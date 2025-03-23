@@ -12,25 +12,25 @@ module command_processor (
 	output wire [31:0] o_tdata,
 	output wire [ 3:0] o_tkeep,
 	output wire        o_tlast,
-	 
+
 	output reg pllreset,
-	 
+
 	output reg [7:0]	spitx,
 	input  reg [7:0]	spirx,
 	input  reg 			spitxready,
 	output reg			spitxdv,
 	input  reg			spirxdv,
 	output reg [7:0]	spics, // which chip to talk to
-	
+
 	input wire [3:0]	lockinfo, // clock info
-	
+
 	input wire [139:0] lvds1bits, lvds2bits, lvds3bits, lvds4bits,// rx_in[0] drives data to rx_out[(J-1)..0], rx_in[1] drives data to the next J number of bits on rx_out
 	input wire			clklvds, // clk1, runs at LVDS bit rate (ADC clk input rate) / 2
 	output reg			ram_wr=0,
 	output reg [9:0]	ram_wr_address=0, ram_rd_address=0,
 	output reg [559:0] lvdsbitsout, //output bits to fifo
 	input wire [559:0] lvdsbitsin, // input bits from fifo
-	
+
 	output reg[2:0] phasecounterselect, // Dynamic phase shift counter Select. 000:all 001:M 010:C0 011:C1 100:C2 101:C3 110:C4. Registered in the rising edge of scanclk.
 	output reg phaseupdown=1, // Dynamic phase shift direction; 1:UP, 0:DOWN. Registered in the PLL on the rising edge of scanclk.
 	output reg [3:0] phasestep,
@@ -39,9 +39,9 @@ module command_processor (
 	output reg [2:0] spimisossel=0, //which spimiso to listen to
 	output reg [11:0]	debugout,  // for debugging
 	input wire [3:0]	overrange,  //ORA0,A1,B0,B1
-	
+
 	output reg [1:0] spi_mode=0,
-	
+
 	input wire [7:0] boardin,
 	output wire [7:0] boardout=0,
 	output reg spireset_L=1'b1,
@@ -154,7 +154,7 @@ always @ (posedge clklvds or negedge rstn) begin
 			    ram_wr <= 1'b0;
 			end
 		end
-		
+
 		// rolling trigger
 		if (dorolling_sync && acqstate>0 && acqstate<250) begin
 			if (rollingtriggercounter==40000000) begin
@@ -167,7 +167,7 @@ always @ (posedge clklvds or negedge rstn) begin
 			end
 			else rollingtriggercounter <= rollingtriggercounter + 1;
 		end
-		
+
 		case (acqstate)
 		0 : begin // ready
 			tot_counter <= 0;
@@ -175,7 +175,7 @@ always @ (posedge clklvds or negedge rstn) begin
 			downsamplemergingcounter_triggered <= -8'd1;
 			lvdsout_trig <= 0;
 			lvdsout_trig_b <= 0;
-			
+
 			// wait for pre-aquisition
 			if (triggercounter<prelengthtotake_sync) begin
 				if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) begin
@@ -184,7 +184,7 @@ always @ (posedge clklvds or negedge rstn) begin
 			end
 			else if (triggerlive_sync) begin
 				triggercounter <= 0; // will also use this to keep recording enough samples after the trigger, so reset
-				
+
 				case(triggertype_sync)
 					8'd1 : acqstate <= 8'd1; // threshold trigger rising edge
 					8'd2 : acqstate <= 8'd3; // threshold trigger falling edge
@@ -199,7 +199,7 @@ always @ (posedge clklvds or negedge rstn) begin
 				endcase
 			end
 		end
-		
+
 		// rising edge trigger (1)
 		1 : begin // ready for first part of trigger condition to be met
 			if (triggertype_sync!=1) acqstate <= 0;
@@ -219,7 +219,7 @@ always @ (posedge clklvds or negedge rstn) begin
 				end
 			end
 		end
-		
+
 		2 : begin // ready for second part of trigger condition to be met
 			if (triggertype_sync!=1) acqstate <= 0;
 			else begin
@@ -248,7 +248,7 @@ always @ (posedge clklvds or negedge rstn) begin
                 end
 			end
 		end
-		
+
 		// falling edge trigger (2)
 		3 : begin // ready for first part of trigger condition to be met
             if (triggertype_sync!=2) acqstate <= 0;
@@ -299,7 +299,7 @@ always @ (posedge clklvds or negedge rstn) begin
                 end
             end
 		end
-		
+
 		5 : begin // external trigger, like from another board (3)
             if (triggertype_sync!=3) acqstate <= 0;
             else begin
@@ -319,7 +319,7 @@ always @ (posedge clklvds or negedge rstn) begin
                 end
             end
 		end
-		
+
 		250 : begin // triggered, now taking more data
 			lvdsout_trig <= 0; // stop telling the others forwards
 			lvdsout_trig_b <= 0; // and backwards
@@ -334,21 +334,21 @@ always @ (posedge clklvds or negedge rstn) begin
 				acqstate <= 8'd251;
 			end
 		end
-		
+
 		251 : begin // ready to be read out, not writing into RAM
 			lvdsout_trig <= 0;
 			lvdsout_trig_b <= 0;
 			triggercounter <= 0;
 			if (didreadout_sync) acqstate <= 8'd0;
 		end
-		
+
 		default : begin
 			acqstate <= 8'd0;
 		end
 		endcase
 	end
 end
-	 
+
 
 // variables in clk domain, reading out of the RAM buffer
 localparam [3:0] INIT=4'd0, RX=4'd1, PROCESS=4'd2, TX_DATA_CONST=4'd3, TX_DATA1=4'd4, TX_DATA2=4'd5, TX_DATA3=4'd6;
@@ -390,7 +390,7 @@ always @ (posedge clk or negedge rstn) begin
             probecompcounter <= 0;
         end
         else probecompcounter <= probecompcounter + 16'd1;
-  
+
         case (state)
         INIT : begin
             spireset_L <= 1'b1;
@@ -616,8 +616,45 @@ always @ (posedge clk or negedge rstn) begin
                 state <= TX_DATA_CONST;
             end
 
+            12 : begin
+                // Return acqstate, so we can see if we have an event ready to be read out,
+                // and which samples triggered (to prevent jitter)
+                o_tdata <= {4'd0,sample_triggered_sync,acqstate_sync};
+                length <= 4;
+                o_tvalid <= 1'b1;
+                state <= TX_DATA_CONST;
+            end
+
+            13 : begin // arm trigger
+                if (acqstate_sync == 0 || acqstate_sync == 251) begin
+                    triggertype <= rx_data[1]; // set the trigger type
+                    channeltype <= rx_data[2]; // the channel type (bit0: single or dual, bit1: oversampling (swapped inputs))
+                    lengthtotake <= {rx_data[5],rx_data[4]};
+
+                    // we might not have actually read out data yet; however, since we are force arming the trigger we
+                    // are going to pretend that we did so. In the separate "loop" over clklvds that should move
+                    // acqstate to 0
+                    length <= 0;
+                    channel <= 0;
+                    didreadout <= 1'b1;
+
+                    triggerlive <= 1'b1; // gets reset in INIT state
+
+                    // return 1 in the first byte indicating that we were able to arm the trigger
+                    // and for debuging current acqstate in the second.
+                    o_tdata <= {8'd0, 8'd0, acqstate_sync, 8'd1};
+                end else begin
+                    // return 0 in the first byte indicating that we were not able to arm the trigger
+                    // and for debuging current acqstate in the second.
+                    o_tdata <= {8'd0, 8'd0, acqstate_sync, 8'd0};
+                end
+                length <= 4;
+                o_tvalid <= 1'b1;
+                state <= TX_DATA_CONST;
+            end
+
             default: // some command we didn't know
-                state <= RX;
+            state <= RX;
 
             endcase
         end
@@ -738,7 +775,7 @@ always @ (posedge clk or negedge rstn) begin
     end
 end
 
-// this is all for downsample merging, since 40 samples come in each clklvds tick 
+// this is all for downsample merging, since 40 samples come in each clklvds tick
 integer i, j;
 always @ (posedge clklvds) begin
 
@@ -751,7 +788,7 @@ always @ (posedge clklvds) begin
 //		samplevalue[20+i+1]  <= {lvds3bits[110+i],lvds3bits[100+i],lvds3bits[90+i],lvds3bits[80+i],lvds3bits[70+i],lvds3bits[60+i],lvds3bits[50+i],lvds3bits[40+i],lvds3bits[30+i],lvds3bits[20+i],lvds3bits[10+i],lvds3bits[0+i]};
 //		samplevalue[30+i]  <= {lvds4bits[110+i+1],lvds4bits[100+i+1],lvds4bits[90+i+1],lvds4bits[80+i+1],lvds4bits[70+i+1],lvds4bits[60+i+1],lvds4bits[50+i+1],lvds4bits[40+i+1],lvds4bits[30+i+1],lvds4bits[20+i+1],lvds4bits[10+i+1],lvds4bits[0+i+1]};
 //		samplevalue[30+i+1]  <= {lvds4bits[110+i],lvds4bits[100+i],lvds4bits[90+i],lvds4bits[80+i],lvds4bits[70+i],lvds4bits[60+i],lvds4bits[50+i],lvds4bits[40+i],lvds4bits[30+i],lvds4bits[20+i],lvds4bits[10+i],lvds4bits[0+i]};
-//		
+//
 //		sampleclkstr[i] <= {lvds1bits[130+i],lvds1bits[120+i]};
 //		sampleclkstr[i+1] <= {lvds1bits[130+i+1],lvds1bits[120+i+1]};
 //		sampleclkstr[10+i] <= {lvds2bits[130+i],lvds2bits[120+i]};
@@ -767,7 +804,7 @@ always @ (posedge clklvds) begin
 		samplevaluereg[10+i]  <= {lvds2bits[110+i],lvds2bits[100+i],lvds2bits[90+i],lvds2bits[80+i],lvds2bits[70+i],lvds2bits[60+i],lvds2bits[50+i],lvds2bits[40+i],lvds2bits[30+i],lvds2bits[20+i],lvds2bits[10+i],lvds2bits[0+i]};
 		samplevaluereg[20+i]  <= {lvdsEbits[  0+i],lvdsEbits[ 10+i],lvds3bits[90+i],lvds3bits[80+i],lvds3bits[70+i],lvds3bits[60+i],lvds3bits[50+i],lvds3bits[40+i],lvds3bits[30+i],lvds3bits[20+i],lvds3bits[10+i],lvds3bits[0+i]};
 		samplevaluereg[30+i]  <= {lvdsEbits[ 20+i],lvdsLbits[  0+i],lvds4bits[90+i],lvds4bits[80+i],lvds4bits[70+i],lvds4bits[60+i],lvds4bits[50+i],lvds4bits[40+i],lvds4bits[30+i],lvds4bits[20+i],lvds4bits[10+i],lvds4bits[0+i]};
-		
+
 		if (channeltype_sync[1] == 1'b0) begin // normal, not swapped
 			// don't invert input 0
 			samplevalue[0 +i] <= samplevaluereg[0 +i];
@@ -789,7 +826,7 @@ always @ (posedge clklvds) begin
 			samplevalue[10+i] <= (samplevaluereg[10+i]== -12'd2048) ? 12'd2047: -samplevaluereg[10+i];
 			samplevalue[30+i] <= (samplevaluereg[30+i]== -12'd2048) ? 12'd2047: -samplevaluereg[30+i];
 		end
-		
+
 		sampleclkstr[i]    <= {lvds1bits[130+i],lvds1bits[120+i]};
 		sampleclkstr[10+i] <= {lvds2bits[130+i],lvds2bits[120+i]};
 		sampleclkstr[20+i] <= {lvds3bits[130+i],lvds3bits[120+i]};
@@ -800,9 +837,9 @@ always @ (posedge clklvds) begin
 		lvdsbitsout[14*i+12 +:2] <= sampleclkstr[i]; // always use the same clk and str bits
 		samplevalue2[i] <= samplevalue[i]; // pipeline just so the delay is the same for this and higher downsample rates - also helps with timing closure
 	end
-	
+
 	if (channeltype_sync[0]==1'b0) begin // single channel mode
-	
+
 			if (downsamplemerging_sync==1) begin // this is highest rate
 				for (i=0;i<10;i=i+1) begin // straighten the samples out
 					lvdsbitsout[14*(i*4+0) +:12] <= samplevalue2[30+1*i];
@@ -811,7 +848,7 @@ always @ (posedge clklvds) begin
 					lvdsbitsout[14*(i*4+3) +:12] <= samplevalue2[ 0+1*i];
 				end
 			end
-	
+
         if (downsamplemerging_sync==2) begin
             for (i=0;i<10;i=i+1) begin
                 if (highres_sync) begin
@@ -903,7 +940,7 @@ always @ (posedge clklvds) begin
         end
 	end
 	else begin // two channel mode
-	
+
 			if (downsamplemerging_sync==1) begin // this is highest rate
 				for (i=0;i<5;i=i+1) begin // straighten the samples out
 					lvdsbitsout[14*(i*2+0 ) +:12] <= samplevalue2[20+1*i];
@@ -1026,7 +1063,7 @@ always @ (posedge clklvds) begin
             end
         end
 	end
-	
+
 end
 
 
@@ -1077,7 +1114,7 @@ always @ (posedge clk_over_4) begin // Process the state machine at each 12.5 MH
 		 lpxc = lpxc + 13'd1;
 		 if (lpxc == 0 && send_color) neostate = 0;
 	end
-	
+
 	if (neo_color[neo_led_num] & (1 << neobits)) begin // Set the correct pin state
 	  if (neostate == 0 || neostate == 1 || neostate == 2) leds[1] = 1;
 	  else if (neostate == 3 || neostate == 6) leds[1] = 0;
