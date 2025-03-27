@@ -99,7 +99,6 @@ integer		eventcounter = 0, eventcounter_sync = 0;
 reg [15:0]	lengthtotake = 0, lengthtotake_sync = 0;
 reg [15:0]	prelengthtotake=1000, prelengthtotake_sync=1000;
 reg 			triggerlive = 0, triggerlive_sync = 0;
-reg			force_acquisition = 0, force_acquisition_sync = 0;
 reg			didreadout = 0, didreadout_sync = 0;
 reg [ 7:0]	triggertype = 0, triggertype_sync = 0;
 reg [ 7:0]	channeltype = 0, channeltype_sync = 0;
@@ -131,7 +130,6 @@ always @ (posedge clklvds or negedge rstn) begin
 		highres_sync           <= highres;
 		triggerchan_sync       <= triggerchan;
 		dorolling_sync         <= dorolling;
-		force_acquisition_sync <= force_acquisition;
 
 		if (acqstate==251) begin // not writing, while waiting to be read out
 			ram_wr <= 1'b0;
@@ -170,14 +168,6 @@ always @ (posedge clklvds or negedge rstn) begin
 			else rollingtriggercounter <= rollingtriggercounter + 1;
 		end
 
-		if (dorolling_sync==0 && force_acquisition_sync && (acqstate==0 || acqstate==251)) begin
-			sample_triggered <= 0;
-			downsamplemergingcounter_triggered <= downsamplemergingcounter;
-			ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-			lvdsout_trig <= 1'b1; // tell the others (maybe want to do rolling trigger on just the first board?)
-			acqstate <= 8'd250; // trigger
-		end
-
 		case (acqstate)
 		0 : begin // ready
 			tot_counter <= 0;
@@ -200,6 +190,7 @@ always @ (posedge clklvds or negedge rstn) begin
 					8'd1 : acqstate <= 8'd1; // threshold trigger rising edge
 					8'd2 : acqstate <= 8'd3; // threshold trigger falling edge
 					8'd3 : acqstate <= 8'd5; // external trigger
+					8'd4 : acqstate <= 8'd6; // auto trigger (forces waveform capture unconditionally)
 					default: begin
 						// Does this ever happen?
 						ram_address_triggered <= ram_wr_address; // remember where the trigger happened
@@ -331,6 +322,24 @@ always @ (posedge clklvds or negedge rstn) begin
             end
 		end
 
+		6: begin
+			// We end up here when triggertype is set to 4 (auto trigger). When we enter here triggercounter is 0,
+			// so we will accumlate pre-trigger samples, then record trigger position and move on to step 250 where
+			// reminder of the data (after-trigger samples) will be accumlated. This to force waveform capture
+			// call force-arm-trigger function with trigger type set to 4.
+			if (triggercounter<prelengthtotake_sync) begin
+				if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) begin
+					triggercounter <= triggercounter + 16'd1;
+				end
+			end else begin
+				ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+				lvdsout_trig <= 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
+				lvdsout_trig_b <= 1'b1; // and backwards
+				downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+				acqstate <= 8'd250;
+			end
+		end
+
 		250 : begin // triggered, now taking more data
 			lvdsout_trig <= 0; // stop telling the others forwards
 			lvdsout_trig_b <= 0; // and backwards
@@ -367,6 +376,7 @@ localparam [3:0] TX_DATA4=4'd7, PLLCLOCK=4'd8, BOOTUP=4'd9;
 
 reg [ 3:0]	state = INIT;
 reg			didbootup = 0;
+reg         configured = 0;
 reg [ 3:0]	rx_counter = 0;
 reg [ 7:0]	rx_data[7:0];
 integer		length = 0;
@@ -396,10 +406,6 @@ always @ (posedge clk or negedge rstn) begin
         didbootup <= 1'b0;
         state  <= INIT;
     end else begin
-        if (acqstate_sync == 251) begin
-            force_acquisition <= 1'b0;
-        end
-
         if (probecompcounter==16'd25000) begin
             boardout[3] <= ~boardout[3]; // for probe compensation, 1kHz
             probecompcounter <= 0;
@@ -418,7 +424,6 @@ always @ (posedge clk or negedge rstn) begin
             channel <= 6'd0;
             triggerlive <= 1'b0;
             didreadout <= 1'b0;
-            force_acquisition <= 1'b0;
             if (didbootup) state <= RX;
             else state <= BOOTUP;
         end
@@ -641,7 +646,7 @@ always @ (posedge clk or negedge rstn) begin
                 state <= TX_DATA_CONST;
             end
 
-            13 : begin // arm trigger
+            13 : begin // force-arm-trigger function
                 if (acqstate_sync == 0 || acqstate_sync == 251) begin
                     triggertype <= rx_data[1]; // set the trigger type
                     channeltype <= rx_data[2]; // the channel type (bit0: single or dual, bit1: oversampling (swapped inputs))
@@ -669,32 +674,22 @@ always @ (posedge clk or negedge rstn) begin
                 state <= TX_DATA_CONST;
             end
 
-            14: begin
-                // Force data acquisition; result contained in first returned byte
-                if (dorolling) begin
-                    // Forced acquisition cannot be initiated if rolling is enabled; returned value 0.
-                    o_tdata <= {8'd0, 8'd0, 8'd0, 8'd0};
+            14 : begin // read register indentified by a number in rx_data[1]
+                case (rx_data[1])
+                    0: o_tdata <= {8'd0, 8'd0, 6'd0, ram_preoffset[9:8], ram_preoffset[7:0]};
+                    1: o_tdata <= {8'd0, 8'd0, 6'd0, ram_address_triggered_sync[9:8], ram_address_triggered_sync[7:0]};
+                    2: o_tdata <= {8'd0, 8'd0, 8'd0, 7'b0, configured};
+                endcase
+                length <= 4;
+                o_tvalid <= 1'b1;
+                state <= TX_DATA_CONST;
+            end
 
-                end else if (acqstate_sync == 0 || acqstate_sync == 251) begin
-                    // Do force data acquisition. This happens if we are sitting in the acqstate 0 perhaps
-                    // due to the fact that conditional triggering is disabled (triggertype == 0) or if
-                    // if we are in acqstate 251. In the later case previous acquisition already took place
-                    // and there is data sitting in the buffer waiting to be read out, in which case that
-                    // data will be lost and new acquisition made. If you don't want that data to be lost, then
-                    // before calling this function first check acqstate (command #12 above) and if returns
-                    // state 251, download waveform, which will reset acqstate to 0. Note, that if triggertype
-                    // is not 0 then before this function is called again another acquisition might take place.
-                    didreadout <= 1'b0;
-                    force_acquisition <= 1'b1;
-                    o_tdata <= {8'd0, 8'd0, 8'd0, 8'd2};
-
-                end else begin
-                    // forced acquisition cannot be initiated because we are in the middile of data acquisition
-                    // returned value 1; user encouraged to either retry or check acqstate (command #12 above)
-                    // and then download captured data once it becomes available.
-                    o_tdata <= {8'd0, 8'd0, 8'd0, 8'd1};
-                end
-
+            15 : begin // update `configured` flag
+                // The first time we connect to the board we go through a board setup/configuration steps.
+                // At the we set this flag/register (`configured`) to 1 so that we do not have to configure
+                // board again on subsequenct connections.
+                configured <= rx_data[1][0];
                 length <= 4;
                 o_tvalid <= 1'b1;
                 state <= TX_DATA_CONST;
