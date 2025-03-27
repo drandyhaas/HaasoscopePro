@@ -381,7 +381,6 @@ localparam [3:0] TX_DATA4=4'd7, PLLCLOCK=4'd8, BOOTUP=4'd9;
 
 reg [ 3:0]	state = INIT;
 reg			didbootup = 0;
-reg         configured = 0;
 reg [ 3:0]	rx_counter = 0;
 reg [ 7:0]	rx_data[7:0];
 integer		length = 0;
@@ -658,27 +657,18 @@ always @ (posedge clk or negedge rstn) begin
             14 : begin // read-register function.
                 // Returns "register" (some are wires) value indentified by a number in rx_data[1].
                 case (rx_data[1])
-                    0 : o_tdata <= {8'd0, 8'd0, 6'd0, ram_preoffset};
-                    1 : o_tdata <= {8'd0, 8'd0, 6'd0, ram_address_triggered_sync};
-                    2 : o_tdata <= {8'd0, 8'd0, 8'd0, 7'b0, configured};
+                    0 : o_tdata <= {22'd0, ram_preoffset};
+                    1 : o_tdata <= {22'd0, ram_address_triggered_sync};
+                    2 : o_tdata <= {28'd0, spistate};
                     3 : o_tdata <= version;
-                    4 : o_tdata <= {8'd0, 8'd0, 8'd0, boardin};
-                    5 : o_tdata <= {8'd0, 8'd0, 8'd0, acqstate_sync};
+                    4 : o_tdata <= {24'd0, boardin};
+                    5 : o_tdata <= {24'd0, acqstate_sync};
                     6 : o_tdata <= eventcounter_sync;
                     7 : o_tdata <= {12'd0, sample_triggered_sync};
-                    8 : o_tdata <= {8'd0, 8'd0, 8'd0, downsamplemergingcounter_triggered_sync};
+                    8 : o_tdata <= {24'd0, downsamplemergingcounter_triggered_sync};
                     default:
-                    	o_tdata <= {8'd0, 8'd0, 8'd0, 8'd0};
+                    	o_tdata <= {32'd0};
                 endcase
-                `SEND_STD_USB_RESPONSE
-            end
-
-            15 : begin // update `configured` flag
-                // The first time we connect to the board we go through a board setup/configuration steps.
-                // After that we can set this flag/register (`configured`) to 1 so that we do not have to
-                // configure board again on subsequenct connections. Value of this register can be read
-                // using read-register function (rx_data[0] == 14). See above.
-                configured <= rx_data[1][0];
                 `SEND_STD_USB_RESPONSE
             end
 
