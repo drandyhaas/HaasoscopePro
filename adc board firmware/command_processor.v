@@ -340,6 +340,7 @@ always @ (posedge clklvds or negedge rstn) begin
 				ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
 				lvdsout_trig <= 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
 				lvdsout_trig_b <= 1'b1; // and backwards
+				sample_triggered <= 0;
 				downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
 				acqstate <= 8'd250;
 			end
@@ -666,6 +667,8 @@ always @ (posedge clk or negedge rstn) begin
                     6 : o_tdata <= eventcounter_sync;
                     7 : o_tdata <= {12'd0, sample_triggered_sync};
                     8 : o_tdata <= {24'd0, downsamplemergingcounter_triggered_sync};
+                    9 : o_tdata <= {24'd0, downsamplemerging};
+                    10: o_tdata <= {27'd0, downsample}
                     default:
                     	o_tdata <= {32'd0};
                 endcase
