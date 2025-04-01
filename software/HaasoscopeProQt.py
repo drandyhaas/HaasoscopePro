@@ -304,7 +304,7 @@ class MainWindow(TemplateBaseClass):
         adf4350(usb, self.samplerate * 1000 / 2, None, themuxout=self.themuxoutV)
         time.sleep(0.1)
         res = boardinbits(usb)
-        if not getbit(res, 0): print("Adf pll for board",board,"not locked?")  # should be 1 if locked
+        if not getbit(res, 5): print("Adf pll for board",board,"not locked?")  # should be 1 if locked
         else: print("Adf pll locked for board",board)
 
     def chanon(self):
