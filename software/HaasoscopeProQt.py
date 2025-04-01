@@ -48,7 +48,7 @@ class MainWindow(TemplateBaseClass):
     num_logic_inputs = 0
     tenx = 1
     debug = False
-    dopattern = 4 # set to 4 to do max varying test pattern
+    dopattern = 0 # set to 4 to do max varying test pattern
     debugprint = True
     showbinarydata = True
     debugstrobe = False
@@ -419,7 +419,7 @@ class MainWindow(TemplateBaseClass):
         switchclock(usbs,board)
 
     def adjustclocks(self, board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr):
-        if (nbadclkA+nbadclkB+nbadclkC+nbadclkD+nbadstr>0) and self.phasecs[board][0][0] < 20:  # adjust phase by 90 deg
+        if (nbadclkA+nbadclkB+nbadclkC+nbadclkD+nbadstr>4) and self.phasecs[board][0][0] < 20:  # adjust phase by 90 deg
             n = 6  # amount to adjust clklvds (positive)
             for i in range(n): self.dophase(board, 0, 1, pllnum=0, quiet=(i != n - 1))  # adjust phase of clklvds
         if self.plljustreset[board]>0: self.plljustreset[board] -= 1 # count down while collecting events
