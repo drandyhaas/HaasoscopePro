@@ -562,7 +562,7 @@ always @ (posedge clk or negedge rstn) begin
                 phasecounterselect <= rx_data[2][2:0];// 000:all 001:M 010:C0 011:C1 100:C2 101:C3 110:C4.
                 phaseupdown <= rx_data[3][0]; // up or down
                 scanclk <= 1'b0; // start low
-                phasestep[rx_data[1]] <= 1'b1; // assert!
+                phasestep[rx_data[1]] <= 1'b1; // assert - the index here selects which pll to adjust
                 pllclock_counter <= 0;
                 scanclk_cycles <= 0;
                 state <= PLLCLOCK;
@@ -802,8 +802,8 @@ always @ (posedge clklvds) begin
 	for (i=0;i<10;i=i+1) begin
 		samplevaluereg[0 +i]  <= {lvds1bits[110+i],lvds1bits[100+i],lvds1bits[90+i],lvds1bits[80+i],lvds1bits[70+i],lvds1bits[60+i],lvds1bits[50+i],lvds1bits[40+i],lvds1bits[30+i],lvds1bits[20+i],lvds1bits[10+i],lvds1bits[0+i]};
 		samplevaluereg[10+i]  <= {lvds2bits[110+i],lvds2bits[100+i],lvds2bits[90+i],lvds2bits[80+i],lvds2bits[70+i],lvds2bits[60+i],lvds2bits[50+i],lvds2bits[40+i],lvds2bits[30+i],lvds2bits[20+i],lvds2bits[10+i],lvds2bits[0+i]};
-		samplevaluereg[20+i]  <= {lvdsEbits[  0+i],lvdsEbits[ 10+i],lvds3bits[90+i],lvds3bits[80+i],lvds3bits[70+i],lvds3bits[60+i],lvds3bits[50+i],lvds3bits[40+i],lvds3bits[30+i],lvds3bits[20+i],lvds3bits[10+i],lvds3bits[0+i]};
-		samplevaluereg[30+i]  <= {lvdsEbits[ 20+i],lvdsLbits[  0+i],lvds4bits[90+i],lvds4bits[80+i],lvds4bits[70+i],lvds4bits[60+i],lvds4bits[50+i],lvds4bits[40+i],lvds4bits[30+i],lvds4bits[20+i],lvds4bits[10+i],lvds4bits[0+i]};
+		samplevaluereg[20+i]  <= {lvds3bits[110+i],lvds3bits[100+i],lvds3bits[90+i],lvds3bits[80+i],lvds3bits[70+i],lvds3bits[60+i],lvds3bits[50+i],lvds3bits[40+i],lvds3bits[30+i],lvds3bits[20+i],lvds3bits[10+i],lvds3bits[0+i]};
+		samplevaluereg[30+i]  <= {lvds4bits[110+i],lvds4bits[100+i],lvds4bits[90+i],lvds4bits[80+i],lvds4bits[70+i],lvds4bits[60+i],lvds4bits[50+i],lvds4bits[40+i],lvds4bits[30+i],lvds4bits[20+i],lvds4bits[10+i],lvds4bits[0+i]};
 
 		if (channeltype_sync[1] == 1'b0) begin // normal, not swapped
 			// don't invert input 0

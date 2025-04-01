@@ -363,9 +363,7 @@ set_location_assignment PIN_M19 -to lvds2in[6]
 set_location_assignment PIN_M20 -to "lvds2in[6](n)"
 set_location_assignment PIN_N19 -to lvds2in[7]
 set_location_assignment PIN_N20 -to "lvds2in[7](n)"
-set_location_assignment PIN_AA8 -to lvdsEin[0]
 set_instance_assignment -name IO_STANDARD LVDS -to lvdsEin[0]
-set_location_assignment PIN_AB8 -to "lvdsEin[0](n)"
 set_instance_assignment -name IO_STANDARD LVDS -to lvdsEin[1]
 set_instance_assignment -name IO_STANDARD LVDS -to lvdsEin[2]
 set_instance_assignment -name IO_STANDARD LVDS -to lvdsEin[3]
@@ -379,12 +377,6 @@ set_instance_assignment -name IO_STANDARD LVDS -to lvdsLin[3]
 set_instance_assignment -name IO_STANDARD LVDS -to lvdsLin[4]
 set_instance_assignment -name IO_STANDARD LVDS -to lvdsLin[5]
 set_instance_assignment -name IO_STANDARD LVDS -to lvdsLin[6]
-set_location_assignment PIN_AA7 -to lvdsEin[1]
-set_location_assignment PIN_AB7 -to "lvdsEin[1](n)"
-set_location_assignment PIN_AA14 -to lvdsEin[2]
-set_location_assignment PIN_AB14 -to "lvdsEin[2](n)"
-set_location_assignment PIN_AA15 -to lvdsLin[0]
-set_location_assignment PIN_AB15 -to "lvdsLin[0](n)"
 set_instance_assignment -name IO_STANDARD LVDS -to lvdsin_spare
 set_instance_assignment -name IO_STANDARD LVDS -to lvdsin_trig_b
 set_instance_assignment -name IO_STANDARD LVDS -to lvdsout_spare
@@ -397,6 +389,14 @@ set_location_assignment PIN_H2 -to lvdsin_trig_b
 set_location_assignment PIN_H1 -to "lvdsin_trig_b(n)"
 set_location_assignment PIN_F21 -to lvdsout_trig_b
 set_location_assignment PIN_F22 -to "lvdsout_trig_b(n)"
+set_location_assignment PIN_AA15 -to lvds4in[10]
+set_location_assignment PIN_AB15 -to "lvds4in[10](n)"
+set_location_assignment PIN_AA14 -to lvds4in[11]
+set_location_assignment PIN_AB14 -to "lvds4in[11](n)"
+set_location_assignment PIN_AA7 -to lvds3in[10]
+set_location_assignment PIN_AB7 -to "lvds3in[10](n)"
+set_location_assignment PIN_AA8 -to lvds3in[11]
+set_location_assignment PIN_AB8 -to "lvds3in[11](n)"
 set_global_assignment -name BDF_FILE coincidence.bdf
 set_global_assignment -name SDC_FILE coincidence.sdc
 set_global_assignment -name VERILOG_FILE command_processor.v
