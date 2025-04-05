@@ -16,7 +16,7 @@
 	<version>10</version>
 	<create_cvp_file>0</create_cvp_file>
 	<create_hps_iocsr>0</create_hps_iocsr>
-	<auto_create_rpd>0</auto_create_rpd>
+	<auto_create_rpd>1</auto_create_rpd>
 	<rpd_little_endian>1</rpd_little_endian>
 	<options>
 		<map_file>1</map_file>

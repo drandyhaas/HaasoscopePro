@@ -561,7 +561,7 @@ class MainWindow(TemplateBaseClass):
         for usb in usbs: self.telldownsample(usb, self.downsample)
 
         #for testing function below
-        self.print_firmware_reads()
+        #self.print_firmware_reads()
 
     def print_firmware_reads(self):
         def reverse_bits(byte):

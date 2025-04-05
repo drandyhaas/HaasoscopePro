@@ -1,9 +1,3 @@
-// Sequence of register writes that triggers sending 4 bytes usb response.
-`define SEND_STD_USB_RESPONSE \
-    length <= 4; \
-    o_tvalid <= 1'b1; \
-    state <= TX_DATA_CONST;
-
 module command_processor (
 	input  wire        rstn,
 	input  wire        clk,
@@ -421,6 +415,12 @@ always @ (posedge clk) begin
 	for (i=0;i<4;i=i+1)
 	    if (overrange[i]) overrange_counter[i] <= overrange_counter[i] + 1;
 end
+
+// Sequence of register writes that triggers sending 4 bytes usb response.
+`define SEND_STD_USB_RESPONSE \
+    length <= 4; \
+    o_tvalid <= 1'b1; \
+    state <= TX_DATA_CONST;
 
 always @ (posedge clk or negedge rstn) begin
     if (~rstn) begin
