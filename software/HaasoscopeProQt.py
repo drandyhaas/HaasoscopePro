@@ -561,7 +561,7 @@ class MainWindow(TemplateBaseClass):
         for usb in usbs: self.telldownsample(usb, self.downsample)
 
         #for testing function below
-        #self.print_firmware_reads()
+        self.print_firmware_reads()
 
     def print_firmware_reads(self):
         def reverse_bits(byte):
@@ -572,12 +572,19 @@ class MainWindow(TemplateBaseClass):
             return reversed_byte
 
         file = open("output.txt", "w")
-        for j in range(10):
-            for i in range(256):
-                usbs[0].send(bytes([14, 0, j, i, 99, 99, 99, 99])) # read from address {1,2,3}
-                res = usbs[0].recv(4)
-                if len(res)==4: print(j*256+i,"",reverse_bits((res[0])), file=file)
-                else: print("Timeout?")
+        for k in range(20):
+            for j in range(256):
+                for i in range(256):
+                    usbs[0].send(bytes([14, k, j, i, 99, 99, 99, 99])) # read from address {1,2,3}
+            res = usbs[0].recv(256*256*4)
+            if len(res) == 256*256*4:
+                for j in range(256):
+                    for i in range(256):
+                        if (k*256*256 + j*256 + i)<1191788:
+                            print(k*256*256 + j*256 + i, "", reverse_bits((res[256*4*j+4*i])), file=file)
+            else:
+                print("timeout?")
+        file.close()
 
     def telldownsample(self, usb, ds):
         if ds < 0: ds = 0
