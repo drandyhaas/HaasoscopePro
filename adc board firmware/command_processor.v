@@ -54,9 +54,23 @@ module command_processor (
 	input wire lvdsin_spare,
 	output reg lvdsout_spare=0,
 	input wire [69:0] lvdsEbits, lvdsLbits,
-	output reg [1:0] leds // controls LED 3..2
+	output reg [1:0] leds, // controls LED 3..2
+	
+	output reg [23:0] flash_addr,
+	output reg flash_bulk_erase,
+	output reg clk_over_4,
+	output reg [7:0] flash_datain,
+	output reg flash_rden,
+	output reg flash_read,
+	output reg flash_write,
+	output reg flash_reset,
+	
+	input flash_busy,
+	input flash_data_valid,
+	input [7:0] flash_dataout
+	
 );
-integer version = 21; // firmware version
+integer version = 22; // firmware version
 
 assign debugout[0] = clkswitch;
 assign debugout[1] = lvdsin_trig;
@@ -73,6 +87,8 @@ assign debugout[10] = boardout[3]; //1kHz out 50 Ohm
 
 reg fanon=0;
 assign debugout[11] = fanon;
+
+assign flash_reset = ~rstn;
 
 wire exttrigin;
 assign exttrigin = boardin[4];
@@ -368,6 +384,7 @@ reg [9:0] ram_preoffset = 0;
 integer overrange_counter[4];
 reg [15:0]	probecompcounter = 0;
 reg send_color = 1;
+reg [3:0] flashstate = 0;
 
 always @ (posedge clk) begin
 	acqstate_sync <= acqstate;
@@ -652,7 +669,34 @@ always @ (posedge clk or negedge rstn) begin
                 o_tvalid <= 1'b1;
                 state <= TX_DATA_CONST;
             end
-
+				
+				14 : begin // read from flash
+					case (flashstate)
+               0 : begin
+						if (!flash_busy) begin
+							flash_addr <= {rx_data[1],rx_data[2],rx_data[3]};
+							flash_rden <= 1'b1;
+							flash_read <= 1'b1;
+						end
+						else begin
+							flash_rden <= 1'b0;
+							flash_read <= 1'b0;
+							flashstate <= 4'd1;
+						end
+					end
+					1 : begin
+						if (flash_data_valid) begin
+							flashstate <= 4'd0;
+							o_tdata <= {8'd0, 8'd0, 8'd0, flash_dataout};
+							length <= 4;
+							o_tvalid <= 1'b1;
+							state <= TX_DATA_CONST;
+						end
+					end
+               default : flashstate <= 4'd0;
+               endcase
+				end
+				
             default: // some command we didn't know
             state <= RX;
 
@@ -1076,7 +1120,6 @@ reg [7:0] neobits;
 reg [1:0] neo_led_num;
 parameter neo_led_num_max = 2;
 reg [23:0] neo_color[neo_led_num_max];
-reg clk_over_4 = 0;
 reg clk_over_4_counter = 0;
 
 always @ (posedge clk50) begin // Make 12.5 MHz clock

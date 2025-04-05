@@ -49,6 +49,10 @@ set_max_delay -to [get_ports led* ] 10
 set_min_delay -to [get_ports led* ] -10
 set_max_delay -from [get_ports reset ] 10
 set_min_delay -from [get_ports reset ] -10
+set_max_delay -from [get_ports asmi* ] 10
+set_min_delay -from [get_ports asmi* ] -10 
+set_max_delay -to [get_ports asmi* ] 10
+set_min_delay -to [get_ports asmi* ] -10 
 
 set_input_delay -clock ftdi_clk 0 [get_ports ftdi_clk ]
 set_input_delay -clock ftdi_clk 0 [get_ports ftdi_rxf_n ]

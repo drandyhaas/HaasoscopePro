@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <preferences>
  <debug showDebugMenu="0" />
- <systemtable>
+ <systemtable filter="All Interfaces">
   <columns>
-   <connections preferredWidth="79" />
+   <connections preferredWidth="31" />
    <irq preferredWidth="34" />
    <inputclock preferredWidth="109" />
   </columns>
@@ -15,7 +15,7 @@
    <frequency preferredWidth="409" />
   </columns>
  </clocktable>
- <library expandedCategories="Library,Library/PLL,Project" />
- <window width="1578" height="800" x="0" y="0" />
+ <library expandedCategories="Project,Library" />
+ <window width="1862" height="1131" x="58" y="69" />
  <hdlexample language="VERILOG" />
 </preferences>

@@ -560,6 +560,25 @@ class MainWindow(TemplateBaseClass):
         # print("highres",self.highresval)
         for usb in usbs: self.telldownsample(usb, self.downsample)
 
+        #for testing function below
+        #self.print_firmware_reads()
+
+    def print_firmware_reads(self):
+        def reverse_bits(byte):
+            reversed_byte = 0
+            for i in range(8):
+                if (byte >> i) & 1:
+                    reversed_byte |= 1 << (7 - i)
+            return reversed_byte
+
+        file = open("output.txt", "w")
+        for j in range(10):
+            for i in range(256):
+                usbs[0].send(bytes([14, 0, j, i, 99, 99, 99, 99])) # read from address {1,2,3}
+                res = usbs[0].recv(4)
+                if len(res)==4: print(j*256+i,"",reverse_bits((res[0])), file=file)
+                else: print("Timeout?")
+
     def telldownsample(self, usb, ds):
         if ds < 0: ds = 0
         if ds == 0:

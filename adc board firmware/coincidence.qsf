@@ -41,7 +41,7 @@ set_global_assignment -name DEVICE EP4CE30F23C6
 set_global_assignment -name TOP_LEVEL_ENTITY coincidence
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION "13.0 SP1"
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "08:20:30  NOVEMBER 06, 2018"
-set_global_assignment -name LAST_QUARTUS_VERSION "23.1std.1 Lite Edition"
+set_global_assignment -name LAST_QUARTUS_VERSION "24.1std.0 Lite Edition"
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
 set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
@@ -368,20 +368,6 @@ set_location_assignment PIN_M19 -to lvds2in[6]
 set_location_assignment PIN_M20 -to "lvds2in[6](n)"
 set_location_assignment PIN_N19 -to lvds2in[7]
 set_location_assignment PIN_N20 -to "lvds2in[7](n)"
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsEin[0]
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsEin[1]
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsEin[2]
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsEin[3]
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsEin[4]
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsEin[5]
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsEin[6]
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsLin[0]
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsLin[1]
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsLin[2]
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsLin[3]
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsLin[4]
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsLin[5]
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsLin[6]
 set_instance_assignment -name IO_STANDARD LVDS -to lvdsin_spare
 set_instance_assignment -name IO_STANDARD LVDS -to lvdsin_trig_b
 set_instance_assignment -name IO_STANDARD LVDS -to lvdsout_spare
@@ -406,6 +392,7 @@ set_global_assignment -name BDF_FILE coincidence.bdf
 set_global_assignment -name SDC_FILE coincidence.sdc
 set_global_assignment -name VERILOG_FILE command_processor.v
 set_global_assignment -name VERILOG_FILE SPI_Master.v
+set_global_assignment -name QSYS_FILE asmi.qsys
 set_global_assignment -name QIP_FILE fifo1.qip
 set_global_assignment -name QIP_FILE lvds1.qip
 set_global_assignment -name QIP_FILE lvds2.qip
@@ -430,4 +417,10 @@ set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/ftdi_245fifo/axi_stream
 set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/ftdi_245fifo/axi_stream_downsizing.v
 set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/ftdi_245fifo/axi_stream_assert.v
 set_global_assignment -name QIP_FILE rambuffer.qip
+set_location_assignment PIN_K2 -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_DCLK"
+set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_DCLK"
+set_location_assignment PIN_K1 -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_DATA0"
+set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_DATA0"
+set_location_assignment PIN_E2 -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_SCE"
+set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_SCE"
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

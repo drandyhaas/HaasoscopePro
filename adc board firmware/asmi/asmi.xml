@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deploy
+ date="2025.04.04.14:36:17"
+ outputDirectory="/home/ahaas/Downloads/HaasoscopePro/adc board firmware/asmi/">
+ <perimeter>
+  <parameter
+     name="AUTO_GENERATION_ID"
+     type="Integer"
+     defaultValue="0"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_UNIQUE_ID"
+     type="String"
+     defaultValue=""
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_FAMILY"
+     type="String"
+     defaultValue="Cyclone IV E"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE"
+     type="String"
+     defaultValue="EP4CE30F23C6"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_SPEEDGRADE"
+     type="String"
+     defaultValue="6"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_CLKIN_CLOCK_RATE"
+     type="Long"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_CLKIN_CLOCK_DOMAIN"
+     type="Integer"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_CLKIN_RESET_DOMAIN"
+     type="Integer"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <interface name="addr" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port name="addr" direction="input" role="addr" width="24" />
+  </interface>
+  <interface name="bulk_erase" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port name="bulk_erase" direction="input" role="bulk_erase" width="1" />
+  </interface>
+  <interface name="busy" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port name="busy" direction="output" role="busy" width="1" />
+  </interface>
+  <interface name="clkin" kind="clock" start="0">
+   <property name="clockRate" value="0" />
+   <property name="externallyDriven" value="false" />
+   <property name="ptfSchematicName" value="" />
+   <port name="clkin" direction="input" role="clk" width="1" />
+  </interface>
+  <interface name="data_valid" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port name="data_valid" direction="output" role="data_valid" width="1" />
+  </interface>
+  <interface name="datain" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port name="datain" direction="input" role="datain" width="8" />
+  </interface>
+  <interface name="dataout" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port name="dataout" direction="output" role="dataout" width="8" />
+  </interface>
+  <interface name="illegal_erase" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port
+       name="illegal_erase"
+       direction="output"
+       role="illegal_erase"
+       width="1" />
+  </interface>
+  <interface name="illegal_write" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port
+       name="illegal_write"
+       direction="output"
+       role="illegal_write"
+       width="1" />
+  </interface>
+  <interface name="rden" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port name="rden" direction="input" role="rden" width="1" />
+  </interface>
+  <interface name="read" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port name="read" direction="input" role="read" width="1" />
+  </interface>
+  <interface name="reset" kind="reset" start="0">
+   <property name="associatedClock" value="clkin" />
+   <property name="synchronousEdges" value="DEASSERT" />
+   <port name="reset" direction="input" role="reset" width="1" />
+  </interface>
+  <interface name="write" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port name="write" direction="input" role="write" width="1" />
+  </interface>
+ </perimeter>
+ <entity
+   path=""
+   parameterizationKey="asmi:1.0:AUTO_CLKIN_CLOCK_DOMAIN=-1,AUTO_CLKIN_CLOCK_RATE=-1,AUTO_CLKIN_RESET_DOMAIN=-1,AUTO_DEVICE=EP4CE30F23C6,AUTO_DEVICE_FAMILY=Cyclone IV E,AUTO_DEVICE_SPEEDGRADE=6,AUTO_GENERATION_ID=1743791777,AUTO_UNIQUE_ID=(altera_asmi_parallel:24.1:CBX_AUTO_BLACKBOX=ALL,DATA_WIDTH=STANDARD,DEVICE_FAMILY=Cyclone IV E,ENABLE_SIM=false,EPCS_TYPE=EPCS16,FLASH_RSTPIN=FALSE,INTENDED_DEVICE_FAMILY=Cyclone IV E,PAGE_SIZE=1,PORT_BULK_ERASE=PORT_USED,PORT_DIE_ERASE=PORT_UNUSED,PORT_EN4B_ADDR=PORT_UNUSED,PORT_EX4B_ADDR=PORT_UNUSED,PORT_FAST_READ=PORT_UNUSED,PORT_ILLEGAL_ERASE=PORT_USED,PORT_ILLEGAL_WRITE=PORT_USED,PORT_RDID_OUT=PORT_UNUSED,PORT_READ_ADDRESS=PORT_UNUSED,PORT_READ_DUMMYCLK=PORT_UNUSED,PORT_READ_RDID=PORT_UNUSED,PORT_READ_SID=PORT_UNUSED,PORT_READ_STATUS=PORT_UNUSED,PORT_SECTOR_ERASE=PORT_UNUSED,PORT_SECTOR_PROTECT=PORT_UNUSED,PORT_SHIFT_BYTES=PORT_UNUSED,PORT_WREN=PORT_UNUSED,PORT_WRITE=PORT_USED,USE_ASMIBLOCK=ON,USE_EAB=ON,WRITE_DUMMY_CLK=0,gui_bulk_erase=true,gui_die_erase=false,gui_ex4b_addr=false,gui_fast_read=false,gui_page_write=false,gui_read_address=false,gui_read_dummyclk=false,gui_read_rdid=false,gui_read_sid=false,gui_read_status=false,gui_sector_erase=false,gui_sector_protect=false,gui_single_write=true,gui_use_asmiblock=false,gui_use_eab=false,gui_wren=false,gui_write=true)"
+   instancePathKey="asmi"
+   kind="asmi"
+   version="1.0"
+   name="asmi">
+  <parameter name="AUTO_CLKIN_CLOCK_DOMAIN" value="-1" />
+  <parameter name="AUTO_CLKIN_RESET_DOMAIN" value="-1" />
+  <parameter name="AUTO_GENERATION_ID" value="1743791777" />
+  <parameter name="AUTO_DEVICE" value="EP4CE30F23C6" />
+  <parameter name="AUTO_DEVICE_FAMILY" value="Cyclone IV E" />
+  <parameter name="AUTO_CLKIN_CLOCK_RATE" value="-1" />
+  <parameter name="AUTO_UNIQUE_ID" value="" />
+  <parameter name="AUTO_DEVICE_SPEEDGRADE" value="6" />
+  <generatedFiles>
+   <file
+       path="/home/ahaas/Downloads/HaasoscopePro/adc board firmware/asmi/synthesis/asmi.v"
+       type="VERILOG" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="/home/ahaas/Downloads/HaasoscopePro/adc board firmware/asmi/synthesis/submodules/asmi_asmi_parallel_0.v"
+       type="VERILOG"
+       attributes="" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file
+       path="/home/ahaas/Downloads/HaasoscopePro/adc board firmware/asmi.qsys" />
+  </sourceFiles>
+  <childSourceFiles>
+   <file
+       path="/home/ahaas/intelFPGA_lite/24.1std/ip/altera/altera_asmi_parallel/altera_asmi_parallel_hw.tcl" />
+  </childSourceFiles>
+  <messages>
+   <message level="Debug" culprit="asmi">queue size: 0 starting:asmi "asmi"</message>
+   <message level="Progress" culprit="min"></message>
+   <message level="Progress" culprit="max"></message>
+   <message level="Progress" culprit="current"></message>
+   <message level="Debug">Transform: CustomInstructionTransform</message>
+   <message level="Debug">No custom instruction connections, skipping transform </message>
+   <message level="Debug" culprit="merlin_custom_instruction_transform"><![CDATA[After transform: <b>1</b> modules, <b>0</b> connections]]></message>
+   <message level="Debug">Transform: MMTransform</message>
+   <message level="Debug">Transform: InterruptMapperTransform</message>
+   <message level="Debug">Transform: InterruptSyncTransform</message>
+   <message level="Debug">Transform: InterruptFanoutTransform</message>
+   <message level="Debug">Transform: AvalonStreamingTransform</message>
+   <message level="Debug">Transform: ResetAdaptation</message>
+   <message level="Debug" culprit="asmi"><![CDATA["<b>asmi</b>" reuses <b>altera_asmi_parallel</b> "<b>submodules/asmi_asmi_parallel_0</b>"]]></message>
+   <message level="Debug" culprit="asmi">queue size: 0 starting:altera_asmi_parallel "submodules/asmi_asmi_parallel_0"</message>
+   <message level="Info" culprit="asmi_parallel_0">generating top-level entity asmi_asmi_parallel_0</message>
+   <message level="Info" culprit="asmi_parallel_0"><![CDATA["<b>asmi</b>" instantiated <b>altera_asmi_parallel</b> "<b>asmi_parallel_0</b>"]]></message>
+  </messages>
+ </entity>
+ <entity
+   path="submodules/"
+   parameterizationKey="altera_asmi_parallel:24.1:CBX_AUTO_BLACKBOX=ALL,DATA_WIDTH=STANDARD,DEVICE_FAMILY=Cyclone IV E,ENABLE_SIM=false,EPCS_TYPE=EPCS16,FLASH_RSTPIN=FALSE,INTENDED_DEVICE_FAMILY=Cyclone IV E,PAGE_SIZE=1,PORT_BULK_ERASE=PORT_USED,PORT_DIE_ERASE=PORT_UNUSED,PORT_EN4B_ADDR=PORT_UNUSED,PORT_EX4B_ADDR=PORT_UNUSED,PORT_FAST_READ=PORT_UNUSED,PORT_ILLEGAL_ERASE=PORT_USED,PORT_ILLEGAL_WRITE=PORT_USED,PORT_RDID_OUT=PORT_UNUSED,PORT_READ_ADDRESS=PORT_UNUSED,PORT_READ_DUMMYCLK=PORT_UNUSED,PORT_READ_RDID=PORT_UNUSED,PORT_READ_SID=PORT_UNUSED,PORT_READ_STATUS=PORT_UNUSED,PORT_SECTOR_ERASE=PORT_UNUSED,PORT_SECTOR_PROTECT=PORT_UNUSED,PORT_SHIFT_BYTES=PORT_UNUSED,PORT_WREN=PORT_UNUSED,PORT_WRITE=PORT_USED,USE_ASMIBLOCK=ON,USE_EAB=ON,WRITE_DUMMY_CLK=0,gui_bulk_erase=true,gui_die_erase=false,gui_ex4b_addr=false,gui_fast_read=false,gui_page_write=false,gui_read_address=false,gui_read_dummyclk=false,gui_read_rdid=false,gui_read_sid=false,gui_read_status=false,gui_sector_erase=false,gui_sector_protect=false,gui_single_write=true,gui_use_asmiblock=false,gui_use_eab=false,gui_wren=false,gui_write=true"
+   instancePathKey="asmi:.:asmi_parallel_0"
+   kind="altera_asmi_parallel"
+   version="24.1"
+   name="asmi_asmi_parallel_0">
+  <parameter name="PORT_EN4B_ADDR" value="PORT_UNUSED" />
+  <parameter name="USE_EAB" value="ON" />
+  <parameter name="PORT_READ_SID" value="PORT_UNUSED" />
+  <parameter name="gui_read_rdid" value="false" />
+  <parameter name="gui_page_write" value="false" />
+  <parameter name="DEVICE_FAMILY" value="Cyclone IV E" />
+  <parameter name="PORT_ILLEGAL_WRITE" value="PORT_USED" />
+  <parameter name="FLASH_RSTPIN" value="FALSE" />
+  <parameter name="EPCS_TYPE" value="EPCS16" />
+  <parameter name="gui_sector_protect" value="false" />
+  <parameter name="PORT_WRITE" value="PORT_USED" />
+  <parameter name="gui_fast_read" value="false" />
+  <parameter name="PORT_SECTOR_ERASE" value="PORT_UNUSED" />
+  <parameter name="DATA_WIDTH" value="STANDARD" />
+  <parameter name="gui_read_address" value="false" />
+  <parameter name="gui_sector_erase" value="false" />
+  <parameter name="gui_use_asmiblock" value="false" />
+  <parameter name="PORT_DIE_ERASE" value="PORT_UNUSED" />
+  <parameter name="PORT_WREN" value="PORT_UNUSED" />
+  <parameter name="WRITE_DUMMY_CLK" value="0" />
+  <parameter name="CBX_AUTO_BLACKBOX" value="ALL" />
+  <parameter name="gui_read_dummyclk" value="false" />
+  <parameter name="gui_single_write" value="true" />
+  <parameter name="gui_die_erase" value="false" />
+  <parameter name="gui_ex4b_addr" value="false" />
+  <parameter name="gui_use_eab" value="false" />
+  <parameter name="PORT_READ_DUMMYCLK" value="PORT_UNUSED" />
+  <parameter name="gui_write" value="true" />
+  <parameter name="PORT_SHIFT_BYTES" value="PORT_UNUSED" />
+  <parameter name="PORT_SECTOR_PROTECT" value="PORT_UNUSED" />
+  <parameter name="gui_bulk_erase" value="true" />
+  <parameter name="PORT_FAST_READ" value="PORT_UNUSED" />
+  <parameter name="ENABLE_SIM" value="false" />
+  <parameter name="PORT_READ_STATUS" value="PORT_UNUSED" />
+  <parameter name="PORT_BULK_ERASE" value="PORT_USED" />
+  <parameter name="PORT_RDID_OUT" value="PORT_UNUSED" />
+  <parameter name="PORT_READ_RDID" value="PORT_UNUSED" />
+  <parameter name="gui_read_status" value="false" />
+  <parameter name="PORT_EX4B_ADDR" value="PORT_UNUSED" />
+  <parameter name="PAGE_SIZE" value="1" />
+  <parameter name="gui_wren" value="false" />
+  <parameter name="gui_read_sid" value="false" />
+  <parameter name="PORT_ILLEGAL_ERASE" value="PORT_USED" />
+  <parameter name="PORT_READ_ADDRESS" value="PORT_UNUSED" />
+  <parameter name="INTENDED_DEVICE_FAMILY" value="Cyclone IV E" />
+  <parameter name="USE_ASMIBLOCK" value="ON" />
+  <generatedFiles>
+   <file
+       path="/home/ahaas/Downloads/HaasoscopePro/adc board firmware/asmi/synthesis/submodules/asmi_asmi_parallel_0.v"
+       type="VERILOG"
+       attributes="" />
+  </generatedFiles>
+  <childGeneratedFiles/>
+  <sourceFiles>
+   <file
+       path="/home/ahaas/intelFPGA_lite/24.1std/ip/altera/altera_asmi_parallel/altera_asmi_parallel_hw.tcl" />
+  </sourceFiles>
+  <childSourceFiles/>
+  <instantiator instantiator="asmi" as="asmi_parallel_0" />
+  <messages>
+   <message level="Debug" culprit="asmi">queue size: 0 starting:altera_asmi_parallel "submodules/asmi_asmi_parallel_0"</message>
+   <message level="Info" culprit="asmi_parallel_0">generating top-level entity asmi_asmi_parallel_0</message>
+   <message level="Info" culprit="asmi_parallel_0"><![CDATA["<b>asmi</b>" instantiated <b>altera_asmi_parallel</b> "<b>asmi_parallel_0</b>"]]></message>
+  </messages>
+ </entity>
+</deploy>

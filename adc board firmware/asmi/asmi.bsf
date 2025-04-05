@@ -1,0 +1,181 @@
+/*
+WARNING: Do NOT edit the input and output ports in this file in a text
+editor if you plan to continue editing the block that represents it in
+the Block Editor! File corruption is VERY likely to occur.
+*/
+/*
+Copyright (C) 2025  Altera Corporation. All rights reserved.
+Your use of Altera Corporation's design tools, logic functions 
+and other software and tools, and any partner logic 
+functions, and any output files from any of the foregoing 
+(including device programming or simulation files), and any 
+associated documentation or information are expressly subject 
+to the terms and conditions of the Altera Program License 
+Subscription Agreement, the Altera Quartus Prime License Agreement,
+the Altera IP License Agreement, or other applicable license
+agreement, including, without limitation, that your use is for
+the sole purpose of programming logic devices manufactured by
+Altera and sold by Altera or its authorized distributors.  Please
+refer to the Altera Software License Subscription Agreements 
+on the Quartus Prime software download page.
+*/
+(header "symbol" (version "1.1"))
+(symbol
+	(rect 0 0 304 384)
+	(text "asmi" (rect 139 -1 157 11)(font "Arial" (font_size 10)))
+	(text "inst" (rect 8 368 20 380)(font "Arial" ))
+	(port
+		(pt 0 72)
+		(input)
+		(text "addr[23..0]" (rect 0 0 42 12)(font "Arial" (font_size 8)))
+		(text "addr[23..0]" (rect 4 61 70 72)(font "Arial" (font_size 8)))
+		(line (pt 0 72)(pt 80 72)(line_width 3))
+	)
+	(port
+		(pt 0 112)
+		(input)
+		(text "bulk_erase" (rect 0 0 43 12)(font "Arial" (font_size 8)))
+		(text "bulk_erase" (rect 4 101 64 112)(font "Arial" (font_size 8)))
+		(line (pt 0 112)(pt 80 112)(line_width 1))
+	)
+	(port
+		(pt 0 152)
+		(input)
+		(text "clkin" (rect 0 0 16 12)(font "Arial" (font_size 8)))
+		(text "clkin" (rect 4 141 34 152)(font "Arial" (font_size 8)))
+		(line (pt 0 152)(pt 80 152)(line_width 1))
+	)
+	(port
+		(pt 0 192)
+		(input)
+		(text "datain[7..0]" (rect 0 0 42 12)(font "Arial" (font_size 8)))
+		(text "datain[7..0]" (rect 4 181 76 192)(font "Arial" (font_size 8)))
+		(line (pt 0 192)(pt 80 192)(line_width 3))
+	)
+	(port
+		(pt 0 232)
+		(input)
+		(text "rden" (rect 0 0 17 12)(font "Arial" (font_size 8)))
+		(text "rden" (rect 4 221 28 232)(font "Arial" (font_size 8)))
+		(line (pt 0 232)(pt 80 232)(line_width 1))
+	)
+	(port
+		(pt 0 272)
+		(input)
+		(text "read" (rect 0 0 17 12)(font "Arial" (font_size 8)))
+		(text "read" (rect 4 261 28 272)(font "Arial" (font_size 8)))
+		(line (pt 0 272)(pt 80 272)(line_width 1))
+	)
+	(port
+		(pt 0 312)
+		(input)
+		(text "reset" (rect 0 0 20 12)(font "Arial" (font_size 8)))
+		(text "reset" (rect 4 301 34 312)(font "Arial" (font_size 8)))
+		(line (pt 0 312)(pt 80 312)(line_width 1))
+	)
+	(port
+		(pt 0 352)
+		(input)
+		(text "write" (rect 0 0 17 12)(font "Arial" (font_size 8)))
+		(text "write" (rect 4 341 34 352)(font "Arial" (font_size 8)))
+		(line (pt 0 352)(pt 80 352)(line_width 1))
+	)
+	(port
+		(pt 304 72)
+		(output)
+		(text "busy" (rect 0 0 20 12)(font "Arial" (font_size 8)))
+		(text "busy" (rect 278 61 302 72)(font "Arial" (font_size 8)))
+		(line (pt 304 72)(pt 208 72)(line_width 1))
+	)
+	(port
+		(pt 304 112)
+		(output)
+		(text "data_valid" (rect 0 0 40 12)(font "Arial" (font_size 8)))
+		(text "data_valid" (rect 252 101 312 112)(font "Arial" (font_size 8)))
+		(line (pt 304 112)(pt 208 112)(line_width 1))
+	)
+	(port
+		(pt 304 152)
+		(output)
+		(text "dataout[7..0]" (rect 0 0 48 12)(font "Arial" (font_size 8)))
+		(text "dataout[7..0]" (rect 242 141 320 152)(font "Arial" (font_size 8)))
+		(line (pt 304 152)(pt 208 152)(line_width 3))
+	)
+	(port
+		(pt 304 192)
+		(output)
+		(text "illegal_erase" (rect 0 0 47 12)(font "Arial" (font_size 8)))
+		(text "illegal_erase" (rect 241 181 319 192)(font "Arial" (font_size 8)))
+		(line (pt 304 192)(pt 208 192)(line_width 1))
+	)
+	(port
+		(pt 304 232)
+		(output)
+		(text "illegal_write" (rect 0 0 42 12)(font "Arial" (font_size 8)))
+		(text "illegal_write" (rect 244 221 322 232)(font "Arial" (font_size 8)))
+		(line (pt 304 232)(pt 208 232)(line_width 1))
+	)
+	(drawing
+		(text "addr" (rect 55 43 134 99)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "addr" (rect 85 67 194 144)(font "Arial" (color 0 0 0)))
+		(text "bulk_erase" (rect 16 83 92 179)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "bulk_erase" (rect 85 107 230 224)(font "Arial" (color 0 0 0)))
+		(text "busy" (rect 209 43 442 99)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "busy" (rect 184 67 392 144)(font "Arial" (color 0 0 0)))
+		(text "clkin" (rect 55 123 140 259)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "clk" (rect 85 147 188 304)(font "Arial" (color 0 0 0)))
+		(text "data_valid" (rect 209 83 478 179)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "data_valid" (rect 161 107 382 224)(font "Arial" (color 0 0 0)))
+		(text "datain" (rect 46 163 128 339)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "datain" (rect 85 187 206 384)(font "Arial" (color 0 0 0)))
+		(text "dataout" (rect 209 123 460 259)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "dataout" (rect 174 147 390 304)(font "Arial" (color 0 0 0)))
+		(text "illegal_erase" (rect 209 163 496 339)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "illegal_erase" (rect 152 187 382 384)(font "Arial" (color 0 0 0)))
+		(text "illegal_write" (rect 209 203 496 419)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "illegal_write" (rect 156 227 390 464)(font "Arial" (color 0 0 0)))
+		(text "rden" (rect 55 203 134 419)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "rden" (rect 85 227 194 464)(font "Arial" (color 0 0 0)))
+		(text "read" (rect 55 243 134 499)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "read" (rect 85 267 194 544)(font "Arial" (color 0 0 0)))
+		(text "reset" (rect 51 283 132 579)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "reset" (rect 85 307 200 624)(font "Arial" (color 0 0 0)))
+		(text "write" (rect 52 323 134 659)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "write" (rect 85 347 200 704)(font "Arial" (color 0 0 0)))
+		(text " asmi " (rect 281 368 598 746)(font "Arial" ))
+		(line (pt 80 32)(pt 208 32)(line_width 1))
+		(line (pt 208 32)(pt 208 368)(line_width 1))
+		(line (pt 80 368)(pt 208 368)(line_width 1))
+		(line (pt 80 32)(pt 80 368)(line_width 1))
+		(line (pt 81 52)(pt 81 76)(line_width 1))
+		(line (pt 82 52)(pt 82 76)(line_width 1))
+		(line (pt 81 92)(pt 81 116)(line_width 1))
+		(line (pt 82 92)(pt 82 116)(line_width 1))
+		(line (pt 207 52)(pt 207 76)(line_width 1))
+		(line (pt 206 52)(pt 206 76)(line_width 1))
+		(line (pt 81 132)(pt 81 156)(line_width 1))
+		(line (pt 82 132)(pt 82 156)(line_width 1))
+		(line (pt 207 92)(pt 207 116)(line_width 1))
+		(line (pt 206 92)(pt 206 116)(line_width 1))
+		(line (pt 81 172)(pt 81 196)(line_width 1))
+		(line (pt 82 172)(pt 82 196)(line_width 1))
+		(line (pt 207 132)(pt 207 156)(line_width 1))
+		(line (pt 206 132)(pt 206 156)(line_width 1))
+		(line (pt 207 172)(pt 207 196)(line_width 1))
+		(line (pt 206 172)(pt 206 196)(line_width 1))
+		(line (pt 207 212)(pt 207 236)(line_width 1))
+		(line (pt 206 212)(pt 206 236)(line_width 1))
+		(line (pt 81 212)(pt 81 236)(line_width 1))
+		(line (pt 82 212)(pt 82 236)(line_width 1))
+		(line (pt 81 252)(pt 81 276)(line_width 1))
+		(line (pt 82 252)(pt 82 276)(line_width 1))
+		(line (pt 81 292)(pt 81 316)(line_width 1))
+		(line (pt 82 292)(pt 82 316)(line_width 1))
+		(line (pt 81 332)(pt 81 356)(line_width 1))
+		(line (pt 82 332)(pt 82 356)(line_width 1))
+		(line (pt 0 0)(pt 304 0)(line_width 1))
+		(line (pt 304 0)(pt 304 384)(line_width 1))
+		(line (pt 0 384)(pt 304 384)(line_width 1))
+		(line (pt 0 0)(pt 0 384)(line_width 1))
+	)
+)

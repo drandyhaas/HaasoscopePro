@@ -1,0 +1,29 @@
+Info: Starting: Create block symbol file (.bsf)
+Info: qsys-generate "/home/ahaas/Downloads/HaasoscopePro/adc board firmware/asmi.qsys" --block-symbol-file --output-directory="/home/ahaas/Downloads/HaasoscopePro/adc board firmware/asmi" --family="Cyclone IV E" --part=EP4CE30F23C6
+Progress: Loading adc board firmware/asmi.qsys
+Progress: Reading input file
+Progress: Adding asmi_parallel_0 [altera_asmi_parallel 24.1]
+Progress: Parameterizing module asmi_parallel_0
+Progress: Building connections
+Progress: Parameterizing connections
+Progress: Validating
+Progress: Done reading input file
+Info: qsys-generate succeeded.
+Info: Finished: Create block symbol file (.bsf)
+Info: 
+Info: Starting: Create HDL design files for synthesis
+Info: qsys-generate "/home/ahaas/Downloads/HaasoscopePro/adc board firmware/asmi.qsys" --synthesis=VERILOG --output-directory="/home/ahaas/Downloads/HaasoscopePro/adc board firmware/asmi/synthesis" --family="Cyclone IV E" --part=EP4CE30F23C6
+Progress: Loading adc board firmware/asmi.qsys
+Progress: Reading input file
+Progress: Adding asmi_parallel_0 [altera_asmi_parallel 24.1]
+Progress: Parameterizing module asmi_parallel_0
+Progress: Building connections
+Progress: Parameterizing connections
+Progress: Validating
+Progress: Done reading input file
+Info: asmi: Generating "asmi" for QUARTUS_SYNTH
+Info: asmi_parallel_0: generating top-level entity asmi_asmi_parallel_0
+Info: asmi_parallel_0: "asmi" instantiated altera_asmi_parallel "asmi_parallel_0"
+Info: asmi: Done "asmi" with 2 modules, 2 files
+Info: qsys-generate succeeded.
+Info: Finished: Create HDL design files for synthesis

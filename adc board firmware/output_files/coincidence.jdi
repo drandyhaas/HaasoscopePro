@@ -1,8 +1,16 @@
 <sld_project_info>
   <project>
-    <hash md5_digest_80b="72e89e4dec946eb27fa2"/>
+    <hash md5_digest_80b="5362020414ac6af94c6a"/>
   </project>
   <file_info>
     <file device="EP4CE30F23C6" path="coincidence.sof" usercode="0xFFFFFFFF"/>
   </file_info>
+  <sld_infos>
+    <sld_info hpath="asmi:inst4" name="inst4">
+      <assignment_values>
+        <assignment_value text="QSYS_NAME asmi HAS_SOPCINFO 1 GENERATION_ID 1743820170"/>
+      </assignment_values>
+      <parameters/>
+    </sld_info>
+  </sld_infos>
 </sld_project_info>
