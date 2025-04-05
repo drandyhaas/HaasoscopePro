@@ -1,3 +1,8 @@
+// Sequence of register writes that triggers sending 4 bytes usb response.
+`define SEND_STD_USB_RESPONSE \
+    length <= 4; \
+    o_tvalid <= 1'b1; \
+    state <= TX_DATA_CONST;
 
 module command_processor (
 	input  wire        rstn,
@@ -202,9 +207,11 @@ always @ (posedge clklvds or negedge rstn) begin
 				triggercounter <= 0; // will also use this to keep recording enough samples after the trigger, so reset
 
 				case(triggertype_sync)
+					8'd0 : ; // disable conditional triggering
 					8'd1 : acqstate <= 8'd1; // threshold trigger rising edge
 					8'd2 : acqstate <= 8'd3; // threshold trigger falling edge
 					8'd3 : acqstate <= 8'd5; // external trigger
+					8'd4 : acqstate <= 8'd6; // auto trigger (forces waveform capture unconditionally)
 					default: begin
 						// Does this ever happen?
 						ram_address_triggered <= ram_wr_address; // remember where the trigger happened
@@ -336,6 +343,24 @@ always @ (posedge clklvds or negedge rstn) begin
             end
 		end
 
+		6: begin
+			// We end up here when triggertype is set to 4 (auto trigger). When we enter here triggercounter is 0,
+			// so we will accumlate pre-trigger samples, then record trigger position and move on to step 250 where
+			// reminder of the data (after-trigger samples) will be accumlated. This to force waveform capture
+			// call force-arm-trigger function with trigger type set to 4.
+			if (triggercounter<prelengthtotake_sync) begin
+				if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) begin
+					triggercounter <= triggercounter + 16'd1;
+				end
+			end else begin
+				ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+				lvdsout_trig <= 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
+				lvdsout_trig_b <= 1'b1; // and backwards
+				downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+				acqstate <= 8'd250;
+			end
+		end
+
 		250 : begin // triggered, now taking more data
 			lvdsout_trig <= 0; // stop telling the others forwards
 			lvdsout_trig_b <= 0; // and backwards
@@ -449,9 +474,7 @@ always @ (posedge clk or negedge rstn) begin
                 lengthtotake <= {rx_data[5],rx_data[4]};
                 if (acqstate_sync == 0) triggerlive <= 1'b1; // gets reset in INIT state
                 o_tdata <= {4'd0,sample_triggered_sync,acqstate_sync}; // return acqstate, so we can see if we have an event ready to be read out, and which samples triggered (to prevent jitter)
-                length <= 4;
-                o_tvalid <= 1'b1;
-                state <= TX_DATA_CONST;
+                `SEND_STD_USB_RESPONSE
             end
 
             2 : begin // reads version or does other stuff
@@ -476,9 +499,7 @@ always @ (posedge clk or negedge rstn) begin
                     dorolling <= rx_data[2][0];
                     o_tdata <= dorolling;
                 end
-                length <= 4;
-                o_tvalid <= 1'b1;
-                state <= TX_DATA_CONST;
+                `SEND_STD_USB_RESPONSE
             end
 
             3 : begin // SPI command
@@ -548,9 +569,7 @@ always @ (posedge clk or negedge rstn) begin
                     if (spicscounter==6'd35) begin // wait a bit before setting cs high
                         spicscounter<=6'd0;
                         spistate <= 4'd0;
-                        length <= 4;
-                        o_tvalid <= 1'b1;
-                        state <= TX_DATA_CONST;
+                        `SEND_STD_USB_RESPONSE
                     end
                     else spicscounter <= spicscounter + 6'd1;
                 end
@@ -562,17 +581,13 @@ always @ (posedge clk or negedge rstn) begin
                 spireset_L <= 1'b0;
                 spi_mode <= rx_data[1][1:0];
                 o_tdata <= rx_data[1];
-                length <= 4;
-                o_tvalid <= 1'b1;
-                state <= TX_DATA_CONST;
+                `SEND_STD_USB_RESPONSE
             end
 
             5 : begin // reset plls
                 pllreset2 <= 1'b1;
                 o_tdata <= 5;
-                length <= 4;
-                o_tvalid <= 1'b1;
-                state <= TX_DATA_CONST;
+                `SEND_STD_USB_RESPONSE
             end
 
             6 : begin // for clock phase adjustment
@@ -588,9 +603,7 @@ always @ (posedge clk or negedge rstn) begin
             7 : begin // try to switch clocks
                 clkswitch <= ~clkswitch;
                 o_tdata <= {8'd0,8'd0,4'd0,lockinfo,7'd0,~clkswitch};
-                length <= 4;
-                o_tvalid <= 1'b1;
-                state <= TX_DATA_CONST;
+                `SEND_STD_USB_RESPONSE
             end
 
             8 : begin // trigger settings
@@ -600,9 +613,7 @@ always @ (posedge clk or negedge rstn) begin
                 triggerToT <= rx_data[5];
                 triggerchan <= rx_data[6][0];
                 o_tdata <= 8;
-                length <= 4;
-                o_tvalid <= 1'b1;
-                state <= TX_DATA_CONST;
+                `SEND_STD_USB_RESPONSE
             end
 
             9 : begin // downsample and highres settings
@@ -610,17 +621,13 @@ always @ (posedge clk or negedge rstn) begin
                 highres <= rx_data[2][0];
                 downsamplemerging <= rx_data[3];
                 o_tdata <= 9;
-                length <= 4;
-                o_tvalid <= 1'b1;
-                state <= TX_DATA_CONST;
+                `SEND_STD_USB_RESPONSE
             end
 
             10 : begin // boardout controls
                 boardout[rx_data[1][2:0]] <= rx_data[2][0]; // set bit given by rx_data1 to value in rx_data2
                 o_tdata <= boardout;
-                length <= 4;
-                o_tvalid <= 1'b1;
-                state <= TX_DATA_CONST;
+                `SEND_STD_USB_RESPONSE
             end
 
             11 : begin // LED controls
@@ -628,21 +635,17 @@ always @ (posedge clk or negedge rstn) begin
                 neo_color[1] <= {rx_data[7],rx_data[6],rx_data[5]};
                 send_color <= rx_data[1][0];
                 o_tdata <= 123;
-                length <= 4;
-                o_tvalid <= 1'b1;
-                state <= TX_DATA_CONST;
+                `SEND_STD_USB_RESPONSE
             end
 
             12 : begin
                 // Return acqstate, so we can see if we have an event ready to be read out,
                 // and which samples triggered (to prevent jitter)
                 o_tdata <= {4'd0,sample_triggered_sync,acqstate_sync};
-                length <= 4;
-                o_tvalid <= 1'b1;
-                state <= TX_DATA_CONST;
+                `SEND_STD_USB_RESPONSE
             end
 
-            13 : begin // arm trigger
+            13 : begin // force-arm-trigger function
                 if (acqstate_sync == 0 || acqstate_sync == 251) begin
                     triggertype <= rx_data[1]; // set the trigger type
                     channeltype <= rx_data[2]; // the channel type (bit0: single or dual, bit1: oversampling (swapped inputs))
@@ -665,9 +668,28 @@ always @ (posedge clk or negedge rstn) begin
                     // and for debuging current acqstate in the second.
                     o_tdata <= {8'd0, 8'd0, acqstate_sync, 8'd0};
                 end
-                length <= 4;
-                o_tvalid <= 1'b1;
-                state <= TX_DATA_CONST;
+                `SEND_STD_USB_RESPONSE
+            end
+
+            14 : begin // read-register function.
+                // Returns "register" (some are wires) value indentified by a number in rx_data[1].
+                case (rx_data[1])
+                    0 : o_tdata <= {22'd0, ram_preoffset};
+                    1 : o_tdata <= {22'd0, ram_address_triggered_sync};
+                    2 : o_tdata <= {28'd0, spistate};
+                    3 : o_tdata <= version;
+                    4 : o_tdata <= {24'd0, boardin};
+                    5 : o_tdata <= {24'd0, acqstate_sync};
+                    6 : o_tdata <= eventcounter_sync;
+                    7 : o_tdata <= {12'd0, sample_triggered_sync};
+                    8 : o_tdata <= {24'd0, downsamplemergingcounter_triggered_sync};
+                    9 : o_tdata <= {24'd0, downsamplemerging};
+                    10: o_tdata <= {27'd0, downsample};
+                    11: o_tdata <= {31'd0, highres};
+                    default:
+                    	o_tdata <= {32'd0};
+                endcase
+                `SEND_STD_USB_RESPONSE
             end
 				
 				14 : begin // read from flash
