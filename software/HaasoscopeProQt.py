@@ -560,30 +560,43 @@ class MainWindow(TemplateBaseClass):
         # print("highres",self.highresval)
         for usb in usbs: self.telldownsample(usb, self.downsample)
 
-        #for testing function below
-        #self.print_firmware_reads()
+        #for testing functions below
+        #self.flash_readall_to_file()
+        #self.flash_erase()
+        #c=2
+        #self.flash_read_print(20,0,c)
+        #self.flash_write(20,0,c,102)
+        #self.flash_read_print(20,0,c)
 
-    def print_firmware_reads(self):
-        def reverse_bits(byte):
-            reversed_byte = 0
-            for i in range(8):
-                if (byte >> i) & 1:
-                    reversed_byte |= 1 << (7 - i)
-            return reversed_byte
+    def flash_erase(self):
+        usbs[0].send(bytes([17, 0,0,0, 99, 99, 99, 99]))  # erase
+        res = usbs[0].recv(4)
+        time.sleep(1)
+        print("erase got", res[0])
 
+    def flash_write(self,a,b,c, valuetowrite):
+        usbs[0].send(bytes([16, a, b, c, reverse_bits(valuetowrite), 99, 99, 99]))  # write to address
+        res = usbs[0].recv(4)
+        print("write got", res[0])
+
+    def flash_read_print(self,a,b,c):
+        usbs[0].send(bytes([15, a, b, c, 99, 99, 99, 99]))  # read from address
+        res = usbs[0].recv(4)
+        print(a * 256 * 256 + b * 256 + c, "", reverse_bits(res[0]) )
+
+    def flash_readall_to_file(self):
         file = open("output.txt", "w")
         for k in range(20):
             for j in range(256):
                 for i in range(256):
-                    usbs[0].send(bytes([14, k, j, i, 99, 99, 99, 99])) # read from address {1,2,3}
+                    usbs[0].send(bytes([15, k, j, i, 99, 99, 99, 99])) # read from address
             res = usbs[0].recv(256*256*4)
             if len(res) == 256*256*4:
                 for j in range(256):
                     for i in range(256):
                         if (k*256*256 + j*256 + i)<1191788:
                             print(k*256*256 + j*256 + i, "", reverse_bits((res[256*4*j+4*i])), file=file)
-            else:
-                print("timeout?")
+            else: print("timeout?")
         file.close()
 
     def telldownsample(self, usb, ds):

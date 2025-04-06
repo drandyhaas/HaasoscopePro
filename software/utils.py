@@ -1,3 +1,10 @@
+def reverse_bits(byte):
+    reversed_byte = 0
+    for i in range(8):
+        if (byte >> i) & 1:
+            reversed_byte |= 1 << (7 - i)
+    return reversed_byte
+
 def binprint(x):
     return bin(x)[2:].zfill(8)
 

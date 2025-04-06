@@ -671,8 +671,8 @@ always @ (posedge clk or negedge rstn) begin
                 `SEND_STD_USB_RESPONSE
             end
 
-            14 : begin // read-register function.
-                // Returns "register" (some are wires) value indentified by a number in rx_data[1].
+            14 : begin // read-register function
+                // Returns "register" (some are wires) value indentified by a number in rx_data[1]
                 case (rx_data[1])
                     0 : o_tdata <= {22'd0, ram_preoffset};
                     1 : o_tdata <= {22'd0, ram_address_triggered_sync};
@@ -692,28 +692,87 @@ always @ (posedge clk or negedge rstn) begin
                 `SEND_STD_USB_RESPONSE
             end
 				
-				14 : begin // read from flash
+				15 : begin // read from flash
 					case (flashstate)
                0 : begin
-						if (!flash_busy) begin
+						if (!flash_busy) begin // wait for flash to not be busy, then start
 							flash_addr <= {rx_data[1],rx_data[2],rx_data[3]};
 							flash_rden <= 1'b1;
 							flash_read <= 1'b1;
+							flashstate <= 4'd1;
 						end
 						else begin
 							flash_rden <= 1'b0;
 							flash_read <= 1'b0;
-							flashstate <= 4'd1;
 						end
 					end
 					1 : begin
-						if (flash_data_valid) begin
+						if (flash_busy) begin // once busy, read has started
+							flash_rden <= 1'b0;
+							flash_read <= 1'b0;
+							flashstate <= 4'd2;
+						end
+					end
+					2 : begin
+						if (flash_data_valid) begin // once we got data, we're done
 							flashstate <= 4'd0;
 							o_tdata <= {8'd0, 8'd0, 8'd0, flash_dataout};
-							length <= 4;
-							o_tvalid <= 1'b1;
-							state <= TX_DATA_CONST;
+							`SEND_STD_USB_RESPONSE
 						end
+					end
+               default : flashstate <= 4'd0;
+               endcase
+				end
+				
+				16 : begin // write to flash
+					case (flashstate)
+               0 : begin
+						if (!flash_busy) begin // wait for flash to not be busy, then start
+							flash_addr <= {rx_data[1],rx_data[2],rx_data[3]};
+							flash_datain <= rx_data[4];
+							flash_write <= 1'b1;
+							flashstate <= 4'd1;
+						end
+						else begin
+							flash_write <= 1'b0;
+						end
+					end
+					1 : begin
+						if (flash_busy) begin // once busy, write has started
+							flash_write <= 1'b0;
+							flashstate <= 4'd2;
+						end
+					end
+					2 : begin // we'll return immediately, future operations will wait for busy to be deasserted
+						flashstate <= 4'd0;
+						o_tdata <= {8'd0, 8'd0, 8'd0, 8'd200};
+						`SEND_STD_USB_RESPONSE
+					end
+               default : flashstate <= 4'd0;
+               endcase
+				end
+				
+				17 : begin // erase flash
+					case (flashstate)
+               0 : begin
+						if (!flash_busy) begin // wait for flash to not be busy, then start
+							flash_bulk_erase <= 1'b1;
+							flashstate <= 4'd1;
+						end
+						else begin
+							flash_bulk_erase <= 1'b0;
+						end
+					end
+					1 : begin
+						if (flash_busy) begin // once busy, erase has started
+							flash_bulk_erase <= 1'b0;
+							flashstate <= 4'd2;
+						end
+					end
+					2 : begin // we'll return immediately, future operations will wait for busy to be deasserted
+						flashstate <= 4'd0;
+						o_tdata <= {8'd0, 8'd0, 8'd0, 8'd222};
+						`SEND_STD_USB_RESPONSE
 					end
                default : flashstate <= 4'd0;
                endcase

@@ -1,6 +1,8 @@
 /adc board firmware/db/
 /adc board firmware/incremental_db/
 /adc board firmware/*.rpt
+/adc board firmware/*.sopcinfo
+/adc board firmware/output_files/*.smsg
 /adc board firmware/output_files/*.rpt
 /adc board firmware/output_files/*.summary
 /adc board firmware/output_files/*.done

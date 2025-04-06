@@ -11,6 +11,5 @@ Extra Info (176238): Start inferring scan chains for DSP blocks
 Extra Info (176239): Inferring scan chains for DSP blocks is complete
 Extra Info (176248): Moving registers into I/O cells, Multiplier Blocks, and RAM blocks to improve timing and density
 Extra Info (176249): Finished moving registers into I/O cells, Multiplier Blocks, and RAM blocks
-Warning (15705): Ignored locations or region assignments to the following nodes
 Warning (171167): Found invalid Fitter assignments. See the Ignored Assignments panel in the Fitter Compilation Report for more information.
 Warning (169177): 21 pins must meet Intel FPGA requirements for 3.3-, 3.0-, and 2.5-V interfaces. For more information, refer to AN 447: Interfacing Cyclone IV E Devices with 3.3/3.0/2.5-V LVTTL/LVCMOS I/O Systems.
