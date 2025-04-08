@@ -27,8 +27,37 @@ def inttobytes(theint):  # convert length number to a 4-byte byte array (with ty
 
 def send_leds(usb, r1,g1,b1, r2,g2,b2):
     usb.send(bytes([11, 1, g1, r1, b1, g2, r2, b2]))  # send
-    res = usb.recv(4)
-    #print("got back", res[0])
+    usb.recv(4)
     usb.send(bytes([11, 0, g1, r1, b1, g2, r2, b2]))  # stop sending
+    usb.recv(4)
+
+def flash_erase(usb):
+    usb.send(bytes([17, 0,0,0, 99, 99, 99, 99]))  # erase
     res = usb.recv(4)
-    #print("got back", res[0])
+    time.sleep(1)
+    print("erase got", res[0])
+
+def flash_write(usb, byte3, byte2, byte1, valuetowrite):
+    usb.send(bytes([16, byte3, byte2, byte1, reverse_bits(valuetowrite), 99, 99, 99]))  # write to address
+    res = usb.recv(4)
+    print("write got", res[0])
+
+def flash_read_print(usb, byte3, byte2, byte1):
+    usb.send(bytes([15, byte3, byte2, byte1, 99, 99, 99, 99]))  # read from address
+    res = usb.recv(4)
+    print(byte3 * 256 * 256 + byte2 * 256 + byte1, "", reverse_bits(res[0]) )
+
+def flash_readall_to_file(usb):
+    file = open("output.txt", "w")
+    for k in range(20):
+        for j in range(256):
+            for i in range(256):
+                usb.send(bytes([15, k, j, i, 99, 99, 99, 99])) # read from address
+        res = usb.recv(256*256*4)
+        if len(res) == 256*256*4:
+            for j in range(256):
+                for i in range(256):
+                    if (k*256*256 + j*256 + i)<1191788:
+                        print(k*256*256 + j*256 + i, "", reverse_bits((res[256*4*j+4*i])), file=file)
+        else: print("timeout?")
+    file.close()
