@@ -1080,7 +1080,7 @@
          </font>
         </property>
         <property name="text">
-         <string>Show persist</string>
+         <string>Persist (Direct)</string>
         </property>
        </widget>
        <widget class="QLabel" name="label_11">
