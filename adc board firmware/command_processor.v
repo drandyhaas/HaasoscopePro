@@ -861,7 +861,7 @@ always @ (posedge clk or negedge rstn) begin
 						o_tdata  <= {lvdsbitsin[14*(38-channel) +: 12], 4'd0, lvdsbitsin[14*(39-channel) +: 12], 4'd0};
 					 end
 					 else begin // two channel mode
-						o_tdata  <= {lvdsbitsin[14*(channel2+1) +: 12], 4'd0, lvdsbitsin[14*channel2 +: 12], 4'd0};
+						o_tdata  <= {lvdsbitsin[14*(38-channel2) +: 12], 4'd0, lvdsbitsin[14*(39-channel2) +: 12], 4'd0};
 					 end
                 channel <= channel + 6'd2;
                 channel2 <= channel2 + 6'd2;
@@ -875,9 +875,9 @@ always @ (posedge clk or negedge rstn) begin
                 if (length >= 4) begin
                     length <= length - 16'd4;
 						  
-						  //if (channel==10) channel2 <= 6'd20;
-						  //if (channel==20) channel2 <= 6'd10;
-						  //if (channel==30) channel2 <= 6'd30;
+						  if (channel==10) channel2 <= 6'd20;
+						  if (channel==20) channel2 <= 6'd10;
+						  if (channel==30) channel2 <= 6'd30;
 						  
                     if (channel==50) begin
                         channel <= 0;

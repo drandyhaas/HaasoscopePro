@@ -842,15 +842,13 @@ class MainWindow(TemplateBaseClass):
         nbadclkD = 0
         nbadstr = 0
         unpackedsamples = struct.unpack('<' + 'h' * (len(data) // 2), data)
-        downsampleoffset = int(2 * (self.sample_triggered[board] + (downsamplemergingcounter-1)%self.downsamplemerging * 10) / self.downsamplemerging)
+        downsampleoffset = 2 * (self.sample_triggered[board] + (downsamplemergingcounter-1)%self.downsamplemerging * 10) // self.downsamplemerging
         if not self.dotwochannel: downsampleoffset *= 2
-        if self.doexttrig[board]: downsampleoffset -= int(self.toff/self.downsamplefactor)
+        if self.doexttrig[board]: downsampleoffset -= self.toff // self.downsamplefactor
         datasize = self.xydata[board][1].size
         for s in range(0, self.expect_samples+self.expect_samples_extra):
-            n2 = 0
-            chan2 = 0
             for n in range(self.nsubsamples): # the subsample to get
-                val = unpackedsamples[self.nsubsamples * s + n]
+                val = unpackedsamples[self.nsubsamples * s + n] # this will be 16x larger than the 12 bit value, since it's shifted 4 bits to the left
 
                 if 40 <= n < 44:
                     if val!=336 and val!= 682:
@@ -871,25 +869,12 @@ class MainWindow(TemplateBaseClass):
                         val += self.extrigboardmeancorrection
                         val *= self.extrigboardstdcorrection
                     if self.dotwochannel:
-                        if n==10:
-                            n2=0
-                            chan2=1
-                        if n==20:
-                            n2=10
-                            chan2=0
-                        if n==30:
-                            n2=10
-                            chan2=1
-                        samp = s*20 + 19 - n2 - downsampleoffset
-                        #samp = s*20 + n - downsampleoffset
-                        n2 += 1
-                        #if s==0:print("n",n,"chan2",chan2,"samp",samp+downsampleoffset)
-                        if samp < datasize:
-                            self.xydata[board*self.num_chan_per_board + chan2][1][samp] = val
+                        samp = s*20 + n - downsampleoffset
+                        if n>=20: samp -= 20
+                        if samp < datasize: self.xydata[board*self.num_chan_per_board + (n<20) ][1][samp] = val
                     else:
                         samp = s*40 + n - downsampleoffset
-                        if samp < datasize:
-                            self.xydata[board*self.num_chan_per_board][1][samp] = val
+                        if samp < datasize: self.xydata[board*self.num_chan_per_board][1][samp] = val
 
         self.adjustclocks(board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr)
         if board == self.activeboard:
