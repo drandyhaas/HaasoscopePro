@@ -1,2 +1,2 @@
 Warning (335093): The Timing Analyzer is analyzing 1 combinational loops as latches. For more details, run the Check Timing command in the Timing Analyzer or view the "User-Specified and Inferred Latches" table in the Analysis & Synthesis report.
-Warning (332174): Ignored filter at coincidence.sdc(28): otherclkpll* could not be matched with a clock File: /home/ahaas/Downloads/HaasoscopePro/adc board firmware/coincidence.sdc Line: 28
+Warning (332174): Ignored filter at coincidence.sdc(28): otherclkpll* could not be matched with a clock File: C:/gitwork/master/HaasoscopePro/adc board firmware/coincidence.sdc Line: 28

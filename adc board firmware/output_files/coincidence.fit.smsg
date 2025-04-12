@@ -2,7 +2,7 @@ Warning (292013): Feature LogicLock is only available with a valid subscription 
 Warning (15714): Some pins have incomplete I/O assignments. Refer to the I/O Assignment Warnings report for details
 Warning (176674): Following 64 pins are differential I/O pins but do not have their complement pins. Hence, the Fitter automatically created the complement pins.
 Warning (335093): The Timing Analyzer is analyzing 1 combinational loops as latches. For more details, run the Check Timing command in the Timing Analyzer or view the "User-Specified and Inferred Latches" table in the Analysis & Synthesis report.
-Warning (332174): Ignored filter at coincidence.sdc(28): otherclkpll* could not be matched with a clock File: /home/ahaas/Downloads/HaasoscopePro/adc board firmware/coincidence.sdc Line: 28
+Warning (332174): Ignored filter at coincidence.sdc(28): otherclkpll* could not be matched with a clock File: C:/gitwork/master/HaasoscopePro/adc board firmware/coincidence.sdc Line: 28
 Extra Info (176273): Performing register packing on registers with non-logic cell location assignments
 Extra Info (176274): Completed register packing on registers with non-logic cell location assignments
 Extra Info (176236): Started Fast Input/Output/OE register processing
@@ -12,4 +12,3 @@ Extra Info (176239): Inferring scan chains for DSP blocks is complete
 Extra Info (176248): Moving registers into I/O cells, Multiplier Blocks, and RAM blocks to improve timing and density
 Extra Info (176249): Finished moving registers into I/O cells, Multiplier Blocks, and RAM blocks
 Warning (171167): Found invalid Fitter assignments. See the Ignored Assignments panel in the Fitter Compilation Report for more information.
-Warning (169177): 21 pins must meet Intel FPGA requirements for 3.3-, 3.0-, and 2.5-V interfaces. For more information, refer to AN 447: Interfacing Cyclone IV E Devices with 3.3/3.0/2.5-V LVTTL/LVCMOS I/O Systems.

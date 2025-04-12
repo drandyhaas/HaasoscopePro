@@ -6,6 +6,7 @@ from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
 from PyQt5.QtGui import QPalette, QColor
 from scipy.optimize import curve_fit
 from scipy.signal import resample
+import struct
 from usbs import *
 from board import *
 
@@ -840,74 +841,41 @@ class MainWindow(TemplateBaseClass):
         nbadclkC = 0
         nbadclkD = 0
         nbadstr = 0
+        unpackedsamples = struct.unpack('<' + 'h' * (len(data) // 2), data)
+        downsampleoffset = int(4 * (self.sample_triggered[board] + (downsamplemergingcounter-1)%self.downsamplemerging * 10) / self.downsamplemerging)
+        datasize = self.xydata[board][1].size
         for s in range(0, self.expect_samples+self.expect_samples_extra):
-            subsamples = data[self.nsubsamples*2*s: self.nsubsamples*2*(s+1)]
             for n in range(self.nsubsamples): # the subsample to get
-                pbyte = 2 * n
-                lowbits = subsamples[pbyte + 0]
-                highbits = subsamples[pbyte + 1]
-                if n < 40 and highbits>=8: # getbit(highbits, 3):
-                    highbits = (highbits - 16) * 256
-                else:
-                    highbits = highbits * 256
-                val = highbits + lowbits
-                chan = int(n/10)
+                val = unpackedsamples[self.nsubsamples * s + n] // 16
+                chan = n // 10
 
-                if n == 40 and val & 0x5555 != 4369 and val & 0x5555 != 17476:
-                    nbadclkA = nbadclkA + 1
-                elif n == 41 and val & 0x5555 != 1 and val & 0x5555 != 4:
-                    nbadclkA = nbadclkA + 1
-                elif n == 42 and val & 0x5555 != 4369 and val & 0x5555 != 17476:
-                    nbadclkB = nbadclkB + 1
-                elif n == 43 and val & 0x5555 != 1 and val & 0x5555 != 4:
-                    nbadclkB = nbadclkB + 1
-                elif n == 44 and val & 0x5555 != 4369 and val & 0x5555 != 17476:
-                    nbadclkC = nbadclkC + 1
-                elif n == 45 and val & 0x5555 != 1 and val & 0x5555 != 4:
-                    nbadclkC = nbadclkC + 1
-                elif n == 46 and val & 0x5555 != 4369 and val & 0x5555 != 17476:
-                    nbadclkD = nbadclkD + 1
-                elif n == 47 and val & 0x5555 != 1 and val & 0x5555 != 4:
-                    nbadclkD = nbadclkD + 1
-                # if 40<=n<48 and nbadclkD:
-                #    print("s=", s, "n=", n, "pbyte=", pbyte, "chan=", chan, binprint(data[pbyte + 1]), binprint(data[pbyte + 0]), val)
+                if 40 <= n < 44:
+                    if val!=21 and val!= 42:
+                        if n == 40: nbadclkA += 1
+                        elif n == 41: nbadclkB += 1
+                        elif n == 42: nbadclkC += 1
+                        elif n == 43: nbadclkD += 1
+                        #print("s=", s, "n=", n, "clk", val, binprint(val))
 
-                if 40 <= n < 48:
-                    strobe = val & 0xaaaa
-                    if strobe != 0:
-                        if strobe != 8 and strobe != 128 and strobe != 2048 and strobe != 32768:
-                            if strobe * 4 != 8 and strobe * 4 != 128 and strobe * 4 != 2048 and strobe * 4 != 32768:
-                                if self.debugstrobe: print("s=", s, "n=", n, "str", binprint(strobe), strobe)
-                                nbadstr = nbadstr + 1
+                if 44 <= n < 48:
+                    if val!=0 and val!=2 and val!=8 and val!=32:
+                        nbadstr = nbadstr + 1
+                        #print("s=", s, "n=", n, "str", val, binprint(val))
 
-                if self.debug and self.debugprint:
-                    goodval = -1
-                    if s < 0 or (n < 40 and val != 0 and val != goodval):
-                        if self.showbinarydata and n < 40:
-                            # if s<0 or chan!=3 or (chan==3 and val!=255 and val!=511 and val!=1023 and val!=2047):
-                            if s < 100:
-                                if lowbits > 0 or highbits > 0:
-                                    print("s=", s, "n=", n, "pbyte=", pbyte, "chan=", chan, binprint(data[pbyte + 1]),
-                                          binprint(data[pbyte + 0]), val)
-                        elif n < 40:
-                            print("s=", s, "n=", n, "pbyte=", pbyte, "chan=", chan, hex(data[pbyte + 1]),
-                                  hex(data[pbyte + 0]))
                 if n < 40:
                     val = val * self.yscale
                     if self.dooversample and board%2==0:
                         val += self.extrigboardmeancorrection
                         val *= self.extrigboardstdcorrection
                     if self.dotwochannel:
-                        samp = s * 20 + 19 - n%10 - int(chan/2)*10
-                        samp = samp - int(2 * (self.sample_triggered[board] + (downsamplemergingcounter-1)%self.downsamplemerging * 10) / self.downsamplemerging)
+                        samp = s * 20 + 19 - n%10 - chan*5 - downsampleoffset
                         if self.doexttrig[board]: samp = samp + int(self.toff/self.downsamplefactor)
-                        if samp >= self.xydata[board * self.num_chan_per_board + chan % 2][1].size: continue
+                        if samp >= datasize: continue
                         self.xydata[board * self.num_chan_per_board + chan % 2][1][samp] = val
                     else:
-                        samp = s * 40 + 39 - n
-                        samp = samp - int(4 * (self.sample_triggered[board] + (downsamplemergingcounter-1)%self.downsamplemerging * 10) / self.downsamplemerging)
+                        samp = s * 40 + 39 - n - downsampleoffset
                         if self.doexttrig[board]: samp = samp + int(self.toff/self.downsamplefactor)
-                        if samp >= self.xydata[board][1].size: continue
+                        if samp >= datasize: continue
                         self.xydata[board*self.num_chan_per_board][1][samp] = val
 
         self.adjustclocks(board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr)

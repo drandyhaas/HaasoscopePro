@@ -817,30 +817,46 @@ always @ (posedge clk or negedge rstn) begin
                 o_tvalid <= 1'b1;
                 if (channel==48) o_tdata <= {16'hbeef,16'hdead};//marker
                 else if (channel==46) o_tdata  <= {
-                    12'd0,
-                    lvdsbitsin[14*39+12 +: 2], //sampleclkstr39
-                    lvdsbitsin[14*38+12 +: 2],lvdsbitsin[14*37+12 +: 2],lvdsbitsin[14*36+12 +: 2],lvdsbitsin[14*35+12 +: 2],lvdsbitsin[14*34+12 +: 2],lvdsbitsin[14*33+12 +: 2],lvdsbitsin[14*32+12 +: 2],lvdsbitsin[14*31+12 +: 2],
-                    lvdsbitsin[14*30+12 +: 2], //sampleclkstr30
+                    6'd0,
+						  lvdsbitsin[14*39+13], //samplestr39
+                    lvdsbitsin[14*38+13],lvdsbitsin[14*37+13],lvdsbitsin[14*36+13],lvdsbitsin[14*35+13],lvdsbitsin[14*34+13],lvdsbitsin[14*33+13],lvdsbitsin[14*32+13],lvdsbitsin[14*31+13],
+                    lvdsbitsin[14*30+13], //samplestr30
+                    6'd0,
+                    lvdsbitsin[14*29+13], //samplestr29
+                    lvdsbitsin[14*28+13],lvdsbitsin[14*27+13],lvdsbitsin[14*26+13],lvdsbitsin[14*25+13],lvdsbitsin[14*24+13],lvdsbitsin[14*23+13],lvdsbitsin[14*22+13],lvdsbitsin[14*21+13],
+                    lvdsbitsin[14*20+13], //samplestr20
                     };
                 else if (channel==44) o_tdata  <= {
-                    12'd0,
-                    lvdsbitsin[14*29+12 +: 2], //sampleclkstr29
-                    lvdsbitsin[14*28+12 +: 2],lvdsbitsin[14*27+12 +: 2],lvdsbitsin[14*26+12 +: 2],lvdsbitsin[14*25+12 +: 2],lvdsbitsin[14*24+12 +: 2],lvdsbitsin[14*23+12 +: 2],lvdsbitsin[14*22+12 +: 2],lvdsbitsin[14*21+12 +: 2],
-                    lvdsbitsin[14*20+12 +: 2], //sampleclkstr20
+                    6'd0,
+						  lvdsbitsin[14*19+13], //samplestr19
+                    lvdsbitsin[14*18+13],lvdsbitsin[14*17+13],lvdsbitsin[14*16+13],lvdsbitsin[14*15+13],lvdsbitsin[14*14+13],lvdsbitsin[14*13+13],lvdsbitsin[14*12+13],lvdsbitsin[14*11+13],
+                    lvdsbitsin[14*10+13], //samplestr10
+						  6'd0,
+                    lvdsbitsin[14*9+13], //samplestr9
+                    lvdsbitsin[14*8+13],lvdsbitsin[14*7+13],lvdsbitsin[14*6+13],lvdsbitsin[14*5+13],lvdsbitsin[14*4+13],lvdsbitsin[14*3+13],lvdsbitsin[14*2+13],lvdsbitsin[14*1+13],
+                    lvdsbitsin[14*0+13], //samplestr0
                     };
                 else if (channel==42) o_tdata  <= {
-                    12'd0,
-                    lvdsbitsin[14*19+12 +: 2], //sampleclkstr19
-                    lvdsbitsin[14*18+12 +: 2],lvdsbitsin[14*17+12 +: 2],lvdsbitsin[14*16+12 +: 2],lvdsbitsin[14*15+12 +: 2],lvdsbitsin[14*14+12 +: 2],lvdsbitsin[14*13+12 +: 2],lvdsbitsin[14*12+12 +: 2],lvdsbitsin[14*11+12 +: 2],
-                    lvdsbitsin[14*10+12 +: 2], //sampleclkstr10
+                    6'd0,
+						  lvdsbitsin[14*39+12], //sampleclk39
+                    lvdsbitsin[14*38+12],lvdsbitsin[14*37+12],lvdsbitsin[14*36+12],lvdsbitsin[14*35+12],lvdsbitsin[14*34+12],lvdsbitsin[14*33+12],lvdsbitsin[14*32+12],lvdsbitsin[14*31+12],
+                    lvdsbitsin[14*30+12], //sampleclk30
+                    6'd0,
+                    lvdsbitsin[14*29+12], //sampleclk29
+                    lvdsbitsin[14*28+12],lvdsbitsin[14*27+12],lvdsbitsin[14*26+12],lvdsbitsin[14*25+12],lvdsbitsin[14*24+12],lvdsbitsin[14*23+12],lvdsbitsin[14*22+12],lvdsbitsin[14*21+12],
+                    lvdsbitsin[14*20+12], //sampleclk20
                     };
                 else if (channel==40) o_tdata  <= {
-                    12'd0,
-                    lvdsbitsin[14*9+12 +: 2], //sampleclkstr9
-                    lvdsbitsin[14*8+12 +: 2],lvdsbitsin[14*7+12 +: 2],lvdsbitsin[14*6+12 +: 2],lvdsbitsin[14*5+12 +: 2],lvdsbitsin[14*4+12 +: 2],lvdsbitsin[14*3+12 +: 2],lvdsbitsin[14*2+12 +: 2],lvdsbitsin[14*1+12 +: 2],
-                    lvdsbitsin[14*0+12 +: 2], //sampleclkstr0
+                    6'd0,
+						  lvdsbitsin[14*19+12], //sampleclk19
+                    lvdsbitsin[14*18+12],lvdsbitsin[14*17+12],lvdsbitsin[14*16+12],lvdsbitsin[14*15+12],lvdsbitsin[14*14+12],lvdsbitsin[14*13+12],lvdsbitsin[14*12+12],lvdsbitsin[14*11+12],
+                    lvdsbitsin[14*10+12], //sampleclk10
+						  6'd0,
+                    lvdsbitsin[14*9+12], //sampleclk9
+                    lvdsbitsin[14*8+12],lvdsbitsin[14*7+12],lvdsbitsin[14*6+12],lvdsbitsin[14*5+12],lvdsbitsin[14*4+12],lvdsbitsin[14*3+12],lvdsbitsin[14*2+12],lvdsbitsin[14*1+12],
+                    lvdsbitsin[14*0+12], //sampleclk0
                     };
-                else o_tdata  <= {4'd0, lvdsbitsin[14*(channel+1) +: 12], 4'd0, lvdsbitsin[14*channel +: 12]};
+                else o_tdata  <= {lvdsbitsin[14*(channel+1) +: 12], 4'd0, lvdsbitsin[14*channel +: 12], 4'd0};
                 channel <= channel + 6'd2;
                 state <= TX_DATA4;
             end
