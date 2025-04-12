@@ -113,7 +113,7 @@ class MainWindow(TemplateBaseClass):
     nbadclkD = 0
     nbadstr = 0
     eventcounter = [0] * num_board
-    nsubsamples = 10 * 4 + 8 + 2  # extra 4 for clk+str, and 2 dead beef
+    nsubsamples = 10 * 4 + 8 + 2  # extra 4+4 for clk+str, and 2 dead beef
     sample_triggered = [0] * num_board
     doeventcounter = False
     fitwidthfraction = 0.2
@@ -181,6 +181,7 @@ class MainWindow(TemplateBaseClass):
         self.db = False
         self.lastTime = time.time()
         self.fps = None
+        self.lastclk = -1
         self.lines = []
         self.otherlines = []
         self.savetofile = False  # save scope data to file
@@ -848,18 +849,19 @@ class MainWindow(TemplateBaseClass):
         datasize = self.xydata[board][1].size
         for s in range(0, self.expect_samples+self.expect_samples_extra):
             for n in range(self.nsubsamples): # the subsample to get
-                val = unpackedsamples[self.nsubsamples * s + n] # this will be 16x larger than the 12 bit value, since it's shifted 4 bits to the left
+                val = unpackedsamples[s*self.nsubsamples + n] # this will be 16x larger than the 12 bit value, since it's shifted 4 bits to the left
 
                 if 40 <= n < 44:
-                    if val!=336 and val!= 682:
+                    if val!=341 and val!= 682: # 0101010101 or 1010101010
                         if n == 40: nbadclkA += 1
-                        elif n == 41: nbadclkB += 1
-                        elif n == 42: nbadclkC += 1
-                        elif n == 43: nbadclkD += 1
+                        if n == 41: nbadclkB += 1
+                        if n == 42: nbadclkC += 1
+                        if n == 43: nbadclkD += 1
                         #print("s=", s, "n=", n, "clk", val, binprint(val))
+                    else: self.lastclk = val
 
                 if 44 <= n < 48:
-                    if val!=0 and val!=1 and val!=2 and val!=4 and val!=8 and val!=16 and val!=32 and val!=64 and val!=128 and val!=256 and val!=512:
+                    if val!=0 and val!=1 and val!=2 and val!=4 and val!=8 and val!=16 and val!=32 and val!=64 and val!=128 and val!=256 and val!=512: # 10 bits long, and just one 1
                         nbadstr = nbadstr + 1
                         #print("s=", s, "n=", n, "str", val, binprint(val))
 
@@ -871,7 +873,7 @@ class MainWindow(TemplateBaseClass):
                     if self.dotwochannel:
                         samp = s*20 + n - downsampleoffset
                         if n>=20: samp -= 20
-                        if samp < datasize: self.xydata[board*self.num_chan_per_board + (n<20) ][1][samp] = val
+                        if samp < datasize: self.xydata[board*self.num_chan_per_board + (n<20)][1][samp] = val
                     else:
                         samp = s*40 + n - downsampleoffset
                         if samp < datasize: self.xydata[board*self.num_chan_per_board][1][samp] = val
@@ -886,9 +888,9 @@ class MainWindow(TemplateBaseClass):
 
     def drawtext(self):  # happens once per second
         if not self.dodrawing: return
-        thestr = "Nbadclks A B C D " + str(self.nbadclkA) + " " + str(self.nbadclkB) + " " + str(
-            self.nbadclkC) + " " + str(self.nbadclkD)
+        thestr = "Nbadclks A B C D " + str(self.nbadclkA) + " " + str(self.nbadclkB) + " " + str(self.nbadclkC) + " " + str(self.nbadclkD)
         thestr += "\n" + "Nbadstrobes " + str(self.nbadstr)
+        thestr += "\n" + "Last clk "+str(self.lastclk)
         thestr += "\n" + gettemps(self.activeusb)
         thestr += "\n" + "Trigger threshold " + str(round(self.hline, 3))
         thestr += "\n" + "Mean " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.mean(self.xydata[self.activexychannel][1]), 3) ) + " mV"

@@ -405,6 +405,7 @@ integer overrange_counter[4];
 reg [15:0]	probecompcounter = 0;
 reg send_color = 1;
 reg [3:0] flashstate = 0;
+reg [31:0] o_tdatatemp = 0;
 
 always @ (posedge clk) begin
 	acqstate_sync <= acqstate;
@@ -817,51 +818,57 @@ always @ (posedge clk or negedge rstn) begin
             if (o_tready) begin
                 o_tvalid <= 1'b1;
                 if (channel==48) o_tdata <= {16'hbeef,16'hdead};//marker
-                else if (channel==46) o_tdata  <= {
-                    6'd0,
-						  lvdsbitsin[14*39+13], //samplestr39
-                    lvdsbitsin[14*38+13],lvdsbitsin[14*37+13],lvdsbitsin[14*36+13],lvdsbitsin[14*35+13],lvdsbitsin[14*34+13],lvdsbitsin[14*33+13],lvdsbitsin[14*32+13],lvdsbitsin[14*31+13],
-                    lvdsbitsin[14*30+13], //samplestr30
-                    6'd0,
-                    lvdsbitsin[14*29+13], //samplestr29
-                    lvdsbitsin[14*28+13],lvdsbitsin[14*27+13],lvdsbitsin[14*26+13],lvdsbitsin[14*25+13],lvdsbitsin[14*24+13],lvdsbitsin[14*23+13],lvdsbitsin[14*22+13],lvdsbitsin[14*21+13],
-                    lvdsbitsin[14*20+13], //samplestr20
-                    };
-                else if (channel==44) o_tdata  <= {
-                    6'd0,
-						  lvdsbitsin[14*19+13], //samplestr19
-                    lvdsbitsin[14*18+13],lvdsbitsin[14*17+13],lvdsbitsin[14*16+13],lvdsbitsin[14*15+13],lvdsbitsin[14*14+13],lvdsbitsin[14*13+13],lvdsbitsin[14*12+13],lvdsbitsin[14*11+13],
-                    lvdsbitsin[14*10+13], //samplestr10
-						  6'd0,
-                    lvdsbitsin[14*9+13], //samplestr9
-                    lvdsbitsin[14*8+13],lvdsbitsin[14*7+13],lvdsbitsin[14*6+13],lvdsbitsin[14*5+13],lvdsbitsin[14*4+13],lvdsbitsin[14*3+13],lvdsbitsin[14*2+13],lvdsbitsin[14*1+13],
-                    lvdsbitsin[14*0+13], //samplestr0
-                    };
-                else if (channel==42) o_tdata  <= {
-                    6'd0,
-						  lvdsbitsin[14*39+12], //sampleclk39
-                    lvdsbitsin[14*38+12],lvdsbitsin[14*37+12],lvdsbitsin[14*36+12],lvdsbitsin[14*35+12],lvdsbitsin[14*34+12],lvdsbitsin[14*33+12],lvdsbitsin[14*32+12],lvdsbitsin[14*31+12],
-                    lvdsbitsin[14*30+12], //sampleclk30
-                    6'd0,
-                    lvdsbitsin[14*29+12], //sampleclk29
-                    lvdsbitsin[14*28+12],lvdsbitsin[14*27+12],lvdsbitsin[14*26+12],lvdsbitsin[14*25+12],lvdsbitsin[14*24+12],lvdsbitsin[14*23+12],lvdsbitsin[14*22+12],lvdsbitsin[14*21+12],
-                    lvdsbitsin[14*20+12], //sampleclk20
-                    };
-                else if (channel==40) o_tdata  <= {
-                    6'd0,
-						  lvdsbitsin[14*19+12], //sampleclk19
-                    lvdsbitsin[14*18+12],lvdsbitsin[14*17+12],lvdsbitsin[14*16+12],lvdsbitsin[14*15+12],lvdsbitsin[14*14+12],lvdsbitsin[14*13+12],lvdsbitsin[14*12+12],lvdsbitsin[14*11+12],
-                    lvdsbitsin[14*10+12], //sampleclk10
-						  6'd0,
-                    lvdsbitsin[14*9+12], //sampleclk9
-                    lvdsbitsin[14*8+12],lvdsbitsin[14*7+12],lvdsbitsin[14*6+12],lvdsbitsin[14*5+12],lvdsbitsin[14*4+12],lvdsbitsin[14*3+12],lvdsbitsin[14*2+12],lvdsbitsin[14*1+12],
-                    lvdsbitsin[14*0+12], //sampleclk0
-                    };
-                else if (channeltype[0]==1'b0) begin // single channel mode
-						o_tdata  <= {lvdsbitsin[14*(38-channel) +: 12], 4'd0, lvdsbitsin[14*(39-channel) +: 12], 4'd0};
+                else if (channel==46) begin
+						 for (i=0; i<10; i++) begin
+							o_tdatatemp[i] = lvdsbitsin[14*(20+i)+13]; //samplestr 20-29
+							o_tdatatemp[i+16] = lvdsbitsin[14*(30+i)+13]; //samplestr 30-39
+						 end
+						 for (i=0; i<6; i++) begin
+							o_tdatatemp[i+10] = 0; //padding
+							o_tdatatemp[i+26] = 0; //padding
+						 end
+						 o_tdata <= o_tdatatemp;
 					 end
-					 else begin // two channel mode
-						o_tdata  <= {lvdsbitsin[14*(38-channel2) +: 12], 4'd0, lvdsbitsin[14*(39-channel2) +: 12], 4'd0};
+                else if (channel==44) begin
+						 for (i=0; i<10; i++) begin
+							o_tdatatemp[i] = lvdsbitsin[14*(0+i)+13]; //samplestr 0-9
+							o_tdatatemp[i+16] = lvdsbitsin[14*(10+i)+13]; //samplestr 10-19
+						 end
+						 for (i=0; i<6; i++) begin
+							o_tdatatemp[i+10] = 0; //padding
+							o_tdatatemp[i+26] = 0; //padding
+						 end
+						 o_tdata <= o_tdatatemp;
+					 end
+                else if (channel==42) begin
+						 for (i=0; i<10; i++) begin
+							o_tdatatemp[i] = lvdsbitsin[14*(20+i)+12]; //sampleclk 20-29
+							o_tdatatemp[i+16] = lvdsbitsin[14*(30+i)+12]; //sampleclk 30-39
+						 end
+						 for (i=0; i<6; i++) begin
+							o_tdatatemp[i+10] = 0; //padding
+							o_tdatatemp[i+26] = 0; //padding
+						 end
+						 o_tdata <= o_tdatatemp;
+					 end
+                else if (channel==40) begin
+                   for (i=0; i<10; i++) begin
+							o_tdatatemp[i] = lvdsbitsin[14*(20+i)+12]; //sampleclk 0-9
+							o_tdatatemp[i+16] = lvdsbitsin[14*(30+i)+12]; //sampleclk 10-19
+						 end
+						 for (i=0; i<6; i++) begin
+							o_tdatatemp[i+10] = 0; //padding
+							o_tdatatemp[i+26] = 0; //padding
+						 end
+						 o_tdata <= o_tdatatemp;
+					 end
+                else begin // data
+						 if (channeltype[0]==1'b0) begin // single channel mode
+							o_tdata  <= {lvdsbitsin[14*(38-channel) +: 12], 4'd0, lvdsbitsin[14*(39-channel) +: 12], 4'd0};
+						 end
+						 else begin // two channel mode
+							o_tdata  <= {lvdsbitsin[14*(38-channel2) +: 12], 4'd0, lvdsbitsin[14*(39-channel2) +: 12], 4'd0};
+						 end
 					 end
                 channel <= channel + 6'd2;
                 channel2 <= channel2 + 6'd2;
