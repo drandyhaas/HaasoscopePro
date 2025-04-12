@@ -847,6 +847,8 @@ class MainWindow(TemplateBaseClass):
         if self.doexttrig[board]: downsampleoffset -= int(self.toff/self.downsamplefactor)
         datasize = self.xydata[board][1].size
         for s in range(0, self.expect_samples+self.expect_samples_extra):
+            n2 = 0
+            chan2 = 0
             for n in range(self.nsubsamples): # the subsample to get
                 val = unpackedsamples[self.nsubsamples * s + n]
 
@@ -869,12 +871,21 @@ class MainWindow(TemplateBaseClass):
                         val += self.extrigboardmeancorrection
                         val *= self.extrigboardstdcorrection
                     if self.dotwochannel:
-                        chan = n // 10
-                        samp = s*20 + 19 - n%10 - int(chan/2)*10 - downsampleoffset
+                        if n==10:
+                            n2=0
+                            chan2=1
+                        if n==20:
+                            n2=10
+                            chan2=0
+                        if n==30:
+                            n2=10
+                            chan2=1
+                        samp = s*20 + 19 - n2 - downsampleoffset
                         #samp = s*20 + n - downsampleoffset
-                        #if s==0:print("n",n,"chan",chan,"chan%2",chan%2,"samp",samp+downsampleoffset)
+                        n2 += 1
+                        #if s==0:print("n",n,"chan2",chan2,"samp",samp+downsampleoffset)
                         if samp < datasize:
-                            self.xydata[board*self.num_chan_per_board + chan%2][1][samp] = val
+                            self.xydata[board*self.num_chan_per_board + chan2][1][samp] = val
                     else:
                         samp = s*40 + n - downsampleoffset
                         if samp < datasize:

@@ -396,7 +396,7 @@ reg [ 7:0]	rx_data[7:0];
 integer		length = 0;
 reg [ 3:0]	spistate = 0;
 reg [5:0]	channel = 0;
-reg [1:0]	chan = 0; // the "channel" we are sending out (0, 1, 2, 3) (same as "n // 10", where n goes from 0 to 39)
+reg [5:0]	channel2 = 0; // the "channel" we are sending out for two-channel mode, to reorder samples
 reg [5:0]	spicscounter = 0;
 reg [7:0] pllclock_counter = 0; // for clock phase
 reg [7:0] scanclk_cycles = 0;
@@ -444,6 +444,7 @@ always @ (posedge clk or negedge rstn) begin
             spitxdv <= 1'b0;
             spics <= 8'hff;
             channel <= 6'd0;
+				channel2 <= 6'd0;
             triggerlive <= 1'b0;
             didreadout <= 1'b0;
             if (didbootup) state <= RX;
@@ -656,7 +657,6 @@ always @ (posedge clk or negedge rstn) begin
                     // are going to pretend that we did so. In the separate "loop" over clklvds that should move
                     // acqstate to 0
                     length <= 0;
-                    channel <= 0;
                     didreadout <= 1'b1;
 
                     triggerlive <= 1'b1; // gets reset in INIT state
@@ -797,7 +797,7 @@ always @ (posedge clk or negedge rstn) begin
             end
         end
 
-        TX_DATA1 : begin // channel==0
+        TX_DATA1 : begin
             o_tvalid <= 1'b0;
             if (o_tready) begin
                 state <= TX_DATA2; // wait for data
@@ -807,7 +807,8 @@ always @ (posedge clk or negedge rstn) begin
         TX_DATA2 : begin
             o_tvalid <= 1'b0;
             if (o_tready) begin
-					 chan <= 2'd0;
+					 channel <= 6'd0;
+					 channel2 <= 6'd0;
                 state <= TX_DATA3; // wait for data
             end
         end
@@ -860,9 +861,10 @@ always @ (posedge clk or negedge rstn) begin
 						o_tdata  <= {lvdsbitsin[14*(38-channel) +: 12], 4'd0, lvdsbitsin[14*(39-channel) +: 12], 4'd0};
 					 end
 					 else begin // two channel mode
-						o_tdata  <= {lvdsbitsin[14*(channel+1) +: 12], 4'd0, lvdsbitsin[14*channel +: 12], 4'd0};
+						o_tdata  <= {lvdsbitsin[14*(channel2+1) +: 12], 4'd0, lvdsbitsin[14*channel2 +: 12], 4'd0};
 					 end
                 channel <= channel + 6'd2;
+                channel2 <= channel2 + 6'd2;
                 state <= TX_DATA4;
             end
         end
@@ -872,10 +874,11 @@ always @ (posedge clk or negedge rstn) begin
                 o_tvalid <= 1'b0;
                 if (length >= 4) begin
                     length <= length - 16'd4;
-						  if (channel==10) chan <= 2'd1;
-						  if (channel==20) chan <= 2'd2;
-						  if (channel==30) chan <= 2'd3;
-						  if (channel==40) chan <= 2'd0;
+						  
+						  //if (channel==10) channel2 <= 6'd20;
+						  //if (channel==20) channel2 <= 6'd10;
+						  //if (channel==30) channel2 <= 6'd30;
+						  
                     if (channel==50) begin
                         channel <= 0;
                         ram_rd_address <= ram_rd_address + 10'd1;
@@ -886,6 +889,7 @@ always @ (posedge clk or negedge rstn) begin
                 else begin
                     length <= 0;
                     channel <= 0;
+						  channel2 <= 0;
                     didreadout <= 1'b1; // tell it we have read out this event (could be moved earlier?)
                     state <= RX;
                 end
