@@ -519,7 +519,7 @@ class MainWindow(TemplateBaseClass):
         usb.recv(4)
 
     def drawtriggerlines(self):
-        self.hline = (self.triggerlevel - 127) * self.yscale * 16
+        self.hline = (self.triggerlevel - 127) * self.yscale * 16 * 16
         self.otherlines[1].setData([self.min_x, self.max_x],
                                    [self.hline, self.hline])  # horizontal line showing trigger threshold
         point = self.triggerpos + 1.0
@@ -842,12 +842,13 @@ class MainWindow(TemplateBaseClass):
         nbadclkD = 0
         nbadstr = 0
         unpackedsamples = struct.unpack('<' + 'h' * (len(data) // 2), data)
-        downsampleoffset = int(4 * (self.sample_triggered[board] + (downsamplemergingcounter-1)%self.downsamplemerging * 10) / self.downsamplemerging)
+        downsampleoffset = int(2 * (self.sample_triggered[board] + (downsamplemergingcounter-1)%self.downsamplemerging * 10) / self.downsamplemerging)
+        if not self.dotwochannel: downsampleoffset *= 2
+        if self.doexttrig[board]: downsampleoffset -= int(self.toff/self.downsamplefactor)
         datasize = self.xydata[board][1].size
         for s in range(0, self.expect_samples+self.expect_samples_extra):
             for n in range(self.nsubsamples): # the subsample to get
                 val = unpackedsamples[self.nsubsamples * s + n]
-                chan = n // 10
 
                 if 40 <= n < 44:
                     if val!=336 and val!= 682:
@@ -868,15 +869,16 @@ class MainWindow(TemplateBaseClass):
                         val += self.extrigboardmeancorrection
                         val *= self.extrigboardstdcorrection
                     if self.dotwochannel:
-                        samp = s * 20 + 19 - n%10 - chan*5 - downsampleoffset
-                        if self.doexttrig[board]: samp = samp + int(self.toff/self.downsamplefactor)
-                        if samp >= datasize: continue
-                        self.xydata[board * self.num_chan_per_board + chan % 2][1][samp] = val
+                        chan = n // 10
+                        samp = s*20 + 19 - n%10 - int(chan/2)*10 - downsampleoffset
+                        #samp = s*20 + n - downsampleoffset
+                        #if s==0:print("n",n,"chan",chan,"chan%2",chan%2,"samp",samp+downsampleoffset)
+                        if samp < datasize:
+                            self.xydata[board*self.num_chan_per_board + chan%2][1][samp] = val
                     else:
-                        samp = s * 40 + 39 - n - downsampleoffset
-                        if self.doexttrig[board]: samp = samp + int(self.toff/self.downsamplefactor)
-                        if samp >= datasize: continue
-                        self.xydata[board*self.num_chan_per_board][1][samp] = val
+                        samp = s*40 + n - downsampleoffset
+                        if samp < datasize:
+                            self.xydata[board*self.num_chan_per_board][1][samp] = val
 
         self.adjustclocks(board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr)
         if board == self.activeboard:

@@ -396,6 +396,7 @@ reg [ 7:0]	rx_data[7:0];
 integer		length = 0;
 reg [ 3:0]	spistate = 0;
 reg [5:0]	channel = 0;
+reg [1:0]	chan = 0; // the "channel" we are sending out (0, 1, 2, 3) (same as "n // 10", where n goes from 0 to 39)
 reg [5:0]	spicscounter = 0;
 reg [7:0] pllclock_counter = 0; // for clock phase
 reg [7:0] scanclk_cycles = 0;
@@ -799,16 +800,15 @@ always @ (posedge clk or negedge rstn) begin
         TX_DATA1 : begin // channel==0
             o_tvalid <= 1'b0;
             if (o_tready) begin
-                //wait for data
-                state <= TX_DATA2;
+                state <= TX_DATA2; // wait for data
             end
         end
 
         TX_DATA2 : begin
             o_tvalid <= 1'b0;
             if (o_tready) begin
-                // wait for data
-                state <= TX_DATA3;
+					 chan <= 2'd0;
+                state <= TX_DATA3; // wait for data
             end
         end
 
@@ -856,7 +856,12 @@ always @ (posedge clk or negedge rstn) begin
                     lvdsbitsin[14*8+12],lvdsbitsin[14*7+12],lvdsbitsin[14*6+12],lvdsbitsin[14*5+12],lvdsbitsin[14*4+12],lvdsbitsin[14*3+12],lvdsbitsin[14*2+12],lvdsbitsin[14*1+12],
                     lvdsbitsin[14*0+12], //sampleclk0
                     };
-                else o_tdata  <= {lvdsbitsin[14*(channel+1) +: 12], 4'd0, lvdsbitsin[14*channel +: 12], 4'd0};
+                else if (channeltype[0]==1'b0) begin // single channel mode
+						o_tdata  <= {lvdsbitsin[14*(38-channel) +: 12], 4'd0, lvdsbitsin[14*(39-channel) +: 12], 4'd0};
+					 end
+					 else begin // two channel mode
+						o_tdata  <= {lvdsbitsin[14*(channel+1) +: 12], 4'd0, lvdsbitsin[14*channel +: 12], 4'd0};
+					 end
                 channel <= channel + 6'd2;
                 state <= TX_DATA4;
             end
@@ -867,6 +872,10 @@ always @ (posedge clk or negedge rstn) begin
                 o_tvalid <= 1'b0;
                 if (length >= 4) begin
                     length <= length - 16'd4;
+						  if (channel==10) chan <= 2'd1;
+						  if (channel==20) chan <= 2'd2;
+						  if (channel==30) chan <= 2'd3;
+						  if (channel==40) chan <= 2'd0;
                     if (channel==50) begin
                         channel <= 0;
                         ram_rd_address <= ram_rd_address + 10'd1;
