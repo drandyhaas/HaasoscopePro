@@ -79,7 +79,7 @@ class MainWindow(TemplateBaseClass):
     highresval = 1
     xscale = 1
     xscaling = 1
-    yscale = 3.3/2.03 * 10*5/8 / pow(2,12) # this is the size of 1 bit, so that 2^12 bits fill the 10.x divisions on the screen
+    yscale = 3.3/2.03 * 10*5/8 / pow(2,12) /16 # this is the size of 1 bit, so that 2^12 bits fill the 10.x divisions on the screen
     min_y = -5 # -pow(2, 11) * yscale
     max_y = 5 # pow(2, 11) * yscale
     min_x = 0
@@ -846,11 +846,11 @@ class MainWindow(TemplateBaseClass):
         datasize = self.xydata[board][1].size
         for s in range(0, self.expect_samples+self.expect_samples_extra):
             for n in range(self.nsubsamples): # the subsample to get
-                val = unpackedsamples[self.nsubsamples * s + n] // 16
+                val = unpackedsamples[self.nsubsamples * s + n]
                 chan = n // 10
 
                 if 40 <= n < 44:
-                    if val!=21 and val!= 42:
+                    if val!=336 and val!= 682:
                         if n == 40: nbadclkA += 1
                         elif n == 41: nbadclkB += 1
                         elif n == 42: nbadclkC += 1
@@ -858,7 +858,7 @@ class MainWindow(TemplateBaseClass):
                         #print("s=", s, "n=", n, "clk", val, binprint(val))
 
                 if 44 <= n < 48:
-                    if val!=0 and val!=2 and val!=8 and val!=32:
+                    if val!=0 and val!=1 and val!=2 and val!=4 and val!=8 and val!=16 and val!=32 and val!=64 and val!=128 and val!=256 and val!=512:
                         nbadstr = nbadstr + 1
                         #print("s=", s, "n=", n, "str", val, binprint(val))
 
