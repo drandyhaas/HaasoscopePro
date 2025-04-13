@@ -861,7 +861,8 @@ class MainWindow(TemplateBaseClass):
         if self.doexttrig[board]: downsampleoffset -= self.toff // self.downsamplefactor
         datasize = self.xydata[board][1].size
         for s in range(0, self.expect_samples+self.expect_samples_extra):
-            if self.dodirect:
+
+            if self.dodirect: #This is the new faster way of doing things
                 vals = unpackedsamples[s*self.nsubsamples+40:s*self.nsubsamples + 48]
                 for n in range(0,8): # the subsample to get
                     val = vals[n]
@@ -885,8 +886,9 @@ class MainWindow(TemplateBaseClass):
                         samp = 0
                     if samp+20 >= datasize:
                         nsamp = datasize - samp
-                    if 0 < nsamp <= 20: self.xydata[board * self.num_chan_per_board+0][1][samp:samp + nsamp] = npunpackedsamples[s * self.nsubsamples+20:s * self.nsubsamples+20 + nsamp]
-                    if 0 < nsamp <= 20: self.xydata[board * self.num_chan_per_board+1][1][samp:samp + nsamp] = npunpackedsamples[s * self.nsubsamples:s * self.nsubsamples + nsamp]
+                    if 0 < nsamp <= 20:
+                        self.xydata[board * self.num_chan_per_board+0][1][samp:samp + nsamp] = npunpackedsamples[s * self.nsubsamples+20:s * self.nsubsamples+20 + nsamp]
+                        self.xydata[board * self.num_chan_per_board+1][1][samp:samp + nsamp] = npunpackedsamples[s * self.nsubsamples:s * self.nsubsamples + nsamp]
                 else:
                     samp = s*40 - downsampleoffset
                     nsamp=40
@@ -895,9 +897,10 @@ class MainWindow(TemplateBaseClass):
                         samp = 0
                     if samp+40 >= datasize:
                         nsamp = datasize - samp
-                    if 0 < nsamp <= 40: self.xydata[board * self.num_chan_per_board][1][samp:samp + nsamp] = npunpackedsamples[s * self.nsubsamples:s * self.nsubsamples + nsamp]
+                    if 0 < nsamp <= 40:
+                        self.xydata[board * self.num_chan_per_board][1][samp:samp + nsamp] = npunpackedsamples[s * self.nsubsamples:s * self.nsubsamples + nsamp]
 
-            else:
+            else: # This is the older slower way
                 for n in range(self.nsubsamples): # the subsample to get
                     val = unpackedsamples[s*self.nsubsamples + n] # this will be 16x larger than the 12 bit value, since it's shifted 4 bits to the left
                     if 40 <= n < 44:
