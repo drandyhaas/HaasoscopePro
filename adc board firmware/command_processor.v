@@ -54,7 +54,7 @@ module command_processor (
 	output reg lvdsout_spare=0,
 	input wire [69:0] lvdsEbits, lvdsLbits,
 	output reg [1:0] leds, // controls LED 3..2
-	
+
 	output reg [23:0] flash_addr,
 	output reg flash_bulk_erase,
 	output reg clk_over_4,
@@ -63,11 +63,11 @@ module command_processor (
 	output reg flash_read,
 	output reg flash_write,
 	output reg flash_reset,
-	
+
 	input flash_busy,
 	input flash_data_valid,
 	input [7:0] flash_dataout
-	
+
 );
 integer version = 22; // firmware version
 
@@ -115,7 +115,7 @@ reg [15:0]	lengthtotake = 0, lengthtotake_sync = 0;
 reg [15:0]	prelengthtotake=1000, prelengthtotake_sync=1000;
 reg 			triggerlive = 0, triggerlive_sync = 0;
 reg			didreadout = 0, didreadout_sync = 0;
-reg [ 7:0]	triggertype = 0, triggertype_sync = 0;
+reg [ 7:0]	triggertype = 0, triggertype_sync = 0, current_active_trigger_type = 0;
 reg [ 7:0]	channeltype = 0, channeltype_sync = 0;
 reg [ 9:0]	ram_address_triggered = 0, ram_address_triggered_sync = 0;
 reg [ 7:0] 	triggerToT = 0, triggerToT_sync = 0;
@@ -125,7 +125,7 @@ reg [7:0]	downsamplemerging = 1, downsamplemerging_sync = 1;
 reg [19:0] 	sample_triggered = 0, sample_triggered_sync = 0;
 reg [7:0]	downsamplemergingcounter_triggered = 0, downsamplemergingcounter_triggered_sync = 0;
 reg 			triggerchan = 0, triggerchan_sync = 0;
-reg			dorolling = 0, dorolling_sync = 0;
+reg			dorolling = 0, dorolling_sync = 0; // TODO: to be removed
 
 // this drives the trigger
 always @ (posedge clklvds or negedge rstn) begin
@@ -144,14 +144,17 @@ always @ (posedge clklvds or negedge rstn) begin
 		downsamplemerging_sync <= downsamplemerging;
 		highres_sync           <= highres;
 		triggerchan_sync       <= triggerchan;
-		dorolling_sync         <= dorolling;
+		dorolling_sync         <= dorolling; // TODO: to be removed
 
-		if (acqstate==251) begin // not writing, while waiting to be read out
+		if (acqstate==251 || acqstate==0) begin
+			// not writing, while waiting to be read out or in initial state where trigger might be disabled
 			ram_wr <= 1'b0;
 			downsamplecounter <= 1;
 			downsamplemergingcounter <= 1;
 		end
-		else begin // always writing while waiting for a trigger, to see what happened before
+		else begin
+			// Acqure data if some trigger has been armed (acqstate > 0) and it has not arrived yet to its
+			// final state (acqstate == 251) where we will be waiting for data to be read out.
 			if (downsamplecounter[downsample_sync]) begin
 				downsamplecounter <= 1;
 				if (downsamplemergingcounter==downsamplemerging_sync) begin
@@ -170,7 +173,7 @@ always @ (posedge clklvds or negedge rstn) begin
 			end
 		end
 
-		// rolling trigger
+		// rolling trigger; TODO: this whole if block is to be deleted
 		if (dorolling_sync && acqstate>0 && acqstate<250) begin
 			if (rollingtriggercounter==40000000) begin
 				sample_triggered <= 0;
@@ -191,28 +194,34 @@ always @ (posedge clklvds or negedge rstn) begin
 			lvdsout_trig <= 0;
 			lvdsout_trig_b <= 0;
 
-			// wait for pre-aquisition
-			if (triggercounter<prelengthtotake_sync) begin
+			downsamplecounter <= 1;
+			downsamplemergingcounter <= 1;
+			triggercounter <= 0; // set to 0 as this register will be used to count in pre-aquisition
+			current_active_trigger_type <= triggertype_sync;
+
+			case(triggertype_sync)
+				8'd0 : ; // disable conditional triggering
+				default: acqstate <= 8'd7; // go to pre-aquisition
+			endcase
+		end
+
+		7 : begin // pre-aquisition
+			if (current_active_trigger_type != triggertype_sync) begin
+				acqstate <= 8'd0; // go back to initial state
+			end
+			else if (triggercounter<prelengthtotake_sync) begin
 				if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) begin
 					triggercounter <= triggercounter + 16'd1;
 				end
 			end
-			else if (triggerlive_sync) begin
+			else begin
 				triggercounter <= 0; // will also use this to keep recording enough samples after the trigger, so reset
 
-				case(triggertype_sync)
-					8'd0 : ; // disable conditional triggering
+				case(current_active_trigger_type)
 					8'd1 : acqstate <= 8'd1; // threshold trigger rising edge
 					8'd2 : acqstate <= 8'd3; // threshold trigger falling edge
 					8'd3 : acqstate <= 8'd5; // external trigger
 					8'd4 : acqstate <= 8'd6; // auto trigger (forces waveform capture unconditionally)
-					default: begin
-						// Does this ever happen?
-						ram_address_triggered <= ram_wr_address; // remember where the trigger happened
-						//lvdsout_trig <= 1'b1; // tell the others
-						//lvdsout_trig_b <= 1'b1; // tell the others
-						acqstate <= 8'd250; // go straight to taking more data, no trigger, triggertype==0
-					end
 				endcase
 			end
 		end
@@ -338,21 +347,14 @@ always @ (posedge clklvds or negedge rstn) begin
 		end
 
 		6: begin
-			// We end up here when triggertype is set to 4 (auto trigger). When we enter here triggercounter is 0,
-			// so we will accumlate pre-trigger samples, then record trigger position and move on to step 250 where
-			// reminder of the data (after-trigger samples) will be accumlated. This to force waveform capture
-			// call force-arm-trigger function with trigger type set to 4.
-			if (triggercounter<prelengthtotake_sync) begin
-				if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) begin
-					triggercounter <= triggercounter + 16'd1;
-				end
-			end else begin
-				ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-				lvdsout_trig <= 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
-				lvdsout_trig_b <= 1'b1; // and backwards
-				downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
-				acqstate <= 8'd250;
-			end
+			// We end up here when triggertype is set to 4 (auto trigger). Record trigger position and move on to
+			// step 250 where reminder of the data (after-trigger samples) will be accumlated. This to force waveform
+			// capture call force-arm-trigger function with trigger type set to 4.
+			ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+			lvdsout_trig <= 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
+			lvdsout_trig_b <= 1'b1; // and backwards
+			downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+			acqstate <= 8'd250;
 		end
 
 		250 : begin // triggered, now taking more data
@@ -650,27 +652,19 @@ always @ (posedge clk or negedge rstn) begin
             end
 
             13 : begin // force-arm-trigger function
-                if (acqstate_sync == 0 || acqstate_sync == 251) begin
-                    triggertype <= rx_data[1]; // set the trigger type
-                    channeltype <= rx_data[2]; // the channel type (bit0: single or dual, bit1: oversampling (swapped inputs))
-                    lengthtotake <= {rx_data[5],rx_data[4]};
+                triggertype <= rx_data[1]; // set the trigger type
+                channeltype <= rx_data[2]; // the channel type (bit0: single or dual, bit1: oversampling (swapped inputs))
+                lengthtotake <= {rx_data[5],rx_data[4]};
 
-                    // we might not have actually read out data yet; however, since we are force arming the trigger we
-                    // are going to pretend that we did so. In the separate "loop" over clklvds that should move
-                    // acqstate to 0
-                    length <= 0;
-                    didreadout <= 1'b1;
+                // we might not have actually read out data yet; however, since we are force arming the trigger we
+                // are going to pretend that we did so. In the separate "loop" over clklvds that should move
+                // acqstate to 0
+                length <= 0;
+                didreadout <= 1'b1;
 
-                    triggerlive <= 1'b1; // gets reset in INIT state
-
-                    // return 1 in the first byte indicating that we were able to arm the trigger
-                    // and for debuging current acqstate in the second.
-                    o_tdata <= {8'd0, 8'd0, acqstate_sync, 8'd1};
-                end else begin
-                    // return 0 in the first byte indicating that we were not able to arm the trigger
-                    // and for debuging current acqstate in the second.
-                    o_tdata <= {8'd0, 8'd0, acqstate_sync, 8'd0};
-                end
+                // Assuming that trigger type is changed, trigger will always be re-armed;
+                // For debuging current acqstate in the first byte
+                o_tdata <= {8'd0, 8'd0, 8'd0, acqstate_sync};
                 `SEND_STD_USB_RESPONSE
             end
 
@@ -689,12 +683,13 @@ always @ (posedge clk or negedge rstn) begin
                     9 : o_tdata <= {24'd0, downsamplemerging};
                     10: o_tdata <= {27'd0, downsample};
                     11: o_tdata <= {31'd0, highres};
+                    12: o_tdata <= {20'd0, upperthresh};
                     default:
                     	o_tdata <= {32'd0};
                 endcase
                 `SEND_STD_USB_RESPONSE
             end
-				
+
 				15 : begin // read from flash
 					case (flashstate)
                0 : begin
@@ -726,7 +721,7 @@ always @ (posedge clk or negedge rstn) begin
                default : flashstate <= 4'd0;
                endcase
 				end
-				
+
 				16 : begin // write to flash
 					case (flashstate)
                0 : begin
@@ -754,7 +749,7 @@ always @ (posedge clk or negedge rstn) begin
                default : flashstate <= 4'd0;
                endcase
 				end
-				
+
 				17 : begin // erase flash
 					case (flashstate)
                0 : begin
@@ -780,7 +775,7 @@ always @ (posedge clk or negedge rstn) begin
                default : flashstate <= 4'd0;
                endcase
 				end
-				
+
             default: // some command we didn't know
             state <= RX;
 
@@ -831,11 +826,11 @@ always @ (posedge clk or negedge rstn) begin
 							o_tdatatemp[i+10] = 0; //padding
 							o_tdatatemp[i+26] = 0; //padding
 						 end
-						 if (o_tdatatemp[9:0]!=0 && o_tdatatemp[9:0]!=1 && o_tdatatemp[9:0]!=2 && o_tdatatemp[9:0]!=4 && o_tdatatemp[9:0]!=8 && o_tdatatemp[9:0]!=16 && 
+						 if (o_tdatatemp[9:0]!=0 && o_tdatatemp[9:0]!=1 && o_tdatatemp[9:0]!=2 && o_tdatatemp[9:0]!=4 && o_tdatatemp[9:0]!=8 && o_tdatatemp[9:0]!=16 &&
 							  o_tdatatemp[9:0]!=32 && o_tdatatemp[9:0]!=64 && o_tdatatemp[9:0]!=128 && o_tdatatemp[9:0]!=256 && o_tdatatemp[9:0]!=512) begin
 							  clkstrprob<=1'b1; // issue with str
 						 end
-						 if (o_tdatatemp[25:16]!=0 && o_tdatatemp[25:16]!=1 && o_tdatatemp[25:16]!=2 && o_tdatatemp[25:16]!=4 && o_tdatatemp[25:16]!=8 && o_tdatatemp[25:16]!=16 && 
+						 if (o_tdatatemp[25:16]!=0 && o_tdatatemp[25:16]!=1 && o_tdatatemp[25:16]!=2 && o_tdatatemp[25:16]!=4 && o_tdatatemp[25:16]!=8 && o_tdatatemp[25:16]!=16 &&
 							  o_tdatatemp[25:16]!=32 && o_tdatatemp[25:16]!=64 && o_tdatatemp[25:16]!=128 && o_tdatatemp[25:16]!=256 && o_tdatatemp[25:16]!=512) begin
 							  clkstrprob<=1'b1; // issue with str
 						 end
@@ -850,11 +845,11 @@ always @ (posedge clk or negedge rstn) begin
 							o_tdatatemp[i+10] = 0; //padding
 							o_tdatatemp[i+26] = 0; //padding
 						 end
-						 if (o_tdatatemp[9:0]!=0 && o_tdatatemp[9:0]!=1 && o_tdatatemp[9:0]!=2 && o_tdatatemp[9:0]!=4 && o_tdatatemp[9:0]!=8 && o_tdatatemp[9:0]!=16 && 
+						 if (o_tdatatemp[9:0]!=0 && o_tdatatemp[9:0]!=1 && o_tdatatemp[9:0]!=2 && o_tdatatemp[9:0]!=4 && o_tdatatemp[9:0]!=8 && o_tdatatemp[9:0]!=16 &&
 							  o_tdatatemp[9:0]!=32 && o_tdatatemp[9:0]!=64 && o_tdatatemp[9:0]!=128 && o_tdatatemp[9:0]!=256 && o_tdatatemp[9:0]!=512) begin
 							  clkstrprob<=1'b1; // issue with str
 						 end
-						 if (o_tdatatemp[25:16]!=0 && o_tdatatemp[25:16]!=1 && o_tdatatemp[25:16]!=2 && o_tdatatemp[25:16]!=4 && o_tdatatemp[25:16]!=8 && o_tdatatemp[25:16]!=16 && 
+						 if (o_tdatatemp[25:16]!=0 && o_tdatatemp[25:16]!=1 && o_tdatatemp[25:16]!=2 && o_tdatatemp[25:16]!=4 && o_tdatatemp[25:16]!=8 && o_tdatatemp[25:16]!=16 &&
 							  o_tdatatemp[25:16]!=32 && o_tdatatemp[25:16]!=64 && o_tdatatemp[25:16]!=128 && o_tdatatemp[25:16]!=256 && o_tdatatemp[25:16]!=512) begin
 							  clkstrprob<=1'b1; // issue with str
 						 end
@@ -914,11 +909,11 @@ always @ (posedge clk or negedge rstn) begin
                 o_tvalid <= 1'b0;
                 if (length >= 4) begin
                     length <= length - 16'd4;
-						  
+
 						  if (channel==10) channel2 <= 6'd20;
 						  if (channel==20) channel2 <= 6'd10;
 						  if (channel==30) channel2 <= 6'd30;
-						  
+
                     if (channel==50) begin
                         channel <= 0;
                         ram_rd_address <= ram_rd_address + 10'd1;
