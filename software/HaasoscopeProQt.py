@@ -865,7 +865,9 @@ class MainWindow(TemplateBaseClass):
             if self.dodirect: #This is the new faster way of doing things
                 vals = unpackedsamples[s*self.nsubsamples+40:s*self.nsubsamples + 50]
                 if vals[9]!=-16657: print("no beef?") # -16657 is 0xbeef
-                if vals[8]!=0 or (self.lastclk!=341 and self.lastclk!=682): # only bother checking if there was a clkstr problem detected in firmware, or we need to decode because of a previous clkstr prob and now want to update self.lastclk
+                if vals[8]!=0 or (self.lastclk!=341 and self.lastclk!=682):
+                    # only bother checking if there was a clkstr problem detected in firmware, or we need to decode
+                    # because of a previous clkstr prob and now want to update self.lastclk
                     for n in range(0,8): # the subsample to get
                         val = vals[n]
                         if n < 4:
@@ -876,8 +878,7 @@ class MainWindow(TemplateBaseClass):
                                 if n == 3: nbadclkD += 1
                                 #print("s=", s, "n=", n, "clk", val, binprint(val))
                             self.lastclk = val
-                        else:
-                            if val!=0 and val!=1 and val!=2 and val!=4 and val!=8 and val!=16 and val!=32 and val!=64 and val!=128 and val!=256 and val!=512: # 10 bits long, and just one 1
+                        elif val not in {0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512}: # 10 bits long, and just one 1
                                 nbadstr = nbadstr + 1
                                 #print("s=", s, "n=", n, "str", val, binprint(val))
                 if self.dotwochannel:
@@ -913,10 +914,10 @@ class MainWindow(TemplateBaseClass):
                             if n == 43: nbadclkD += 1
                             #print("s=", s, "n=", n, "clk", val, binprint(val))
                         else: self.lastclk = val
-                    if 44 <= n < 48:
-                        if val!=0 and val!=1 and val!=2 and val!=4 and val!=8 and val!=16 and val!=32 and val!=64 and val!=128 and val!=256 and val!=512: # 10 bits long, and just one 1
-                            nbadstr = nbadstr + 1
-                            #print("s=", s, "n=", n, "str", val, binprint(val))
+                    if (44 <= n < 48) and (val not in {0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512}):
+                        # 10 bits long, and just one 1
+                        nbadstr = nbadstr + 1
+                        #print("s=", s, "n=", n, "str", val, binprint(val))
                     if n < 40:
                         val = val * self.yscale
                         if self.dooversample and board%2==0:
