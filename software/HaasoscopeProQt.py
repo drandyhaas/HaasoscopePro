@@ -879,8 +879,8 @@ class MainWindow(TemplateBaseClass):
                                 #print("s=", s, "n=", n, "clk", val, binprint(val))
                             self.lastclk = val
                         elif val not in {0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512}: # 10 bits long, and just one 1
-                                nbadstr = nbadstr + 1
-                                #print("s=", s, "n=", n, "str", val, binprint(val))
+                            nbadstr = nbadstr + 1
+                            #print("s=", s, "n=", n, "str", val, binprint(val))
                 if self.dotwochannel:
                     samp = s*20 - downsampleoffset
                     nsamp=20
