@@ -113,7 +113,6 @@ reg signed [11:0]  upperthresh = 0, upperthresh_sync = 0;
 integer		eventcounter = 0, eventcounter_sync = 0;
 reg [15:0]	lengthtotake = 0, lengthtotake_sync = 0;
 reg [15:0]	prelengthtotake=1000, prelengthtotake_sync=1000;
-reg 			triggerlive = 0, triggerlive_sync = 0;
 reg			didreadout = 0, didreadout_sync = 0;
 reg [ 7:0]	triggertype = 0, triggertype_sync = 0, current_active_trigger_type = 0;
 reg [ 7:0]	channeltype = 0, channeltype_sync = 0;
@@ -131,7 +130,6 @@ reg			dorolling = 0, dorolling_sync = 0; // TODO: to be removed
 always @ (posedge clklvds or negedge rstn) begin
 	if (~rstn) acqstate <= 8'd0;
 	else begin
-		triggerlive_sync       <= triggerlive;
 		lengthtotake_sync      <= lengthtotake;
 		prelengthtotake_sync   <= prelengthtotake;
 		triggertype_sync       <= triggertype;
@@ -449,7 +447,6 @@ always @ (posedge clk or negedge rstn) begin
             spics <= 8'hff;
             channel <= 6'd0;
 				channel2 <= 6'd0;
-            triggerlive <= 1'b0;
             didreadout <= 1'b0;
             if (didbootup) state <= RX;
             else state <= BOOTUP;
@@ -478,7 +475,6 @@ always @ (posedge clk or negedge rstn) begin
                 triggertype <= rx_data[1]; // while we're at it, set the trigger type
                 channeltype <= rx_data[2]; // and the channel type (bit0: single or dual, bit1: oversampling (swapped inputs))
                 lengthtotake <= {rx_data[5],rx_data[4]};
-                if (acqstate_sync == 0) triggerlive <= 1'b1; // gets reset in INIT state
                 o_tdata <= {4'd0,sample_triggered_sync,acqstate_sync}; // return acqstate, so we can see if we have an event ready to be read out, and which samples triggered (to prevent jitter)
                 `SEND_STD_USB_RESPONSE
             end
