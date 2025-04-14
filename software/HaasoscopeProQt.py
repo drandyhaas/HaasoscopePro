@@ -923,10 +923,10 @@ class MainWindow(TemplateBaseClass):
                         if self.dotwochannel:
                             samp = s*20 + n - downsampleoffset
                             if n>=20: samp -= 20
-                            if 0 < samp < datasize: self.xydata[board*self.num_chan_per_board + (n<20)][1][samp] = val
+                            if 0 <= samp < datasize: self.xydata[board*self.num_chan_per_board + (n<20)][1][samp] = val
                         else:
                             samp = s*40 + n - downsampleoffset
-                            if 0 < samp < datasize: self.xydata[board*self.num_chan_per_board][1][samp] = val
+                            if 0 <= samp < datasize: self.xydata[board*self.num_chan_per_board][1][samp] = val
 
         self.adjustclocks(board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr)
         if board == self.activeboard:
