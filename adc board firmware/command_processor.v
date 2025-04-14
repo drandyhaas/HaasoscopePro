@@ -406,6 +406,7 @@ reg [15:0]	probecompcounter = 0;
 reg send_color = 1;
 reg [3:0] flashstate = 0;
 reg [31:0] o_tdatatemp = 0;
+reg clkstrprob = 0;
 
 always @ (posedge clk) begin
 	acqstate_sync <= acqstate;
@@ -817,7 +818,10 @@ always @ (posedge clk or negedge rstn) begin
         TX_DATA3 : begin
             if (o_tready) begin
                 o_tvalid <= 1'b1;
-                if (channel==48) o_tdata <= {16'hbeef,16'hdead};//marker
+                if (channel==48) begin
+						if (clkstrprob) o_tdata <= {16'hbeef,16'h01}; // marker, clkstr problem
+						else o_tdata <= {16'hbeef,16'h00}; // marker, no problems
+					 end
                 else if (channel==46) begin
 						 for (i=0; i<10; i++) begin
 							o_tdatatemp[i] = lvdsbitsin[14*(20+i)+13]; //samplestr 20-29
@@ -826,6 +830,14 @@ always @ (posedge clk or negedge rstn) begin
 						 for (i=0; i<6; i++) begin
 							o_tdatatemp[i+10] = 0; //padding
 							o_tdatatemp[i+26] = 0; //padding
+						 end
+						 if (o_tdatatemp[9:0]!=0 && o_tdatatemp[9:0]!=1 && o_tdatatemp[9:0]!=2 && o_tdatatemp[9:0]!=4 && o_tdatatemp[9:0]!=8 && o_tdatatemp[9:0]!=16 && 
+							  o_tdatatemp[9:0]!=32 && o_tdatatemp[9:0]!=64 && o_tdatatemp[9:0]!=128 && o_tdatatemp[9:0]!=256 && o_tdatatemp[9:0]!=512) begin
+							  clkstrprob<=1'b1; // issue with str
+						 end
+						 if (o_tdatatemp[25:16]!=0 && o_tdatatemp[25:16]!=1 && o_tdatatemp[25:16]!=2 && o_tdatatemp[25:16]!=4 && o_tdatatemp[25:16]!=8 && o_tdatatemp[25:16]!=16 && 
+							  o_tdatatemp[25:16]!=32 && o_tdatatemp[25:16]!=64 && o_tdatatemp[25:16]!=128 && o_tdatatemp[25:16]!=256 && o_tdatatemp[25:16]!=512) begin
+							  clkstrprob<=1'b1; // issue with str
 						 end
 						 o_tdata <= o_tdatatemp;
 					 end
@@ -838,6 +850,14 @@ always @ (posedge clk or negedge rstn) begin
 							o_tdatatemp[i+10] = 0; //padding
 							o_tdatatemp[i+26] = 0; //padding
 						 end
+						 if (o_tdatatemp[9:0]!=0 && o_tdatatemp[9:0]!=1 && o_tdatatemp[9:0]!=2 && o_tdatatemp[9:0]!=4 && o_tdatatemp[9:0]!=8 && o_tdatatemp[9:0]!=16 && 
+							  o_tdatatemp[9:0]!=32 && o_tdatatemp[9:0]!=64 && o_tdatatemp[9:0]!=128 && o_tdatatemp[9:0]!=256 && o_tdatatemp[9:0]!=512) begin
+							  clkstrprob<=1'b1; // issue with str
+						 end
+						 if (o_tdatatemp[25:16]!=0 && o_tdatatemp[25:16]!=1 && o_tdatatemp[25:16]!=2 && o_tdatatemp[25:16]!=4 && o_tdatatemp[25:16]!=8 && o_tdatatemp[25:16]!=16 && 
+							  o_tdatatemp[25:16]!=32 && o_tdatatemp[25:16]!=64 && o_tdatatemp[25:16]!=128 && o_tdatatemp[25:16]!=256 && o_tdatatemp[25:16]!=512) begin
+							  clkstrprob<=1'b1; // issue with str
+						 end
 						 o_tdata <= o_tdatatemp;
 					 end
                 else if (channel==42) begin
@@ -848,6 +868,12 @@ always @ (posedge clk or negedge rstn) begin
 						 for (i=0; i<6; i++) begin
 							o_tdatatemp[i+10] = 0; //padding
 							o_tdatatemp[i+26] = 0; //padding
+						 end
+						 if (o_tdatatemp[9:0]!=10'd341 && o_tdatatemp[9:0]!=10'd682) begin
+							clkstrprob<=1'b1; // issue with clk
+						 end
+						 if (o_tdatatemp[25:16]!=10'd341 && o_tdatatemp[9:0]!=10'd682) begin
+							clkstrprob<=1'b1; // issue with clk
 						 end
 						 o_tdata <= o_tdatatemp;
 					 end
@@ -860,7 +886,14 @@ always @ (posedge clk or negedge rstn) begin
 							o_tdatatemp[i+10] = 0; //padding
 							o_tdatatemp[i+26] = 0; //padding
 						 end
+						 if (o_tdatatemp[9:0]!=10'd341 && o_tdatatemp[9:0]!=10'd682) begin
+							clkstrprob<=1'b1; // issue with clk
+						 end
+						 if (o_tdatatemp[25:16]!=10'd341 && o_tdatatemp[9:0]!=10'd682) begin
+							clkstrprob<=1'b1; // issue with clk
+						 end
 						 o_tdata <= o_tdatatemp;
+						 clkstrprob <= 1'b0; // assume no clkstr problems, will check in next steps
 					 end
                 else begin // data
 						 if (channeltype[0]==1'b0) begin // single channel mode

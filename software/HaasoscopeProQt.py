@@ -113,7 +113,7 @@ class MainWindow(TemplateBaseClass):
     nbadclkD = 0
     nbadstr = 0
     eventcounter = [0] * num_board
-    nsubsamples = 10 * 4 + 8 + 2  # extra 4+4 for clk+str, and 2 dead beef
+    nsubsamples = 10 * 4 + 8 + 2  # extra 4+4 for clk+str, and 2 clkstrprob beef
     sample_triggered = [0] * num_board
     doeventcounter = False
     fitwidthfraction = 0.2
@@ -121,7 +121,7 @@ class MainWindow(TemplateBaseClass):
     extrigboardmeancorrection = 0
     lastrate = 0
     lastsize = 0
-    dodirect = False
+    dodirect = True
     VperD = [0.16]*(num_board*2)
     plljustreset = [0] * num_board
     dooversample = False
@@ -863,21 +863,23 @@ class MainWindow(TemplateBaseClass):
         for s in range(0, self.expect_samples+self.expect_samples_extra):
 
             if self.dodirect: #This is the new faster way of doing things
-                vals = unpackedsamples[s*self.nsubsamples+40:s*self.nsubsamples + 48]
-                for n in range(0,8): # the subsample to get
-                    val = vals[n]
-                    if n < 4:
-                        if val!=341 and val!= 682: # 0101010101 or 1010101010
-                            if n == 0: nbadclkA += 1
-                            if n == 1: nbadclkB += 1
-                            if n == 2: nbadclkC += 1
-                            if n == 3: nbadclkD += 1
-                            #print("s=", s, "n=", n, "clk", val, binprint(val))
-                        else: self.lastclk = val
-                    else:
-                        if val!=0 and val!=1 and val!=2 and val!=4 and val!=8 and val!=16 and val!=32 and val!=64 and val!=128 and val!=256 and val!=512: # 10 bits long, and just one 1
-                            nbadstr = nbadstr + 1
-                            #print("s=", s, "n=", n, "str", val, binprint(val))
+                vals = unpackedsamples[s*self.nsubsamples+40:s*self.nsubsamples + 50]
+                if vals[9]!=-16657: print("no beef?") # -16657 is 0xbeef
+                if vals[8]!=0 or (self.lastclk!=341 and self.lastclk!=682): # only bother checking if there was a clkstr problem detected in firmware, or we need to decode because of a previous clkstr prob and now want to update self.lastclk
+                    for n in range(0,8): # the subsample to get
+                        val = vals[n]
+                        if n < 4:
+                            if val!=341 and val!= 682: # 0101010101 or 1010101010
+                                if n == 0: nbadclkA += 1
+                                if n == 1: nbadclkB += 1
+                                if n == 2: nbadclkC += 1
+                                if n == 3: nbadclkD += 1
+                                #print("s=", s, "n=", n, "clk", val, binprint(val))
+                            self.lastclk = val
+                        else:
+                            if val!=0 and val!=1 and val!=2 and val!=4 and val!=8 and val!=16 and val!=32 and val!=64 and val!=128 and val!=256 and val!=512: # 10 bits long, and just one 1
+                                nbadstr = nbadstr + 1
+                                #print("s=", s, "n=", n, "str", val, binprint(val))
                 if self.dotwochannel:
                     samp = s*20 - downsampleoffset
                     nsamp=20
