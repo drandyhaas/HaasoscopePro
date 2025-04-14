@@ -54,7 +54,7 @@ module command_processor (
 	output reg lvdsout_spare=0,
 	input wire [69:0] lvdsEbits, lvdsLbits,
 	output reg [1:0] leds, // controls LED 3..2
-	
+
 	output reg [23:0] flash_addr,
 	output reg flash_bulk_erase,
 	output reg clk_over_4,
@@ -63,11 +63,11 @@ module command_processor (
 	output reg flash_read,
 	output reg flash_write,
 	output reg flash_reset,
-	
+
 	input flash_busy,
 	input flash_data_valid,
 	input [7:0] flash_dataout
-	
+
 );
 integer version = 22; // firmware version
 
@@ -144,7 +144,7 @@ always @ (posedge clklvds or negedge rstn) begin
 		downsamplemerging_sync <= downsamplemerging;
 		highres_sync           <= highres;
 		triggerchan_sync       <= triggerchan;
-		dorolling_sync         <= 1'b0; // TODO: to be removed
+		dorolling_sync         <= dorolling; // TODO: to be removed
 
 		if (acqstate==251 || acqstate==0) begin
 			// not writing, while waiting to be read out or in initial state where trigger might be disabled
@@ -689,7 +689,7 @@ always @ (posedge clk or negedge rstn) begin
                 endcase
                 `SEND_STD_USB_RESPONSE
             end
-				
+
 				15 : begin // read from flash
 					case (flashstate)
                0 : begin
@@ -721,7 +721,7 @@ always @ (posedge clk or negedge rstn) begin
                default : flashstate <= 4'd0;
                endcase
 				end
-				
+
 				16 : begin // write to flash
 					case (flashstate)
                0 : begin
@@ -749,7 +749,7 @@ always @ (posedge clk or negedge rstn) begin
                default : flashstate <= 4'd0;
                endcase
 				end
-				
+
 				17 : begin // erase flash
 					case (flashstate)
                0 : begin
@@ -775,7 +775,7 @@ always @ (posedge clk or negedge rstn) begin
                default : flashstate <= 4'd0;
                endcase
 				end
-				
+
             default: // some command we didn't know
             state <= RX;
 
@@ -826,11 +826,11 @@ always @ (posedge clk or negedge rstn) begin
 							o_tdatatemp[i+10] = 0; //padding
 							o_tdatatemp[i+26] = 0; //padding
 						 end
-						 if (o_tdatatemp[9:0]!=0 && o_tdatatemp[9:0]!=1 && o_tdatatemp[9:0]!=2 && o_tdatatemp[9:0]!=4 && o_tdatatemp[9:0]!=8 && o_tdatatemp[9:0]!=16 && 
+						 if (o_tdatatemp[9:0]!=0 && o_tdatatemp[9:0]!=1 && o_tdatatemp[9:0]!=2 && o_tdatatemp[9:0]!=4 && o_tdatatemp[9:0]!=8 && o_tdatatemp[9:0]!=16 &&
 							  o_tdatatemp[9:0]!=32 && o_tdatatemp[9:0]!=64 && o_tdatatemp[9:0]!=128 && o_tdatatemp[9:0]!=256 && o_tdatatemp[9:0]!=512) begin
 							  clkstrprob<=1'b1; // issue with str
 						 end
-						 if (o_tdatatemp[25:16]!=0 && o_tdatatemp[25:16]!=1 && o_tdatatemp[25:16]!=2 && o_tdatatemp[25:16]!=4 && o_tdatatemp[25:16]!=8 && o_tdatatemp[25:16]!=16 && 
+						 if (o_tdatatemp[25:16]!=0 && o_tdatatemp[25:16]!=1 && o_tdatatemp[25:16]!=2 && o_tdatatemp[25:16]!=4 && o_tdatatemp[25:16]!=8 && o_tdatatemp[25:16]!=16 &&
 							  o_tdatatemp[25:16]!=32 && o_tdatatemp[25:16]!=64 && o_tdatatemp[25:16]!=128 && o_tdatatemp[25:16]!=256 && o_tdatatemp[25:16]!=512) begin
 							  clkstrprob<=1'b1; // issue with str
 						 end
@@ -845,11 +845,11 @@ always @ (posedge clk or negedge rstn) begin
 							o_tdatatemp[i+10] = 0; //padding
 							o_tdatatemp[i+26] = 0; //padding
 						 end
-						 if (o_tdatatemp[9:0]!=0 && o_tdatatemp[9:0]!=1 && o_tdatatemp[9:0]!=2 && o_tdatatemp[9:0]!=4 && o_tdatatemp[9:0]!=8 && o_tdatatemp[9:0]!=16 && 
+						 if (o_tdatatemp[9:0]!=0 && o_tdatatemp[9:0]!=1 && o_tdatatemp[9:0]!=2 && o_tdatatemp[9:0]!=4 && o_tdatatemp[9:0]!=8 && o_tdatatemp[9:0]!=16 &&
 							  o_tdatatemp[9:0]!=32 && o_tdatatemp[9:0]!=64 && o_tdatatemp[9:0]!=128 && o_tdatatemp[9:0]!=256 && o_tdatatemp[9:0]!=512) begin
 							  clkstrprob<=1'b1; // issue with str
 						 end
-						 if (o_tdatatemp[25:16]!=0 && o_tdatatemp[25:16]!=1 && o_tdatatemp[25:16]!=2 && o_tdatatemp[25:16]!=4 && o_tdatatemp[25:16]!=8 && o_tdatatemp[25:16]!=16 && 
+						 if (o_tdatatemp[25:16]!=0 && o_tdatatemp[25:16]!=1 && o_tdatatemp[25:16]!=2 && o_tdatatemp[25:16]!=4 && o_tdatatemp[25:16]!=8 && o_tdatatemp[25:16]!=16 &&
 							  o_tdatatemp[25:16]!=32 && o_tdatatemp[25:16]!=64 && o_tdatatemp[25:16]!=128 && o_tdatatemp[25:16]!=256 && o_tdatatemp[25:16]!=512) begin
 							  clkstrprob<=1'b1; // issue with str
 						 end
@@ -909,11 +909,11 @@ always @ (posedge clk or negedge rstn) begin
                 o_tvalid <= 1'b0;
                 if (length >= 4) begin
                     length <= length - 16'd4;
-						  
+
 						  if (channel==10) channel2 <= 6'd20;
 						  if (channel==20) channel2 <= 6'd10;
 						  if (channel==30) channel2 <= 6'd30;
-						  
+
                     if (channel==50) begin
                         channel <= 0;
                         ram_rd_address <= ram_rd_address + 10'd1;
