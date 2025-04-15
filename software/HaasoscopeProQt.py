@@ -70,8 +70,7 @@ class MainWindow(TemplateBaseClass):
     themuxoutV = True
     phasecs = []
     for ph in range(len(usbs)): phasecs.append([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
-    pll_test_c0phase = -5
-    pll_test_c0phase_down = 2
+    phaseoffset = 2 # how many positive phase steps to take from middle of good range
     doexttrig = [0] * num_board
     paused = True # will unpause with dostartstop at startup
     downsample = 0
@@ -124,6 +123,8 @@ class MainWindow(TemplateBaseClass):
     dodirect = True
     VperD = [0.16]*(num_board*2)
     plljustreset = [0] * num_board
+    plljustresetdir = 0
+    phasenbad = [0] * 12
     dooversample = False
     doresamp = 0
 
@@ -416,20 +417,34 @@ class MainWindow(TemplateBaseClass):
         tres = usbs[board].recv(4)
         print("pllreset sent to board",board,"- got back:", tres[3], tres[2], tres[1], tres[0])
         self.phasecs[board] = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]  # reset counters
-        # adjust phases (intentionally put to a place where the clockstr may be bad, it'll get adjusted by 90 deg later, and then dropped to a good range)
-        n = self.pll_test_c0phase  # amount to adjust (+ or -)
-        for i in range(abs(n)): self.dophase(board, 0, n > 0, pllnum=0, quiet=(i != abs(n) - 1))  # adjust phase of c0, clklvds
-        self.plljustreset[board] = 3 # get a few events
+        self.plljustreset[board] = 0
+        self.plljustresetdir = 1
+        self.phasenbad = [0]*12 # reset nbad counters
         switchclock(usbs,board)
 
     def adjustclocks(self, board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr):
-        if (nbadclkA+nbadclkB+nbadclkC+nbadclkD+nbadstr>4) and self.phasecs[board][0][0] < 20:  # adjust phase by 90 deg
-            n = 6  # amount to adjust clklvds (positive)
-            for i in range(n): self.dophase(board, 0, 1, pllnum=0, quiet=(i != n - 1))  # adjust phase of clklvds
-        if self.plljustreset[board]>0: self.plljustreset[board] -= 1 # count down while collecting events
-        if self.plljustreset[board]==1: # adjust back down to a good range after detecting that it needs to be shifted by 90 deg or not
-            n = self.pll_test_c0phase_down  # amount to adjust (positive)
-            for i in range(n): self.dophase(board, 0, 1, pllnum=0, quiet=(i != n - 1))  # adjust phase of clklvds
+        if 0<=self.plljustreset[board]<12: # we start by going up in phase
+            nbad = nbadclkA + nbadclkB + nbadclkC + nbadclkD + nbadstr
+            #print("plljustreset for board",board,"is",self.plljustreset[board],"nbad",nbad)
+            self.phasenbad[self.plljustreset[board]]+=nbad
+            #print(self.phasenbad)
+            self.dophase(board, 0, (self.plljustresetdir==1), pllnum=0, quiet=True) # adjust phase of clklvds
+            self.plljustreset[board]+=self.plljustresetdir
+        if self.plljustreset[board]==12:
+            #print("plljustreset for board",board,"is",self.plljustreset[board])
+            self.plljustresetdir=-1
+            self.plljustreset[board] += self.plljustresetdir
+            self.dophase(board, 0, (self.plljustresetdir == 1), pllnum=0, quiet=True)  # adjust phase of clklvds
+        if self.plljustreset[board]==-1:
+            #print("plljustreset for board",board,"is",self.plljustreset[board])
+            print("bad clkstr per phase step:",self.phasenbad)
+            startofzeros, lengthofzeros = find_longest_zero_stretch(self.phasenbad, True)
+            print("good phase starts at",startofzeros, "and goes for", lengthofzeros,"steps")
+            if startofzeros>=12: startofzeros-=12
+            n = startofzeros + lengthofzeros//2 + self.phaseoffset # amount to adjust clklvds (positive)
+            if n>=12: n-=12
+            for i in range(n+1): self.dophase(board, 0, 1, pllnum=0, quiet=(i != n - 1)) # adjust phase of clklvds, extra 1 because we went to phase=-1 before
+            self.plljustreset[board] += self.plljustresetdir
 
     def wheelEvent(self, event):  # QWheelEvent
         if hasattr(event, "delta"):

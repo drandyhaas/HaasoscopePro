@@ -12,6 +12,24 @@ def binprint(x):
 def getbit(i, n):
     return (i >> n) & 1
 
+def find_longest_zero_stretch(arr, wrap):
+    if wrap: arr = arr+arr # to handle wraparounds
+    max_length = 0
+    current_length = 0
+    start_index = -1
+    current_start = -1
+    for i, num in enumerate(arr):
+        if num == 0:
+            if current_length == 0:
+                current_start = i
+            current_length += 1
+            if current_length > max_length:
+                max_length = current_length
+                start_index = current_start
+        else:
+            current_length = 0
+    return start_index, max_length
+
 def bytestoint(thebytes):
     return thebytes[0] + pow(2, 8) * thebytes[1] + pow(2, 16) * thebytes[2] + pow(2, 24) * thebytes[3]
 
