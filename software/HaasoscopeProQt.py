@@ -421,6 +421,7 @@ class MainWindow(TemplateBaseClass):
         self.plljustresetdir = 1
         self.phasenbad = [0]*12 # reset nbad counters
         self.expect_samples = 1000
+        self.dodrawing = False
         switchclock(usbs,board)
 
     def adjustclocks(self, board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr):
@@ -435,13 +436,13 @@ class MainWindow(TemplateBaseClass):
             self.dophase(board, plloutnum, (self.plljustresetdir==1), pllnum=0, quiet=True) # adjust phase of plloutnum
             self.dophase(board, plloutnum2, (self.plljustresetdir==1), pllnum=0, quiet=True) # adjust phase of plloutnum
             self.plljustreset[board]+=self.plljustresetdir
-        if self.plljustreset[board]>=12:
+        elif self.plljustreset[board]>=12:
             if debugphase: print("plljustreset for board",board,"is",self.plljustreset[board])
             if self.plljustreset[board]==15: self.plljustresetdir=-1
             self.plljustreset[board] += self.plljustresetdir
             self.dophase(board, plloutnum, (self.plljustresetdir == 1), pllnum=0, quiet=True)  # adjust phase of plloutnum
             self.dophase(board, plloutnum2, (self.plljustresetdir == 1), pllnum=0, quiet=True)  # adjust phase of plloutnum
-        if self.plljustreset[board]==-1:
+        elif self.plljustreset[board]==-1:
             if debugphase: print("plljustreset for board",board,"is",self.plljustreset[board])
             print("bad clkstr per phase step:",self.phasenbad)
             startofzeros, lengthofzeros = find_longest_zero_stretch(self.phasenbad, True)
@@ -454,7 +455,12 @@ class MainWindow(TemplateBaseClass):
                 self.dophase(board, plloutnum, 1, pllnum=0, quiet=(i != n - 1)) # adjust phase of plloutnum
                 self.dophase(board, plloutnum2, 1, pllnum=0, quiet=(i != n - 1))  # adjust phase of plloutnum
             self.plljustreset[board] += self.plljustresetdir
+        elif self.plljustreset[board] == -2:
             self.depth()
+            self.plljustreset[board] += self.plljustresetdir
+        elif self.plljustreset[board] == -3:
+            self.dodrawing = True
+            self.plljustreset[board] += self.plljustresetdir
 
     def wheelEvent(self, event):  # QWheelEvent
         if hasattr(event, "delta"):
