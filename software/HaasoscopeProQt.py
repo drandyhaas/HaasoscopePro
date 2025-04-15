@@ -70,7 +70,7 @@ class MainWindow(TemplateBaseClass):
     themuxoutV = True
     phasecs = []
     for ph in range(len(usbs)): phasecs.append([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
-    phaseoffset = 2 # how many positive phase steps to take from middle of good range
+    phaseoffset = 1 # how many positive phase steps to take from middle of good range
     doexttrig = [0] * num_board
     paused = True # will unpause with dostartstop at startup
     downsample = 0
@@ -423,27 +423,29 @@ class MainWindow(TemplateBaseClass):
         switchclock(usbs,board)
 
     def adjustclocks(self, board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr):
+        debugphase=False
         if 0<=self.plljustreset[board]<12: # we start by going up in phase
             nbad = nbadclkA + nbadclkB + nbadclkC + nbadclkD + nbadstr
-            #print("plljustreset for board",board,"is",self.plljustreset[board],"nbad",nbad)
+            if debugphase: print("plljustreset for board",board,"is",self.plljustreset[board],"nbad",nbad)
             self.phasenbad[self.plljustreset[board]]+=nbad
-            #print(self.phasenbad)
+            if debugphase: print(self.phasenbad)
             self.dophase(board, 0, (self.plljustresetdir==1), pllnum=0, quiet=True) # adjust phase of clklvds
             self.plljustreset[board]+=self.plljustresetdir
-        if self.plljustreset[board]==12:
-            #print("plljustreset for board",board,"is",self.plljustreset[board])
-            self.plljustresetdir=-1
+        if self.plljustreset[board]>=12:
+            if debugphase: print("plljustreset for board",board,"is",self.plljustreset[board])
+            if self.plljustreset[board]==15: self.plljustresetdir=-1
             self.plljustreset[board] += self.plljustresetdir
             self.dophase(board, 0, (self.plljustresetdir == 1), pllnum=0, quiet=True)  # adjust phase of clklvds
         if self.plljustreset[board]==-1:
-            #print("plljustreset for board",board,"is",self.plljustreset[board])
+            if debugphase: print("plljustreset for board",board,"is",self.plljustreset[board])
             print("bad clkstr per phase step:",self.phasenbad)
             startofzeros, lengthofzeros = find_longest_zero_stretch(self.phasenbad, True)
             print("good phase starts at",startofzeros, "and goes for", lengthofzeros,"steps")
             if startofzeros>=12: startofzeros-=12
             n = startofzeros + lengthofzeros//2 + self.phaseoffset # amount to adjust clklvds (positive)
             if n>=12: n-=12
-            for i in range(n+1): self.dophase(board, 0, 1, pllnum=0, quiet=(i != n - 1)) # adjust phase of clklvds, extra 1 because we went to phase=-1 before
+            n+=1 # extra 1 because we went to phase=-1 before
+            for i in range(n): self.dophase(board, 0, 1, pllnum=0, quiet=(i != n - 1)) # adjust phase of clklvds
             self.plljustreset[board] += self.plljustresetdir
 
     def wheelEvent(self, event):  # QWheelEvent
