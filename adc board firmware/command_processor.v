@@ -173,7 +173,7 @@ always @ (posedge clklvds or negedge rstn) begin
 
 		// rolling trigger; TODO: this whole if block is to be deleted
 		if (dorolling_sync && acqstate>0 && acqstate<250) begin
-			if (rollingtriggercounter==40000000) begin
+			if (rollingtriggercounter==8000000) begin // ~10 Hz
 				sample_triggered <= 0;
 				downsamplemergingcounter_triggered <= downsamplemergingcounter;
 				ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
