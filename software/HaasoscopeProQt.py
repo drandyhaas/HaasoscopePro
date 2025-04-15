@@ -122,7 +122,7 @@ class MainWindow(TemplateBaseClass):
     lastsize = 0
     dodirect = True
     VperD = [0.16]*(num_board*2)
-    plljustreset = [0] * num_board
+    plljustreset = [-10] * num_board
     plljustresetdir = 0
     phasenbad = [0] * 12
     dooversample = False
@@ -420,23 +420,27 @@ class MainWindow(TemplateBaseClass):
         self.plljustreset[board] = 0
         self.plljustresetdir = 1
         self.phasenbad = [0]*12 # reset nbad counters
+        self.expect_samples = 1000
         switchclock(usbs,board)
 
     def adjustclocks(self, board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr):
         debugphase=False
-        plloutnum = 2 # adjusting clkout, which drives the ADF4350
+        plloutnum = 0 # adjusting clklvds
+        plloutnum2 = 1 # adjusting clklvdsout
         if 0<=self.plljustreset[board]<12: # we start by going up in phase
             nbad = nbadclkA + nbadclkB + nbadclkC + nbadclkD + nbadstr
             if debugphase: print("plljustreset for board",board,"is",self.plljustreset[board],"nbad",nbad)
             self.phasenbad[self.plljustreset[board]]+=nbad
             if debugphase: print(self.phasenbad)
             self.dophase(board, plloutnum, (self.plljustresetdir==1), pllnum=0, quiet=True) # adjust phase of plloutnum
+            self.dophase(board, plloutnum2, (self.plljustresetdir==1), pllnum=0, quiet=True) # adjust phase of plloutnum
             self.plljustreset[board]+=self.plljustresetdir
         if self.plljustreset[board]>=12:
             if debugphase: print("plljustreset for board",board,"is",self.plljustreset[board])
             if self.plljustreset[board]==15: self.plljustresetdir=-1
             self.plljustreset[board] += self.plljustresetdir
             self.dophase(board, plloutnum, (self.plljustresetdir == 1), pllnum=0, quiet=True)  # adjust phase of plloutnum
+            self.dophase(board, plloutnum2, (self.plljustresetdir == 1), pllnum=0, quiet=True)  # adjust phase of plloutnum
         if self.plljustreset[board]==-1:
             if debugphase: print("plljustreset for board",board,"is",self.plljustreset[board])
             print("bad clkstr per phase step:",self.phasenbad)
@@ -446,8 +450,11 @@ class MainWindow(TemplateBaseClass):
             n = startofzeros + lengthofzeros//2 + self.phaseoffset # amount to adjust clklvds (positive)
             if n>=12: n-=12
             n+=1 # extra 1 because we went to phase=-1 before
-            for i in range(n): self.dophase(board, plloutnum, 1, pllnum=0, quiet=(i != n - 1)) # adjust phase of plloutnum
+            for i in range(n):
+                self.dophase(board, plloutnum, 1, pllnum=0, quiet=(i != n - 1)) # adjust phase of plloutnum
+                self.dophase(board, plloutnum2, 1, pllnum=0, quiet=(i != n - 1))  # adjust phase of plloutnum
             self.plljustreset[board] += self.plljustresetdir
+            self.depth()
 
     def wheelEvent(self, event):  # QWheelEvent
         if hasattr(event, "delta"):
