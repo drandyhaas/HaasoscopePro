@@ -902,24 +902,28 @@ class MainWindow(TemplateBaseClass):
                 if self.dotwochannel:
                     samp = s*20 - downsampleoffset
                     nsamp=20
+                    nstart=0
                     if samp<0:
                         nsamp = 20 + samp
+                        nstart = -samp
                         samp = 0
                     if samp+20 >= datasize:
                         nsamp = datasize - samp
                     if 0 < nsamp <= 20:
-                        self.xydata[board * self.num_chan_per_board+0][1][samp:samp + nsamp] = npunpackedsamples[s * self.nsubsamples+20:s * self.nsubsamples+20 + nsamp]
-                        self.xydata[board * self.num_chan_per_board+1][1][samp:samp + nsamp] = npunpackedsamples[s * self.nsubsamples:s * self.nsubsamples + nsamp]
+                        self.xydata[board * self.num_chan_per_board+0][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+20+nstart:s*self.nsubsamples+20+nstart+nsamp]
+                        self.xydata[board * self.num_chan_per_board+1][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
                 else:
                     samp = s*40 - downsampleoffset
                     nsamp=40
+                    nstart=0
                     if samp<0:
                         nsamp = 40 + samp
+                        nstart = -samp
                         samp = 0
                     if samp+40 >= datasize:
                         nsamp = datasize - samp
                     if 0 < nsamp <= 40:
-                        self.xydata[board * self.num_chan_per_board][1][samp:samp + nsamp] = npunpackedsamples[s * self.nsubsamples:s * self.nsubsamples + nsamp]
+                        self.xydata[board * self.num_chan_per_board][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
 
             else: # This is the older slower way
                 for n in range(self.nsubsamples): # the subsample to get
