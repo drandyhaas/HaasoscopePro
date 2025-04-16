@@ -272,7 +272,7 @@ def gettemps(usb):
     slowdac1 = spicommand(usb, "SlowDAC1", 0x00, 0x00, 0x00, True, cs=6, nbyte=2, quiet=True)
     slowdac1amp = 4.0
     slowdac1V = (256 * slowdac1[1] + slowdac1[0]) * 3300 / pow(2, 12) / slowdac1amp
-    adctemp = (780-slowdac1V)/1.5
+    adctemp = (750-slowdac1V)/1.5
     spicommand(usb, "SlowDAC2", 0x08, 0x00, 0x00, True, cs=6, nbyte=2,
                quiet=True)  # first conversion may be for old input
     slowdac2 = spicommand(usb, "SlowDAC2", 0x08, 0x00, 0x00, True, cs=6, nbyte=2, quiet=True)
@@ -281,6 +281,6 @@ def gettemps(usb):
     Rboard = 10000*(3300/slowdac2V-1)
     T0 = 273 + 25
     beta = 3380 # for NCP18XH103F03RB
-    Tboard = 1/( 1/T0 - math.log(Rboard/10000)/beta ) - 273
+    Tboard = 1/( 1/T0 - math.log(Rboard/10000)/beta ) - 273 - 10
     return "Temps (ADC, board): "+str(round(adctemp, 1))+"\u00b0C, " + str(round(Tboard, 2))+"\u00b0C"
 
