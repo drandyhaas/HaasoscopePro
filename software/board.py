@@ -75,6 +75,14 @@ def setupboard(usb, dopattern, twochannel, dooverrange):
     tad=0
     spicommand(usb, "TAD", 0x02, 0xB6, tad, False)  # adjust TAD (time of ADC relative to clk)
 
+    do1v=False
+    if do1v:
+        spicommand2(usb, "FS_RANGE A",0x00,0x30,0xff,0xff,False)  # adjust full scale ADC range 1V for input A
+        spicommand2(usb, "FS_RANGE B",0x00,0x32,0xff,0xff,False)  # adjust full scale ADC range 1V for input B
+    else:
+        spicommand2(usb, "FS_RANGE A",0x00,0x30,0xa0,0x00,False)  # adjust full scale ADC range 800mV for input A
+        spicommand2(usb, "FS_RANGE B",0x00,0x32,0xa0,0x00,False)  # adjust full scale ADC range 800mV for input B
+
     if dooverrange:
         spicommand(usb, "OVR_CFG", 0x02, 0x13, 0x0f, False)  # overrange on
         spicommand(usb, "OVR_T0", 0x02, 0x11, 0xf2, False)  # overrange threshold 0
