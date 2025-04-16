@@ -1109,75 +1109,73 @@ class MainWindow(TemplateBaseClass):
         if self.num_board==1:
             for board in range(self.num_board):
                 # board==0
-                r1 = 0x0f
-                g1 = 0x00
-                b1 = 0x00
-                r2 = 0x00
-                g2 = 0x00
-                b2 = 0x00
+                r1 = 100
+                g1 = 0
+                b1 = 0
+                r2 = 0
+                g2 = 0
+                b2 = 0
                 if self.dotwochannel:
-                    r1 = 0x0f
-                    g1 = 0x00
-                    b1 = 0x00
-                    r2 = 0x00
-                    g2 = 0x0f
-                    b2 = 0x00
-                send_leds(usbs[board], r1, g1, b1, r2, g2, b2)
+                    r1 = 100
+                    g1 = 0
+                    b1 = 0
+                    r2 = 0
+                    g2 = 100
+                    b2 = 0
                 send_leds(usbs[board], r1, g1, b1, r2, g2, b2)
         elif self.num_board==2:
             for board in range(self.num_board):
                 # board==0
-                r1 = 0x0f
-                g1 = 0x00
-                b1 = 0x00
-                r2 = 0x00
-                g2 = 0x00
-                b2 = 0x00
+                r1 = 100
+                g1 = 0
+                b1 = 0
+                r2 = 0
+                g2 = 0
+                b2 = 0
                 if board==1:
-                    r1 = 0x00
-                    g1 = 0x00
-                    b1 = 0x0f
-                    r2 = 0x00
-                    g2 = 0x00
-                    b2 = 0x00
+                    r1 = 0
+                    g1 = 0
+                    b1 = 100
+                    r2 = 0
+                    g2 = 0
+                    b2 = 0
                 if self.dotwochannel:
                     # board==0
-                    r1 = 0x0f
-                    g1 = 0x00
-                    b1 = 0x00
-                    r2 = 0x00
-                    g2 = 0x0f
-                    b2 = 0x00
+                    r1 = 100
+                    g1 = 0
+                    b1 = 0
+                    r2 = 0
+                    g2 = 100
+                    b2 = 0
                     if board==1:
-                        r1 = 0x00
-                        g1 = 0x00
-                        b1 = 0x0f
-                        r2 = 0x0f
-                        g2 = 0x00
-                        b2 = 0x0f
+                        r1 = 0
+                        g1 = 0
+                        b1 = 100
+                        r2 = 100
+                        g2 = 0
+                        b2 = 100
                 if self.dooversample:
                     # board==0
-                    r1 = 0x00
-                    g1 = 0x00
-                    b1 = 0x00
-                    r2 = 0x0f
-                    g2 = 0x00
-                    b2 = 0x00
+                    r1 = 0
+                    g1 = 0
+                    b1 = 0
+                    r2 = 100
+                    g2 = 0
+                    b2 = 0
                     if board == 1:
-                        r1 = 0x00
-                        g1 = 0x00
-                        b1 = 0x00
-                        r2 = 0x00
-                        g2 = 0x00
-                        b2 = 0x0f
+                        r1 = 0
+                        g1 = 0
+                        b1 = 0
+                        r2 = 0
+                        g2 = 0
+                        b2 = 100
                         if self.dointerleaved:
-                            r1 = 0x00
-                            g1 = 0x00
-                            b1 = 0x00
-                            r2 = 0x0f
-                            g2 = 0x0f
-                            b2 = 0x0f
-                send_leds(usbs[board], r1, g1, b1, r2, g2, b2)
+                            r1 = 0
+                            g1 = 0
+                            b1 = 0
+                            r2 = 20
+                            g2 = 0
+                            b2 = 0
                 send_leds(usbs[board], r1, g1, b1, r2, g2, b2)
         else:
             print("Don't know how to set lights for",self.num_board,"boards yet!")
