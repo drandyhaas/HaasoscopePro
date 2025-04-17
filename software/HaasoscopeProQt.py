@@ -264,11 +264,13 @@ class MainWindow(TemplateBaseClass):
 
     def changeoffset(self):
         scaling = 1000*self.VperD[self.activeboard*2+self.selectedchannel]/160 # compare to 0 dB gain
+        if self.ui.acdcCheck.checkState() == QtCore.Qt.Checked: scaling *= 245/160 # offset gain is different in AC mode
         if dooffset(self.activeusb, self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx,self.dooversample):
             if self.dooversample and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
                 dooffset(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx,self.dooversample)
             v2 = scaling*1.5*self.ui.offsetBox.value()
             if self.dooversample: v2 *= 2.0
+            if self.ui.acdcCheck.checkState() == QtCore.Qt.Checked: v2*=(160/245) # offset gain is different in AC mode
             self.ui.Voff.setText(str(int(v2))+" mV")
 
     def changegain(self):
@@ -321,6 +323,7 @@ class MainWindow(TemplateBaseClass):
     def setacdc(self):
         setchanacdc(self.activeusb, self.selectedchannel,
                     self.ui.acdcCheck.checkState() == QtCore.Qt.Checked, self.dooversample)  # will be True for AC, False for DC
+        self.changeoffset() # because offset gain is different in AC mode
         if self.dooversample and self.ui.boardBox.value() % 2 == 0:  # also adjust other board we're oversampling with
             setchanacdc(usbs[self.ui.boardBox.value()+1], self.selectedchannel,
                     self.ui.acdcCheck.checkState() == QtCore.Qt.Checked, self.dooversample)
