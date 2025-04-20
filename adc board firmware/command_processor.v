@@ -123,8 +123,10 @@ reg			highres = 0, highres_sync = 0;
 reg [7:0]	downsamplemerging = 1, downsamplemerging_sync = 1;
 reg [19:0] 	sample_triggered = 0, sample_triggered_sync = 0;
 reg [7:0]	downsamplemergingcounter_triggered = 0, downsamplemergingcounter_triggered_sync = 0;
+reg [7:0]	triggerphase = 0, triggerphase_sync = 0;
 reg 			triggerchan = 0, triggerchan_sync = 0;
 reg			dorolling = 0, dorolling_sync = 0; // TODO: to be removed
+reg 			firingsecondstep = 0;
 
 // this drives the trigger
 always @ (posedge clklvds or negedge rstn) begin
@@ -189,6 +191,7 @@ always @ (posedge clklvds or negedge rstn) begin
 			tot_counter <= 0;
 			sample_triggered <= 0;
 			downsamplemergingcounter_triggered <= -8'd1;
+			triggerphase <= -8'd1;
 			lvdsout_trig <= 0;
 			lvdsout_trig_b <= 0;
 
@@ -228,48 +231,79 @@ always @ (posedge clklvds or negedge rstn) begin
 		1 : begin // ready for first part of trigger condition to be met
 			if (triggertype_sync!=1) acqstate <= 0;
 			else begin
+				firingsecondstep=1'b0;
+				
+				if (triggerchan_sync==1'b0) begin // single channel
 				for (i=0;i<10;i=i+1) begin
-					if (
-					    (triggerchan_sync==1'b0 && samplevalue[i]<lowerthresh_sync) ||
-					    (triggerchan_sync==1'b1 && samplevalue[10+i]<lowerthresh_sync)
-					) acqstate <= 8'd2;
-					if (
-					    (triggerchan_sync==1'b0 && samplevalue[i]>upperthresh_sync) ||
-					    (triggerchan_sync==1'b1 && samplevalue[10+i]>upperthresh_sync)
-					)
-					    sample_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
-					else
-					    sample_triggered[9-i] <= 1'b0;
+					if (samplevalue[i]<lowerthresh_sync) acqstate <= 8'd2;
+					if (samplevalue[i]>upperthresh_sync) begin
+						sample_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
+						triggerphase <= 8'd0;
+					end
+					else sample_triggered[9-i] <= 1'b0;
 				end
+				end
+				
+				else begin // two channel
+				for (i=0;i<10;i=i+1) begin
+					if (samplevalue[10+i]<lowerthresh_sync) acqstate <= 8'd2;
+					if (samplevalue[10+i]>upperthresh_sync) begin
+						sample_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
+						triggerphase <= 8'd0;
+					end
+					else sample_triggered[9-i] <= 1'b0;
+				end
+				end
+				
 			end
 		end
 
 		2 : begin // ready for second part of trigger condition to be met
 			if (triggertype_sync!=1) acqstate <= 0;
 			else begin
-                for (i=0;i<10;i=i+1) begin
-                    if (
-                        (triggerchan_sync==1'b0 && samplevalue[i]>upperthresh_sync) ||
-                        (triggerchan_sync==1'b1 && samplevalue[10+i]>upperthresh_sync)
-                    ) begin
-                        if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
-                            sample_triggered[10+9-i] <= 1'b1; // remember the samples that caused the trigger
-                            downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
-                        end
-
-                        if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync)
-                            tot_counter <= tot_counter + 8'd1;
-
-                        if (tot_counter>=triggerToT_sync &&
-                            (triggerToT_sync==0 || downsamplemergingcounter==downsamplemergingcounter_triggered) )
-                        begin
-                            ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-                            lvdsout_trig <= 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
-                            lvdsout_trig_b <= 1'b1; // and backwards
-                            acqstate <= 8'd250;
-                        end
-                    end
-                end
+                
+			  if (triggerchan_sync==1'b0) begin // single channel
+			  
+			  for (i=0;i<10;i=i+1) begin
+					if (samplevalue[i]>upperthresh_sync) begin
+						firingsecondstep=1'b1;
+						if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
+							 sample_triggered[10+9-i] <= 1'b1; // remember the samples that caused the trigger
+							 if (triggerphase == -8d'1) triggerphase <= 8'd4;
+							 downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+						end
+					end
+			  end
+			  
+			  end
+			  else begin // two channel
+			  
+			  for (i=0;i<10;i=i+1) begin
+					if (samplevalue[10+i]>upperthresh_sync) begin
+						firingsecondstep=1'b1;
+						if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
+							 sample_triggered[10+9-i] <= 1'b1; // remember the samples that caused the trigger
+							 if (triggerphase == -8d'1) triggerphase <= 8'd4;
+							 downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+						end
+					end
+			  end
+			  
+			  end
+			  
+    			if (firingsecondstep) begin
+					if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync)
+						 tot_counter <= tot_counter + 8'd1;
+					if (tot_counter>=triggerToT_sync &&
+						 (triggerToT_sync==0 || downsamplemergingcounter==downsamplemergingcounter_triggered) )
+					begin
+						 ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+						 lvdsout_trig <= 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
+						 lvdsout_trig_b <= 1'b1; // and backwards
+						 acqstate <= 8'd250;
+					end
+			   end
+				
 			end
 		end
 
@@ -414,6 +448,7 @@ always @ (posedge clk) begin
 	ram_address_triggered_sync <= ram_address_triggered;
 	sample_triggered_sync <= sample_triggered;
 	downsamplemergingcounter_triggered_sync <= downsamplemergingcounter_triggered;
+	triggerphase_sync <= triggerphase;
 
 	for (i=0;i<4;i=i+1)
 	    if (overrange[i]) overrange_counter[i] <= overrange_counter[i] + 1;
@@ -484,7 +519,7 @@ always @ (posedge clk or negedge rstn) begin
                 if (rx_data[1]==1) o_tdata <= {boardin,boardin,boardin,boardin};
                 if (rx_data[1]==2) o_tdata <= overrange_counter[rx_data[2][1:0]];
                 if (rx_data[1]==3) o_tdata <= eventcounter_sync;
-                if (rx_data[1]==4) o_tdata <= downsamplemergingcounter_triggered_sync;
+                if (rx_data[1]==4) o_tdata <= {16'd0,triggerphase_sync,downsamplemergingcounter_triggered_sync};
                 if (rx_data[1]==5) begin
                     lvdsout_spare <= rx_data[2][0]; // used for telling order of devices
                     o_tdata <= {8'd0, 7'd0,lvdsin_spare, 4'd0,lockinfo, 7'd0,~clkswitch};

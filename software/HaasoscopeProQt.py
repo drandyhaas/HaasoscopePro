@@ -794,7 +794,7 @@ class MainWindow(TemplateBaseClass):
                     readyevent[board] = self.getchannels(board)
                 for board in range(self.num_board):
                     if not readyevent[board]: continue
-                    downsamplemergingcounter = self.getpredata(board)
+                    downsamplemergingcounter, triggerphase = self.getpredata(board)
                     data = self.getdata(usbs[board])
                     rx_len = rx_len + len(data)
                     if self.dofft and board==self.activeboard: self.plot_fft()
@@ -847,16 +847,17 @@ class MainWindow(TemplateBaseClass):
             if eventcountertemp != self.eventcounter[board] + 1 and eventcountertemp != 0:  # check event count, but account for rollover
                 print("Event counter not incremented by 1?", eventcountertemp, self.eventcounter[board], " for board", board)
             self.eventcounter[board] = eventcountertemp
+
         downsamplemergingcounter = 0
-        if self.downsamplemerging > 1:
-            usbs[board].send(bytes([2, 4, 100, 100, 100, 100, 100, 100]))  # get downsamplemergingcounter
-            res = usbs[board].recv(4)
-            downsamplemergingcounter = res[0]
-            if downsamplemergingcounter == self.downsamplemerging:
-                if not self.doexttrig[board]:
-                    downsamplemergingcounter = 0
-            # print("downsamplemergingcounter", downsamplemergingcounter)
-        return downsamplemergingcounter
+        usbs[board].send(bytes([2, 4, 100, 100, 100, 100, 100, 100]))  # get downsamplemergingcounter
+        res = usbs[board].recv(4)
+        if self.downsamplemerging > 1: downsamplemergingcounter = res[0]
+        if downsamplemergingcounter == self.downsamplemerging:
+            if not self.doexttrig[board]:
+                downsamplemergingcounter = 0
+        # print("downsamplemergingcounter", downsamplemergingcounter)
+        triggerphase = res[1]
+        return downsamplemergingcounter, triggerphase
 
     def getdata(self, usb):
         expect_len = (self.expect_samples+ self.expect_samples_extra) * 2 * self.nsubsamples # length to request: each adc bit is stored as 10 bits in 2 bytes, a couple extra for shifting later
