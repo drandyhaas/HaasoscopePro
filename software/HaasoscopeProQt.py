@@ -918,7 +918,7 @@ class MainWindow(TemplateBaseClass):
                             nbadstr = nbadstr + 1
                             #print("s=", s, "n=", n, "str", val, binprint(val))
                 if self.dotwochannel:
-                    samp = s*20 - downsampleoffset
+                    samp = s*20 - downsampleoffset - (triggerphase>>4)//2
                     nsamp=20
                     nstart=0
                     if samp<0:
