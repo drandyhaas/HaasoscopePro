@@ -798,7 +798,7 @@ class MainWindow(TemplateBaseClass):
                     data = self.getdata(usbs[board])
                     rx_len = rx_len + len(data)
                     if self.dofft and board==self.activeboard: self.plot_fft()
-                    self.drawchannels(data, board, downsamplemergingcounter)
+                    self.drawchannels(data, board, downsamplemergingcounter, triggerphase)
                 if self.getone and rx_len > 0:
                     self.dostartstop()
                     self.drawtext()
@@ -872,12 +872,13 @@ class MainWindow(TemplateBaseClass):
             # oldbytes()
         return data
 
-    def drawchannels(self, data, board, downsamplemergingcounter):
+    def drawchannels(self, data, board, downsamplemergingcounter, triggerphase):
         if self.dofast: return
         if self.doexttrig[board]:
             if board % 2 == 1: boardtouse = board-1
             else: boardtouse = board+1
             self.sample_triggered[board] = self.sample_triggered[boardtouse] # take from the other board when interleaving using ext trig
+        #print("triggerphase", triggerphase>>4, triggerphase%4)
         nbadclkA = 0
         nbadclkB = 0
         nbadclkC = 0
@@ -930,7 +931,7 @@ class MainWindow(TemplateBaseClass):
                         self.xydata[board * self.num_chan_per_board+0][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+20+nstart:s*self.nsubsamples+20+nstart+nsamp]
                         self.xydata[board * self.num_chan_per_board+1][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
                 else:
-                    samp = s*40 - downsampleoffset
+                    samp = s*40 - downsampleoffset - (triggerphase>>4)
                     nsamp=40
                     nstart=0
                     if samp<0:

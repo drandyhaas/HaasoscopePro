@@ -122,8 +122,12 @@ reg [4:0] 	downsample = 0, downsample_sync = 0;
 reg			highres = 0, highres_sync = 0;
 reg [7:0]	downsamplemerging = 1, downsamplemerging_sync = 1;
 reg [19:0] 	sample_triggered = 0, sample_triggered_sync = 0;
+reg [19:0] 	sample_triggered2 = 0;
+reg [19:0] 	sample_triggered3 = 0;
+reg [19:0] 	sample_triggered4 = 0;
+reg [9:0]   sample_triggered_max_val1=0, sample_triggered_max_val2=0;
 reg [7:0]	downsamplemergingcounter_triggered = 0, downsamplemergingcounter_triggered_sync = 0;
-reg [7:0]	triggerphase = 0, triggerphase_sync = 0;
+reg [8:0]	triggerphase = 0, triggerphase_sync = 0;
 reg 			triggerchan = 0, triggerchan_sync = 0;
 reg			dorolling = 0, dorolling_sync = 0; // TODO: to be removed
 reg 			firingsecondstep = 0;
@@ -190,8 +194,13 @@ always @ (posedge clklvds or negedge rstn) begin
 		0 : begin // ready
 			tot_counter <= 0;
 			sample_triggered <= 0;
+			sample_triggered2 <= 0;
+			sample_triggered3 <= 0;
+			sample_triggered4 <= 0;
+			sample_triggered_max_val1 <= 0;
+			sample_triggered_max_val2 <= 0;
+			triggerphase <= -9'd1;
 			downsamplemergingcounter_triggered <= -8'd1;
-			triggerphase <= -8'd1;
 			lvdsout_trig <= 0;
 			lvdsout_trig_b <= 0;
 
@@ -231,16 +240,32 @@ always @ (posedge clklvds or negedge rstn) begin
 		1 : begin // ready for first part of trigger condition to be met
 			if (triggertype_sync!=1) acqstate <= 0;
 			else begin
-				firingsecondstep=1'b0;
 				
 				if (triggerchan_sync==1'b0) begin // single channel
 				for (i=0;i<10;i=i+1) begin
 					if (samplevalue[i]<lowerthresh_sync) acqstate <= 8'd2;
 					if (samplevalue[i]>upperthresh_sync) begin
 						sample_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
-						triggerphase <= 8'd0;
 					end
 					else sample_triggered[9-i] <= 1'b0;
+					
+					if (samplevalue[10+i]<lowerthresh_sync) acqstate <= 8'd2;
+					if (samplevalue[10+i]>upperthresh_sync) begin
+						sample_triggered2[9-i] <= 1'b1; // remember the samples that caused the trigger
+					end
+					else sample_triggered2[9-i] <= 1'b0;
+					
+					if (samplevalue[20+i]<lowerthresh_sync) acqstate <= 8'd2;
+					if (samplevalue[20+i]>upperthresh_sync) begin
+						sample_triggered3[9-i] <= 1'b1; // remember the samples that caused the trigger
+					end
+					else sample_triggered3[9-i] <= 1'b0;
+					
+					if (samplevalue[30+i]<lowerthresh_sync) acqstate <= 8'd2;
+					if (samplevalue[30+i]>upperthresh_sync) begin
+						sample_triggered4[9-i] <= 1'b1; // remember the samples that caused the trigger
+					end
+					else sample_triggered4[9-i] <= 1'b0;
 				end
 				end
 				
@@ -249,7 +274,6 @@ always @ (posedge clklvds or negedge rstn) begin
 					if (samplevalue[10+i]<lowerthresh_sync) acqstate <= 8'd2;
 					if (samplevalue[10+i]>upperthresh_sync) begin
 						sample_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
-						triggerphase <= 8'd0;
 					end
 					else sample_triggered[9-i] <= 1'b0;
 				end
@@ -261,7 +285,8 @@ always @ (posedge clklvds or negedge rstn) begin
 		2 : begin // ready for second part of trigger condition to be met
 			if (triggertype_sync!=1) acqstate <= 0;
 			else begin
-                
+			  firingsecondstep=1'b0;
+              
 			  if (triggerchan_sync==1'b0) begin // single channel
 			  
 			  for (i=0;i<10;i=i+1) begin
@@ -269,7 +294,27 @@ always @ (posedge clklvds or negedge rstn) begin
 						firingsecondstep=1'b1;
 						if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
 							 sample_triggered[10+9-i] <= 1'b1; // remember the samples that caused the trigger
-							 if (triggerphase == -8d'1) triggerphase <= 8'd4;
+							 downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+						end
+					end
+					if (samplevalue[10+i]>upperthresh_sync) begin
+						firingsecondstep=1'b1;
+						if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
+							 sample_triggered2[10+9-i] <= 1'b1; // remember the samples that caused the trigger
+							 downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+						end
+					end
+					if (samplevalue[20+i]>upperthresh_sync) begin
+						firingsecondstep=1'b1;
+						if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
+							 sample_triggered3[10+9-i] <= 1'b1; // remember the samples that caused the trigger
+							 downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+						end
+					end
+					if (samplevalue[30+i]>upperthresh_sync) begin
+						firingsecondstep=1'b1;
+						if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
+							 sample_triggered4[10+9-i] <= 1'b1; // remember the samples that caused the trigger
 							 downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
 						end
 					end
@@ -283,7 +328,6 @@ always @ (posedge clklvds or negedge rstn) begin
 						firingsecondstep=1'b1;
 						if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
 							 sample_triggered[10+9-i] <= 1'b1; // remember the samples that caused the trigger
-							 if (triggerphase == -8d'1) triggerphase <= 8'd4;
 							 downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
 						end
 					end
@@ -402,6 +446,44 @@ always @ (posedge clklvds or negedge rstn) begin
 				eventcounter <= eventcounter + 1;
 				acqstate <= 8'd251;
 			end
+			
+			if (triggerphase == -9'd1) begin // just once
+				triggerphase = 0;
+				sample_triggered_max_val1 = sample_triggered[9:0];
+				if (sample_triggered2[9:0] < sample_triggered_max_val1) begin
+					sample_triggered_max_val1 = sample_triggered2[9:0];
+					triggerphase[3:0] = 4'd1;
+				end
+				if (sample_triggered3[9:0] < sample_triggered_max_val1) begin
+					sample_triggered_max_val1 = sample_triggered3[9:0];
+					triggerphase[3:0] = 4'd2;
+				end
+				if (sample_triggered4[9:0] < sample_triggered_max_val1) begin
+					sample_triggered_max_val1 = sample_triggered4[9:0];
+					triggerphase[3:0] = 4'd3;
+				end
+				if (triggerphase[3:0]==4'd1) sample_triggered[9:0] <= sample_triggered2[9:0];
+				else if (triggerphase[3:0]==4'd2) sample_triggered[9:0] <= sample_triggered3[9:0];
+				else if (triggerphase[3:0]==4'd3) sample_triggered[9:0] <= sample_triggered4[9:0];
+
+				sample_triggered_max_val2 = sample_triggered[19:10];
+				if (sample_triggered2[19:10] > sample_triggered_max_val2) begin
+					sample_triggered_max_val2 = sample_triggered2[19:10];
+					triggerphase[7:4] = 4'd1;
+				end
+				if (sample_triggered3[19:10] > sample_triggered_max_val2) begin
+					sample_triggered_max_val2 = sample_triggered3[19:10];
+					triggerphase[7:4] = 4'd2;
+				end
+				if (sample_triggered4[19:10] > sample_triggered_max_val2) begin
+					sample_triggered_max_val2 = sample_triggered4[19:10];
+					triggerphase[7:4] = 4'd3;
+				end
+				if (triggerphase[7:4]==4'd1) sample_triggered[19:10] <= sample_triggered2[19:10];
+				else if (triggerphase[7:4]==4'd2) sample_triggered[19:10] <= sample_triggered3[19:10];
+				else if (triggerphase[7:4]==4'd3) sample_triggered[19:10] <= sample_triggered4[19:10];
+			end
+			
 		end
 
 		251 : begin // ready to be read out, not writing into RAM
@@ -519,7 +601,7 @@ always @ (posedge clk or negedge rstn) begin
                 if (rx_data[1]==1) o_tdata <= {boardin,boardin,boardin,boardin};
                 if (rx_data[1]==2) o_tdata <= overrange_counter[rx_data[2][1:0]];
                 if (rx_data[1]==3) o_tdata <= eventcounter_sync;
-                if (rx_data[1]==4) o_tdata <= {16'd0,triggerphase_sync,downsamplemergingcounter_triggered_sync};
+                if (rx_data[1]==4) o_tdata <= {16'd0,triggerphase_sync[7:0],downsamplemergingcounter_triggered_sync};
                 if (rx_data[1]==5) begin
                     lvdsout_spare <= rx_data[2][0]; // used for telling order of devices
                     o_tdata <= {8'd0, 7'd0,lvdsin_spare, 4'd0,lockinfo, 7'd0,~clkswitch};
