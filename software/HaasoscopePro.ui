@@ -1816,6 +1816,8 @@
      <string>File</string>
     </property>
     <addaction name="actionRecord"/>
+    <addaction name="separator"/>
+    <addaction name="actionUpdate_firmware"/>
    </widget>
    <widget class="QMenu" name="menuCalibration">
     <property name="title">
@@ -1872,6 +1874,11 @@
    </property>
    <property name="text">
     <string>Allow same chan coin</string>
+   </property>
+  </action>
+  <action name="actionUpdate_firmware">
+   <property name="text">
+    <string>Update firmware</string>
    </property>
   </action>
  </widget>

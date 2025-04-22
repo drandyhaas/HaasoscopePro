@@ -179,7 +179,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.twochanCheck.clicked.connect(self.twochan)
         self.ui.ToffBox.valueChanged.connect(self.setToff)
         self.ui.fftCheck.clicked.connect(self.fft)
-        self.ui.actionDo_autocalibration.triggered.connect(self.actionDo_autocalibration)
+        self.ui.actionDo_autocalibration.triggered.connect(self.autocalibration)
+        self.ui.actionUpdate_firmware.triggered.connect(self.update_firmware)
         self.dofft = False
         self.db = False
         self.lastTime = time.time()
@@ -598,16 +599,6 @@ class MainWindow(TemplateBaseClass):
         # print("highres",self.highresval)
         for usb in usbs: self.telldownsample(usb, self.downsample)
 
-        # for testing flash functions
-        # flash_readall_to_file(usbs[0])
-        #flash_erase(usbs[0])
-        #flash_writeall_from_file(usbs[0])
-
-        # lowbyte=2
-        # flash_read_print(usbs[0],20,0, lowbyte)
-        #flash_write(usbs[0], 20,0, lowbyte,102)
-        # flash_read_print(usbs[0], 20,0, lowbyte)
-
     def telldownsample(self, usb, ds):
         if ds < 0: ds = 0
         if ds == 0:
@@ -1014,7 +1005,18 @@ class MainWindow(TemplateBaseClass):
 
         self.ui.textBrowser.setText(thestr)
 
-    def actionDo_autocalibration(self):
+    @staticmethod
+    def update_firmware():
+        #flash_readall_to_file(usbs[0])
+        flash_erase(usbs[0])
+        flash_writeall_from_file(usbs[0])
+
+        #lowbyte=2
+        #flash_read_print(usbs[0],20,0, lowbyte)
+        # flash_write(usbs[0], 20,0, lowbyte,102)
+        # flash_read_print(usbs[0], 20,0, lowbyte)
+
+    def autocalibration(self):
         c1 = self.activeboard  # board data we are merging with
         if c1 >= self.num_board - 1: return
         c = (self.activeboard + 1) * self.num_chan_per_board  # the exttrig board data
