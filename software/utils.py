@@ -1,3 +1,5 @@
+import time
+
 def reverse_bits(byte):
     reversed_byte = 0
     for i in range(8):
@@ -61,10 +63,29 @@ def flash_erase(usb):
     time.sleep(1)
     print("erase got", res[0])
 
-def flash_write(usb, byte3, byte2, byte1, valuetowrite):
+def flash_write(usb, byte3, byte2, byte1, valuetowrite, dorecieve=True):
     usb.send(bytes([16, byte3, byte2, byte1, reverse_bits(valuetowrite), 99, 99, 99]))  # write to address
-    res = usb.recv(4)
-    print("write got", res[0])
+    if dorecieve:
+        res = usb.recv(4)
+        print("write got", res[0])
+
+def flash_writeall_from_file(usb):
+    start_time = time.time()
+    with open('..\\adc board firmware\\output_files\\coincidence_auto.rpd', 'rb') as f:
+        all_bytes = f.read()
+        print("opened file with length",len(all_bytes))
+        for b in range(len(all_bytes)):
+            #print(b,all_bytes[b])
+            flash_write(usb,b//(256*256),(b//256)%256,b%256,all_bytes[b],False)
+            if b%1024==1023:
+                res = usb.recv(4*1024)
+                if b%(1024*10)==1023: print("byte",b,"writeall got length",len(res)//4,res[0],res[-4])
+        f.close()
+    res = usb.recv(4 * (len(all_bytes)%1024))
+    print("byte", b, "writeall asked for leftover",len(all_bytes)%1024,"and got length", len(res) // 4, res[0], res[-4])
+    oldbytes(usb) # make sure there's none left over to read
+    elapsed_time = time.time() - start_time
+    print(f"Elapsed time for writeall: {elapsed_time} seconds")
 
 def flash_read_print(usb, byte3, byte2, byte1):
     usb.send(bytes([15, byte3, byte2, byte1, 99, 99, 99, 99]))  # read from address

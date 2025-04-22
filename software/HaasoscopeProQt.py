@@ -600,10 +600,12 @@ class MainWindow(TemplateBaseClass):
 
         # for testing flash functions
         # flash_readall_to_file(usbs[0])
-        # flash_erase(usbs[0])
+        #flash_erase(usbs[0])
+        #flash_writeall_from_file(usbs[0])
+
         # lowbyte=2
         # flash_read_print(usbs[0],20,0, lowbyte)
-        # flash_write(usbs[0], 20,0, lowbyte,102)
+        #flash_write(usbs[0], 20,0, lowbyte,102)
         # flash_read_print(usbs[0], 20,0, lowbyte)
 
     def telldownsample(self, usb, ds):

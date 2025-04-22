@@ -685,7 +685,7 @@ reg [9:0] ram_preoffset = 0;
 integer overrange_counter[4];
 reg [15:0]	probecompcounter = 0;
 reg send_color = 1;
-reg [3:0] flashstate = 0;
+reg [3:0] flashstate=0, flashbusycounter=0;
 reg [31:0] o_tdatatemp = 0;
 reg clkstrprob = 0;
 
@@ -971,7 +971,11 @@ always @ (posedge clk or negedge rstn) begin
 				15 : begin // read from flash
 					case (flashstate)
                0 : begin
-						if (!flash_busy) begin // wait for flash to not be busy, then start
+						if (!flash_busy) begin
+							flashbusycounter <= flashbusycounter+4'd1;
+						end
+						if (flashbusycounter>12) begin // wait for flash to not be busy, then start (need extra 2 clk_over_4 cycles according to note in datasheet)
+							flashbusycounter<=0;
 							flash_addr <= {rx_data[1],rx_data[2],rx_data[3]};
 							flash_rden <= 1'b1;
 							flash_read <= 1'b1;
@@ -1003,7 +1007,11 @@ always @ (posedge clk or negedge rstn) begin
 				16 : begin // write to flash
 					case (flashstate)
                0 : begin
-						if (!flash_busy) begin // wait for flash to not be busy, then start
+						if (!flash_busy) begin
+							flashbusycounter <= flashbusycounter+4'd1;
+						end
+						if (flashbusycounter>12) begin // wait for flash to not be busy, then start (need extra 2 clk_over_4 cycles according to note in datasheet)
+							flashbusycounter<=0;
 							flash_addr <= {rx_data[1],rx_data[2],rx_data[3]};
 							flash_datain <= rx_data[4];
 							flash_write <= 1'b1;
@@ -1031,7 +1039,11 @@ always @ (posedge clk or negedge rstn) begin
 				17 : begin // erase flash
 					case (flashstate)
                0 : begin
-						if (!flash_busy) begin // wait for flash to not be busy, then start
+						if (!flash_busy) begin
+							flashbusycounter <= flashbusycounter+4'd1;
+						end
+						if (flashbusycounter>12) begin // wait for flash to not be busy, then start (need extra 2 clk_over_4 cycles according to note in datasheet)
+							flashbusycounter<=0;
 							flash_bulk_erase <= 1'b1;
 							flashstate <= 4'd1;
 						end
