@@ -1020,7 +1020,7 @@ always @ (posedge clk or negedge rstn) begin
 					1 : begin
 						if (flashbusycounter==4) begin // wait for data and addr to register
 							flashbusycounter<=0;
-							flash_write <= 1'b1;
+							if (rx_data[5]==100 && rx_data[6]==101 && rx_data[7]==102) flash_write <= 1'b1;
 							flashstate <= 4'd2;
 						end
 						else flashbusycounter <= flashbusycounter+4'd1;
@@ -1050,7 +1050,7 @@ always @ (posedge clk or negedge rstn) begin
 						if (!flash_busy) begin
 							if (flashbusycounter==12) begin // wait for flash to not be busy, then start (need extra 2 clk_over_4 cycles according to note in datasheet)
 								flashbusycounter<=0;
-								flash_bulk_erase <= 1'b1;
+								if (rx_data[5]==100 && rx_data[6]==101 && rx_data[7]==102) flash_bulk_erase <= 1'b1;
 								flashstate <= 4'd1;
 							end
 							else flashbusycounter <= flashbusycounter+4'd1;
