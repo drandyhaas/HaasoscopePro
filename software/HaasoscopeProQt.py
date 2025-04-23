@@ -114,6 +114,7 @@ class MainWindow(TemplateBaseClass):
     eventcounter = [0] * num_board
     nsubsamples = 10 * 4 + 8 + 2  # extra 4+4 for clk+str, and 2 clkstrprob beef
     sample_triggered = [0] * num_board
+    triggerphase = [0] * num_board
     doeventcounter = False
     fitwidthfraction = 0.2
     extrigboardstdcorrection = 1
@@ -787,11 +788,11 @@ class MainWindow(TemplateBaseClass):
                     readyevent[board] = self.getchannels(board)
                 for board in range(self.num_board):
                     if not readyevent[board]: continue
-                    downsamplemergingcounter, triggerphase = self.getpredata(board)
+                    downsamplemergingcounter = self.getpredata(board)
                     data = self.getdata(usbs[board])
                     rx_len = rx_len + len(data)
                     if self.dofft and board==self.activeboard: self.plot_fft()
-                    self.drawchannels(data, board, downsamplemergingcounter, triggerphase)
+                    self.drawchannels(data, board, downsamplemergingcounter)
                 if self.getone and rx_len > 0:
                     self.dostartstop()
                     self.drawtext()
@@ -840,7 +841,6 @@ class MainWindow(TemplateBaseClass):
             if eventcountertemp != self.eventcounter[board] + 1 and eventcountertemp != 0:  # check event count, but account for rollover
                 print("Event counter not incremented by 1?", eventcountertemp, self.eventcounter[board], " for board", board)
             self.eventcounter[board] = eventcountertemp
-
         downsamplemergingcounter = 0
         usbs[board].send(bytes([2, 4, 100, 100, 100, 100, 100, 100]))  # get downsamplemergingcounter
         res = usbs[board].recv(4)
@@ -848,9 +848,8 @@ class MainWindow(TemplateBaseClass):
         if downsamplemergingcounter == self.downsamplemerging:
             if not self.doexttrig[board]:
                 downsamplemergingcounter = 0
-        # print("downsamplemergingcounter", downsamplemergingcounter)
-        triggerphase = res[1]
-        return downsamplemergingcounter, triggerphase
+        self.triggerphase[board]=res[1]
+        return downsamplemergingcounter
 
     def getdata(self, usb):
         expect_len = (self.expect_samples+ self.expect_samples_extra) * 2 * self.nsubsamples # length to request: each adc bit is stored as 10 bits in 2 bytes, a couple extra for shifting later
@@ -865,13 +864,13 @@ class MainWindow(TemplateBaseClass):
             # oldbytes()
         return data
 
-    def drawchannels(self, data, board, downsamplemergingcounter, triggerphase):
+    def drawchannels(self, data, board, downsamplemergingcounter):
         if self.dofast: return
         if self.doexttrig[board]:
             if board % 2 == 1: boardtouse = board-1
             else: boardtouse = board+1
             self.sample_triggered[board] = self.sample_triggered[boardtouse] # take from the other board when interleaving using ext trig
-        #print("triggerphase", triggerphase>>4, triggerphase%4)
+            self.triggerphase[board] = self.triggerphase[boardtouse]
         nbadclkA = 0
         nbadclkB = 0
         nbadclkC = 0
@@ -911,7 +910,7 @@ class MainWindow(TemplateBaseClass):
                             nbadstr = nbadstr + 1
                             #print("s=", s, "n=", n, "str", val, binprint(val))
                 if self.dotwochannel:
-                    samp = s*20 - downsampleoffset - (triggerphase>>4)//2
+                    samp = s*20 - downsampleoffset - (self.triggerphase[board]>>4)//2
                     nsamp=20
                     nstart=0
                     if samp<0:
@@ -924,7 +923,7 @@ class MainWindow(TemplateBaseClass):
                         self.xydata[board * self.num_chan_per_board+0][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+20+nstart:s*self.nsubsamples+20+nstart+nsamp]
                         self.xydata[board * self.num_chan_per_board+1][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
                 else:
-                    samp = s*40 - downsampleoffset - (triggerphase>>4)
+                    samp = s*40 - downsampleoffset - (self.triggerphase[board]>>4)
                     nsamp=40
                     nstart=0
                     if samp<0:
