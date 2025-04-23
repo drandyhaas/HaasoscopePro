@@ -70,7 +70,7 @@ class MainWindow(TemplateBaseClass):
     themuxoutV = True
     phasecs = []
     for ph in range(len(usbs)): phasecs.append([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
-    phaseoffset = 1 # how many positive phase steps to take from middle of good range
+    phaseoffset = 0 # how many positive phase steps to take from middle of good range
     doexttrig = [0] * num_board
     paused = True # will unpause with dostartstop at startup
     downsample = 0
@@ -123,8 +123,8 @@ class MainWindow(TemplateBaseClass):
     dodirect = True
     VperD = [0.16]*(num_board*2)
     plljustreset = [-10] * num_board
-    plljustresetdir = 0
-    phasenbad = [0] * 12
+    plljustresetdir = [0] * num_board
+    phasenbad = [[0] * 12] * num_board
     dooversample = False
     doresamp = 0
 
@@ -422,8 +422,8 @@ class MainWindow(TemplateBaseClass):
         print("pllreset sent to board",board,"- got back:", tres[3], tres[2], tres[1], tres[0])
         self.phasecs[board] = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]  # reset counters
         self.plljustreset[board] = 0
-        self.plljustresetdir = 1
-        self.phasenbad = [0]*12 # reset nbad counters
+        self.plljustresetdir[board] = 1
+        self.phasenbad[board] = [0]*12 # reset nbad counters
         self.expect_samples = 1000
         self.dodrawing = False
         switchclock(usbs,board)
@@ -435,21 +435,21 @@ class MainWindow(TemplateBaseClass):
         if 0<=self.plljustreset[board]<12: # we start by going up in phase
             nbad = nbadclkA + nbadclkB + nbadclkC + nbadclkD + nbadstr
             if debugphase: print("plljustreset for board",board,"is",self.plljustreset[board],"nbad",nbad)
-            self.phasenbad[self.plljustreset[board]]+=nbad
-            if debugphase: print(self.phasenbad)
-            self.dophase(board, plloutnum, (self.plljustresetdir==1), pllnum=0, quiet=True) # adjust phase of plloutnum
-            self.dophase(board, plloutnum2, (self.plljustresetdir==1), pllnum=0, quiet=True) # adjust phase of plloutnum
-            self.plljustreset[board]+=self.plljustresetdir
+            self.phasenbad[board][self.plljustreset[board]]+=nbad
+            if debugphase: print(self.phasenbad[board])
+            self.dophase(board, plloutnum, (self.plljustresetdir[board]==1), pllnum=0, quiet=True) # adjust phase of plloutnum
+            self.dophase(board, plloutnum2, (self.plljustresetdir[board]==1), pllnum=0, quiet=True) # adjust phase of plloutnum
+            self.plljustreset[board]+=self.plljustresetdir[board]
         elif self.plljustreset[board]>=12:
             if debugphase: print("plljustreset for board",board,"is",self.plljustreset[board])
-            if self.plljustreset[board]==15: self.plljustresetdir=-1
-            self.plljustreset[board] += self.plljustresetdir
-            self.dophase(board, plloutnum, (self.plljustresetdir == 1), pllnum=0, quiet=True)  # adjust phase of plloutnum
-            self.dophase(board, plloutnum2, (self.plljustresetdir == 1), pllnum=0, quiet=True)  # adjust phase of plloutnum
+            if self.plljustreset[board]==15: self.plljustresetdir[board]=-1
+            self.plljustreset[board] += self.plljustresetdir[board]
+            self.dophase(board, plloutnum, (self.plljustresetdir[board] == 1), pllnum=0, quiet=True)  # adjust phase of plloutnum
+            self.dophase(board, plloutnum2, (self.plljustresetdir[board] == 1), pllnum=0, quiet=True)  # adjust phase of plloutnum
         elif self.plljustreset[board]==-1:
             if debugphase: print("plljustreset for board",board,"is",self.plljustreset[board])
-            print("bad clkstr per phase step:",self.phasenbad)
-            startofzeros, lengthofzeros = find_longest_zero_stretch(self.phasenbad, True)
+            print("bad clkstr per phase step:",self.phasenbad[board])
+            startofzeros, lengthofzeros = find_longest_zero_stretch(self.phasenbad[board], True)
             print("good phase starts at",startofzeros, "and goes for", lengthofzeros,"steps")
             if startofzeros>=12: startofzeros-=12
             n = startofzeros + lengthofzeros//2 + self.phaseoffset # amount to adjust clklvds (positive)
@@ -458,13 +458,13 @@ class MainWindow(TemplateBaseClass):
             for i in range(n):
                 self.dophase(board, plloutnum, 1, pllnum=0, quiet=(i != n - 1)) # adjust phase of plloutnum
                 self.dophase(board, plloutnum2, 1, pllnum=0, quiet=(i != n - 1))  # adjust phase of plloutnum
-            self.plljustreset[board] += self.plljustresetdir
+            self.plljustreset[board] += self.plljustresetdir[board]
         elif self.plljustreset[board] == -2:
             self.depth()
-            self.plljustreset[board] += self.plljustresetdir
+            self.plljustreset[board] += self.plljustresetdir[board]
         elif self.plljustreset[board] == -3:
             self.dodrawing = True
-            self.plljustreset[board] += self.plljustresetdir
+            self.plljustreset[board] += self.plljustresetdir[board]
 
     def wheelEvent(self, event):  # QWheelEvent
         if hasattr(event, "delta"):
@@ -1009,21 +1009,21 @@ class MainWindow(TemplateBaseClass):
     def update_firmware():
         verifyerase=False
         print("erasing flash")
-        flash_erase(usbs[0])
+        flash_erase(self.activeusb)
         time.sleep(5)
         if verifyerase:
             print("verifying flash erase")
             baderase=False
-            readbytes = flash_readall(usbs[0])
+            readbytes = flash_readall(self.activeusb)
             for theb in range(len(readbytes)):
                 if readbytes[theb]!=255:
                     print("byte",theb,"was",readbytes[theb])
                     baderase=True
             if not baderase: print("erase verified")
             else: return
-        writtenbytes = flash_writeall_from_file(usbs[0],'../adc board firmware/output_files/coincidence_auto.rpd')
+        writtenbytes = flash_writeall_from_file(self.activeusb,'../adc board firmware/output_files/coincidence_auto.rpd')
         print("verifying write")
-        readbytes = flash_readall(usbs[0])
+        readbytes = flash_readall(self.activeusb)
         if writtenbytes == readbytes: print("verified!")
         else:
             print("not verified!!!")
@@ -1271,9 +1271,9 @@ class MainWindow(TemplateBaseClass):
         print("Setting up board",board)
         #version(usbs[board])
         self.adfreset(board)
-        self.pllreset(board)
         setupboard(usbs[board], self.dopattern, self.dotwochannel, self.dooverrange)
         for c in range(self.num_chan_per_board): setchanacdc(usbs[board], c, 0, self.dooversample)
+        self.pllreset(board)
         return 1
 
     def closeEvent(self, event):
