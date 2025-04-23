@@ -1021,7 +1021,7 @@ class MainWindow(TemplateBaseClass):
                     baderase=True
             if not baderase: print("erase verified")
             else: return
-        writtenbytes = flash_writeall_from_file(usbs[0],'..\\adc board firmware\\output_files\\coincidence_auto.rpd')
+        writtenbytes = flash_writeall_from_file(usbs[0],'../adc board firmware/output_files/coincidence_auto.rpd')
         print("verifying write")
         readbytes = flash_readall(usbs[0])
         if writtenbytes == readbytes: print("verified!")

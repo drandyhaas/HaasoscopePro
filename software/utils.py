@@ -97,7 +97,7 @@ def flash_read(usb, byte3, byte2, byte1, dorecieve=True):
 def flash_readall(usb):
     readbytes = bytearray([])
     for k in range(20):
-        print("reading block", k, "of 20")
+        print("reading block", k+1, "of 20")
         for j in range(256):
             for i in range(256):
                 flash_read(usb, k, j, i,False) # read from address, but don't recieve the data yet
