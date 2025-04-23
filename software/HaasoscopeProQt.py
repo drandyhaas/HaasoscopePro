@@ -1007,14 +1007,34 @@ class MainWindow(TemplateBaseClass):
 
     @staticmethod
     def update_firmware():
-        #flash_readall_to_file(usbs[0])
+        verifyerase=False
+        print("erasing flash")
         flash_erase(usbs[0])
-        flash_writeall_from_file(usbs[0])
-
-        #lowbyte=2
-        #flash_read_print(usbs[0],20,0, lowbyte)
-        # flash_write(usbs[0], 20,0, lowbyte,102)
-        # flash_read_print(usbs[0], 20,0, lowbyte)
+        time.sleep(5)
+        if verifyerase:
+            print("verifying flash erase")
+            baderase=False
+            readbytes = flash_readall(usbs[0])
+            for theb in range(len(readbytes)):
+                if readbytes[theb]!=255:
+                    print("byte",theb,"was",readbytes[theb])
+                    baderase=True
+            if not baderase: print("erase verified")
+            else: return
+        writtenbytes = flash_writeall_from_file(usbs[0],'..\\adc board firmware\\output_files\\coincidence_auto.rpd')
+        print("verifying write")
+        readbytes = flash_readall(usbs[0])
+        if writtenbytes == readbytes: print("verified!")
+        else:
+            print("not verified!!!")
+            nbad=0
+            for theb in range(len(writtenbytes)):
+                if writtenbytes[theb] != readbytes[theb]:
+                    print("byte",theb,"tried to write",writtenbytes[theb],"but read back",readbytes[theb])
+                    nbad+=1
+                    if nbad>50:
+                        print("not showing more")
+                        break
 
     def autocalibration(self):
         c1 = self.activeboard  # board data we are merging with

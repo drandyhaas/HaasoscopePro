@@ -1,5 +1,3 @@
-import time
-
 def reverse_bits(byte):
     reversed_byte = 0
     for i in range(8):
@@ -37,10 +35,11 @@ def bytestoint(thebytes):
 
 def oldbytes(usb):
     while True:
-        olddata = usb.recv(1000000)
-        print("Got", len(olddata), "old bytes")
-        if len(olddata) == 0: break
-        print("Old byte0:", olddata[0])
+        olddata = usb.recv(100000)
+        if len(olddata)>0:
+            print("Got", len(olddata), "old bytes")
+            print("Old byte0:", olddata[0])
+        else: break
 
 def inttobytes(theint):  # convert length number to a 4-byte byte array (with type of 'bytes')
     return [theint & 0xff, (theint >> 8) & 0xff, (theint >> 16) & 0xff, (theint >> 24) & 0xff]
@@ -58,51 +57,56 @@ def send_leds(usb, r1,g1,b1, r2,g2,b2): # ch0, ch1
     usb.recv(4)
 
 def flash_erase(usb):
-    usb.send(bytes([17, 0,0,0, 99, 99, 99, 99]))  # erase
+    usb.send(bytes([17, 0, 0, 0, 99, 99, 99, 99])) # erase
     res = usb.recv(4)
-    time.sleep(1)
-    print("erase got", res[0])
+    print("bulk erase got", res[0])
 
 def flash_write(usb, byte3, byte2, byte1, valuetowrite, dorecieve=True):
-    usb.send(bytes([16, byte3, byte2, byte1, reverse_bits(valuetowrite), 99, 99, 99]))  # write to address
+    usb.send(bytes([16, byte3, byte2, byte1, reverse_bits(valuetowrite), 99, 99, 99])) # write to address
     if dorecieve:
         res = usb.recv(4)
         print("write got", res[0])
 
-def flash_writeall_from_file(usb):
-    start_time = time.time()
-    with open('..\\adc board firmware\\output_files\\coincidence_auto.rpd', 'rb') as f:
-        all_bytes = f.read()
-        print("opened file with length",len(all_bytes))
-        for b in range(len(all_bytes)):
-            #print(b,all_bytes[b])
-            flash_write(usb,b//(256*256),(b//256)%256,b%256,all_bytes[b],False)
-            if b%1024==1023:
-                res = usb.recv(4*1024)
-                if b%(1024*10)==1023: print("byte",b,"writeall got length",len(res)//4,res[0],res[-4])
+def flash_writeall_from_file(usb, filename, dowrite=True):
+    with open(filename, 'rb') as f:
+        allbytes = f.read()
+        print("opened",filename,"with length",len(allbytes))
+        if dowrite:
+            for b in range(len(allbytes)):
+                flash_write(usb,b//(256*256),(b//256)%256,b%256,allbytes[b],False)
+                if b%1024==1023:
+                    res = usb.recv(4*1024)
+                    if b%(1024*50)==1023: print("wrote byte",b+1,"/ 1191788")
+                    if len(res)!=4*1024:
+                        print("got only",len(res),"bytes read back?")
         f.close()
-    res = usb.recv(4 * (len(all_bytes)%1024))
-    print("byte", b, "writeall asked for leftover",len(all_bytes)%1024,"and got length", len(res) // 4, res[0], res[-4])
-    oldbytes(usb) # make sure there's none left over to read
-    elapsed_time = time.time() - start_time
-    print(f"Elapsed time for writeall: {elapsed_time} seconds")
+    if dowrite:
+        res = usb.recv(4 * (len(allbytes)%1024))
+        print("wrote byte", b+1, "(leftover",len(allbytes)%1024,"bytes)")
+        if len(res)!=(4*(len(allbytes)%1024)):
+            print("got only",len(res),"bytes read back?")
+        oldbytes(usb) # make sure there's none left over to read
+    return allbytes
 
-def flash_read_print(usb, byte3, byte2, byte1):
+def flash_read(usb, byte3, byte2, byte1, dorecieve=True):
     usb.send(bytes([15, byte3, byte2, byte1, 99, 99, 99, 99]))  # read from address
-    res = usb.recv(4)
-    print(byte3 * 256 * 256 + byte2 * 256 + byte1, "", reverse_bits(res[0]) )
+    if dorecieve:
+        res = usb.recv(4)
+        print(byte3 * 256 * 256 + byte2 * 256 + byte1, "", reverse_bits(res[0]) )
 
-def flash_readall_to_file(usb):
-    file = open("output.txt", "w")
+def flash_readall(usb):
+    readbytes = bytearray([])
     for k in range(20):
+        print("reading block", k, "of 20")
         for j in range(256):
             for i in range(256):
-                usb.send(bytes([15, k, j, i, 99, 99, 99, 99])) # read from address
+                flash_read(usb, k, j, i,False) # read from address, but don't recieve the data yet
         res = usb.recv(256*256*4)
         if len(res) == 256*256*4:
             for j in range(256):
                 for i in range(256):
                     if (k*256*256 + j*256 + i)<1191788:
-                        print(k*256*256 + j*256 + i, "", reverse_bits((res[256*4*j+4*i])), file=file)
+                        outbyte = reverse_bits((res[256 * 4 * j + 4 * i]))
+                        readbytes.append(outbyte)
         else: print("timeout?")
-    file.close()
+    return readbytes

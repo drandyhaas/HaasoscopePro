@@ -972,25 +972,25 @@ always @ (posedge clk or negedge rstn) begin
 					case (flashstate)
                0 : begin
 						if (!flash_busy) begin
-							flashbusycounter <= flashbusycounter+4'd1;
-						end
-						if (flashbusycounter>12) begin // wait for flash to not be busy, then start (need extra 2 clk_over_4 cycles according to note in datasheet)
-							flashbusycounter<=0;
 							flash_addr <= {rx_data[1],rx_data[2],rx_data[3]};
-							flash_rden <= 1'b1;
-							flash_read <= 1'b1;
-							flashstate <= 4'd1;
-						end
-						else begin
-							flash_rden <= 1'b0;
-							flash_read <= 1'b0;
+							if (flashbusycounter==8) begin // wait for flash to not be busy, then start (need extra 2 clk_over_4 cycles according to note in datasheet)
+								flashbusycounter<=0;
+								flash_rden <= 1'b1;
+								flash_read <= 1'b1;
+								flashstate <= 4'd1;
+							end
+							else flashbusycounter <= flashbusycounter+4'd1;
 						end
 					end
 					1 : begin
 						if (flash_busy) begin // once busy, read has started
-							flash_rden <= 1'b0;
-							flash_read <= 1'b0;
-							flashstate <= 4'd2;
+							if (flashbusycounter==4) begin // wait for addr to register
+								flashbusycounter<=0;
+								flash_rden <= 1'b0;
+								flash_read <= 1'b0;
+								flashstate <= 4'd2;
+							end
+							else flashbusycounter <= flashbusycounter+4'd1;
 						end
 					end
 					2 : begin
@@ -1008,26 +1008,34 @@ always @ (posedge clk or negedge rstn) begin
 					case (flashstate)
                0 : begin
 						if (!flash_busy) begin
-							flashbusycounter <= flashbusycounter+4'd1;
-						end
-						if (flashbusycounter>12) begin // wait for flash to not be busy, then start (need extra 2 clk_over_4 cycles according to note in datasheet)
-							flashbusycounter<=0;
 							flash_addr <= {rx_data[1],rx_data[2],rx_data[3]};
 							flash_datain <= rx_data[4];
-							flash_write <= 1'b1;
-							flashstate <= 4'd1;
-						end
-						else begin
-							flash_write <= 1'b0;
+							if (flashbusycounter==8) begin // wait for flash to not be busy, then start (need extra 2 clk_over_4 cycles according to note in datasheet)
+								flashbusycounter<=0;
+								flashstate <= 4'd1;
+							end
+							else flashbusycounter <= flashbusycounter+4'd1;
 						end
 					end
 					1 : begin
-						if (flash_busy) begin // once busy, write has started
-							flash_write <= 1'b0;
+						if (flashbusycounter==4) begin // wait for data and addr to register
+							flashbusycounter<=0;
+							flash_write <= 1'b1;
 							flashstate <= 4'd2;
 						end
+						else flashbusycounter <= flashbusycounter+4'd1;
 					end
-					2 : begin // we'll return immediately, future operations will wait for busy to be deasserted
+					2 : begin
+						if (flash_busy) begin // once busy
+							if (flashbusycounter==4) begin // wait for write to start
+								flashbusycounter<=0;
+								flash_write <= 1'b0;
+								flashstate <= 4'd3;
+							end
+							else flashbusycounter <= flashbusycounter+4'd1;
+						end
+					end
+					3 : begin // we'll return immediately, future operations will wait for busy to be deasserted
 						flashstate <= 4'd0;
 						o_tdata <= {8'd0, 8'd0, 8'd0, 8'd200};
 						`SEND_STD_USB_RESPONSE
@@ -1040,21 +1048,22 @@ always @ (posedge clk or negedge rstn) begin
 					case (flashstate)
                0 : begin
 						if (!flash_busy) begin
-							flashbusycounter <= flashbusycounter+4'd1;
-						end
-						if (flashbusycounter>12) begin // wait for flash to not be busy, then start (need extra 2 clk_over_4 cycles according to note in datasheet)
-							flashbusycounter<=0;
-							flash_bulk_erase <= 1'b1;
-							flashstate <= 4'd1;
-						end
-						else begin
-							flash_bulk_erase <= 1'b0;
+							if (flashbusycounter==12) begin // wait for flash to not be busy, then start (need extra 2 clk_over_4 cycles according to note in datasheet)
+								flashbusycounter<=0;
+								flash_bulk_erase <= 1'b1;
+								flashstate <= 4'd1;
+							end
+							else flashbusycounter <= flashbusycounter+4'd1;
 						end
 					end
 					1 : begin
 						if (flash_busy) begin // once busy, erase has started
-							flash_bulk_erase <= 1'b0;
-							flashstate <= 4'd2;
+							if (flashbusycounter==12) begin // wait for erase to start
+								flashbusycounter<=0;
+								flash_bulk_erase <= 1'b0;
+								flashstate <= 4'd2;
+							end
+							else flashbusycounter <= flashbusycounter+4'd1;
 						end
 					end
 					2 : begin // we'll return immediately, future operations will wait for busy to be deasserted
