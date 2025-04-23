@@ -62,7 +62,6 @@ class MainWindow(TemplateBaseClass):
     triggertype = 1
     isrolling = 0
     selectedchannel = 0
-    activeusb = usbs[0]
     activeboard = 0
     activexychannel = 0
     tad = 0
@@ -203,7 +202,6 @@ class MainWindow(TemplateBaseClass):
         self.show()
 
     def boardchanged(self):
-        self.activeusb = usbs[self.ui.boardBox.value()]
         self.activeboard = self.ui.boardBox.value()
         self.selectchannel()
 
@@ -267,7 +265,7 @@ class MainWindow(TemplateBaseClass):
     def changeoffset(self):
         scaling = 1000*self.VperD[self.activeboard*2+self.selectedchannel]/160 # compare to 0 dB gain
         if self.ui.acdcCheck.checkState() == QtCore.Qt.Checked: scaling *= 245/160 # offset gain is different in AC mode
-        if dooffset(self.activeusb, self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx,self.dooversample):
+        if dooffset(usbs[self.activeboard], self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx,self.dooversample):
             if self.dooversample and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
                 dooffset(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx,self.dooversample)
             v2 = scaling*1.5*self.ui.offsetBox.value()
@@ -276,7 +274,7 @@ class MainWindow(TemplateBaseClass):
             self.ui.Voff.setText(str(int(v2))+" mV")
 
     def changegain(self):
-        setgain(self.activeusb, self.selectedchannel, self.ui.gainBox.value(),self.dooversample)
+        setgain(usbs[self.activeboard], self.selectedchannel, self.ui.gainBox.value(),self.dooversample)
         if self.dooversample and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
             setgain(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.gainBox.value(),self.dooversample)
         db = self.ui.gainBox.value()
@@ -297,11 +295,11 @@ class MainWindow(TemplateBaseClass):
 
     def setTAD(self):
         if self.tad<0 and self.ui.tadBox.value()>=0:
-            spicommand(self.activeusb, "TAD", 0x02, 0xB7, 0, False, quiet=False)
+            spicommand(usbs[self.activeboard], "TAD", 0x02, 0xB7, 0, False, quiet=False)
         if self.tad>=0 and self.ui.tadBox.value()<0:
-            spicommand(self.activeusb, "TAD", 0x02, 0xB7, 1, False, quiet=False)
+            spicommand(usbs[self.activeboard], "TAD", 0x02, 0xB7, 1, False, quiet=False)
         self.tad = self.ui.tadBox.value()
-        spicommand(self.activeusb, "TAD", 0x02, 0xB6, abs(self.tad), False, quiet=True)
+        spicommand(usbs[self.activeboard], "TAD", 0x02, 0xB6, abs(self.tad), False, quiet=True)
 
     def setToff(self):
         self.toff = self.ui.ToffBox.value()
@@ -323,7 +321,7 @@ class MainWindow(TemplateBaseClass):
             self.lines[self.activexychannel].setVisible(False)
 
     def setacdc(self):
-        setchanacdc(self.activeusb, self.selectedchannel,
+        setchanacdc(usbs[self.activeboard], self.selectedchannel,
                     self.ui.acdcCheck.checkState() == QtCore.Qt.Checked, self.dooversample)  # will be True for AC, False for DC
         self.changeoffset() # because offset gain is different in AC mode
         if self.dooversample and self.ui.boardBox.value() % 2 == 0:  # also adjust other board we're oversampling with
@@ -331,11 +329,11 @@ class MainWindow(TemplateBaseClass):
                     self.ui.acdcCheck.checkState() == QtCore.Qt.Checked, self.dooversample)
 
     def setohm(self):
-        setchanimpedance(self.activeusb, self.selectedchannel,
+        setchanimpedance(usbs[self.activeboard], self.selectedchannel,
                          self.ui.ohmCheck.checkState() == QtCore.Qt.Checked, self.dooversample)  # will be True for 1M ohm, False for 50 ohm
 
     def setatt(self):
-        setchanatt(self.activeusb, self.selectedchannel,
+        setchanatt(usbs[self.activeboard], self.selectedchannel,
                    self.ui.attCheck.checkState() == QtCore.Qt.Checked, self.dooversample)  # will be True for attenuation on
 
     def settenx(self):
@@ -347,7 +345,7 @@ class MainWindow(TemplateBaseClass):
 
     def setoversamp(self):
         self.dooversample = self.ui.oversampCheck.checkState() == QtCore.Qt.Checked # will be True for oversampling, False otherwise
-        setsplit(self.activeusb,self.dooversample)
+        setsplit(usbs[self.activeboard],self.dooversample)
         setsplit(usbs[self.activeboard+1], False)
         for usb in usbs: swapinputs(usb,self.dooversample)
         if self.dooversample:
@@ -976,7 +974,7 @@ class MainWindow(TemplateBaseClass):
         thestr = "Nbadclks A B C D " + str(self.nbadclkA) + " " + str(self.nbadclkB) + " " + str(self.nbadclkC) + " " + str(self.nbadclkD)
         thestr += "\n" + "Nbadstrobes " + str(self.nbadstr)
         thestr += "\n" + "Last clk "+str(self.lastclk)
-        thestr += "\n" + gettemps(self.activeusb)
+        thestr += "\n" + gettemps(usbs[self.activeboard])
         thestr += "\n" + "Trigger threshold " + str(round(self.hline, 3))
         thestr += "\n" + "Mean " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.mean(self.xydata[self.activexychannel][1]), 3) ) + " mV"
         thestr += "\n" + "RMS " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.std(self.xydata[self.activexychannel][1]), 3) ) + " mV"
@@ -1006,23 +1004,24 @@ class MainWindow(TemplateBaseClass):
 
     @staticmethod
     def update_firmware():
+        print("updating firmware on board",self.activeboard)
         verifyerase=False
         print("erasing flash")
-        flash_erase(self.activeusb)
+        flash_erase(usbs[self.activeboard])
         time.sleep(5)
         if verifyerase:
             print("verifying flash erase")
             baderase=False
-            readbytes = flash_readall(self.activeusb)
+            readbytes = flash_readall(usbs[self.activeboard])
             for theb in range(len(readbytes)):
                 if readbytes[theb]!=255:
                     print("byte",theb,"was",readbytes[theb])
                     baderase=True
             if not baderase: print("erase verified")
             else: return
-        writtenbytes = flash_writeall_from_file(self.activeusb,'../adc board firmware/output_files/coincidence_auto.rpd')
+        writtenbytes = flash_writeall_from_file(usbs[self.activeboard],'../adc board firmware/output_files/coincidence_auto.rpd')
         print("verifying write")
-        readbytes = flash_readall(self.activeusb)
+        readbytes = flash_readall(usbs[self.activeboard])
         if writtenbytes == readbytes: print("verified!")
         else:
             print("not verified!!!")
