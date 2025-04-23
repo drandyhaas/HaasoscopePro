@@ -1002,8 +1002,7 @@ class MainWindow(TemplateBaseClass):
 
         self.ui.textBrowser.setText(thestr)
 
-    @staticmethod
-    def update_firmware():
+    def update_firmware(self):
         print("updating firmware on board",self.activeboard)
         verifyerase=False
         print("erasing flash")
