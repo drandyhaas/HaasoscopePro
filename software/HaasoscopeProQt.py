@@ -13,9 +13,11 @@ from board import *
 usbs = connectdevices()
 if len(usbs)==0: sys.exit(0)
 for b in range(len(usbs)):
+    if len(usbs) > 1: clkout_ena(usbs[b], 1) # turn on lvdsout_clk for boards
     version(usbs[b])
     version(usbs[b])
     version(usbs[b])
+time.sleep(.1) # wait for clocks to lock
 usbs = orderusbs(usbs)
 
 # Define fft window class from template
@@ -1016,10 +1018,16 @@ class MainWindow(TemplateBaseClass):
 
     def update_firmware(self):
         print("updating firmware on board",self.activeboard)
+        starttime = time.time()
+        for bo in range(self.num_board): clkout_ena(usbs[bo],0)
+        doerase=True
+        if doerase:
+            print("erasing flash")
+            flash_erase(usbs[self.activeboard])
+            while flash_busy(usbs[self.activeboard],doprint=False)>0: time.sleep(.1)
+            print("should be erased now")
+        print("took",round(time.time()-starttime,3),"seconds so far")
         verifyerase=False
-        print("erasing flash")
-        flash_erase(usbs[self.activeboard])
-        time.sleep(5)
         if verifyerase:
             print("verifying flash erase")
             baderase=False
@@ -1030,7 +1038,8 @@ class MainWindow(TemplateBaseClass):
                     baderase=True
             if not baderase: print("erase verified")
             else: return
-        writtenbytes = flash_writeall_from_file(usbs[self.activeboard],'../adc board firmware/output_files/coincidence_auto.rpd')
+        writtenbytes = flash_writeall_from_file(usbs[self.activeboard],'../adc board firmware/output_files/coincidence_auto.rpd', dowrite=True)
+        print("took",round(time.time()-starttime,3),"seconds so far")
         print("verifying write")
         readbytes = flash_readall(usbs[self.activeboard])
         if writtenbytes == readbytes: print("verified!")
@@ -1044,6 +1053,8 @@ class MainWindow(TemplateBaseClass):
                     if nbad>50:
                         print("not showing more")
                         break
+        for bo in range(self.num_board): clkout_ena(usbs[bo],self.num_board>1)
+        print("took",round(time.time()-starttime,3),"seconds")
 
     def autocalibration(self):
         c1 = self.activeboard  # board data we are merging with

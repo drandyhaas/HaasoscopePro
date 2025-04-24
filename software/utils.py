@@ -56,10 +56,21 @@ def send_leds(usb, r1,g1,b1, r2,g2,b2): # ch0, ch1
     usb.send(bytes([11, 0, g1, r1, b1, g2, r2, b2]))  # stop sending
     usb.recv(4)
 
+def clkout_ena(usb, en, doprint=True):
+    usb.send(bytes([2, 9, en, 0, 99, 99, 99, 99])) # turn on/off lvdsout_clk
+    res = usb.recv(4)
+    if doprint: print("clkout_ena now",en,"and was",res[0])
+
 def flash_erase(usb, doprint=False):
     usb.send(bytes([17, 0, 0, 0, 99, 100, 101, 102])) # erase
     res = usb.recv(4)
     if doprint: print("bulk erase got", res[0])
+
+def flash_busy(usb, doprint=False):
+    usb.send(bytes([14, 13, 0, 0, 99, 99, 99, 99])) # get flash busy status
+    res = usb.recv(4)
+    if doprint: print("flash busy got", res[0])
+    return res[0]
 
 def flash_write(usb, byte3, byte2, byte1, valuetowrite, dorecieve=True):
     usb.send(bytes([16, byte3, byte2, byte1, reverse_bits(valuetowrite), 100, 101, 102])) # write to address
@@ -89,10 +100,15 @@ def flash_writeall_from_file(usb, filename, dowrite=True):
     return allbytes
 
 def flash_read(usb, byte3, byte2, byte1, dorecieve=True):
-    usb.send(bytes([15, byte3, byte2, byte1, 99, 99, 99, 99]))  # read from address
+    lengthsent = usb.send(bytes([15, byte3, byte2, byte1, 99, 99, 99, 99]))  # read from address
+    if lengthsent!=8:
+        print("flash_read sent",lengthsent,"bytes?!")
     if dorecieve:
         res = usb.recv(4)
-        print(byte3 * 256 * 256 + byte2 * 256 + byte1, "", reverse_bits(res[0]) )
+        if len(res)==4:
+            print(byte3*256*256+byte2*256+byte1, "", reverse_bits(res[0]), "and timeoutcounter",res[3]*256*256+res[2]*256+res[3])
+        else:
+            print("flash_read timeout?")
 
 def flash_readall(usb):
     readbytes = bytearray([])
@@ -108,5 +124,5 @@ def flash_readall(usb):
                     if (k*256*256 + j*256 + i)<1191788:
                         outbyte = reverse_bits((res[256 * 4 * j + 4 * i]))
                         readbytes.append(outbyte)
-        else: print("timeout?")
+        else: print("flash_readall timeout?")
     return readbytes

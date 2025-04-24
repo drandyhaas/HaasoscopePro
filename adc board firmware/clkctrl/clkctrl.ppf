@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pinplan
+ variation_name="altclkctrl_0"
+ megafunction_name="ALTCLKCTRL"
+ intended_family="Cyclone IV E"
+ specifies="all_ports">
+ <global>
+  <pin name="inclk" direction="input" scope="external" />
+  <pin name="ena" direction="input" scope="external" />
+  <pin name="outclk" direction="output" scope="external" />
+ </global>
+</pinplan>

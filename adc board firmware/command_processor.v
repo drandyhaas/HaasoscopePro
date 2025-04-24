@@ -63,6 +63,8 @@ module command_processor (
 	output reg flash_read,
 	output reg flash_write,
 	output reg flash_reset,
+	
+	output reg clkout_ena=1,
 
 	input flash_busy,
 	input flash_data_valid,
@@ -730,9 +732,9 @@ always @ (posedge clk or negedge rstn) begin
             spitxdv <= 1'b0;
             spics <= 8'hff;
             channel <= 6'd0;
-			channel2 <= 6'd0;
+				channel2 <= 6'd0;
             triggerlive <= 1'b0;
-			didreadout <= 1'b0;
+				didreadout <= 1'b0;
             if (didbootup) state <= RX;
             else state <= BOOTUP;
         end
@@ -786,6 +788,10 @@ always @ (posedge clk or negedge rstn) begin
                 if (rx_data[1]==8) begin
                     dorolling <= rx_data[2][0];
                     o_tdata <= dorolling;
+                end
+					 if (rx_data[1]==9) begin
+                    clkout_ena <= rx_data[2][0];
+                    o_tdata <= {31'd0,clkout_ena};
                 end
                 `SEND_STD_USB_RESPONSE
             end
@@ -967,6 +973,7 @@ always @ (posedge clk or negedge rstn) begin
                     10: o_tdata <= {27'd0, downsample};
                     11: o_tdata <= {31'd0, highres};
                     12: o_tdata <= {20'd0, upperthresh};
+					13: o_tdata <= {31'd0, flash_busy};
                     default:
                     	o_tdata <= {32'd0};
                 endcase

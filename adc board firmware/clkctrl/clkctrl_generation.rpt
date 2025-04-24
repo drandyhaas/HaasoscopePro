@@ -1,0 +1,33 @@
+Info: Starting: Create block symbol file (.bsf)
+Info: qsys-generate "C:\gitwork\master\HaasoscopePro\adc board firmware\clkctrl.qsys" --block-symbol-file --output-directory="C:\gitwork\master\HaasoscopePro\adc board firmware\clkctrl" --family="Cyclone IV E" --part=EP4CE30F23C6
+Progress: Loading adc board firmware/clkctrl.qsys
+Progress: Reading input file
+Progress: Adding altclkctrl_0 [altclkctrl 23.1]
+Progress: Parameterizing module altclkctrl_0
+Progress: Building connections
+Progress: Parameterizing connections
+Progress: Validating
+Progress: Done reading input file
+: clkctrl.altclkctrl_0: Targeting device family: Cyclone IV E.
+: clkctrl.altclkctrl_0: Global clock network allows a clock signal to reach all parts of the chip with the same amount of skew. Input port 'clkselect' can be used to switch between four clock inputs.
+Info: qsys-generate succeeded.
+Info: Finished: Create block symbol file (.bsf)
+Info: 
+Info: Starting: Create HDL design files for synthesis
+Info: qsys-generate "C:\gitwork\master\HaasoscopePro\adc board firmware\clkctrl.qsys" --synthesis=VERILOG --output-directory="C:\gitwork\master\HaasoscopePro\adc board firmware\clkctrl\synthesis" --family="Cyclone IV E" --part=EP4CE30F23C6
+Progress: Loading adc board firmware/clkctrl.qsys
+Progress: Reading input file
+Progress: Adding altclkctrl_0 [altclkctrl 23.1]
+Progress: Parameterizing module altclkctrl_0
+Progress: Building connections
+Progress: Parameterizing connections
+Progress: Validating
+Progress: Done reading input file
+: clkctrl.altclkctrl_0: Targeting device family: Cyclone IV E.
+: clkctrl.altclkctrl_0: Global clock network allows a clock signal to reach all parts of the chip with the same amount of skew. Input port 'clkselect' can be used to switch between four clock inputs.
+Info: clkctrl: Generating clkctrl "clkctrl" for QUARTUS_SYNTH
+Info: altclkctrl_0: Generating top-level entity clkctrl_altclkctrl_0.
+Info: altclkctrl_0: "clkctrl" instantiated altclkctrl "altclkctrl_0"
+Info: clkctrl: Done "clkctrl" with 2 modules, 2 files
+Info: qsys-generate succeeded.
+Info: Finished: Create HDL design files for synthesis

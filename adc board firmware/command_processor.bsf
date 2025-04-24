@@ -451,6 +451,13 @@ https://fpgasoftware.intel.com/eula.
 		(text "flash_reset" (rect 207 571 251 583)(font "Arial" ))
 		(line (pt 272 576)(pt 256 576)(line_width 1))
 	)
+	(port
+		(pt 272 592)
+		(output)
+		(text "clkout_ena" (rect 0 0 42 12)(font "Arial" ))
+		(text "clkout_ena" (rect 209 587 251 599)(font "Arial" ))
+		(line (pt 272 592)(pt 256 592)(line_width 1))
+	)
 	(parameter
 		"neo_led_num_max"
 		"2"

@@ -1,0 +1,8 @@
+# # File gsaved with Nlview version 6.3.8  2013-12-19 bk=1.2992 VDI=34 GEI=35
+# 
+preplace inst unsaved.altclkctrl_0 -pg 1 -lvl 1 -y 30
+preplace inst unsaved -pg 1 -lvl 1 -y 40 -regy -20
+preplace netloc EXPORT<net_container>unsaved</net_container>(SLAVE)altclkctrl_0.altclkctrl_output,(SLAVE)unsaved.altclkctrl_output) 1 0 1 NJ
+preplace netloc EXPORT<net_container>unsaved</net_container>(SLAVE)unsaved.altclkctrl_input,(SLAVE)altclkctrl_0.altclkctrl_input) 1 0 1 NJ
+levelinfo -pg 1 0 120 310
+levelinfo -hier unsaved 130 160 300
