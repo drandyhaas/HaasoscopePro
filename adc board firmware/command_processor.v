@@ -617,15 +617,15 @@ always @ (posedge clklvds or negedge rstn) begin
 			if (triggerphase == -9'd1) begin // just once
 				triggerphase = 0;
 				sample_triggered_max_val1 = sample_triggered[9:0];
-				if (sample_triggered2[9:0] < sample_triggered_max_val1) begin
+				if (sample_triggered2[9:0] > sample_triggered_max_val1) begin
 					sample_triggered_max_val1 = sample_triggered2[9:0];
 					triggerphase[3:0] = 4'd1;
 				end
-				if (sample_triggered3[9:0] < sample_triggered_max_val1) begin
+				if (sample_triggered3[9:0] > sample_triggered_max_val1) begin
 					sample_triggered_max_val1 = sample_triggered3[9:0];
 					triggerphase[3:0] = 4'd2;
 				end
-				if (sample_triggered4[9:0] < sample_triggered_max_val1) begin
+				if (sample_triggered4[9:0] > sample_triggered_max_val1) begin
 					sample_triggered_max_val1 = sample_triggered4[9:0];
 					triggerphase[3:0] = 4'd3;
 				end

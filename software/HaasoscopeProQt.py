@@ -69,7 +69,7 @@ class MainWindow(TemplateBaseClass):
     themuxoutV = True
     phasecs = []
     for ph in range(len(usbs)): phasecs.append([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
-    phaseoffset = 0 # how many positive phase steps to take from middle of good range
+    phaseoffset = 1 # how many positive phase steps to take from middle of good range
     doexttrig = [0] * num_board
     paused = True # will unpause with dostartstop at startup
     downsample = 0
@@ -817,16 +817,24 @@ class MainWindow(TemplateBaseClass):
         triggercounter = usbs[board].recv(4)  # get the 4 bytes
         acqstate = triggercounter[0]
         if acqstate == 251:  # an event is ready to be read out
-            #print("board",board,"sample triggered", binprint(triggercounter[3]), binprint(triggercounter[2]), binprint(triggercounter[1]))
             gotzerobit = False
-            for s in range(21):
+            gotanyzerobit = False
+            for s in range(20):
                 thebit = getbit(triggercounter[int(s / 8) + 1], s % 8)
-                if thebit == 0: gotzerobit = True
+                if thebit == 0:
+                    gotzerobit = True
+                    gotanyzerobit = True
                 if thebit == 1 and gotzerobit:
                     self.sample_triggered[board] = s
                     gotzerobit = False
-            #if self.sample_triggered[board]<10: self.sample_triggered[board] += 0
-            #print("sample_triggered", self.sample_triggered[board], "for board", board)
+            if not gotanyzerobit:
+                #print("not any zero bit")
+                self.sample_triggered[board] = 0
+            #if board==0: print("board",board,"sample triggered", binprint(triggercounter[3]), binprint(triggercounter[2]), binprint(triggercounter[1]))
+            #if board==0: print("sample_triggered", self.sample_triggered[board], "for board", board)
+            # if board==0:
+            #     if 9<=self.sample_triggered[board]<=11: self.dodrawing=True
+            #     else: self.dodrawing=False
             return 1
         else:
             return 0
@@ -869,6 +877,9 @@ class MainWindow(TemplateBaseClass):
             else: boardtouse = board+1
             self.sample_triggered[board] = self.sample_triggered[boardtouse] # take from the other board when interleaving using ext trig
             self.triggerphase[board] = self.triggerphase[boardtouse]
+        triggerphase = self.triggerphase[board]%4
+        if self.sample_triggered[board]>=10: triggerphase = self.triggerphase[board]>>4
+        #print("triggerphase",self.triggerphase[board]>>4,self.triggerphase[board]%4,"so use",triggerphase,"for board",board)
         nbadclkA = 0
         nbadclkB = 0
         nbadclkC = 0
@@ -908,7 +919,7 @@ class MainWindow(TemplateBaseClass):
                             nbadstr = nbadstr + 1
                             #print("s=", s, "n=", n, "str", val, binprint(val))
                 if self.dotwochannel:
-                    samp = s*20 - downsampleoffset - (self.triggerphase[board]>>4)//2
+                    samp = s*20 - downsampleoffset - triggerphase//2
                     nsamp=20
                     nstart=0
                     if samp<0:
@@ -921,7 +932,8 @@ class MainWindow(TemplateBaseClass):
                         self.xydata[board * self.num_chan_per_board+0][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+20+nstart:s*self.nsubsamples+20+nstart+nsamp]
                         self.xydata[board * self.num_chan_per_board+1][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
                 else:
-                    samp = s*40 - downsampleoffset - (self.triggerphase[board]>>4)
+                    samp = s*40 - downsampleoffset - triggerphase
+                    #if self.sample_triggered[board]<=10: samp = s*40 - downsampleoffset - (self.triggerphase[board]%4)
                     nsamp=40
                     nstart=0
                     if samp<0:
