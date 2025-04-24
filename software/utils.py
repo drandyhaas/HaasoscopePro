@@ -56,10 +56,10 @@ def send_leds(usb, r1,g1,b1, r2,g2,b2): # ch0, ch1
     usb.send(bytes([11, 0, g1, r1, b1, g2, r2, b2]))  # stop sending
     usb.recv(4)
 
-def flash_erase(usb):
+def flash_erase(usb, doprint=False):
     usb.send(bytes([17, 0, 0, 0, 99, 100, 101, 102])) # erase
     res = usb.recv(4)
-    print("bulk erase got", res[0])
+    if doprint: print("bulk erase got", res[0])
 
 def flash_write(usb, byte3, byte2, byte1, valuetowrite, dorecieve=True):
     usb.send(bytes([16, byte3, byte2, byte1, reverse_bits(valuetowrite), 100, 101, 102])) # write to address
