@@ -229,9 +229,9 @@ class MainWindow(TemplateBaseClass):
         p.setColor(QPalette.Base, col)  # Set background color of box
         self.ui.chanColor.setPalette(p)
         if self.lines[self.activexychannel].isVisible():
-            self.ui.chanonCheck.setCheckState(QtCore.Qt.Checked)
+            self.ui.chanonCheck.setChecked(QtCore.Qt.Checked)
         else:
-            self.ui.chanonCheck.setCheckState(QtCore.Qt.Unchecked)
+            self.ui.chanonCheck.setChecked(QtCore.Qt.Unchecked)
 
     def fft(self):
         if self.ui.fftCheck.checkState() == QtCore.Qt.Checked:
@@ -248,6 +248,10 @@ class MainWindow(TemplateBaseClass):
 
     def twochan(self):
         self.dotwochannel = self.ui.twochanCheck.checkState() == QtCore.Qt.Checked
+        for bo in range(self.num_board):
+            for ch in range(self.num_chan_per_board):
+                setchanatt(usbs[bo], ch, self.dotwochannel, self.dooversample)  # turn on/off antialias for two/single channel mode
+        self.ui.attCheck.setChecked(self.dotwochannel)
         self.setupchannels()
         self.doleds()
         for usb in usbs: setupboard(usb,self.dopattern,self.dotwochannel,self.dooverrange)
@@ -774,7 +778,7 @@ class MainWindow(TemplateBaseClass):
                 self.fftui.fftyrange = self.fftui.fftfreqplot_ydatamax * 1.1
             if not self.fftui.isVisible(): # closed the fft window
                 self.dofft = False
-                self.ui.fftCheck.setCheckState(QtCore.Qt.Unchecked)
+                self.ui.fftCheck.setChecked(QtCore.Qt.Unchecked)
         app.processEvents()
 
     def getevent(self):

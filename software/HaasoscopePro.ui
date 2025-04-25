@@ -1188,7 +1188,7 @@
          </font>
         </property>
         <property name="text">
-         <string>5x attentuation</string>
+         <string>800 MHz antialias</string>
         </property>
         <property name="checkable">
          <bool>true</bool>
