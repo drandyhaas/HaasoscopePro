@@ -44,7 +44,7 @@ module command_processor (
 	input wire [7:0] boardin,
 	output wire [7:0] boardout=0,
 	output reg spireset_L=1'b1,
-	input wire clk50, // needed while doing pllreset,
+	input wire clk50, // needed while doing pllreset
 	input wire lvdsin_trig,
 	output reg lvdsout_trig=0,
 	input wire lvdsin_trig_b,
@@ -53,7 +53,7 @@ module command_processor (
 	input wire lvdsin_spare,
 	output reg lvdsout_spare=0,
 	input wire [69:0] lvdsEbits, lvdsLbits,
-	output reg [1:0] leds, // controls LED 3..2
+	output reg [1:0] leds, // controls LED3..2 (LED1..0 are controlled directly by ftdi245fifo module)
 
 	output reg [23:0] flash_addr,
 	output reg flash_bulk_erase,
@@ -69,10 +69,11 @@ module command_processor (
 	input flash_busy,
 	input flash_data_valid,
 	input [7:0] flash_dataout
-
 );
+
 integer version = 23; // firmware version
 
+// these 10 debugout's go to LEDs on the board
 assign debugout[0] = clkswitch;
 assign debugout[1] = lvdsin_trig;
 assign debugout[2] = lvdsin_trig_b;
@@ -82,18 +83,25 @@ assign debugout[5] = lockinfo[1]; //activeclock
 assign debugout[6] = lockinfo[2]; //clkbad0
 assign debugout[7] = lockinfo[3]; //clkbad1
 
-assign debugout[8] = boardin[0]; // inputs on PCB
+assign debugout[8] = boardin[0]; // extra inputs on PCB, mirrored to LEDs for now
 assign debugout[9] = boardin[1];
-assign debugout[10] = boardout[3]; //1kHz out 50 Ohm
+// boardin[2] is 12Vconnected
+// boardin[3] is PG12V
+wire exttrigin; assign exttrigin = boardin[4]; // SMA in on back panel
+// boardin[5] is Lockdetect (from ADF4350)
+// boardin[6] is Muxout (from ADF4350)
+// boardin[7] is Calstat (from ADC)
 
-reg fanon=0;
+// boardout[3] is the 1kHz square wave going to the front panel
+// other 7 boardout's are for controlling relays
+
+wire auxout; assign debugout[10] = auxout; // SMA out on back panel
+
+reg fanon=0; // the cooling fan (could be PWM'ed for finer control)
 assign debugout[11] = fanon;
 
-assign flash_reset = ~rstn;
-
-wire exttrigin;
-assign exttrigin = boardin[4];
-assign leds[0] = exttrigin; // LED2
+assign flash_reset = ~rstn; // active high flash controller reset signal
+assign leds[0] = exttrigin; // LED2 (LED3 is used for controlling both the RGB LEDs on the front panel)
 
 // variables in clklvds domain, writing into the RAM buffer
 integer		downsamplecounter = 1;
@@ -107,6 +115,7 @@ reg [7:0]	tot_counter = 0;
 reg [7:0]	downsamplemergingcounter = 1;
 reg [15:0]	triggercounter = 0;
 integer		rollingtriggercounter = 0;
+reg 			firingsecondstep = 0;
 
 // variables synced between domains
 reg [ 7:0]	acqstate = 0, acqstate_sync = 0;
@@ -115,7 +124,7 @@ reg signed [11:0]  upperthresh = 0, upperthresh_sync = 0;
 integer		eventcounter = 0, eventcounter_sync = 0;
 reg [15:0]	lengthtotake = 0, lengthtotake_sync = 0;
 reg [15:0]	prelengthtotake=1000, prelengthtotake_sync=1000;
-reg 		triggerlive = 0, triggerlive_sync = 0;
+reg 			triggerlive = 0, triggerlive_sync = 0;
 reg			didreadout = 0, didreadout_sync = 0;
 reg [ 7:0]	triggertype = 0, triggertype_sync = 0, current_active_trigger_type = 0;
 reg [ 7:0]	channeltype = 0, channeltype_sync = 0;
@@ -133,7 +142,6 @@ reg [7:0]	downsamplemergingcounter_triggered = 0, downsamplemergingcounter_trigg
 reg [8:0]	triggerphase = 0, triggerphase_sync = 0;
 reg 			triggerchan = 0, triggerchan_sync = 0;
 reg			dorolling = 0, dorolling_sync = 0; // TODO: to be removed
-reg 			firingsecondstep = 0;
 
 // this drives the trigger
 always @ (posedge clklvds or negedge rstn) begin
@@ -182,7 +190,7 @@ always @ (posedge clklvds or negedge rstn) begin
 		end
 
 		// rolling trigger; TODO: this whole if block is to be deleted
-		if (dorolling_sync && acqstate>0 && acqstate<250 && acqstate!=7) begin
+		if (dorolling_sync && acqstate>0 && acqstate<249) begin
 			if (rollingtriggercounter==8000000) begin // ~10 Hz
 				sample_triggered <= 0;
 				downsamplemergingcounter_triggered <= downsamplemergingcounter;
@@ -196,6 +204,7 @@ always @ (posedge clklvds or negedge rstn) begin
 
 		case (acqstate)
 		0 : begin // ready
+			auxout <= 0;
 			tot_counter <= 0;
 			sample_triggered <= 0;
 			sample_triggered2 <= 0;
@@ -207,22 +216,18 @@ always @ (posedge clklvds or negedge rstn) begin
 			downsamplemergingcounter_triggered <= -8'd1;
 			lvdsout_trig <= 0;
 			lvdsout_trig_b <= 0;
-
 			downsamplecounter <= 1;
 			downsamplemergingcounter <= 1;
 			triggercounter <= 0; // set to 0 as this register will be used to count in pre-aquisition
 			current_active_trigger_type <= triggertype_sync;
-
 			case(triggertype_sync)
 				8'd0 : ; // disable conditional triggering
-				default: acqstate <= 8'd7; // go to pre-aquisition
+				default: acqstate <= 8'd249; // go to pre-aquisition
 			endcase
 		end
 
-		7 : begin // pre-aquisition
-			if (current_active_trigger_type != triggertype_sync) begin
-				acqstate <= 8'd0; // go back to initial state
-			end
+		249 : begin // pre-aquisition
+			if (current_active_trigger_type != triggertype_sync) acqstate <= 8'd0; // go back to initial state
 			else if (triggercounter<prelengthtotake_sync) begin
 				if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) begin
 					triggercounter <= triggercounter + 16'd1;
@@ -234,15 +239,16 @@ always @ (posedge clklvds or negedge rstn) begin
 				case(current_active_trigger_type)
 					8'd1 : acqstate <= 8'd1; // threshold trigger rising edge
 					8'd2 : acqstate <= 8'd3; // threshold trigger falling edge
-					8'd3 : acqstate <= 8'd5; // external trigger
+					8'd3 : acqstate <= 8'd5; // external trigger from another board over LVDS
 					8'd4 : acqstate <= 8'd6; // auto trigger (forces waveform capture unconditionally)
+					8'd5 : acqstate <= 8'd7; // external trigger, like from back panel SMA
 				endcase
 			end
 		end
 
 		// rising edge trigger (1)
 		1 : begin // ready for first part of trigger condition to be met
-			if (triggertype_sync!=1) acqstate <= 0;
+			if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
 			else begin
 				if (channeltype_sync[0]==1'b0) begin // single channel mode
 				for (i=0;i<10;i=i+1) begin
@@ -313,7 +319,7 @@ always @ (posedge clklvds or negedge rstn) begin
 		end
 
 		2 : begin // ready for second part of trigger condition to be met
-			if (triggertype_sync!=1) acqstate <= 0;
+			if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
 			else begin
 			  firingsecondstep=1'b0;
            
@@ -408,7 +414,7 @@ always @ (posedge clklvds or negedge rstn) begin
 
 		// falling edge trigger (2)
 		3 : begin // ready for first part of trigger condition to be met
-			if (triggertype_sync!=2) acqstate <= 0;
+			if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
 			else begin
 				 if (channeltype_sync[0]==1'b0) begin // single channel mode
 					for (i=0;i<10;i=i+1) begin
@@ -478,7 +484,7 @@ always @ (posedge clklvds or negedge rstn) begin
 			end
 		end
 		4 : begin // ready for second part of trigger condition to be met
-			if (triggertype_sync!=2) acqstate <= 0;
+			if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
 			else begin
 				 firingsecondstep=1'b0;
 		  
@@ -572,7 +578,7 @@ always @ (posedge clklvds or negedge rstn) begin
 		end
 
 		5 : begin // external trigger, like from another board (3)
-            if (triggertype_sync!=3) acqstate <= 0;
+            if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
             else begin
                 if (lvdsin_trig) begin
                     ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
@@ -592,14 +598,26 @@ always @ (posedge clklvds or negedge rstn) begin
 		end
 
 		6: begin
-			// We end up here when triggertype is set to 4 (auto trigger). Record trigger position and move on to
-			// step 250 where reminder of the data (after-trigger samples) will be accumlated. This to force waveform
-			// capture call force-arm-trigger function with trigger type set to 4.
+			// triggertype == 4, force waveform capture
 			ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
 			lvdsout_trig <= 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
 			lvdsout_trig_b <= 1'b1; // and backwards
 			downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
 			acqstate <= 8'd250;
+		end
+		
+		7: begin // external trigger, like from the back panel SMA
+           if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
+			  else begin
+					if (exttrigin) begin
+                    ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+                    lvdsout_trig <= 1'b1; // tell the others forwards
+                    lvdsout_trig_b <= 1'b1; // tell the others backwards
+                    sample_triggered <= 0; // we didn't measure the trigger edge - going to be some jitter unfortunately
+                    downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
+                    acqstate <= 8'd250;
+                end
+			  end
 		end
 
 		250 : begin // triggered, now taking more data
@@ -615,6 +633,8 @@ always @ (posedge clklvds or negedge rstn) begin
 				eventcounter <= eventcounter + 1;
 				acqstate <= 8'd251;
 			end
+			
+			auxout<=1; // send to back panel, trigger out
 			
 			if (triggerphase == -9'd1) begin // just once
 				triggerphase = 0;
@@ -656,6 +676,7 @@ always @ (posedge clklvds or negedge rstn) begin
 		end
 
 		251 : begin // ready to be read out, not writing into RAM
+			auxout<=0; // send to back panel, trigger out done
 			lvdsout_trig <= 0;
 			lvdsout_trig_b <= 0;
 			triggercounter <= 0;
@@ -673,7 +694,6 @@ end
 // variables in clk domain, reading out of the RAM buffer
 localparam [3:0] INIT=4'd0, RX=4'd1, PROCESS=4'd2, TX_DATA_CONST=4'd3, TX_DATA1=4'd4, TX_DATA2=4'd5, TX_DATA3=4'd6;
 localparam [3:0] TX_DATA4=4'd7, PLLCLOCK=4'd8, BOOTUP=4'd9;
-
 reg [ 3:0]	state = INIT;
 reg			didbootup = 0;
 reg [ 3:0]	rx_counter = 0;
@@ -692,6 +712,7 @@ reg send_color = 1;
 reg [3:0] flashstate=0, flashbusycounter=0;
 reg [31:0] o_tdatatemp = 0;
 reg clkstrprob = 0;
+reg [7:0] boardin_sync = 0;
 
 always @ (posedge clk) begin
 	acqstate_sync <= acqstate;
@@ -700,6 +721,7 @@ always @ (posedge clk) begin
 	sample_triggered_sync <= sample_triggered;
 	downsamplemergingcounter_triggered_sync <= downsamplemergingcounter_triggered;
 	triggerphase_sync <= triggerphase;
+	boardin_sync <= boardin;
 
 	for (i=0;i<4;i=i+1)
 	    if (overrange[i]) overrange_counter[i] <= overrange_counter[i] + 1;
@@ -769,7 +791,7 @@ always @ (posedge clk or negedge rstn) begin
 
             2 : begin // reads version or does other stuff
                 if (rx_data[1]==0) o_tdata <= version;
-                if (rx_data[1]==1) o_tdata <= {boardin,boardin,boardin,boardin};
+                if (rx_data[1]==1) o_tdata <= {24'd0,boardin_sync};
                 if (rx_data[1]==2) o_tdata <= overrange_counter[rx_data[2][1:0]];
                 if (rx_data[1]==3) o_tdata <= eventcounter_sync;
                 if (rx_data[1]==4) o_tdata <= {16'd0,triggerphase_sync[7:0],downsamplemergingcounter_triggered_sync};
@@ -964,7 +986,7 @@ always @ (posedge clk or negedge rstn) begin
                     1 : o_tdata <= {22'd0, ram_address_triggered_sync};
                     2 : o_tdata <= {28'd0, spistate};
                     3 : o_tdata <= version;
-                    4 : o_tdata <= {24'd0, boardin};
+                    4 : o_tdata <= {24'd0, boardin_sync};
                     5 : o_tdata <= {24'd0, acqstate_sync};
                     6 : o_tdata <= eventcounter_sync;
                     7 : o_tdata <= {12'd0, sample_triggered_sync};

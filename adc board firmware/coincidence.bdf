@@ -225,7 +225,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 117 12)(pt 121 8))
 	)
 	(text "VCC" (rect 136 7 156 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect 264 1144 320 1192))
+	(annotation_block (location)(rect 264 1104 320 1192))
 )
 (pin
 	(input)
@@ -2044,7 +2044,7 @@ https://fpgasoftware.intel.com/eula.
 	(drawing
 		(rectangle (rect 16 16 256 608))
 	)
-	(annotation_block (parameter)(rect 440 896 656 928))
+	(annotation_block (parameter)(rect 432 888 656 928))
 )
 (connector
 	(pt 888 680)
