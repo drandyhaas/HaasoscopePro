@@ -1066,12 +1066,12 @@ class MainWindow(TemplateBaseClass):
         cdata = self.xydata[c]
         cdata[1] = np.roll(cdata[1], -self.toff)
         minrms = 1e9
-        minshift = 1000000
+        minshift = 0
         for nshift in range(-self.toff, 20*self.expect_samples):
             yc = cdata[1][(cdata[0] > self.vline - fitwidth) & (cdata[0] < self.vline + fitwidth)]
             yc1 = self.xydata[c1][1][
                 (self.xydata[c1][0] > self.vline - fitwidth) & (self.xydata[c1][0] < self.vline + fitwidth)]
-            therms = np.std(yc1 - yc)
+            therms = np.std(yc1 - yc) * (1+nshift/(20*self.expect_samples))
             # print("nshift",nshift,"std",therms)
             if therms < minrms:
                 minrms = therms
@@ -1096,7 +1096,7 @@ class MainWindow(TemplateBaseClass):
             self.extrigboardstdcorrection = self.extrigboardstdcorrection * extrigboardstd / otherboardstd
         else:
             self.extrigboardstdcorrection = self.extrigboardstdcorrection
-        print("calculated mean and std corrections", self.extrigboardmeancorrection, self.extrigboardstdcorrection)
+        #print("calculated mean and std corrections", self.extrigboardmeancorrection, self.extrigboardstdcorrection)
 
     def plot_fft(self):
         if self.dointerleaved: y = self.xydatainterleaved[int(self.activeboard/2)][1]
