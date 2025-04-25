@@ -71,7 +71,7 @@ class MainWindow(TemplateBaseClass):
     themuxoutV = True
     phasecs = []
     for ph in range(len(usbs)): phasecs.append([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
-    phaseoffset = 1 # how many positive phase steps to take from middle of good range
+    phaseoffset = 0 # how many positive phase steps to take from middle of good range
     doexttrig = [0] * num_board
     paused = True # will unpause with dostartstop at startup
     downsample = 0
@@ -183,6 +183,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.fftCheck.clicked.connect(self.fft)
         self.ui.actionDo_autocalibration.triggered.connect(self.autocalibration)
         self.ui.actionUpdate_firmware.triggered.connect(self.update_firmware)
+        self.ui.actionTriggerout.triggered.connect(self.triggerout)
         self.dofft = False
         self.db = False
         self.lastTime = time.time()
@@ -1020,6 +1021,11 @@ class MainWindow(TemplateBaseClass):
 
         self.ui.textBrowser.setText(thestr)
 
+    def triggerout(self):
+        val = self.ui.actionTriggerout.isChecked()
+        for board in range(self.num_board):
+            auxoutselector(usbs[board],val)
+
     def update_firmware(self):
         print("updating firmware on board",self.activeboard)
         starttime = time.time()
@@ -1298,6 +1304,7 @@ class MainWindow(TemplateBaseClass):
         setupboard(usbs[board], self.dopattern, self.dotwochannel, self.dooverrange)
         for c in range(self.num_chan_per_board): setchanacdc(usbs[board], c, 0, self.dooversample)
         self.pllreset(board)
+        auxoutselector(usbs[board],0)
         return 1
 
     def closeEvent(self, event):

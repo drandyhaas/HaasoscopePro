@@ -1830,6 +1830,7 @@
      <string>Other</string>
     </property>
     <addaction name="separator"/>
+    <addaction name="actionTriggerout"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
@@ -1879,6 +1880,14 @@
   <action name="actionUpdate_firmware">
    <property name="text">
     <string>Update firmware</string>
+   </property>
+  </action>
+  <action name="actionTriggerout">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Trigger out</string>
    </property>
   </action>
  </widget>

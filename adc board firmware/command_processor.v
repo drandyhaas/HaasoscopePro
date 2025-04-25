@@ -82,7 +82,6 @@ assign debugout[4] = lockinfo[0]; //locked
 assign debugout[5] = lockinfo[1]; //activeclock
 assign debugout[6] = lockinfo[2]; //clkbad0
 assign debugout[7] = lockinfo[3]; //clkbad1
-
 assign debugout[8] = boardin[0]; // extra inputs on PCB, mirrored to LEDs for now
 assign debugout[9] = boardin[1];
 // boardin[2] is 12Vconnected
@@ -95,10 +94,10 @@ wire exttrigin; assign exttrigin = boardin[4]; // SMA in on back panel
 // boardout[3] is the 1kHz square wave going to the front panel
 // other 7 boardout's are for controlling relays
 
-wire auxout; assign debugout[10] = auxout; // SMA out on back panel
+wire auxtrigout; 
+assign debugout[10] = (auxoutselector_sync==0) ? clklvds: auxtrigout; // SMA out on back panel
 
-reg fanon=0; // the cooling fan (could be PWM'ed for finer control)
-assign debugout[11] = fanon;
+wire fanon; assign debugout[11] = fanon; // the cooling fan (could be PWM'ed for finer control)
 
 assign flash_reset = ~rstn; // active high flash controller reset signal
 assign leds[0] = exttrigin; // LED2 (LED3 is used for controlling both the RGB LEDs on the front panel)
@@ -142,6 +141,8 @@ reg [7:0]	downsamplemergingcounter_triggered = 0, downsamplemergingcounter_trigg
 reg [8:0]	triggerphase = 0, triggerphase_sync = 0;
 reg 			triggerchan = 0, triggerchan_sync = 0;
 reg			dorolling = 0, dorolling_sync = 0; // TODO: to be removed
+reg 			auxoutselector = 0, auxoutselector_sync = 0;
+
 
 // this drives the trigger
 always @ (posedge clklvds or negedge rstn) begin
@@ -161,6 +162,7 @@ always @ (posedge clklvds or negedge rstn) begin
 		highres_sync           <= highres;
 		triggerchan_sync       <= triggerchan;
 		dorolling_sync         <= dorolling; // TODO: to be removed
+		auxoutselector_sync	  <= auxoutselector;
 
 		if (acqstate==251 || acqstate==0) begin
 			// not writing, while waiting to be read out or in initial state where trigger might be disabled
@@ -204,7 +206,7 @@ always @ (posedge clklvds or negedge rstn) begin
 
 		case (acqstate)
 		0 : begin // ready
-			auxout <= 0;
+			auxtrigout <= 0;
 			tot_counter <= 0;
 			sample_triggered <= 0;
 			sample_triggered2 <= 0;
@@ -634,7 +636,7 @@ always @ (posedge clklvds or negedge rstn) begin
 				acqstate <= 8'd251;
 			end
 			
-			auxout<=1; // send to back panel, trigger out
+			auxtrigout<=1; // send to back panel, trigger out
 			
 			if (triggerphase == -9'd1) begin // just once
 				triggerphase = 0;
@@ -676,7 +678,7 @@ always @ (posedge clklvds or negedge rstn) begin
 		end
 
 		251 : begin // ready to be read out, not writing into RAM
-			auxout<=0; // send to back panel, trigger out done
+			auxtrigout<=0; // send to back panel, trigger out done
 			lvdsout_trig <= 0;
 			lvdsout_trig_b <= 0;
 			triggercounter <= 0;
@@ -784,37 +786,43 @@ always @ (posedge clk or negedge rstn) begin
                 triggertype <= rx_data[1]; // while we're at it, set the trigger type
                 channeltype <= rx_data[2]; // and the channel type (bit0: single or dual, bit1: oversampling (swapped inputs))
                 lengthtotake <= {rx_data[5],rx_data[4]};
-				if (acqstate_sync == 0 || acqstate_sync == 7) triggerlive <= 1'b1; // gets reset in INIT state
+					 if (acqstate_sync == 0 || acqstate_sync == 249) triggerlive <= 1'b1; // gets reset in INIT state
                 o_tdata <= {4'd0,sample_triggered_sync,acqstate_sync}; // return acqstate, so we can see if we have an event ready to be read out, and which samples triggered (to prevent jitter)
                 `SEND_STD_USB_RESPONSE
             end
 
             2 : begin // reads version or does other stuff
-                if (rx_data[1]==0) o_tdata <= version;
-                if (rx_data[1]==1) o_tdata <= {24'd0,boardin_sync};
-                if (rx_data[1]==2) o_tdata <= overrange_counter[rx_data[2][1:0]];
-                if (rx_data[1]==3) o_tdata <= eventcounter_sync;
-                if (rx_data[1]==4) o_tdata <= {16'd0,triggerphase_sync[7:0],downsamplemergingcounter_triggered_sync};
-                if (rx_data[1]==5) begin
+                case (rx_data[1]) 
+					 0: o_tdata <= version;
+                1: o_tdata <= {24'd0,boardin_sync};
+                2: o_tdata <= overrange_counter[rx_data[2][1:0]];
+                3: o_tdata <= eventcounter_sync;
+                4: o_tdata <= {16'd0,triggerphase_sync[7:0],downsamplemergingcounter_triggered_sync};
+                5: begin
                     lvdsout_spare <= rx_data[2][0]; // used for telling order of devices
                     o_tdata <= {8'd0, 7'd0,lvdsin_spare, 4'd0,lockinfo, 7'd0,~clkswitch};
                 end
-                if (rx_data[1]==6) begin
+                6: begin
                     fanon <= rx_data[2][0];
                     o_tdata <= fanon;
                 end
-                if (rx_data[1]==7) begin
+                7: begin
                     prelengthtotake <= {rx_data[3],rx_data[2]};
                     o_tdata <= prelengthtotake;
                 end
-                if (rx_data[1]==8) begin
+                8: begin
                     dorolling <= rx_data[2][0];
                     o_tdata <= dorolling;
                 end
-					 if (rx_data[1]==9) begin
+					 9: begin
                     clkout_ena <= rx_data[2][0];
                     o_tdata <= {31'd0,clkout_ena};
                 end
+					 10: begin
+                    auxoutselector <= rx_data[2][0];
+                    o_tdata <= {31'd0,auxoutselector};
+                end
+					 endcase
                 `SEND_STD_USB_RESPONSE
             end
 
@@ -966,12 +974,11 @@ always @ (posedge clk or negedge rstn) begin
                 channeltype <= rx_data[2]; // the channel type (bit0: single or dual, bit1: oversampling (swapped inputs))
                 lengthtotake <= {rx_data[5],rx_data[4]};
 
-                // we might not have actually read out data yet; however, since we are force arming the trigger we
-                // are going to pretend that we did so. In the separate "loop" over clklvds that should move
-                // acqstate to 0
+                // we might not have actually read out data yet; however, since we are force arming the trigger we are going to pretend that we did so
+					 // in the separate "loop" over clklvds that should move acqstate to 0
                 length <= 0;
                 didreadout <= 1'b1;
-				triggerlive <= 1'b1; // gets reset in INIT state
+					 triggerlive <= 1'b1; // gets reset in INIT state
 
                 // Assuming that trigger type is changed, trigger will always be re-armed;
                 // For debuging current acqstate in the first byte
@@ -995,9 +1002,9 @@ always @ (posedge clk or negedge rstn) begin
                     10: o_tdata <= {27'd0, downsample};
                     11: o_tdata <= {31'd0, highres};
                     12: o_tdata <= {20'd0, upperthresh};
-					13: o_tdata <= {31'd0, flash_busy};
+						  13: o_tdata <= {31'd0, flash_busy};
                     default:
-                    	o_tdata <= {32'd0};
+								o_tdata <= {32'd0};
                 endcase
                 `SEND_STD_USB_RESPONSE
             end
