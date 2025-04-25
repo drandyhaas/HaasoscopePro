@@ -1,3 +1,4 @@
+Warning (12251): Asmi_parallel_0: Used altera_asmi_parallel 23.1 (instead of 24.1)
 Warning (10268): Verilog HDL information at command_processor.v(148): always construct contains both blocking and non-blocking assignments File: C:/gitwork/master/HaasoscopePro/adc board firmware/command_processor.v Line: 148
 Warning (10268): Verilog HDL information at command_processor.v(738): always construct contains both blocking and non-blocking assignments File: C:/gitwork/master/HaasoscopePro/adc board firmware/command_processor.v Line: 738
 Warning (10268): Verilog HDL information at command_processor.v(1315): always construct contains both blocking and non-blocking assignments File: C:/gitwork/master/HaasoscopePro/adc board firmware/command_processor.v Line: 1315

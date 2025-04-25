@@ -3,6 +3,8 @@ Warning (15714): Some pins have incomplete I/O assignments. Refer to the I/O Ass
 Warning (176674): Following 64 pins are differential I/O pins but do not have their complement pins. Hence, the Fitter automatically created the complement pins.
 Warning (335093): The Timing Analyzer is analyzing 1 combinational loops as latches. For more details, run the Check Timing command in the Timing Analyzer or view the "User-Specified and Inferred Latches" table in the Analysis & Synthesis report.
 Warning (332174): Ignored filter at coincidence.sdc(28): otherclkpll* could not be matched with a clock File: C:/gitwork/master/HaasoscopePro/adc board firmware/coincidence.sdc Line: 28
+Warning (332054): Assignment set_input_delay is accepted but has some problems at coincidence.sdc(80): Set_input_delay/set_output_delay has replaced one or more delays on port "boardin[4]". Please use -add_delay option if you meant to add additional constraints. File: C:/gitwork/master/HaasoscopePro/adc board firmware/coincidence.sdc Line: 80
+Warning (332054): Assignment set_output_delay is accepted but has some problems at coincidence.sdc(81): Set_input_delay/set_output_delay has replaced one or more delays on port "debugout[10]". Please use -add_delay option if you meant to add additional constraints. File: C:/gitwork/master/HaasoscopePro/adc board firmware/coincidence.sdc Line: 81
 Extra Info (176273): Performing register packing on registers with non-logic cell location assignments
 Extra Info (176274): Completed register packing on registers with non-logic cell location assignments
 Extra Info (176236): Started Fast Input/Output/OE register processing
@@ -12,3 +14,4 @@ Extra Info (176239): Inferring scan chains for DSP blocks is complete
 Extra Info (176248): Moving registers into I/O cells, Multiplier Blocks, and RAM blocks to improve timing and density
 Extra Info (176249): Finished moving registers into I/O cells, Multiplier Blocks, and RAM blocks
 Warning (171167): Found invalid Fitter assignments. See the Ignored Assignments panel in the Fitter Compilation Report for more information.
+Warning (169180): Following 1 pins must use external clamping diodes.

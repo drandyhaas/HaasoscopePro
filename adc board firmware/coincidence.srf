@@ -26,6 +26,11 @@
 { "" "" "" "No exact pin location assignment(s) for 18 pins of 151 total pins. For the list of pins please refer to the I/O Assignment Warnings table in the fitter report." {  } {  } 0 169085 "" 0 0 "Design Software" 0 -1 0 ""}
 { "" "" "" "Ignored filter at coincidence.sdc(28): otherclkpll* could not be matched with a clock" {  } {  } 0 332174 "" 0 0 "Design Software" 0 -1 0 ""}
 { "" "" "" "Verilog HDL or VHDL warning at asmi_asmi_parallel_0.v(109): object \"illegal_write_prot_reg\" assigned a value but never read" {  } {  } 0 10036 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "Assignment set_input_delay is accepted but has some problems at coincidence.sdc(80): Set_input_delay/set_output_delay has replaced one or more delays on port \"boardin\[4\]\". Please use -add_delay option if you meant to add additional constraints." {  } {  } 0 332054 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "Assignment set_output_delay is accepted but has some problems at coincidence.sdc(81): Set_input_delay/set_output_delay has replaced one or more delays on port \"debugout\[10\]\". Please use -add_delay option if you meant to add additional constraints." {  } {  } 0 332054 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "Pin asmi:inst4\|asmi_asmi_parallel_0:asmi_parallel_0\|sd2~ALTERA_DATA0 uses I/O standard 2.5 V at K1" {  } {  } 0 169178 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "Following 1 pins must use external clamping diodes." {  } {  } 0 169180 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "Asmi_parallel_0: Used altera_asmi_parallel 23.1 (instead of 24.1)" {  } {  } 0 12251 "" 0 0 "Design Software" 0 -1 0 ""}
 { "" "" "" "*" {  } {  } 0 10268 "" 0 0 "Design Software" 0 -1 0 ""}
 { "" "" "" "*" {  } {  } 0 15705 "" 0 0 "Design Software" 0 -1 0 ""}
 { "" "" "" "*" {  } {  } 0 176674 "" 0 0 "Design Software" 0 -1 0 ""}
