@@ -87,7 +87,7 @@
        <widget class="QSlider" name="threshold">
         <property name="geometry">
          <rect>
-          <x>150</x>
+          <x>170</x>
           <y>30</y>
           <width>10</width>
           <height>241</height>
@@ -124,7 +124,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>290</y>
+          <y>310</y>
           <width>191</width>
           <height>10</height>
          </rect>
@@ -166,7 +166,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>310</y>
+          <y>320</y>
           <width>51</width>
           <height>16</height>
          </rect>
@@ -184,7 +184,7 @@
         <property name="geometry">
          <rect>
           <x>86</x>
-          <y>270</y>
+          <y>290</y>
           <width>47</width>
           <height>13</height>
          </rect>
@@ -201,7 +201,7 @@
        <widget class="QLabel" name="label_4">
         <property name="geometry">
          <rect>
-          <x>130</x>
+          <x>150</x>
           <y>10</y>
           <width>51</width>
           <height>20</height>
@@ -292,7 +292,7 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>330</y>
+          <y>340</y>
           <width>61</width>
           <height>21</height>
          </rect>
@@ -310,7 +310,7 @@
         <property name="geometry">
          <rect>
           <x>140</x>
-          <y>330</y>
+          <y>340</y>
           <width>61</width>
           <height>21</height>
          </rect>
@@ -330,7 +330,7 @@
           <x>10</x>
           <y>110</y>
           <width>111</width>
-          <height>151</height>
+          <height>171</height>
          </rect>
         </property>
         <property name="font">
@@ -346,7 +346,7 @@
           <rect>
            <x>10</x>
            <y>20</y>
-           <width>81</width>
+           <width>91</width>
            <height>17</height>
           </rect>
          </property>
@@ -367,7 +367,7 @@
           <rect>
            <x>10</x>
            <y>40</y>
-           <width>70</width>
+           <width>91</width>
            <height>17</height>
           </rect>
          </property>
@@ -377,14 +377,14 @@
           </font>
          </property>
          <property name="text">
-          <string>External</string>
+          <string>Other boards</string>
          </property>
         </widget>
         <widget class="QSpinBox" name="totBox">
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>90</y>
+           <y>115</y>
            <width>51</width>
            <height>22</height>
           </rect>
@@ -408,7 +408,7 @@
          <property name="geometry">
           <rect>
            <x>70</x>
-           <y>93</y>
+           <y>119</y>
            <width>31</width>
            <height>16</height>
           </rect>
@@ -426,7 +426,7 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>120</y>
+           <y>140</y>
            <width>51</width>
            <height>22</height>
           </rect>
@@ -450,7 +450,7 @@
          <property name="geometry">
           <rect>
            <x>70</x>
-           <y>123</y>
+           <y>143</y>
            <width>31</width>
            <height>16</height>
           </rect>
@@ -468,7 +468,7 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>60</y>
+           <y>85</y>
            <width>51</width>
            <height>22</height>
           </rect>
@@ -492,7 +492,7 @@
          <property name="geometry">
           <rect>
            <x>70</x>
-           <y>64</y>
+           <y>89</y>
            <width>31</width>
            <height>16</height>
           </rect>
@@ -506,6 +506,24 @@
           <string>Chan</string>
          </property>
         </widget>
+        <widget class="QCheckBox" name="extsmatrigCheck">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>60</y>
+           <width>91</width>
+           <height>17</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <family>Arial</family>
+          </font>
+         </property>
+         <property name="text">
+          <string>Ext. SMA</string>
+         </property>
+        </widget>
        </widget>
        <widget class="QLineEdit" name="timebaseBox">
         <property name="enabled">
@@ -514,7 +532,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>330</y>
+          <y>340</y>
           <width>51</width>
           <height>20</height>
          </rect>

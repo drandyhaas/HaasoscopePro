@@ -73,6 +73,7 @@ class MainWindow(TemplateBaseClass):
     for ph in range(len(usbs)): phasecs.append([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
     phaseoffset = 0 # how many positive phase steps to take from middle of good range
     doexttrig = [0] * num_board
+    doextsmatrig = [0] * num_board
     paused = True # will unpause with dostartstop at startup
     downsample = 0
     downsamplefactor = 1
@@ -144,6 +145,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.timefastButton.clicked.connect(self.timefast)
         self.ui.risingedgeCheck.stateChanged.connect(self.risingfalling)
         self.ui.exttrigCheck.stateChanged.connect(self.exttrig)
+        self.ui.extsmatrigCheck.stateChanged.connect(self.extsmatrig)
         self.ui.totBox.valueChanged.connect(self.tot)
         self.ui.depthBox.valueChanged.connect(self.depth)
         self.ui.boardBox.valueChanged.connect(self.boardchanged)
@@ -210,15 +212,23 @@ class MainWindow(TemplateBaseClass):
 
     def selectchannel(self):
         if self.activeboard%2==0:
-            self.ui.exttrigCheck.setEnabled(False)
             self.ui.oversampCheck.setEnabled(True)
             if self.dooversample: self.ui.interleavedCheck.setEnabled(True)
         else:
-            self.ui.exttrigCheck.setEnabled(True)
             self.ui.oversampCheck.setEnabled(False)
             self.ui.interleavedCheck.setEnabled(False)
-        if self.doexttrig[self.activeboard]: self.ui.exttrigCheck.setChecked(True)
-        else: self.ui.exttrigCheck.setChecked(False)
+        if self.doexttrig[self.activeboard]:
+            self.ui.exttrigCheck.setChecked(True)
+            self.ui.extsmatrigCheck.setEnabled(False)
+        else:
+            self.ui.exttrigCheck.setChecked(False)
+            self.ui.extsmatrigCheck.setEnabled(True)
+        if self.doextsmatrig[self.activeboard]:
+            self.ui.extsmatrigCheck.setChecked(True)
+            self.ui.exttrigCheck.setEnabled(False)
+        else:
+            self.ui.extsmatrigCheck.setChecked(False)
+            self.ui.exttrigCheck.setEnabled(True)
         self.selectedchannel = self.ui.chanBox.value()
         self.activexychannel = self.activeboard*self.num_chan_per_board + self.selectedchannel
         p = self.ui.chanColor.palette()
@@ -496,11 +506,19 @@ class MainWindow(TemplateBaseClass):
         self.doexttrig[board] = value
         self.ui.exttrigCheck.setChecked(value)
         #print("doexttrig", self.doexttrig[board], "for board", board)
+        if self.doexttrig[board]: self.ui.extsmatrigCheck.setEnabled(False)
+        else: self.ui.extsmatrigCheck.setEnabled(True)
         r = self.ui.rollingButton.isChecked()
         if self.doexttrig[board]: r = False
         print("setting rolling",r,"for board",board)
         usbs[board].send(bytes([2, 8, r, 0, 100, 100, 100, 100]))
         usbs[board].recv(4)
+
+    def extsmatrig(self):
+        self.doextsmatrig[self.activeboard] = self.ui.extsmatrigCheck.isChecked()
+        #print("ext SMA trig now",self.doextsmatrig[self.activeboard],"for board",self.activeboard)
+        if self.doextsmatrig[self.activeboard]: self.ui.exttrigCheck.setEnabled(False)
+        else: self.ui.exttrigCheck.setEnabled(True)
 
     def grid(self):
         if self.ui.gridCheck.isChecked():
@@ -819,6 +837,7 @@ class MainWindow(TemplateBaseClass):
     def getchannels(self, board):
         tt = self.triggertype
         if self.doexttrig[board] > 0: tt = 3
+        elif self.doextsmatrig[board] > 0: tt = 5
         usbs[board].send(bytes([1, tt, self.dotwochannel+2*self.dooversample, 99] + inttobytes(
             self.expect_samples - self.triggerpos + 1)))  # length to take after trigger (last 4 bytes)
         triggercounter = usbs[board].recv(4)  # get the 4 bytes
