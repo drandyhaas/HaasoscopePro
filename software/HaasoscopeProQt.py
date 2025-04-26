@@ -468,7 +468,7 @@ class MainWindow(TemplateBaseClass):
             startofzeros, lengthofzeros = find_longest_zero_stretch(self.phasenbad[board], True)
             print("good phase starts at",startofzeros, "and goes for", lengthofzeros,"steps")
             if startofzeros>=12: startofzeros-=12
-            n = startofzeros + lengthofzeros//2 + self.phaseoffset # amount to adjust clklvds (positive)
+            n = startofzeros + lengthofzeros//2 + self.phaseoffset # amount to adjust clklvds and clklvdsout (positive)
             if n>=12: n-=12
             n+=1 # extra 1 because we went to phase=-1 before
             for i in range(n):
@@ -844,18 +844,13 @@ class MainWindow(TemplateBaseClass):
         acqstate = triggercounter[0]
         if acqstate == 251:  # an event is ready to be read out
             gotzerobit = False
-            gotanyzerobit = False
             for s in range(20):
                 thebit = getbit(triggercounter[int(s / 8) + 1], s % 8)
                 if thebit == 0:
                     gotzerobit = True
-                    gotanyzerobit = True
                 if thebit == 1 and gotzerobit:
                     self.sample_triggered[board] = s
                     gotzerobit = False
-            if not gotanyzerobit:
-                #print("not any zero bit")
-                self.sample_triggered[board] = 0
             #if board==0: print("board",board,"sample triggered", binprint(triggercounter[3]), binprint(triggercounter[2]), binprint(triggercounter[1]))
             #if board==0: print("sample_triggered", self.sample_triggered[board], "for board", board)
             # if board==0:
@@ -903,9 +898,13 @@ class MainWindow(TemplateBaseClass):
             else: boardtouse = board+1
             self.sample_triggered[board] = self.sample_triggered[boardtouse] # take from the other board when interleaving using ext trig
             self.triggerphase[board] = self.triggerphase[boardtouse]
-        triggerphase = self.triggerphase[board]%4
-        if self.sample_triggered[board]>=10: triggerphase = self.triggerphase[board]>>4
-        #print("triggerphase",self.triggerphase[board]>>4,self.triggerphase[board]%4,"so use",triggerphase,"for board",board)
+        sample_triggered_touse = self.sample_triggered[board]
+        if (self.triggerphase[board]%4) != (self.triggerphase[board]>>2)%4:
+            #print("sampletriggered",self.sample_triggered[board],"and triggerphase for board",board,"is",self.triggerphase[board]>>4, "needzeros:",self.triggerphase[board]%4, "zeroblind:",(self.triggerphase[board]>>2)%4)
+            if self.sample_triggered[board]<10: sample_triggered_touse = self.sample_triggered[board]-1 # if we're in this rare case, adjust sample_triggered by 1 since the real thing would have had all ones
+        if self.sample_triggered[board]<10:
+            triggerphase = (self.triggerphase[board]>>2)%4 # use the triggerphase from the lower 10 bits of sample_triggered, the version not caring about whether it has zeros
+        else: triggerphase = self.triggerphase[board]>>4 # just use triggerphase from the upper 10 bits of sample_triggered when sample_triggered is occuring in the last 10 bits
         nbadclkA = 0
         nbadclkB = 0
         nbadclkC = 0
@@ -919,7 +918,7 @@ class MainWindow(TemplateBaseClass):
             if self.dooversample and board % 2 == 0:
                 npunpackedsamples += self.extrigboardmeancorrection
                 npunpackedsamples *= self.extrigboardstdcorrection
-        downsampleoffset = 2 * (self.sample_triggered[board] + (downsamplemergingcounter-1)%self.downsamplemerging * 10) // self.downsamplemerging
+        downsampleoffset = 2 * (sample_triggered_touse + (downsamplemergingcounter-1)%self.downsamplemerging * 10) // self.downsamplemerging
         if not self.dotwochannel: downsampleoffset *= 2
         if self.doexttrig[board]: downsampleoffset -= self.toff // self.downsamplefactor
         datasize = self.xydata[board][1].size
@@ -959,7 +958,6 @@ class MainWindow(TemplateBaseClass):
                         self.xydata[board * self.num_chan_per_board+1][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
                 else:
                     samp = s*40 - downsampleoffset - triggerphase
-                    #if self.sample_triggered[board]<=10: samp = s*40 - downsampleoffset - (self.triggerphase[board]%4)
                     nsamp=40
                     nstart=0
                     if samp<0:

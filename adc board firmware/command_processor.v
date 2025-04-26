@@ -71,7 +71,7 @@ module command_processor (
 	input [7:0] flash_dataout
 );
 
-integer version = 23; // firmware version
+integer version = 24; // firmware version
 
 // these 10 debugout's go to LEDs on the board
 assign debugout[0] = clkswitch;
@@ -143,7 +143,7 @@ reg [8:0]	triggerphase = 0, triggerphase_sync = 0;
 reg 			triggerchan = 0, triggerchan_sync = 0;
 reg			dorolling = 0, dorolling_sync = 0; // TODO: to be removed
 reg 			auxoutselector = 0, auxoutselector_sync = 0;
-
+reg 			st1zero, st2zero, st3zero, st4zero; // for sample_triggered
 
 // this drives the trigger
 always @ (posedge clklvds or negedge rstn) begin
@@ -476,39 +476,70 @@ always @ (posedge clklvds or negedge rstn) begin
 			
 			if (triggerphase == -9'd1) begin // just once
 				triggerphase = 0;
-				sample_triggered_max_val1 = sample_triggered[9:0];
+				
+				// see whether the sample_triggered's have a 0 in the first 10 bits
+				st1zero=0;
+				st2zero=0;
+				st3zero=0;
+				st4zero=0;
+				for (int i=0; i<10; i++) begin
+					if (sample_triggered [i]==0) st1zero=1;
+					if (sample_triggered2[i]==0) st2zero=1;
+					if (sample_triggered3[i]==0) st3zero=1;
+					if (sample_triggered4[i]==0) st4zero=1;
+				end
+				
+				// find the best sample_triggered that has a zero, and use it for the output sample_triggered
+				// usually that will determine the triggerphase as well
+				if (st1zero) sample_triggered_max_val1 = sample_triggered [9:0];
+				if (st2zero && sample_triggered2[9:0] > sample_triggered_max_val1) begin
+					sample_triggered_max_val1 = sample_triggered2[9:0];
+					triggerphase[1:0] = 2'd1;
+				end
+				if (st3zero && sample_triggered3[9:0] > sample_triggered_max_val1) begin
+					sample_triggered_max_val1 = sample_triggered3[9:0];
+					triggerphase[1:0] = 2'd2;
+				end
+				if (st4zero && sample_triggered4[9:0] > sample_triggered_max_val1) begin
+					sample_triggered_max_val1 = sample_triggered4[9:0];
+					triggerphase[1:0] = 2'd3;
+				end
+				if (triggerphase[1:0]==2'd1) sample_triggered[9:0] <= sample_triggered2[9:0];
+				else if (triggerphase[1:0]==2'd2) sample_triggered[9:0] <= sample_triggered3[9:0];
+				else if (triggerphase[1:0]==2'd3) sample_triggered[9:0] <= sample_triggered4[9:0];
+				
+				// correct triggerphase in the rare case that the best one would have been all zeros in the first 10 bits
+				sample_triggered_max_val1 = sample_triggered [9:0];
 				if (sample_triggered2[9:0] > sample_triggered_max_val1) begin
 					sample_triggered_max_val1 = sample_triggered2[9:0];
-					triggerphase[3:0] = 4'd1;
+					triggerphase[3:2] = 2'd1;
 				end
 				if (sample_triggered3[9:0] > sample_triggered_max_val1) begin
 					sample_triggered_max_val1 = sample_triggered3[9:0];
-					triggerphase[3:0] = 4'd2;
+					triggerphase[3:2] = 2'd2;
 				end
 				if (sample_triggered4[9:0] > sample_triggered_max_val1) begin
 					sample_triggered_max_val1 = sample_triggered4[9:0];
-					triggerphase[3:0] = 4'd3;
+					triggerphase[3:2] = 2'd3;
 				end
-				if (triggerphase[3:0]==4'd1) sample_triggered[9:0] <= sample_triggered2[9:0];
-				else if (triggerphase[3:0]==4'd2) sample_triggered[9:0] <= sample_triggered3[9:0];
-				else if (triggerphase[3:0]==4'd3) sample_triggered[9:0] <= sample_triggered4[9:0];
 
+				// find the best sample_triggered to use for when the rising edge is in the last 10 bits
 				sample_triggered_max_val2 = sample_triggered[19:10];
 				if (sample_triggered2[19:10] > sample_triggered_max_val2) begin
 					sample_triggered_max_val2 = sample_triggered2[19:10];
-					triggerphase[7:4] = 4'd1;
+					triggerphase[5:4] = 2'd1;
 				end
 				if (sample_triggered3[19:10] > sample_triggered_max_val2) begin
 					sample_triggered_max_val2 = sample_triggered3[19:10];
-					triggerphase[7:4] = 4'd2;
+					triggerphase[5:4] = 2'd2;
 				end
 				if (sample_triggered4[19:10] > sample_triggered_max_val2) begin
 					sample_triggered_max_val2 = sample_triggered4[19:10];
-					triggerphase[7:4] = 4'd3;
+					triggerphase[5:4] = 2'd3;
 				end
-				if (triggerphase[7:4]==4'd1) sample_triggered[19:10] <= sample_triggered2[19:10];
-				else if (triggerphase[7:4]==4'd2) sample_triggered[19:10] <= sample_triggered3[19:10];
-				else if (triggerphase[7:4]==4'd3) sample_triggered[19:10] <= sample_triggered4[19:10];
+				if (triggerphase[5:4]==2'd1) sample_triggered[19:10] <= sample_triggered2[19:10];
+				else if (triggerphase[5:4]==2'd2) sample_triggered[19:10] <= sample_triggered3[19:10];
+				else if (triggerphase[5:4]==2'd3) sample_triggered[19:10] <= sample_triggered4[19:10];
 			end
 			
 		end
