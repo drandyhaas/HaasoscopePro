@@ -256,70 +256,30 @@ always @ (posedge clklvds or negedge rstn) begin
 		1 : begin // ready for first part of trigger condition to be met
 			if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
 			else begin
-				if (channeltype_sync[0]==1'b0) begin // single channel mode
 				for (i=0;i<10;i=i+1) begin
-					if ( (samplevalue[ 0+i]<lowerthresh_sync && rising) || (samplevalue[ 0+i]>upperthresh_sync && !rising) ) acqstate <= 8'd2;
-					if ( (samplevalue[ 0+i]<lowerthresh_sync && !rising) || (samplevalue[ 0+i]>upperthresh_sync && rising) ) begin
-						sample_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
-					end
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
+						( (samplevalue[ 0+i]<lowerthresh_sync && rising) || (samplevalue[ 0+i]>upperthresh_sync && !rising) ) ) acqstate <= 8'd2;
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
+						( (samplevalue[ 0+i]<lowerthresh_sync && !rising) || (samplevalue[ 0+i]>upperthresh_sync && rising) ) ) sample_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
 					else sample_triggered[9-i] <= 1'b0;
 					
-					if ( (samplevalue[10+i]<lowerthresh_sync && rising) || (samplevalue[10+i]>upperthresh_sync && !rising) ) acqstate <= 8'd2;
-					if ( (samplevalue[10+i]<lowerthresh_sync && !rising) || (samplevalue[10+i]>upperthresh_sync && rising) ) begin
-						sample_triggered2[9-i] <= 1'b1; // remember the samples that caused the trigger
-					end
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
+						( (samplevalue[10+i]<lowerthresh_sync && rising) || (samplevalue[10+i]>upperthresh_sync && !rising) ) ) acqstate <= 8'd2;
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
+						( (samplevalue[10+i]<lowerthresh_sync && !rising) || (samplevalue[10+i]>upperthresh_sync && rising) ) ) sample_triggered2[9-i] <= 1'b1; // remember the samples that caused the trigger
 					else sample_triggered2[9-i] <= 1'b0;
 					
-					if ( (samplevalue[20+i]<lowerthresh_sync && rising) || (samplevalue[20+i]>upperthresh_sync && !rising) ) acqstate <= 8'd2;
-					if ( (samplevalue[20+i]<lowerthresh_sync && !rising) || (samplevalue[20+i]>upperthresh_sync && rising) ) begin
-						sample_triggered3[9-i] <= 1'b1; // remember the samples that caused the trigger
-					end
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
+						( (samplevalue[20+i]<lowerthresh_sync && rising) || (samplevalue[20+i]>upperthresh_sync && !rising) ) ) acqstate <= 8'd2;
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
+						( (samplevalue[20+i]<lowerthresh_sync && !rising) || (samplevalue[20+i]>upperthresh_sync && rising) ) ) sample_triggered3[9-i] <= 1'b1; // remember the samples that caused the trigger
 					else sample_triggered3[9-i] <= 1'b0;
 					
-					if ( (samplevalue[30+i]<lowerthresh_sync && rising) || (samplevalue[30+i]>upperthresh_sync && !rising) ) acqstate <= 8'd2;
-					if ( (samplevalue[30+i]<lowerthresh_sync && !rising) || (samplevalue[30+i]>upperthresh_sync && rising) ) begin
-						sample_triggered4[9-i] <= 1'b1; // remember the samples that caused the trigger
-					end
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
+						( (samplevalue[30+i]<lowerthresh_sync && rising) || (samplevalue[30+i]>upperthresh_sync && !rising) ) ) acqstate <= 8'd2;
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
+						( (samplevalue[30+i]<lowerthresh_sync && !rising) || (samplevalue[30+i]>upperthresh_sync && rising) ) ) sample_triggered4[9-i] <= 1'b1; // remember the samples that caused the trigger
 					else sample_triggered4[9-i] <= 1'b0;
-				end
-				end				
-				else begin // two channel
-					if (triggerchan_sync==1'b0) begin // channel 0 triggering
-						for (i=0;i<10;i=i+1) begin
-							if ( (samplevalue[ 0+i]<lowerthresh_sync && rising) || (samplevalue[ 0+i]>upperthresh_sync && !rising) ) acqstate <= 8'd2;
-							if ( (samplevalue[ 0+i]<lowerthresh_sync && !rising) || (samplevalue[ 0+i]>upperthresh_sync && rising) ) begin
-								sample_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
-							end
-							else sample_triggered[9-i] <= 1'b0;
-							
-							if ( (samplevalue[20+i]<lowerthresh_sync && rising) || (samplevalue[20+i]>upperthresh_sync && !rising) ) acqstate <= 8'd2;
-							if ( (samplevalue[20+i]<lowerthresh_sync && !rising) || (samplevalue[20+i]>upperthresh_sync && rising) ) begin
-								sample_triggered3[9-i] <= 1'b1; // remember the samples that caused the trigger
-							end
-							else sample_triggered3[9-i] <= 1'b0;
-							
-							sample_triggered2[9-i] <= 1'b0;
-							sample_triggered4[9-i] <= 1'b0;
-						end
-					end
-					else begin // channel 1 triggering
-						for (i=0;i<10;i=i+1) begin
-							if ( (samplevalue[10+i]<lowerthresh_sync && rising) || (samplevalue[10+i]>upperthresh_sync && !rising) ) acqstate <= 8'd2;
-							if ( (samplevalue[10+i]<lowerthresh_sync && !rising) || (samplevalue[10+i]>upperthresh_sync && rising) ) begin
-								sample_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
-							end
-							else sample_triggered2[9-i] <= 1'b0;
-							
-							if ( (samplevalue[30+i]<lowerthresh_sync && rising) || (samplevalue[30+i]>upperthresh_sync && !rising) ) acqstate <= 8'd2;
-							if ( (samplevalue[30+i]<lowerthresh_sync && !rising) || (samplevalue[30+i]>upperthresh_sync && rising) ) begin
-								sample_triggered4[9-i] <= 1'b1; // remember the samples that caused the trigger
-							end
-							else sample_triggered4[9-i] <= 1'b0;
-							
-							sample_triggered[9-i] <= 1'b0;
-							sample_triggered3[9-i] <= 1'b0;
-						end
-					end
 				end
 			end
 		end
