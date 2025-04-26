@@ -71,7 +71,7 @@ class MainWindow(TemplateBaseClass):
     themuxoutV = True
     phasecs = []
     for ph in range(len(usbs)): phasecs.append([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
-    phaseoffset = 0 # how many positive phase steps to take from middle of good range
+    phaseoffset = 1 # how many positive phase steps to take from middle of good range
     doexttrig = [0] * num_board
     doextsmatrig = [0] * num_board
     paused = True # will unpause with dostartstop at startup
@@ -1083,47 +1083,75 @@ class MainWindow(TemplateBaseClass):
         for bo in range(self.num_board): clkout_ena(usbs[bo],self.num_board>1)
         print("took",round(time.time()-starttime,3),"seconds")
 
-    def autocalibration(self):
-        c1 = self.activeboard  # board data we are merging with
-        if c1 >= self.num_board - 1: return
-        c = (self.activeboard + 1) * self.num_chan_per_board  # the exttrig board data
-        # fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
-        bare_max_x = 4 * 10 * self.expect_samples * self.downsamplefactor / self.nsunits / self.samplerate
-        fitwidth = bare_max_x * self.fitwidthfraction
-        cdata = self.xydata[c]
-        cdata[1] = np.roll(cdata[1], -self.toff)
+    def autocalibration(self, resamp=2, dofiner=False, oldtoff=0, finewidth=4):
+        if not resamp: # called from GUI, defaults aren't filled
+            resamp=2
+            dofiner=False
+            oldtoff=0
+        print("autocalibration",resamp,dofiner,finewidth)
+        if self.tad!=0:
+            print("Set TAD to 0 first!")
+            return
+        c1 = self.activeboard
+        if c1 >= self.num_board - 1:
+            print("Select the even channel first!")
+            return
+        c = (self.activeboard + 1) * self.num_chan_per_board
+        fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
+        #bare_max_x = 4 * 10 * self.expect_samples * self.downsamplefactor / self.nsunits / self.samplerate
+        #fitwidth = bare_max_x * self.fitwidthfraction
+        c1data = self.xydata[c1] # active board data
+        c1datanewy, c1datanewx = resample(c1data[1], len(c1data[0]) * resamp, t=c1data[0])
+        cdata = self.xydata[c] # the exttrig board data
+        cdatanewy, cdatanewx = resample(cdata[1], len(cdata[0]) * resamp, t=cdata[0])
+        minrange = -self.toff * resamp
+        if dofiner: minrange = (self.toff-oldtoff-finewidth)*resamp
+        maxrange = 10*self.expect_samples*resamp
+        if dofiner: maxrange = (self.toff-oldtoff+finewidth)*resamp
+        print("min center max ranges",minrange,(minrange+maxrange)//2,maxrange)
+        cdatanewy = np.roll(cdatanewy, minrange)
         minrms = 1e9
         minshift = 0
-        for nshift in range(-self.toff, 20*self.expect_samples):
-            yc = cdata[1][(cdata[0] > self.vline - fitwidth) & (cdata[0] < self.vline + fitwidth)]
-            yc1 = self.xydata[c1][1][
-                (self.xydata[c1][0] > self.vline - fitwidth) & (self.xydata[c1][0] < self.vline + fitwidth)]
-            therms = np.std(yc1 - yc) * (1+nshift/(20*self.expect_samples))
-            # print("nshift",nshift,"std",therms)
+        for nshift in range(minrange, maxrange):
+            yc = cdatanewy[(cdatanewx > self.vline - fitwidth) & (cdatanewx < self.vline + fitwidth)]
+            yc1 = c1datanewy[(c1datanewx > self.vline - fitwidth) & (c1datanewx < self.vline + fitwidth)]
+            therms = np.std(yc1 - yc) * (1+nshift/(20*self.expect_samples*resamp)) # bias towards lower shifts
+            #if dofiner: print("nshift",nshift,"std",therms)
             if therms < minrms:
                 minrms = therms
                 minshift = nshift
-            cdata[1] = np.roll(cdata[1], 1)
-        #print("minrms found for toff =", minshift)
-        minshift = minshift - 1 #better for interleaving
-        self.toff = minshift + self.toff
-        self.ui.ToffBox.setValue(self.toff)
-        cdata[1] = np.roll(cdata[1], -20*self.expect_samples + minshift)
-
-        yc = self.xydata[c][1][
-            (self.xydata[c][0] > self.vline - fitwidth) & (self.xydata[c][0] < self.vline + fitwidth)]
-        yc1 = self.xydata[c1][1][
-            (self.xydata[c1][0] > self.vline - fitwidth) & (self.xydata[c1][0] < self.vline + fitwidth)]
-        extrigboardmean = np.mean(yc)
-        otherboardmean = np.mean(yc1)
-        self.extrigboardmeancorrection = self.extrigboardmeancorrection + extrigboardmean - otherboardmean
-        extrigboardstd = np.std(yc)
-        otherboardstd = np.std(yc1)
-        if otherboardstd > 0:
-            self.extrigboardstdcorrection = self.extrigboardstdcorrection * extrigboardstd / otherboardstd
+            cdatanewy = np.roll(cdatanewy, 1)
+        print("minrms found for shift =", minshift, "toff",self.toff,"have minshift//resamp",minshift//resamp,"and extra",minshift%resamp,"/",resamp)
+        if dofiner:
+            self.toff = minshift // resamp + oldtoff - 1 # the minus one lets us then adjust forward with TAD
+            self.ui.ToffBox.setValue(self.toff)
+            tadshift = (138.4*2/resamp) * (minshift%resamp)
+            tadshiftround = round(tadshift+138.4)
+            print("should set TAD to",tadshift,"+ 138.4 ~=",tadshiftround)
+            for t in range(255//5):
+                if abs(self.tad - tadshiftround)<5: break
+                if self.tad<tadshiftround: self.ui.tadBox.setValue(self.tad+5)
+                else: self.ui.tadBox.setValue(self.tad-5)
+                self.setTAD()
+                time.sleep(.1) # be gentle
         else:
-            self.extrigboardstdcorrection = self.extrigboardstdcorrection
-        #print("calculated mean and std corrections", self.extrigboardmeancorrection, self.extrigboardstdcorrection)
+            oldtoff = self.toff
+            self.toff = minshift//resamp + self.toff
+            yc = self.xydata[c][1][
+                (self.xydata[c][0] > self.vline - fitwidth) & (self.xydata[c][0] < self.vline + fitwidth)]
+            yc1 = self.xydata[c1][1][
+                (self.xydata[c1][0] > self.vline - fitwidth) & (self.xydata[c1][0] < self.vline + fitwidth)]
+            extrigboardmean = np.mean(yc)
+            otherboardmean = np.mean(yc1)
+            self.extrigboardmeancorrection = self.extrigboardmeancorrection + extrigboardmean - otherboardmean
+            extrigboardstd = np.std(yc)
+            otherboardstd = np.std(yc1)
+            if otherboardstd > 0:
+                self.extrigboardstdcorrection = self.extrigboardstdcorrection * extrigboardstd / otherboardstd
+            else:
+                self.extrigboardstdcorrection = self.extrigboardstdcorrection
+            print("calculated mean and std corrections", self.extrigboardmeancorrection, self.extrigboardstdcorrection)
+            self.autocalibration(64,True, oldtoff)
 
     def plot_fft(self):
         if self.dointerleaved: y = self.xydatainterleaved[int(self.activeboard/2)][1]
