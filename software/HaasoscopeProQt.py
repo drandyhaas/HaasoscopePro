@@ -66,7 +66,7 @@ class MainWindow(TemplateBaseClass):
     selectedchannel = 0
     activeboard = 0
     activexychannel = 0
-    tad = 0
+    tad = [0] * num_board
     toff = 0
     themuxoutV = True
     phasecs = []
@@ -130,6 +130,7 @@ class MainWindow(TemplateBaseClass):
     phasenbad = [[0] * 12] * num_board
     dooversample = False
     doresamp = 0
+    triggerautocalibration = [False] * num_board
 
     def __init__(self):
         TemplateBaseClass.__init__(self)
@@ -243,6 +244,7 @@ class MainWindow(TemplateBaseClass):
             self.ui.chanonCheck.setChecked(QtCore.Qt.Checked)
         else:
             self.ui.chanonCheck.setChecked(QtCore.Qt.Unchecked)
+        self.ui.tadBox.setValue(self.tad[self.activeboard])
 
     def fft(self):
         if self.ui.fftCheck.checkState() == QtCore.Qt.Checked:
@@ -311,12 +313,12 @@ class MainWindow(TemplateBaseClass):
         self.fitwidthfraction = self.ui.fwfBox.value() / 100.
 
     def setTAD(self):
-        if self.tad<0 and self.ui.tadBox.value()>=0:
-            spicommand(usbs[self.activeboard], "TAD", 0x02, 0xB7, 0, False, quiet=False)
-        if self.tad>=0 and self.ui.tadBox.value()<0:
-            spicommand(usbs[self.activeboard], "TAD", 0x02, 0xB7, 1, False, quiet=False)
-        self.tad = self.ui.tadBox.value()
-        spicommand(usbs[self.activeboard], "TAD", 0x02, 0xB6, abs(self.tad), False, quiet=True)
+        # if self.tad<0 and self.ui.tadBox.value()>=0:
+        #     spicommand(usbs[self.activeboard], "TAD", 0x02, 0xB7, 0, False, quiet=False)
+        # if self.tad>=0 and self.ui.tadBox.value()<0:
+        #     spicommand(usbs[self.activeboard], "TAD", 0x02, 0xB7, 1, False, quiet=False)
+        self.tad[self.activeboard] = self.ui.tadBox.value()
+        spicommand(usbs[self.activeboard], "TAD", 0x02, 0xB6, abs(self.tad[self.activeboard]), False, quiet=True)
 
     def setToff(self):
         self.toff = self.ui.ToffBox.value()
@@ -1004,6 +1006,9 @@ class MainWindow(TemplateBaseClass):
             self.nbadclkC = nbadclkC
             self.nbadclkD = nbadclkD
             self.nbadstr = nbadstr
+        if self.triggerautocalibration[board]:
+            self.triggerautocalibration[board] = False
+            self.autocalibration()
 
     def drawtext(self):  # happens once per second
         if not self.dodrawing: return
@@ -1089,7 +1094,7 @@ class MainWindow(TemplateBaseClass):
             dofiner=False
             oldtoff=0
         print("autocalibration",resamp,dofiner,finewidth)
-        if self.tad!=0:
+        if self.tad[self.activeboard]!=0:
             print("Set TAD to 0 first!")
             return
         c1 = self.activeboard
@@ -1123,17 +1128,24 @@ class MainWindow(TemplateBaseClass):
             cdatanewy = np.roll(cdatanewy, 1)
         print("minrms found for shift =", minshift, "toff",self.toff,"have minshift//resamp",minshift//resamp,"and extra",minshift%resamp,"/",resamp)
         if dofiner:
-            self.toff = minshift // resamp + oldtoff - 1 # the minus one lets us then adjust forward with TAD
+            self.toff = minshift // resamp + oldtoff - 1  # the minus one lets us then adjust forward with TAD
             self.ui.ToffBox.setValue(self.toff)
-            tadshift = (138.4*2/resamp) * (minshift%resamp)
+            tadshift = round((138.4*2/resamp) * (minshift%resamp),1)
             tadshiftround = round(tadshift+138.4)
             print("should set TAD to",tadshift,"+ 138.4 ~=",tadshiftround)
-            for t in range(255//5):
-                if abs(self.tad - tadshiftround)<5: break
-                if self.tad<tadshiftround: self.ui.tadBox.setValue(self.tad+5)
-                else: self.ui.tadBox.setValue(self.tad-5)
-                self.setTAD()
-                time.sleep(.1) # be gentle
+            if tadshiftround<250: # good
+                for t in range(255//5):
+                    if abs(self.tad[self.activeboard] - tadshiftround)<5: break
+                    if self.tad[self.activeboard]<tadshiftround: self.ui.tadBox.setValue(self.tad[self.activeboard]+5)
+                    else: self.ui.tadBox.setValue(self.tad[self.activeboard]-5)
+                    self.setTAD()
+                    time.sleep(.1) # be gentle
+            else: # too big a shift needed, adjust clock phase of other board and retry
+                self.dophase(self.activeboard + 1, plloutnum=0, updown=1, pllnum=0)
+                self.dophase(self.activeboard + 1, plloutnum=1, updown=1, pllnum=0)
+                self.dophase(self.activeboard + 1, plloutnum=2, updown=1, pllnum=0)
+                self.triggerautocalibration[self.activeboard+1] = True # ask for a new calibration once we've gotten the new board and board+1 data
+                #self.autocalibration(64, True, oldtoff) # can't call from here because we won't take new data with the new phases
         else:
             oldtoff = self.toff
             self.toff = minshift//resamp + self.toff
