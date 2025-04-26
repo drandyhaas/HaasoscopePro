@@ -504,6 +504,7 @@ reg [3:0] flashstate=0, flashbusycounter=0;
 reg [31:0] o_tdatatemp = 0;
 reg clkstrprob = 0;
 reg [7:0] boardin_sync = 0;
+reg [3:0] numones=0, numones2=0;
 
 always @ (posedge clk) begin
 	acqstate_sync <= acqstate;
@@ -953,41 +954,37 @@ always @ (posedge clk or negedge rstn) begin
 						else o_tdata <= {16'hbeef,16'h00}; // marker, no problems
 					 end
                 else if (channel==46) begin
+						 numones=0;
+						 numones2=0;
 						 for (i=0; i<10; i++) begin
 							o_tdatatemp[i] = lvdsbitsin[14*(20+i)+13]; //samplestr 20-29
 							o_tdatatemp[i+16] = lvdsbitsin[14*(30+i)+13]; //samplestr 30-39
+							if (o_tdatatemp[i]) numones=numones+4'd1;
+							if (o_tdatatemp[i+16]) numones2=numones2+4'd1;
 						 end
 						 for (i=0; i<6; i++) begin
 							o_tdatatemp[i+10] = 0; //padding
 							o_tdatatemp[i+26] = 0; //padding
 						 end
-						 if (o_tdatatemp[9:0]!=0 && o_tdatatemp[9:0]!=1 && o_tdatatemp[9:0]!=2 && o_tdatatemp[9:0]!=4 && o_tdatatemp[9:0]!=8 && o_tdatatemp[9:0]!=16 &&
-							  o_tdatatemp[9:0]!=32 && o_tdatatemp[9:0]!=64 && o_tdatatemp[9:0]!=128 && o_tdatatemp[9:0]!=256 && o_tdatatemp[9:0]!=512) begin
-							  clkstrprob<=1'b1; // issue with str
-						 end
-						 if (o_tdatatemp[25:16]!=0 && o_tdatatemp[25:16]!=1 && o_tdatatemp[25:16]!=2 && o_tdatatemp[25:16]!=4 && o_tdatatemp[25:16]!=8 && o_tdatatemp[25:16]!=16 &&
-							  o_tdatatemp[25:16]!=32 && o_tdatatemp[25:16]!=64 && o_tdatatemp[25:16]!=128 && o_tdatatemp[25:16]!=256 && o_tdatatemp[25:16]!=512) begin
-							  clkstrprob<=1'b1; // issue with str
-						 end
+						 if (numones>1) clkstrprob<=1'b1; // issue with str
+						 if (numones2>1) clkstrprob<=1'b1; // issue with str
 						 o_tdata <= o_tdatatemp;
 					 end
                 else if (channel==44) begin
+						 numones=0;
+						 numones2=0;
 						 for (i=0; i<10; i++) begin
 							o_tdatatemp[i] = lvdsbitsin[14*(0+i)+13]; //samplestr 0-9
 							o_tdatatemp[i+16] = lvdsbitsin[14*(10+i)+13]; //samplestr 10-19
+							if (o_tdatatemp[i]) numones=numones+4'd1;
+							if (o_tdatatemp[i+16]) numones2=numones2+4'd1;
 						 end
 						 for (i=0; i<6; i++) begin
 							o_tdatatemp[i+10] = 0; //padding
 							o_tdatatemp[i+26] = 0; //padding
 						 end
-						 if (o_tdatatemp[9:0]!=0 && o_tdatatemp[9:0]!=1 && o_tdatatemp[9:0]!=2 && o_tdatatemp[9:0]!=4 && o_tdatatemp[9:0]!=8 && o_tdatatemp[9:0]!=16 &&
-							  o_tdatatemp[9:0]!=32 && o_tdatatemp[9:0]!=64 && o_tdatatemp[9:0]!=128 && o_tdatatemp[9:0]!=256 && o_tdatatemp[9:0]!=512) begin
-							  clkstrprob<=1'b1; // issue with str
-						 end
-						 if (o_tdatatemp[25:16]!=0 && o_tdatatemp[25:16]!=1 && o_tdatatemp[25:16]!=2 && o_tdatatemp[25:16]!=4 && o_tdatatemp[25:16]!=8 && o_tdatatemp[25:16]!=16 &&
-							  o_tdatatemp[25:16]!=32 && o_tdatatemp[25:16]!=64 && o_tdatatemp[25:16]!=128 && o_tdatatemp[25:16]!=256 && o_tdatatemp[25:16]!=512) begin
-							  clkstrprob<=1'b1; // issue with str
-						 end
+						 if (numones>1) clkstrprob<=1'b1; // issue with str
+						 if (numones2>1) clkstrprob<=1'b1; // issue with str
 						 o_tdata <= o_tdatatemp;
 					 end
                 else if (channel==42) begin
@@ -1002,15 +999,15 @@ always @ (posedge clk or negedge rstn) begin
 						 if (o_tdatatemp[9:0]!=10'd341 && o_tdatatemp[9:0]!=10'd682) begin
 							clkstrprob<=1'b1; // issue with clk
 						 end
-						 if (o_tdatatemp[25:16]!=10'd341 && o_tdatatemp[9:0]!=10'd682) begin
+						 if (o_tdatatemp[25:16]!=10'd341 && o_tdatatemp[25:16]!=10'd682) begin
 							clkstrprob<=1'b1; // issue with clk
 						 end
 						 o_tdata <= o_tdatatemp;
 					 end
                 else if (channel==40) begin
                    for (i=0; i<10; i++) begin
-							o_tdatatemp[i] = lvdsbitsin[14*(20+i)+12]; //sampleclk 0-9
-							o_tdatatemp[i+16] = lvdsbitsin[14*(30+i)+12]; //sampleclk 10-19
+							o_tdatatemp[i] = lvdsbitsin[14*(0+i)+12]; //sampleclk 0-9
+							o_tdatatemp[i+16] = lvdsbitsin[14*(10+i)+12]; //sampleclk 10-19
 						 end
 						 for (i=0; i<6; i++) begin
 							o_tdatatemp[i+10] = 0; //padding
@@ -1019,7 +1016,7 @@ always @ (posedge clk or negedge rstn) begin
 						 if (o_tdatatemp[9:0]!=10'd341 && o_tdatatemp[9:0]!=10'd682) begin
 							clkstrprob<=1'b1; // issue with clk
 						 end
-						 if (o_tdatatemp[25:16]!=10'd341 && o_tdatatemp[9:0]!=10'd682) begin
+						 if (o_tdatatemp[25:16]!=10'd341 && o_tdatatemp[25:16]!=10'd682) begin
 							clkstrprob<=1'b1; // issue with clk
 						 end
 						 o_tdata <= o_tdatatemp;
