@@ -1,6 +1,6 @@
 BLOCK		START ADDRESS		END ADDRESS
 
-Page_0		0x00000000		0x00075088
+Page_0		0x00000000		0x00075380
 
 
 Configuration device: EP4CE30
@@ -10,6 +10,6 @@ Quad-Serial configuration device dummy clock cycle: 8
 
 Notes:
 
-- Data checksum for this conversion is 0x1A084BCF
+- Data checksum for this conversion is 0x1A0C01C0
 
 - All the addresses in this file are byte addresses

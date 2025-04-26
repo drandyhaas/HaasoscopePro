@@ -381,8 +381,6 @@ always @ (posedge clklvds or negedge rstn) begin
 		end
 
 		250 : begin // triggered, now taking more data
-			lvdsout_trig <= 0; // stop telling the others forwards
-			lvdsout_trig_b <= 0; // and backwards
 			rollingtriggercounter <= 0; // reset after getting an event
 			if (triggercounter<lengthtotake_sync) begin
 				if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) begin
@@ -462,6 +460,10 @@ always @ (posedge clklvds or negedge rstn) begin
 				if (triggerphase[5:4]==2'd1) sample_triggered[19:10] <= sample_triggered2[19:10];
 				else if (triggerphase[5:4]==2'd2) sample_triggered[19:10] <= sample_triggered3[19:10];
 				else if (triggerphase[5:4]==2'd3) sample_triggered[19:10] <= sample_triggered4[19:10];
+			end
+			else begin // NOT the first time in this state, to give time for the trigger to be high and registered by other boards
+				lvdsout_trig <= 0; // stop telling the others forwards
+				lvdsout_trig_b <= 0; // and backwards
 			end
 			
 		end

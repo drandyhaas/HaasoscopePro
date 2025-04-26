@@ -117,7 +117,6 @@ class MainWindow(TemplateBaseClass):
     nsubsamples = 10 * 4 + 8 + 2  # extra 4+4 for clk+str, and 2 clkstrprob beef
     sample_triggered = [0] * num_board
     triggerphase = [0] * num_board
-    doeventcounter = False
     fitwidthfraction = 0.2
     extrigboardstdcorrection = 1
     extrigboardmeancorrection = 0
@@ -864,13 +863,15 @@ class MainWindow(TemplateBaseClass):
             return 0
 
     def getpredata(self, board):
-        if self.doeventcounter:
+        doeventcounter = False
+        if doeventcounter:
             usbs[board].send(bytes([2, 3, 100, 100, 100, 100, 100, 100]))  # get eventcounter
             res = usbs[board].recv(4)
             eventcountertemp = res[0] + 256 * res[1] + 256 * 256 * res[2] + 256 * 256 * 256 * res[3]
             if eventcountertemp != self.eventcounter[board] + 1 and eventcountertemp != 0:  # check event count, but account for rollover
                 print("Event counter not incremented by 1?", eventcountertemp, self.eventcounter[board], " for board", board)
             self.eventcounter[board] = eventcountertemp
+            if board==0: print("eventcounter diff for board",board,"and",board+1,self.eventcounter[board]-self.eventcounter[board+1])
         downsamplemergingcounter = 0
         usbs[board].send(bytes([2, 4, 100, 100, 100, 100, 100, 100]))  # get downsamplemergingcounter
         res = usbs[board].recv(4)

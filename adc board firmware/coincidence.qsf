@@ -394,7 +394,7 @@ set_location_assignment PIN_K1 -to "asmi:inst4|asmi_asmi_parallel_0:asmi_paralle
 set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_DATA0"
 set_location_assignment PIN_E2 -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_SCE"
 set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_SCE"
-set_global_assignment -name SMART_RECOMPILE OFF
+set_global_assignment -name SMART_RECOMPILE ON
 set_global_assignment -name BDF_FILE coincidence.bdf
 set_global_assignment -name SDC_FILE coincidence.sdc
 set_global_assignment -name VERILOG_FILE command_processor.v
