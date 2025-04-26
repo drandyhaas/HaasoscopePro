@@ -131,6 +131,7 @@ class MainWindow(TemplateBaseClass):
     dooversample = False
     doresamp = 0
     triggerautocalibration = [False] * num_board
+    extraphasefortad = [0] * num_board
 
     def __init__(self):
         TemplateBaseClass.__init__(self)
@@ -922,7 +923,9 @@ class MainWindow(TemplateBaseClass):
                 npunpackedsamples *= self.extrigboardstdcorrection
         downsampleoffset = 2 * (sample_triggered_touse + (downsamplemergingcounter-1)%self.downsamplemerging * 10) // self.downsamplemerging
         if not self.dotwochannel: downsampleoffset *= 2
-        if self.doexttrig[board]: downsampleoffset -= self.toff // self.downsamplefactor
+        if self.doexttrig[board]:
+            if self.dotwochannel: downsampleoffset -= self.toff // self.downsamplefactor // 2
+            else: downsampleoffset -= self.toff // self.downsamplefactor
         datasize = self.xydata[board][1].size
         for s in range(0, self.expect_samples+self.expect_samples_extra):
 
@@ -1095,8 +1098,15 @@ class MainWindow(TemplateBaseClass):
             oldtoff=0
         print("autocalibration",resamp,dofiner,finewidth)
         if self.tad[self.activeboard]!=0:
-            print("Set TAD to 0 first!")
-            return
+            for t in range(255//5):
+                if self.tad[self.activeboard]>0: self.ui.tadBox.setValue(self.tad[self.activeboard]-5)
+                self.setTAD()
+                time.sleep(.1) # be gentle
+        if self.extraphasefortad[self.activeboard]!=0:
+            self.dophase(self.activeboard, plloutnum=0, updown=0, pllnum=0) # adjust up one, to account for phase offset of TAD
+            self.dophase(self.activeboard, plloutnum=1, updown=0, pllnum=0)
+            self.extraphasefortad[self.activeboard]-=1
+            print("extra phase for TAD now",self.extraphasefortad[self.activeboard],"for board",self.activeboard)
         c1 = self.activeboard
         if c1 >= self.num_board - 1:
             print("Select the even channel first!")
@@ -1134,13 +1144,18 @@ class MainWindow(TemplateBaseClass):
             tadshiftround = round(tadshift+138.4)
             print("should set TAD to",tadshift,"+ 138.4 ~=",tadshiftround)
             if tadshiftround<250: # good
+                if tadshiftround>135:
+                    self.dophase(self.activeboard, plloutnum=0, updown=1, pllnum=0) # adjust up one, to account for phase offset of TAD
+                    self.dophase(self.activeboard, plloutnum=1, updown=1, pllnum=0)
+                    self.extraphasefortad[self.activeboard]+=1
+                    print("extra phase for TAD now", self.extraphasefortad[self.activeboard], "for board", self.activeboard)
                 for t in range(255//5):
                     if abs(self.tad[self.activeboard] - tadshiftround)<5: break
                     if self.tad[self.activeboard]<tadshiftround: self.ui.tadBox.setValue(self.tad[self.activeboard]+5)
                     else: self.ui.tadBox.setValue(self.tad[self.activeboard]-5)
                     self.setTAD()
                     time.sleep(.1) # be gentle
-            else: # too big a shift needed, adjust clock phase of other board and retry
+            else: # too big a shift needed, adjust clock phases of other board and retry
                 self.dophase(self.activeboard + 1, plloutnum=0, updown=1, pllnum=0)
                 self.dophase(self.activeboard + 1, plloutnum=1, updown=1, pllnum=0)
                 self.dophase(self.activeboard + 1, plloutnum=2, updown=1, pllnum=0)
