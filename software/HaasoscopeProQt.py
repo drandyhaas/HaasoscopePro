@@ -319,6 +319,18 @@ class MainWindow(TemplateBaseClass):
         #     spicommand(usbs[self.activeboard], "TAD", 0x02, 0xB7, 1, False, quiet=False)
         self.tad[self.activeboard] = self.ui.tadBox.value()
         spicommand(usbs[self.activeboard], "TAD", 0x02, 0xB6, abs(self.tad[self.activeboard]), False, quiet=True)
+        if self.tad[self.activeboard]>135:
+            if not self.extraphasefortad[self.activeboard]:
+                self.dophase(self.activeboard, plloutnum=0, updown=1, pllnum=0) # adjust up one, to account for phase offset of TAD
+                self.dophase(self.activeboard, plloutnum=1, updown=1, pllnum=0)
+                self.extraphasefortad[self.activeboard]+=1
+                print("extra phase for TAD>135 now",self.extraphasefortad[self.activeboard])
+        else:
+            if self.extraphasefortad[self.activeboard]:
+                self.dophase(self.activeboard, plloutnum=0, updown=0, pllnum=0) # adjust down one, to not account for phase offset of TAD
+                self.dophase(self.activeboard, plloutnum=1, updown=0, pllnum=0)
+                self.extraphasefortad[self.activeboard]-=1
+                print("extra phase for TAD>135 now",self.extraphasefortad[self.activeboard])
 
     def setToff(self):
         self.toff = self.ui.ToffBox.value()
@@ -1103,11 +1115,6 @@ class MainWindow(TemplateBaseClass):
                 if self.tad[self.activeboard]>0: self.ui.tadBox.setValue(self.tad[self.activeboard]-5)
                 self.setTAD()
                 time.sleep(.1) # be gentle
-        if self.extraphasefortad[self.activeboard]!=0:
-            self.dophase(self.activeboard, plloutnum=0, updown=0, pllnum=0) # adjust up one, to account for phase offset of TAD
-            self.dophase(self.activeboard, plloutnum=1, updown=0, pllnum=0)
-            self.extraphasefortad[self.activeboard]-=1
-            print("extra phase for TAD now",self.extraphasefortad[self.activeboard],"for board",self.activeboard)
         c1 = self.activeboard
         if c1 >= self.num_board - 1:
             print("Select the even channel first!")
@@ -1145,11 +1152,6 @@ class MainWindow(TemplateBaseClass):
             tadshiftround = round(tadshift+138.4)
             print("should set TAD to",tadshift,"+ 138.4 ~=",tadshiftround)
             if tadshiftround<250: # good
-                if tadshiftround>135:
-                    self.dophase(self.activeboard, plloutnum=0, updown=1, pllnum=0) # adjust up one, to account for phase offset of TAD
-                    self.dophase(self.activeboard, plloutnum=1, updown=1, pllnum=0)
-                    self.extraphasefortad[self.activeboard]+=1
-                    print("extra phase for TAD now", self.extraphasefortad[self.activeboard], "for board", self.activeboard)
                 for t in range(255//5):
                     if abs(self.tad[self.activeboard] - tadshiftround)<5: break
                     if self.tad[self.activeboard]<tadshiftround: self.ui.tadBox.setValue(self.tad[self.activeboard]+5)
