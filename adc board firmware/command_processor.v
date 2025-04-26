@@ -953,29 +953,18 @@ always @ (posedge clk or negedge rstn) begin
 						if (clkstrprob) o_tdata <= {16'hbeef,16'h01}; // marker, clkstr problem
 						else o_tdata <= {16'hbeef,16'h00}; // marker, no problems
 					 end
-                else if (channel==46) begin
+                else if (channel==44 || channel==46) begin
 						 numones=0;
 						 numones2=0;
 						 for (i=0; i<10; i++) begin
-							o_tdatatemp[i] = lvdsbitsin[14*(20+i)+13]; //samplestr 20-29
-							o_tdatatemp[i+16] = lvdsbitsin[14*(30+i)+13]; //samplestr 30-39
-							if (o_tdatatemp[i]) numones=numones+4'd1;
-							if (o_tdatatemp[i+16]) numones2=numones2+4'd1;
-						 end
-						 for (i=0; i<6; i++) begin
-							o_tdatatemp[i+10] = 0; //padding
-							o_tdatatemp[i+26] = 0; //padding
-						 end
-						 if (numones>1) clkstrprob<=1'b1; // issue with str
-						 if (numones2>1) clkstrprob<=1'b1; // issue with str
-						 o_tdata <= o_tdatatemp;
-					 end
-                else if (channel==44) begin
-						 numones=0;
-						 numones2=0;
-						 for (i=0; i<10; i++) begin
+							if (channel==44) begin
 							o_tdatatemp[i] = lvdsbitsin[14*(0+i)+13]; //samplestr 0-9
 							o_tdatatemp[i+16] = lvdsbitsin[14*(10+i)+13]; //samplestr 10-19
+							end
+							else begin
+							o_tdatatemp[i] = lvdsbitsin[14*(20+i)+13]; //samplestr 20-29
+							o_tdatatemp[i+16] = lvdsbitsin[14*(30+i)+13]; //samplestr 30-39
+							end
 							if (o_tdatatemp[i]) numones=numones+4'd1;
 							if (o_tdatatemp[i+16]) numones2=numones2+4'd1;
 						 end
@@ -983,44 +972,27 @@ always @ (posedge clk or negedge rstn) begin
 							o_tdatatemp[i+10] = 0; //padding
 							o_tdatatemp[i+26] = 0; //padding
 						 end
-						 if (numones>1) clkstrprob<=1'b1; // issue with str
-						 if (numones2>1) clkstrprob<=1'b1; // issue with str
+						 if (numones>1 || numones2>1) clkstrprob<=1'b1; // issue with str
 						 o_tdata <= o_tdatatemp;
 					 end
-                else if (channel==42) begin
-						 for (i=0; i<10; i++) begin
-							o_tdatatemp[i] = lvdsbitsin[14*(20+i)+12]; //sampleclk 20-29
-							o_tdatatemp[i+16] = lvdsbitsin[14*(30+i)+12]; //sampleclk 30-39
-						 end
-						 for (i=0; i<6; i++) begin
-							o_tdatatemp[i+10] = 0; //padding
-							o_tdatatemp[i+26] = 0; //padding
-						 end
-						 if (o_tdatatemp[9:0]!=10'd341 && o_tdatatemp[9:0]!=10'd682) begin
-							clkstrprob<=1'b1; // issue with clk
-						 end
-						 if (o_tdatatemp[25:16]!=10'd341 && o_tdatatemp[25:16]!=10'd682) begin
-							clkstrprob<=1'b1; // issue with clk
-						 end
-						 o_tdata <= o_tdatatemp;
-					 end
-                else if (channel==40) begin
+                else if (channel==40 || channel==42) begin
                    for (i=0; i<10; i++) begin
+							if (channel==40) begin
 							o_tdatatemp[i] = lvdsbitsin[14*(0+i)+12]; //sampleclk 0-9
 							o_tdatatemp[i+16] = lvdsbitsin[14*(10+i)+12]; //sampleclk 10-19
+							end
+							else begin
+							o_tdatatemp[i] = lvdsbitsin[14*(20+i)+12]; //sampleclk 20-29
+							o_tdatatemp[i+16] = lvdsbitsin[14*(30+i)+12]; //sampleclk 30-39
+							end
 						 end
 						 for (i=0; i<6; i++) begin
 							o_tdatatemp[i+10] = 0; //padding
 							o_tdatatemp[i+26] = 0; //padding
 						 end
-						 if (o_tdatatemp[9:0]!=10'd341 && o_tdatatemp[9:0]!=10'd682) begin
-							clkstrprob<=1'b1; // issue with clk
-						 end
-						 if (o_tdatatemp[25:16]!=10'd341 && o_tdatatemp[25:16]!=10'd682) begin
-							clkstrprob<=1'b1; // issue with clk
-						 end
+						 if ( (o_tdatatemp[9:0]!=10'd341 && o_tdatatemp[9:0]!=10'd682) ||
+								(o_tdatatemp[25:16]!=10'd341 && o_tdatatemp[25:16]!=10'd682) ) clkstrprob<=1'b1; // issue with clk
 						 o_tdata <= o_tdatatemp;
-						 clkstrprob <= 1'b0; // assume no clkstr problems, will check in next steps
 					 end
                 else begin // data
 						 if (channeltype[0]==1'b0) begin // single channel mode
@@ -1029,6 +1001,7 @@ always @ (posedge clk or negedge rstn) begin
 						 else begin // two channel mode
 							o_tdata  <= {lvdsbitsin[14*(38-channel2) +: 12], 4'd0, lvdsbitsin[14*(39-channel2) +: 12], 4'd0};
 						 end
+						 clkstrprob <= 1'b0; // assume no clkstr problems, will check in next steps
 					 end
                 channel <= channel + 6'd2;
                 channel2 <= channel2 + 6'd2;
