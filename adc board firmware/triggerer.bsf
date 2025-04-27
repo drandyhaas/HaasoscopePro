@@ -1,0 +1,261 @@
+/*
+WARNING: Do NOT edit the input and output ports in this file in a text
+editor if you plan to continue editing the block that represents it in
+the Block Editor! File corruption is VERY likely to occur.
+*/
+/*
+Copyright (C) 2024  Intel Corporation. All rights reserved.
+Your use of Intel Corporation's design tools, logic functions 
+and other software and tools, and any partner logic 
+functions, and any output files from any of the foregoing 
+(including device programming or simulation files), and any 
+associated documentation or information are expressly subject 
+to the terms and conditions of the Intel Program License 
+Subscription Agreement, the Intel Quartus Prime License Agreement,
+the Intel FPGA IP License Agreement, or other applicable license
+agreement, including, without limitation, that your use is for
+the sole purpose of programming logic devices manufactured by
+Intel and sold by Intel or its authorized distributors.  Please
+refer to the applicable agreement for further details, at
+https://fpgasoftware.intel.com/eula.
+*/
+(header "symbol" (version "1.1"))
+(symbol
+	(rect 16 16 384 384)
+	(text "triggerer" (rect 5 0 38 12)(font "Arial" ))
+	(text "inst" (rect 8 352 20 364)(font "Arial" ))
+	(port
+		(pt 0 32)
+		(input)
+		(text "clklvds" (rect 0 0 27 12)(font "Arial" ))
+		(text "clklvds" (rect 21 27 48 39)(font "Arial" ))
+		(line (pt 0 32)(pt 16 32)(line_width 1))
+	)
+	(port
+		(pt 0 48)
+		(input)
+		(text "rstn" (rect 0 0 15 12)(font "Arial" ))
+		(text "rstn" (rect 21 43 36 55)(font "Arial" ))
+		(line (pt 0 48)(pt 16 48)(line_width 1))
+	)
+	(port
+		(pt 0 64)
+		(input)
+		(text "samplevalue[0..39][11..0]" (rect 0 0 96 12)(font "Arial" ))
+		(text "samplevalue[0..39][11..0]" (rect 21 59 117 71)(font "Arial" ))
+		(line (pt 0 64)(pt 16 64)(line_width 3))
+	)
+	(port
+		(pt 0 80)
+		(input)
+		(text "lvdsin_trig" (rect 0 0 40 12)(font "Arial" ))
+		(text "lvdsin_trig" (rect 21 75 61 87)(font "Arial" ))
+		(line (pt 0 80)(pt 16 80)(line_width 1))
+	)
+	(port
+		(pt 0 96)
+		(input)
+		(text "lvdsin_trig_b" (rect 0 0 50 12)(font "Arial" ))
+		(text "lvdsin_trig_b" (rect 21 91 71 103)(font "Arial" ))
+		(line (pt 0 96)(pt 16 96)(line_width 1))
+	)
+	(port
+		(pt 0 112)
+		(input)
+		(text "exttrigin" (rect 0 0 29 12)(font "Arial" ))
+		(text "exttrigin" (rect 21 107 50 119)(font "Arial" ))
+		(line (pt 0 112)(pt 16 112)(line_width 1))
+	)
+	(port
+		(pt 0 128)
+		(input)
+		(text "lowerthresh[11..0]" (rect 0 0 67 12)(font "Arial" ))
+		(text "lowerthresh[11..0]" (rect 21 123 88 135)(font "Arial" ))
+		(line (pt 0 128)(pt 16 128)(line_width 3))
+	)
+	(port
+		(pt 0 144)
+		(input)
+		(text "upperthresh[11..0]" (rect 0 0 69 12)(font "Arial" ))
+		(text "upperthresh[11..0]" (rect 21 139 90 151)(font "Arial" ))
+		(line (pt 0 144)(pt 16 144)(line_width 3))
+	)
+	(port
+		(pt 0 160)
+		(input)
+		(text "lengthtotake[15..0]" (rect 0 0 69 12)(font "Arial" ))
+		(text "lengthtotake[15..0]" (rect 21 155 90 167)(font "Arial" ))
+		(line (pt 0 160)(pt 16 160)(line_width 3))
+	)
+	(port
+		(pt 0 176)
+		(input)
+		(text "prelengthtotake[15..0]" (rect 0 0 82 12)(font "Arial" ))
+		(text "prelengthtotake[15..0]" (rect 21 171 103 183)(font "Arial" ))
+		(line (pt 0 176)(pt 16 176)(line_width 3))
+	)
+	(port
+		(pt 0 192)
+		(input)
+		(text "triggerlive" (rect 0 0 37 12)(font "Arial" ))
+		(text "triggerlive" (rect 21 187 58 199)(font "Arial" ))
+		(line (pt 0 192)(pt 16 192)(line_width 1))
+	)
+	(port
+		(pt 0 208)
+		(input)
+		(text "didreadout" (rect 0 0 40 12)(font "Arial" ))
+		(text "didreadout" (rect 21 203 61 215)(font "Arial" ))
+		(line (pt 0 208)(pt 16 208)(line_width 1))
+	)
+	(port
+		(pt 0 224)
+		(input)
+		(text "triggertype[7..0]" (rect 0 0 62 12)(font "Arial" ))
+		(text "triggertype[7..0]" (rect 21 219 83 231)(font "Arial" ))
+		(line (pt 0 224)(pt 16 224)(line_width 3))
+	)
+	(port
+		(pt 0 240)
+		(input)
+		(text "triggerToT[7..0]" (rect 0 0 61 12)(font "Arial" ))
+		(text "triggerToT[7..0]" (rect 21 235 82 247)(font "Arial" ))
+		(line (pt 0 240)(pt 16 240)(line_width 3))
+	)
+	(port
+		(pt 0 256)
+		(input)
+		(text "triggerchan" (rect 0 0 43 12)(font "Arial" ))
+		(text "triggerchan" (rect 21 251 64 263)(font "Arial" ))
+		(line (pt 0 256)(pt 16 256)(line_width 1))
+	)
+	(port
+		(pt 0 272)
+		(input)
+		(text "dorolling" (rect 0 0 30 12)(font "Arial" ))
+		(text "dorolling" (rect 21 267 51 279)(font "Arial" ))
+		(line (pt 0 272)(pt 16 272)(line_width 1))
+	)
+	(port
+		(pt 0 288)
+		(input)
+		(text "auxoutselector" (rect 0 0 56 12)(font "Arial" ))
+		(text "auxoutselector" (rect 21 283 77 295)(font "Arial" ))
+		(line (pt 0 288)(pt 16 288)(line_width 1))
+	)
+	(port
+		(pt 0 304)
+		(input)
+		(text "channeltype[7..0]" (rect 0 0 67 12)(font "Arial" ))
+		(text "channeltype[7..0]" (rect 21 299 88 311)(font "Arial" ))
+		(line (pt 0 304)(pt 16 304)(line_width 3))
+	)
+	(port
+		(pt 0 320)
+		(input)
+		(text "downsamplemerging[7..0]" (rect 0 0 100 12)(font "Arial" ))
+		(text "downsamplemerging[7..0]" (rect 21 315 121 327)(font "Arial" ))
+		(line (pt 0 320)(pt 16 320)(line_width 3))
+	)
+	(port
+		(pt 0 336)
+		(input)
+		(text "downsample[4..0]" (rect 0 0 69 12)(font "Arial" ))
+		(text "downsample[4..0]" (rect 21 331 90 343)(font "Arial" ))
+		(line (pt 0 336)(pt 16 336)(line_width 3))
+	)
+	(port
+		(pt 368 32)
+		(output)
+		(text "ram_wr" (rect 0 0 31 12)(font "Arial" ))
+		(text "ram_wr" (rect 316 27 347 39)(font "Arial" ))
+		(line (pt 368 32)(pt 352 32)(line_width 1))
+	)
+	(port
+		(pt 368 48)
+		(output)
+		(text "ram_wr_address[9..0]" (rect 0 0 89 12)(font "Arial" ))
+		(text "ram_wr_address[9..0]" (rect 258 43 347 55)(font "Arial" ))
+		(line (pt 368 48)(pt 352 48)(line_width 3))
+	)
+	(port
+		(pt 368 64)
+		(output)
+		(text "lvdsout_trig" (rect 0 0 46 12)(font "Arial" ))
+		(text "lvdsout_trig" (rect 301 59 347 71)(font "Arial" ))
+		(line (pt 368 64)(pt 352 64)(line_width 1))
+	)
+	(port
+		(pt 368 80)
+		(output)
+		(text "lvdsout_trig_b" (rect 0 0 56 12)(font "Arial" ))
+		(text "lvdsout_trig_b" (rect 291 75 347 87)(font "Arial" ))
+		(line (pt 368 80)(pt 352 80)(line_width 1))
+	)
+	(port
+		(pt 368 96)
+		(output)
+		(text "auxtrigout" (rect 0 0 37 12)(font "Arial" ))
+		(text "auxtrigout" (rect 310 91 347 103)(font "Arial" ))
+		(line (pt 368 96)(pt 352 96)(line_width 1))
+	)
+	(port
+		(pt 368 112)
+		(output)
+		(text "led" (rect 0 0 10 12)(font "Arial" ))
+		(text "led" (rect 337 107 347 119)(font "Arial" ))
+		(line (pt 368 112)(pt 352 112)(line_width 1))
+	)
+	(port
+		(pt 368 128)
+		(output)
+		(text "acqstate[7..0]" (rect 0 0 53 12)(font "Arial" ))
+		(text "acqstate[7..0]" (rect 294 123 347 135)(font "Arial" ))
+		(line (pt 368 128)(pt 352 128)(line_width 3))
+	)
+	(port
+		(pt 368 144)
+		(output)
+		(text "eventcounter[31..0]" (rect 0 0 75 12)(font "Arial" ))
+		(text "eventcounter[31..0]" (rect 272 139 347 151)(font "Arial" ))
+		(line (pt 368 144)(pt 352 144)(line_width 3))
+	)
+	(port
+		(pt 368 160)
+		(output)
+		(text "ram_address_triggered[9..0]" (rect 0 0 114 12)(font "Arial" ))
+		(text "ram_address_triggered[9..0]" (rect 233 155 347 167)(font "Arial" ))
+		(line (pt 368 160)(pt 352 160)(line_width 3))
+	)
+	(port
+		(pt 368 176)
+		(output)
+		(text "sample_triggered[19..0]" (rect 0 0 92 12)(font "Arial" ))
+		(text "sample_triggered[19..0]" (rect 255 171 347 183)(font "Arial" ))
+		(line (pt 368 176)(pt 352 176)(line_width 3))
+	)
+	(port
+		(pt 368 192)
+		(output)
+		(text "downsamplemergingcounter_triggered[7..0]" (rect 0 0 169 12)(font "Arial" ))
+		(text "downsamplemergingcounter_triggered[7..0]" (rect 178 187 347 199)(font "Arial" ))
+		(line (pt 368 192)(pt 352 192)(line_width 3))
+	)
+	(port
+		(pt 368 208)
+		(output)
+		(text "triggerphase[8..0]" (rect 0 0 68 12)(font "Arial" ))
+		(text "triggerphase[8..0]" (rect 279 203 347 215)(font "Arial" ))
+		(line (pt 368 208)(pt 352 208)(line_width 3))
+	)
+	(port
+		(pt 368 224)
+		(output)
+		(text "downsamplecounter[31..0]" (rect 0 0 101 12)(font "Arial" ))
+		(text "downsamplecounter[31..0]" (rect 246 219 347 231)(font "Arial" ))
+		(line (pt 368 224)(pt 352 224)(line_width 3))
+	)
+	(drawing
+		(rectangle (rect 16 16 352 352)(line_width 1))
+	)
+)

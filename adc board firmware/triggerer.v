@@ -1,0 +1,412 @@
+module triggerer(
+	input clklvds,
+	input rstn,
+	output reg			ram_wr=0,
+	output reg [9:0]	ram_wr_address=0,
+	input signed [11:0] samplevalue[40],
+	input wire lvdsin_trig,
+	output reg lvdsout_trig=0,
+	input wire lvdsin_trig_b,
+	output reg lvdsout_trig_b=0,
+	input exttrigin,
+	output auxtrigout,
+	output reg led, // controls LED2
+	
+	output reg [7:0]	acqstate,
+	output integer		eventcounter,
+	output reg [9:0]	ram_address_triggered,
+	output reg [19:0] sample_triggered,
+	output reg [7:0]	downsamplemergingcounter_triggered,
+	output reg [8:0]	triggerphase,
+	output integer		downsamplecounter,
+
+	input reg signed [11:0]  lowerthresh,
+	input reg signed [11:0]  upperthresh,
+	input reg [15:0]	lengthtotake,
+	input reg [15:0]	prelengthtotake,
+	input reg 			triggerlive,
+	input reg			didreadout,
+	input reg [7:0]	triggertype,
+	input reg [7:0] 	triggerToT,
+	input reg 			triggerchan,
+	input reg			dorolling,
+	input reg 			auxoutselector,
+	input reg [7:0]	channeltype,
+	input reg [7:0]	downsamplemerging,
+	input reg [4:0] 	downsample
+);
+
+//wire exttrigin; 
+//assign exttrigin = boardin[4]; // SMA in on back panel
+assign led = exttrigin; // LED2 (LED3 is used for controlling both the RGB LEDs on the front panel)
+
+//wire auxtrigout; 
+//assign debugout[10] = (auxoutselector_sync==0) ? clklvds: auxtrigout; // SMA out on back panel
+
+integer		rollingtriggercounter = 0;
+reg [7:0]	tot_counter = 0;
+reg [7:0]	downsamplemergingcounter = 0;
+reg [15:0]	triggercounter = 0;
+reg 			firingsecondstep = 0;
+reg [7:0]	current_active_trigger_type = 0;
+reg 			rising = 0;
+reg [19:0] 	sample_triggered2 = 0;
+reg [19:0] 	sample_triggered3 = 0;
+reg [19:0] 	sample_triggered4 = 0;
+reg [9:0]   sample_triggered_max_val1 = 0, sample_triggered_max_val2 = 0;
+reg 			st1zero, st2zero, st3zero, st4zero; // for sample_triggered
+
+reg signed [11:0] lowerthresh_sync = 0;
+reg signed [11:0] upperthresh_sync = 0;
+reg [15:0]	lengthtotake_sync = 0;
+reg [15:0]	prelengthtotake_sync= 0;
+reg [ 7:0]	triggertype_sync = 0;
+reg [ 7:0] 	triggerToT_sync = 0;
+reg 			triggerchan_sync = 0;
+reg			dorolling_sync = 0;
+reg 			auxoutselector_sync = 0;
+reg [ 7:0]	channeltype_sync = 0;
+reg [7:0]	downsamplemerging_sync = 0;
+reg [4:0] 	downsample_sync = 0;
+reg 			triggerlive_sync = 0;
+reg			didreadout_sync = 0;
+
+// this drives the trigger
+integer i;
+always @ (posedge clklvds or negedge rstn) begin
+	if (~rstn) acqstate <= 8'd0;
+	else begin
+		triggerlive_sync       <= triggerlive;
+		lengthtotake_sync      <= lengthtotake;
+		prelengthtotake_sync   <= prelengthtotake;
+		triggertype_sync       <= triggertype;
+		didreadout_sync        <= didreadout;
+		lowerthresh_sync       <= lowerthresh;
+		upperthresh_sync       <= upperthresh;
+		triggerToT_sync        <= triggerToT;
+		triggerchan_sync       <= triggerchan;
+		dorolling_sync         <= dorolling;
+		auxoutselector_sync	  <= auxoutselector;
+		channeltype_sync       <= channeltype;
+		downsamplemerging_sync <= downsamplemerging;
+		downsample_sync        <= downsample;
+
+		if (acqstate==251 || acqstate==0) begin
+			// not writing, while waiting to be read out or in initial state where trigger might be disabled
+			ram_wr <= 1'b0;
+			downsamplecounter <= 1;
+			downsamplemergingcounter <= 1;
+		end
+		else begin
+			// Acqure data if some trigger has been armed (acqstate > 0) and it has not arrived yet to its
+			// final state (acqstate == 251) where we will be waiting for data to be read out.
+			if (downsamplecounter[downsample_sync]) begin
+				downsamplecounter <= 1;
+				if (downsamplemergingcounter==downsamplemerging_sync) begin
+					downsamplemergingcounter <= 8'd1;
+					ram_wr_address <= ram_wr_address + 10'd1;
+					ram_wr <= 1'b1;
+				end
+				else begin
+				    downsamplemergingcounter <= downsamplemergingcounter + 8'd1;
+				    ram_wr <= 1'b0;
+				end
+			end
+			else begin
+			    downsamplecounter <= downsamplecounter  +1;
+			    ram_wr <= 1'b0;
+			end
+		end
+
+		// rolling trigger; TODO: this whole if block is to be deleted
+		if (dorolling_sync && acqstate>0 && acqstate<249) begin
+			if (rollingtriggercounter==8000000) begin // ~10 Hz
+				sample_triggered <= 0;
+				downsamplemergingcounter_triggered <= downsamplemergingcounter;
+				ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+				lvdsout_trig <= 1'b1; // tell the others (maybe want to do rolling trigger on just the first board?)
+				//lvdsout_trig_b <= 1'b1; // no need, just going forwards?
+				acqstate <= 8'd250; // trigger
+			end
+			else rollingtriggercounter <= rollingtriggercounter + 1;
+		end
+
+		case (acqstate)
+		0 : begin // ready
+			auxtrigout <= 0;
+			tot_counter <= 0;
+			sample_triggered <= 0;
+			sample_triggered2 <= 0;
+			sample_triggered3 <= 0;
+			sample_triggered4 <= 0;
+			sample_triggered_max_val1 <= 0;
+			sample_triggered_max_val2 <= 0;
+			triggerphase <= -9'd1;
+			downsamplemergingcounter_triggered <= -8'd1;
+			lvdsout_trig <= 0;
+			lvdsout_trig_b <= 0;
+			downsamplecounter <= 1;
+			downsamplemergingcounter <= 1;
+			triggercounter <= 0; // set to 0 as this register will be used to count in pre-aquisition
+			current_active_trigger_type <= triggertype_sync;
+			case(triggertype_sync)
+				8'd0 : ; // disable conditional triggering
+				default: acqstate <= 8'd249; // go to pre-aquisition
+			endcase
+		end
+
+		249 : begin // pre-aquisition
+			if (current_active_trigger_type != triggertype_sync) acqstate <= 8'd0; // go back to initial state
+			else if (triggercounter<prelengthtotake_sync) begin
+				if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) begin
+					triggercounter <= triggercounter + 16'd1;
+				end
+			end
+			else if (triggerlive_sync) begin
+				triggercounter <= 0; // will also use this to keep recording enough samples after the trigger, so reset
+				
+				if (current_active_trigger_type==1) rising<=1'b1;
+				else rising<=1'b0;
+
+				case(current_active_trigger_type)
+					8'd1 : acqstate <= 8'd1; // threshold trigger rising edge
+					8'd2 : acqstate <= 8'd1; // threshold trigger falling edge
+					8'd3 : acqstate <= 8'd5; // external trigger from another board over LVDS
+					8'd4 : acqstate <= 8'd6; // auto trigger (forces waveform capture unconditionally)
+					8'd5 : acqstate <= 8'd7; // external trigger, like from back panel SMA
+				endcase
+			end
+		end
+
+		// edge trigger (1)
+		1 : begin // ready for first part of trigger condition to be met
+			if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
+			else begin
+				for (i=0;i<10;i=i+1) begin
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
+						( (samplevalue[ 0+i]<lowerthresh_sync && rising) || (samplevalue[ 0+i]>upperthresh_sync && !rising) ) ) acqstate <= 8'd2;
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
+						( (samplevalue[ 0+i]<lowerthresh_sync && !rising) || (samplevalue[ 0+i]>upperthresh_sync && rising) ) ) sample_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
+					else sample_triggered[9-i] <= 1'b0;
+					
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
+						( (samplevalue[10+i]<lowerthresh_sync && rising) || (samplevalue[10+i]>upperthresh_sync && !rising) ) ) acqstate <= 8'd2;
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
+						( (samplevalue[10+i]<lowerthresh_sync && !rising) || (samplevalue[10+i]>upperthresh_sync && rising) ) ) sample_triggered2[9-i] <= 1'b1; // remember the samples that caused the trigger
+					else sample_triggered2[9-i] <= 1'b0;
+					
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
+						( (samplevalue[20+i]<lowerthresh_sync && rising) || (samplevalue[20+i]>upperthresh_sync && !rising) ) ) acqstate <= 8'd2;
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
+						( (samplevalue[20+i]<lowerthresh_sync && !rising) || (samplevalue[20+i]>upperthresh_sync && rising) ) ) sample_triggered3[9-i] <= 1'b1; // remember the samples that caused the trigger
+					else sample_triggered3[9-i] <= 1'b0;
+					
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
+						( (samplevalue[30+i]<lowerthresh_sync && rising) || (samplevalue[30+i]>upperthresh_sync && !rising) ) ) acqstate <= 8'd2;
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
+						( (samplevalue[30+i]<lowerthresh_sync && !rising) || (samplevalue[30+i]>upperthresh_sync && rising) ) ) sample_triggered4[9-i] <= 1'b1; // remember the samples that caused the trigger
+					else sample_triggered4[9-i] <= 1'b0;
+				end
+			end
+		end
+
+		2 : begin // ready for second part of trigger condition to be met
+			if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
+			else begin
+			  firingsecondstep=1'b0;
+			  
+			  for (i=0;i<10;i=i+1) begin
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
+						( (samplevalue[ 0+i]<lowerthresh_sync && !rising) || (samplevalue[ 0+i]>upperthresh_sync && rising) ) ) begin
+						firingsecondstep=1'b1;
+						if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
+							 sample_triggered[10+9-i] <= 1'b1; // remember the samples that caused the trigger
+							 downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+						end
+					end
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
+						( (samplevalue[10+i]<lowerthresh_sync && !rising) || (samplevalue[10+i]>upperthresh_sync && rising) ) ) begin
+						firingsecondstep=1'b1;
+						if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
+							 sample_triggered2[10+9-i] <= 1'b1; // remember the samples that caused the trigger
+							 downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+						end
+					end
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
+						( (samplevalue[20+i]<lowerthresh_sync && !rising) || (samplevalue[20+i]>upperthresh_sync && rising) ) ) begin
+						firingsecondstep=1'b1;
+						if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
+							 sample_triggered3[10+9-i] <= 1'b1; // remember the samples that caused the trigger
+							 downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+						end
+					end
+					if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
+						( (samplevalue[30+i]<lowerthresh_sync && !rising) || (samplevalue[30+i]>upperthresh_sync && rising) ) ) begin
+						firingsecondstep=1'b1;
+						if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
+							 sample_triggered4[10+9-i] <= 1'b1; // remember the samples that caused the trigger
+							 downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+						end
+					end
+			  end
+			  
+    			if (firingsecondstep) begin
+					if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) tot_counter <= tot_counter + 8'd1;
+					if (tot_counter>=triggerToT_sync && (triggerToT_sync==0 || downsamplemergingcounter==downsamplemergingcounter_triggered) ) begin
+						 ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+						 lvdsout_trig <= 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
+						 lvdsout_trig_b <= 1'b1; // and backwards
+						 acqstate <= 8'd250;
+					end
+			   end
+				
+			end
+		end
+
+		5 : begin // external trigger, like from another board (3)
+            if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
+            else begin
+                if (lvdsin_trig) begin
+                    ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+                    lvdsout_trig <= 1'b1; // tell the others forwards
+                    sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
+                    downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
+                    acqstate <= 8'd250;
+                end
+                if (lvdsin_trig_b) begin
+                    ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+                    lvdsout_trig_b <= 1'b1; // tell the others backwards
+                    sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
+                    downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
+                    acqstate <= 8'd250;
+                end
+            end
+		end
+
+		6: begin
+			// triggertype == 4, force waveform capture
+			ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+			lvdsout_trig <= 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
+			lvdsout_trig_b <= 1'b1; // and backwards
+			downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+			acqstate <= 8'd250;
+		end
+		
+		7: begin // external trigger, like from the back panel SMA
+           if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
+			  else begin
+					if (exttrigin) begin
+                    ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+                    lvdsout_trig <= 1'b1; // tell the others forwards
+                    lvdsout_trig_b <= 1'b1; // tell the others backwards
+                    sample_triggered <= 0; // we didn't measure the trigger edge - going to be some jitter unfortunately
+                    downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
+                    acqstate <= 8'd250;
+                end
+			  end
+		end
+
+		250 : begin // triggered, now taking more data
+			rollingtriggercounter <= 0; // reset after getting an event
+			if (triggercounter<lengthtotake_sync) begin
+				if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) begin
+				    triggercounter <= triggercounter + 16'd1;
+				end
+			end
+			else begin
+				eventcounter <= eventcounter + 1;
+				acqstate <= 8'd251;
+			end
+			
+			auxtrigout<=1; // send to back panel, trigger out
+			
+			if (triggerphase == -9'd1) begin // just once
+				triggerphase = 0;
+				
+				// see whether the sample_triggered's have a 0 in the first 10 bits
+				st1zero=0;
+				st2zero=0;
+				st3zero=0;
+				st4zero=0;
+				for (int i=0; i<10; i++) begin
+					if (sample_triggered [i]==0) st1zero=1;
+					if (sample_triggered2[i]==0) st2zero=1;
+					if (sample_triggered3[i]==0) st3zero=1;
+					if (sample_triggered4[i]==0) st4zero=1;
+				end
+				
+				// find the best sample_triggered that has a zero, and use it for the output sample_triggered
+				// usually that will determine the triggerphase as well
+				if (st1zero) sample_triggered_max_val1 = sample_triggered [9:0];
+				if (st2zero && sample_triggered2[9:0] > sample_triggered_max_val1) begin
+					sample_triggered_max_val1 = sample_triggered2[9:0];
+					triggerphase[1:0] = 2'd1;
+				end
+				if (st3zero && sample_triggered3[9:0] > sample_triggered_max_val1) begin
+					sample_triggered_max_val1 = sample_triggered3[9:0];
+					triggerphase[1:0] = 2'd2;
+				end
+				if (st4zero && sample_triggered4[9:0] > sample_triggered_max_val1) begin
+					sample_triggered_max_val1 = sample_triggered4[9:0];
+					triggerphase[1:0] = 2'd3;
+				end
+				if (triggerphase[1:0]==2'd1) sample_triggered[9:0] <= sample_triggered2[9:0];
+				else if (triggerphase[1:0]==2'd2) sample_triggered[9:0] <= sample_triggered3[9:0];
+				else if (triggerphase[1:0]==2'd3) sample_triggered[9:0] <= sample_triggered4[9:0];
+				
+				// correct triggerphase in the rare case that the best one would have been all zeros in the first 10 bits
+				sample_triggered_max_val1 = sample_triggered [9:0];
+				if (sample_triggered2[9:0] > sample_triggered_max_val1) begin
+					sample_triggered_max_val1 = sample_triggered2[9:0];
+					triggerphase[3:2] = 2'd1;
+				end
+				if (sample_triggered3[9:0] > sample_triggered_max_val1) begin
+					sample_triggered_max_val1 = sample_triggered3[9:0];
+					triggerphase[3:2] = 2'd2;
+				end
+				if (sample_triggered4[9:0] > sample_triggered_max_val1) begin
+					sample_triggered_max_val1 = sample_triggered4[9:0];
+					triggerphase[3:2] = 2'd3;
+				end
+
+				// find the best sample_triggered to use for when the rising edge is in the last 10 bits
+				sample_triggered_max_val2 = sample_triggered[19:10];
+				if (sample_triggered2[19:10] > sample_triggered_max_val2) begin
+					sample_triggered_max_val2 = sample_triggered2[19:10];
+					triggerphase[5:4] = 2'd1;
+				end
+				if (sample_triggered3[19:10] > sample_triggered_max_val2) begin
+					sample_triggered_max_val2 = sample_triggered3[19:10];
+					triggerphase[5:4] = 2'd2;
+				end
+				if (sample_triggered4[19:10] > sample_triggered_max_val2) begin
+					sample_triggered_max_val2 = sample_triggered4[19:10];
+					triggerphase[5:4] = 2'd3;
+				end
+				if (triggerphase[5:4]==2'd1) sample_triggered[19:10] <= sample_triggered2[19:10];
+				else if (triggerphase[5:4]==2'd2) sample_triggered[19:10] <= sample_triggered3[19:10];
+				else if (triggerphase[5:4]==2'd3) sample_triggered[19:10] <= sample_triggered4[19:10];
+			end
+			else begin // NOT the first time in this state, to give time for the trigger to be high and registered by other boards
+				lvdsout_trig <= 0; // stop telling the others forwards
+				lvdsout_trig_b <= 0; // and backwards
+			end
+			
+		end
+
+		251 : begin // ready to be read out, not writing into RAM
+			auxtrigout<=0; // send to back panel, trigger out done
+			lvdsout_trig <= 0;
+			lvdsout_trig_b <= 0;
+			triggercounter <= 0;
+			if (didreadout_sync) acqstate <= 8'd0;
+		end
+
+		default : begin
+			acqstate <= 8'd0;
+		end
+		endcase
+	end
+end
+
+endmodule
