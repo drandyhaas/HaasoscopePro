@@ -1,3 +1,4 @@
+// handles triggering and storing of samples into RAM
 module triggerer(
 	input clklvds,
 	input rstn,
@@ -20,6 +21,7 @@ module triggerer(
 	output reg [8:0]	triggerphase,
 	output integer		downsamplecounter,
 
+	// synced inputs from other clocks
 	input reg signed [11:0]  lowerthresh,
 	input reg signed [11:0]  upperthresh,
 	input reg [15:0]	lengthtotake,
@@ -40,7 +42,6 @@ module triggerer(
 assign led = exttrigin;
 
 //auxout is debugout[10], SMA out on back panel
-reg auxtrigout;
 assign auxout = (auxoutselector_sync==0) ? clklvds: auxtrigout;
 
 integer		rollingtriggercounter = 0;
@@ -50,12 +51,14 @@ reg [15:0]	triggercounter = 0;
 reg 			firingsecondstep = 0;
 reg [7:0]	current_active_trigger_type = 0;
 reg 			rising = 0;
+reg 			auxtrigout = 0;
 reg [19:0] 	sample_triggered2 = 0;
 reg [19:0] 	sample_triggered3 = 0;
 reg [19:0] 	sample_triggered4 = 0;
 reg [9:0]   sample_triggered_max_val1 = 0, sample_triggered_max_val2 = 0;
 reg 			st1zero, st2zero, st3zero, st4zero; // for sample_triggered
 
+// synced inputs from other clocks
 reg signed [11:0] lowerthresh_sync = 0;
 reg signed [11:0] upperthresh_sync = 0;
 reg [15:0]	lengthtotake_sync = 0;
@@ -76,6 +79,7 @@ integer i;
 always @ (posedge clklvds or negedge rstn) begin
 	if (~rstn) acqstate <= 8'd0;
 	else begin
+	
 		triggerlive_sync       <= triggerlive;
 		lengthtotake_sync      <= lengthtotake;
 		prelengthtotake_sync   <= prelengthtotake;

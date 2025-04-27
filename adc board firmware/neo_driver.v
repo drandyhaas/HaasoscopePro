@@ -1,8 +1,6 @@
 // Neopixel LED state control
 // Adapted from https://vivonomicon.com/2018/12/24/learning-how-to-fpga-with-neopixel-leds/
-
 `define neo_led_num_max 2
-
 module neo_driver
 (
 	input clk_over_4,

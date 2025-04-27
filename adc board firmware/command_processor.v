@@ -1,19 +1,22 @@
+// the main module
+// gets commands from USB, and takes actions
 module command_processor (
 	input  wire        rstn,
-	input  wire        clk,
-	// AXI-stream slave
-	output wire        i_tready,
-	input  wire        i_tvalid,
+	input  wire        clk, // the main 50 MHz clock
+	
+	// to talk to data I/O FT232H USB2
+	output wire        i_tready, // AXI-stream slave
+	input  wire        i_tvalid, // ...
 	input  wire [ 7:0] i_tdata,
-	// AXI-stream master
-	input  wire        o_tready,
-	output wire        o_tvalid,
+	input  wire        o_tready, // AXI-stream master
+	output wire        o_tvalid, // ...
 	output wire [31:0] o_tdata,
 	output wire [ 3:0] o_tkeep,
 	output wire        o_tlast,
 
-	output reg pllreset,
+	output reg pllreset, // to reset pll's
 
+	// to talk over SPI
 	output reg 	[7:0]	spitx,
 	input  reg 	[7:0]	spirx,
 	input  reg 			spitxready,
@@ -23,9 +26,11 @@ module command_processor (
 
 	input wire 	[3:0]	lockinfo, // clock info
 
+	// reading from RAM
 	output reg 	[9:0] 	ram_rd_address=0,
 	input wire 	[559:0] 	lvdsbitsin, // input bits from fifo
 
+	// to adjust pll phases
 	output reg	[2:0] phasecounterselect, // Dynamic phase shift counter Select. 000:all 001:M 010:C0 011:C1 100:C2 101:C3 110:C4. Registered in the rising edge of scanclk.
 	output reg 			phaseupdown=1, // Dynamic phase shift direction; 1:UP, 0:DOWN. Registered in the PLL on the rising edge of scanclk.
 	output reg 	[3:0] phasestep,
@@ -38,12 +43,13 @@ module command_processor (
 	input wire 	[7:0] boardin,
 	output wire [7:0] boardout=0,
 	output reg 			spireset_L=1'b1,
-	output reg 			clkswitch=0,
+	output reg 			clkswitch=0, // to switch between external clock and internal oscillator
 	input wire 			lvdsin_spare,
 	output reg 			lvdsout_spare=0,
 	input wire 			clk50, // needed while doing pllreset
-	output reg 			clk_over_4,
+	output reg 			clk_over_4, // clock output for flash and RGB LEDs
 
+	// for flash firmware updating
 	output reg [23:0] flash_addr,
 	output reg 			flash_bulk_erase,
 	output reg [7:0] 	flash_datain,
@@ -55,8 +61,10 @@ module command_processor (
 	input 				flash_data_valid,
 	input [7:0] 		flash_dataout,
 	
+	// to turn control LVDS clk out
 	output reg clkout_ena=1,
 	
+	// to RGB LEDs
 	output reg [23:0] neo_color[2],
 	output reg send_color,
 	
@@ -88,7 +96,7 @@ module command_processor (
 
 integer version = 25; // firmware version
 
-// these 10 debugout's go to LEDs on the board
+// these first 10 debugout's go to LEDs on the board
 assign debugout[0] = clkswitch;
 assign debugout[1] = clkout_ena;
 assign debugout[2] = send_color;
@@ -99,7 +107,9 @@ assign debugout[6] = lockinfo[2]; //clkbad0
 assign debugout[7] = lockinfo[3]; //clkbad1
 assign debugout[8] = boardin[0]; // extra inputs on PCB, mirrored to LEDs for now
 assign debugout[9] = boardin[1];
+
 assign debugout[10]= flash_busy; // doesn't actually go to a pin or LED anymore, it's used for auxout
+assign debugout[11]= fanon; // the cooling fan (could be PWM'ed for finer control)
 // boardin[2] is 12Vconnected
 // boardin[3] is PG12V
 // boardin[5] is Lockdetect (from ADF4350)
@@ -108,10 +118,6 @@ assign debugout[10]= flash_busy; // doesn't actually go to a pin or LED anymore,
 
 // boardout[3] is the 1kHz square wave going to the front panel
 // other 7 boardout's are for controlling relays
-
-wire fanon; assign debugout[11] = fanon; // the cooling fan (could be PWM'ed for finer control)
-
-assign flash_reset = ~rstn; // active high flash controller reset signal
 
 // variables in clk domain, reading out of the RAM buffer
 localparam [3:0] INIT=4'd0, RX=4'd1, PROCESS=4'd2, TX_DATA_CONST=4'd3, TX_DATA1=4'd4, TX_DATA2=4'd5, TX_DATA3=4'd6, TX_DATA4=4'd7, PLLCLOCK=4'd8, BOOTUP=4'd9;
@@ -130,30 +136,19 @@ reg [9:0] 	ram_preoffset = 0;
 integer 		overrange_counter[4];
 reg [15:0]	probecompcounter = 0;
 reg [3:0] 	flashstate=0, flashbusycounter=0;
+reg 			fanon = 0; 
 reg [31:0] 	o_tdatatemp = 0;
 reg 			clkstrprob = 0;
-reg [7:0] 	boardin_sync = 0;
 reg [3:0] 	numones=0, numones2=0;
 
+// synced inputs from other clocks
 reg [ 7:0]	acqstate_sync = 0;
 integer		eventcounter_sync = 0;
 reg [ 9:0]	ram_address_triggered_sync = 0;
 reg [19:0] 	sample_triggered_sync = 0;
 reg [7:0]	downsamplemergingcounter_triggered_sync = 0;
 reg [8:0]	triggerphase_sync = 0;
-
-always @ (posedge clk) begin
-	acqstate_sync <= acqstate;
-	eventcounter_sync <= eventcounter;
-	ram_address_triggered_sync <= ram_address_triggered;
-	sample_triggered_sync <= sample_triggered;
-	downsamplemergingcounter_triggered_sync <= downsamplemergingcounter_triggered;
-	triggerphase_sync <= triggerphase;
-	boardin_sync <= boardin;
-
-	for (i=0;i<4;i=i+1)
-	    if (overrange[i]) overrange_counter[i] <= overrange_counter[i] + 1;
-end
+reg [7:0] 	boardin_sync = 0;
 
 // Sequence of register writes that triggers sending 4 bytes usb response.
 `define SEND_STD_USB_RESPONSE \
@@ -699,15 +694,26 @@ always @ (posedge clk or negedge rstn) begin
             state <= PROCESS;
         end
 
-        default :
-            state <= INIT;
-
+        default : state <= INIT;
         endcase
     end
 end
 
+// sync inputs from other clocks
+always @ (posedge clk) begin
+	acqstate_sync <= acqstate;
+	eventcounter_sync <= eventcounter;
+	ram_address_triggered_sync <= ram_address_triggered;
+	sample_triggered_sync <= sample_triggered;
+	downsamplemergingcounter_triggered_sync <= downsamplemergingcounter_triggered;
+	triggerphase_sync <= triggerphase;
+	boardin_sync <= boardin;
+	for (i=0;i<4;i=i+1) if (overrange[i]) overrange_counter[i] <= overrange_counter[i] + 1;
+end
+
+// make 12.5 MHz clock, for flash and RGB LEDs
 reg clk_over_4_counter = 0;
-always @ (posedge clk50) begin // Make 12.5 MHz clock
+always @ (posedge clk50) begin
 	if (clk_over_4_counter) clk_over_4 <= ~clk_over_4;
 	clk_over_4_counter <= clk_over_4_counter + 1'b1;
 end
@@ -730,13 +736,9 @@ always @ (posedge clk50) begin
 	endcase
 end
 
-// for FT232H
-assign i_tready = (state == RX);
-assign o_tkeep  = (length>=4) ? 4'b1111 :
-                  (length==3) ? 4'b0111 :
-                  (length==2) ? 4'b0011 :
-                  (length==1) ? 4'b0001 :
-                 /*length==0*/  4'b0000;
+assign flash_reset = ~rstn; // active high flash controller reset signal
+assign i_tready = (state == RX); // for FT232H data output
+assign o_tkeep  = (length>=4) ? 4'b1111 : (length==3) ? 4'b0111 :(length==2) ? 4'b0011 : (length==1) ? 4'b0001 : /*length==0*/ 4'b0000;
 assign o_tlast  = (length>=4) ? 1'b0 : 1'b1;
 
 endmodule

@@ -1,3 +1,5 @@
+// handles the raw LVDS inputs and orders them into samples
+// also does downsampling
 module downsampler
 (
 	input wire clklvds, // clk1, runs at LVDS bit rate (ADC clk input rate) / 2
@@ -7,6 +9,7 @@ module downsampler
 	input integer		downsamplecounter,
 	output reg signed [11:0] samplevalue[40],
 	
+	// synced inputs from other clocks
 	input reg [7:0]	channeltype, 
 	input reg [7:0]	downsamplemerging,
 	input reg			highres, 
@@ -21,6 +24,7 @@ reg signed [47:0]	highressamplevalueavg0 = 0, highressamplevalueavgtemp0 = 0;
 reg signed [47:0]	highressamplevalueavg1 = 0, highressamplevalueavgtemp1 = 0;
 reg [1:0] 	sampleclkstr[40];
 
+// synced inputs from other clocks
 reg [7:0]	channeltype_sync;
 reg [7:0]	downsamplemerging_sync;
 reg			highres_sync;
