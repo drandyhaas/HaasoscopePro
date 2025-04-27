@@ -1,4 +1,3 @@
-// this is all for downsample merging, since 40 samples come in each clklvds tick
 module downsampler
 (
 	input wire clklvds, // clk1, runs at LVDS bit rate (ADC clk input rate) / 2
@@ -12,7 +11,6 @@ module downsampler
 	input reg [7:0]	downsamplemerging,
 	input reg			highres, 
 	input reg [4:0] 	downsample
-
 );
 
 // variables in clklvds domain, writing into the RAM buffer
@@ -28,6 +26,7 @@ reg [7:0]	downsamplemerging_sync;
 reg			highres_sync;
 reg [4:0] 	downsample_sync;
 
+// this is all for downsample merging, since 40 samples come in each clklvds tick
 integer i, j;
 always @ (posedge clklvds) begin
 

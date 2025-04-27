@@ -77,8 +77,8 @@ set_output_delay -clock clk50 0 [get_ports boardout* ]
 set_output_delay -clock clk50 0 [get_ports debugout* ]
 
 ## for exttrig SMA in and aux SMA out, on clklvds
-set_input_delay -clock pllmain|altpll_component|auto_generated|pll1|clk[1] -1 [get_ports boardin[4] ]
-set_output_delay -clock pllmain|altpll_component|auto_generated|pll1|clk[1] -1 [get_ports debugout[10] ]
+set_input_delay -clock pllmain|altpll_component|auto_generated|pll1|clk[1] -1 [get_ports exttrigin ]
+set_output_delay -clock pllmain|altpll_component|auto_generated|pll1|clk[1] -1 [get_ports auxout ]
 
 ## for flash I/O
 set_input_delay -clock clk_over_4 -5 [get_ports asmi*DATA0 ]

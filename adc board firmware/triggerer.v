@@ -9,7 +9,7 @@ module triggerer(
 	input wire lvdsin_trig_b,
 	output reg lvdsout_trig_b=0,
 	input exttrigin,
-	output auxtrigout,
+	output auxout,
 	output reg led, // controls LED2
 	
 	output reg [7:0]	acqstate,
@@ -36,12 +36,12 @@ module triggerer(
 	input reg [4:0] 	downsample
 );
 
-//wire exttrigin; 
-//assign exttrigin = boardin[4]; // SMA in on back panel
-assign led = exttrigin; // LED2 (LED3 is used for controlling both the RGB LEDs on the front panel)
+//exttrigin is boardin[4], SMA in on back panel
+assign led = exttrigin;
 
-//wire auxtrigout; 
-//assign debugout[10] = (auxoutselector_sync==0) ? clklvds: auxtrigout; // SMA out on back panel
+//auxout is debugout[10], SMA out on back panel
+reg auxtrigout;
+assign auxout = (auxoutselector_sync==0) ? clklvds: auxtrigout;
 
 integer		rollingtriggercounter = 0;
 reg [7:0]	tot_counter = 0;

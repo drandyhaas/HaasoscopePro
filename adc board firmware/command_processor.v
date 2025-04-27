@@ -99,6 +99,7 @@ assign debugout[6] = lockinfo[2]; //clkbad0
 assign debugout[7] = lockinfo[3]; //clkbad1
 assign debugout[8] = boardin[0]; // extra inputs on PCB, mirrored to LEDs for now
 assign debugout[9] = boardin[1];
+assign debugout[10]= flash_busy; // doesn't actually go to a pin or LED anymore, it's used for auxout
 // boardin[2] is 12Vconnected
 // boardin[3] is PG12V
 // boardin[5] is Lockdetect (from ADF4350)
