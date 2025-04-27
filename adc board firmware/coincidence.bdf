@@ -195,7 +195,7 @@ https://fpgasoftware.intel.com/eula.
 )
 (pin
 	(input)
-	(rect -176 352 -8 368)
+	(rect -176 280 -8 296)
 	(text "INPUT" (rect 125 0 153 10)(font "Arial" (font_size 6)))
 	(text "lvdsin_clk" (rect 5 0 54 12)(font "Arial" ))
 	(pt 168 8)
@@ -208,7 +208,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect -240 352 -176 376))
+	(annotation_block (location)(rect -240 280 -176 304))
 )
 (pin
 	(input)
@@ -225,7 +225,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 117 12)(pt 121 8))
 	)
 	(text "VCC" (rect 136 7 156 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect 288 1144 344 1232))
+	(annotation_block (location)(rect 296 1144 352 1232))
 )
 (pin
 	(input)
@@ -276,7 +276,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect 288 1264 344 1288))
+	(annotation_block (location)(rect 296 1264 352 1288))
 )
 (pin
 	(input)
@@ -297,7 +297,7 @@ https://fpgasoftware.intel.com/eula.
 )
 (pin
 	(input)
-	(rect -176 400 -8 416)
+	(rect -176 328 -8 344)
 	(text "INPUT" (rect 125 0 153 10)(font "Arial" (font_size 6)))
 	(text "clk_ext" (rect 5 0 40 12)(font "Arial" ))
 	(pt 168 8)
@@ -310,7 +310,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect -240 400 -176 424))
+	(annotation_block (location)(rect -240 328 -176 352))
 )
 (pin
 	(input)
@@ -1383,7 +1383,7 @@ https://fpgasoftware.intel.com/eula.
 	)
 )
 (symbol
-	(rect -152 456 112 608)
+	(rect -152 384 112 536)
 	(text "pll2" (rect 122 0 145 16)(font "Arial" (font_size 10)))
 	(text "otherclkpll" (rect 8 136 57 148)(font "Arial" ))
 	(port
@@ -2520,11 +2520,6 @@ https://fpgasoftware.intel.com/eula.
 	(pt 680 664)
 )
 (connector
-	(text "clkout" (rect 632 664 661 681)(font "Intel Clear" ))
-	(pt 616 680)
-	(pt 680 680)
-)
-(connector
 	(text "clkout" (rect 614 1080 643 1097)(font "Intel Clear" ))
 	(pt 600 1096)
 	(pt 656 1096)
@@ -2564,16 +2559,6 @@ https://fpgasoftware.intel.com/eula.
 (connector
 	(pt 536 1272)
 	(pt 656 1272)
-)
-(connector
-	(text "clklvdsout" (rect -223 1232 -174 1249)(font "Intel Clear" ))
-	(pt -248 1248)
-	(pt -168 1248)
-)
-(connector
-	(text "clkout" (rect -223 1248 -194 1265)(font "Intel Clear" ))
-	(pt -248 1264)
-	(pt -168 1264)
 )
 (connector
 	(pt -168 1224)
@@ -2924,11 +2909,6 @@ https://fpgasoftware.intel.com/eula.
 	(text "spimosi" (rect 2029 1304 2064 1321)(font "Intel Clear" ))
 	(pt 2000 1320)
 	(pt 2104 1320)
-)
-(connector
-	(text "clkout" (rect 1705 1256 1734 1273)(font "Intel Clear" ))
-	(pt 1672 1272)
-	(pt 1768 1272)
 )
 (connector
 	(text "spireset_L" (rect 1701 1240 1749 1257)(font "Intel Clear" ))
@@ -3556,11 +3536,6 @@ https://fpgasoftware.intel.com/eula.
 	(pt 656 1304)
 )
 (connector
-	(text "clk50" (rect 595 1272 620 1289)(font "Intel Clear" ))
-	(pt 552 1288)
-	(pt 656 1288)
-)
-(connector
 	(pt -832 1784)
 	(pt -720 1784)
 	(bus)
@@ -3644,11 +3619,6 @@ https://fpgasoftware.intel.com/eula.
 	(bus)
 )
 (connector
-	(text "clkout_ena" (rect 1043 1528 1096 1545)(font "Intel Clear" ))
-	(pt 1024 1544)
-	(pt 1104 1544)
-)
-(connector
 	(text "clkswitch" (rect 1050 1368 1093 1385)(font "Intel Clear" ))
 	(pt 1024 1384)
 	(pt 1128 1384)
@@ -3695,31 +3665,6 @@ https://fpgasoftware.intel.com/eula.
 (connector
 	(pt -936 1560)
 	(pt -720 1560)
-)
-(connector
-	(text "clklvdsout" (rect -840 1152 -791 1169)(font "Intel Clear" ))
-	(pt -856 1168)
-	(pt -784 1168)
-)
-(connector
-	(text "clklvds" (rect -656 448 -622 465)(font "Intel Clear" ))
-	(pt -672 464)
-	(pt -600 464)
-)
-(connector
-	(text "clklvds" (rect -656 552 -622 569)(font "Intel Clear" ))
-	(pt -672 568)
-	(pt -600 568)
-)
-(connector
-	(text "clklvds" (rect -656 656 -622 673)(font "Intel Clear" ))
-	(pt -672 672)
-	(pt -600 672)
-)
-(connector
-	(text "clklvds" (rect -656 760 -622 777)(font "Intel Clear" ))
-	(pt -672 776)
-	(pt -600 776)
 )
 (connector
 	(text "lvds1in[13..0]" (rect -663 432 -600 449)(font "Intel Clear" ))
@@ -3881,21 +3826,6 @@ https://fpgasoftware.intel.com/eula.
 	(pt 672 408)
 )
 (connector
-	(text "phaseupdown" (rect 527 424 593 441)(font "Intel Clear" ))
-	(pt 504 440)
-	(pt 672 440)
-)
-(connector
-	(text "phasestep[0]" (rect 529 440 590 457)(font "Intel Clear" ))
-	(pt 504 456)
-	(pt 672 456)
-)
-(connector
-	(text "scanclk" (rect 526 456 561 473)(font "Intel Clear" ))
-	(pt 504 472)
-	(pt 672 472)
-)
-(connector
 	(pt 1168 424)
 	(pt 1192 424)
 )
@@ -3903,12 +3833,6 @@ https://fpgasoftware.intel.com/eula.
 	(text "clklvdsout" (rect 1056 376 1105 393)(font "Intel Clear" ))
 	(pt 1128 392)
 	(pt 1024 392)
-)
-(connector
-	(text "phasecounterselect[2..0]" (rect 531 408 646 425)(font "Intel Clear" ))
-	(pt 504 424)
-	(pt 672 424)
-	(bus)
 )
 (connector
 	(pt 448 392)
@@ -3982,60 +3906,8 @@ https://fpgasoftware.intel.com/eula.
 	(bus)
 )
 (connector
-	(text "pllreset" (rect -213 520 -177 537)(font "Intel Clear" ))
-	(pt -152 536)
-	(pt -240 536)
-)
-(connector
-	(text "lvdsin_clk" (rect 154 432 202 449)(font "Intel Clear" ))
-	(pt 144 360)
-	(pt -8 360)
-)
-(connector
-	(pt 144 360)
-	(pt 144 448)
-)
-(connector
-	(pt 144 448)
-	(pt 216 448)
-)
-(connector
-	(text "clk_ext_50" (rect 152 504 203 521)(font "Intel Clear" ))
-	(pt 216 520)
-	(pt 112 520)
-)
-(connector
-	(pt -152 520)
-	(pt -208 520)
-)
-(connector
-	(pt -208 432)
-	(pt -208 520)
-)
-(connector
-	(pt -208 432)
-	(pt 8 432)
-)
-(connector
-	(pt 8 432)
-	(pt 8 408)
-)
-(connector
-	(pt -8 408)
-	(pt 8 408)
-)
-(connector
 	(pt 1168 408)
 	(pt 1168 424)
-)
-(connector
-	(pt 1168 424)
-	(pt 1168 480)
-)
-(connector
-	(text "clkout" (rect 1502 464 1531 481)(font "Intel Clear" ))
-	(pt 1168 480)
-	(pt 1552 480)
 )
 (connector
 	(pt -808 1248)
@@ -4072,25 +3944,291 @@ https://fpgasoftware.intel.com/eula.
 	(pt -808 1376)
 	(bus)
 )
+(connector
+	(pt 1256 552)
+	(pt 1168 552)
+)
+(connector
+	(pt 1256 552)
+	(pt 1256 976)
+)
+(connector
+	(pt 1168 424)
+	(pt 1168 480)
+)
+(connector
+	(text "clkout" (rect 1502 464 1531 481)(font "Intel Clear" ))
+	(pt 1168 480)
+	(pt 1552 480)
+)
+(connector
+	(pt 600 976)
+	(pt 600 1096)
+)
+(connector
+	(pt 1128 376)
+	(pt 1128 248)
+)
+(connector
+	(text "clklvds" (rect -656 448 -622 465)(font "Intel Clear" ))
+	(pt -768 464)
+	(pt -600 464)
+)
+(connector
+	(pt -768 248)
+	(pt 1128 248)
+)
+(connector
+	(text "clklvds" (rect -656 552 -622 569)(font "Intel Clear" ))
+	(pt -768 568)
+	(pt -600 568)
+)
+(connector
+	(pt -768 248)
+	(pt -768 464)
+)
+(connector
+	(text "clklvds" (rect -656 656 -622 673)(font "Intel Clear" ))
+	(pt -768 672)
+	(pt -600 672)
+)
+(connector
+	(pt -768 464)
+	(pt -768 568)
+)
+(connector
+	(text "clklvds" (rect -656 760 -622 777)(font "Intel Clear" ))
+	(pt -768 776)
+	(pt -600 776)
+)
+(connector
+	(pt -768 568)
+	(pt -768 672)
+)
+(connector
+	(pt -768 672)
+	(pt -768 776)
+)
+(connector
+	(pt -776 1392)
+	(pt -776 1480)
+)
+(connector
+	(text "clklvdsout" (rect -223 1232 -174 1249)(font "Intel Clear" ))
+	(pt -256 1248)
+	(pt -168 1248)
+)
+(connector
+	(text "pllreset" (rect -213 448 -177 465)(font "Intel Clear" ))
+	(pt -152 464)
+	(pt -240 464)
+)
+(connector
+	(text "lvdsin_clk" (rect 154 360 202 377)(font "Intel Clear" ))
+	(pt 144 288)
+	(pt -8 288)
+)
+(connector
+	(pt 144 288)
+	(pt 144 376)
+)
+(connector
+	(pt 144 376)
+	(pt 216 376)
+)
+(connector
+	(text "clk_ext_50" (rect 152 432 203 449)(font "Intel Clear" ))
+	(pt 216 448)
+	(pt 112 448)
+)
+(connector
+	(pt -152 448)
+	(pt -208 448)
+)
+(connector
+	(pt -208 360)
+	(pt -208 448)
+)
+(connector
+	(pt -208 360)
+	(pt 8 360)
+)
+(connector
+	(pt 8 360)
+	(pt 8 336)
+)
+(connector
+	(pt -8 336)
+	(pt 8 336)
+)
+(connector
+	(pt 1128 392)
+	(pt 1128 576)
+)
+(connector
+	(pt -256 576)
+	(pt 1128 576)
+)
+(connector
+	(pt -256 576)
+	(pt -256 1248)
+)
+(connector
+	(pt -256 1248)
+	(pt -256 1392)
+)
+(connector
+	(text "clkout" (rect -223 1248 -194 1265)(font "Intel Clear" ))
+	(pt -168 1264)
+	(pt -240 1264)
+)
+(connector
+	(pt -240 1264)
+	(pt -240 592)
+)
+(connector
+	(pt 1168 480)
+	(pt 1168 552)
+)
+(connector
+	(pt 1168 552)
+	(pt 1168 592)
+)
+(connector
+	(text "clklvdsout" (rect -840 1152 -791 1169)(font "Intel Clear" ))
+	(pt -912 1168)
+	(pt -784 1168)
+)
+(connector
+	(pt -912 1168)
+	(pt -912 1392)
+)
+(connector
+	(pt -912 1392)
+	(pt -776 1392)
+)
+(connector
+	(pt -776 1392)
+	(pt -256 1392)
+)
+(connector
+	(pt 216 416)
+	(pt 216 376)
+)
+(connector
+	(pt 216 416)
+	(pt 296 416)
+)
+(connector
+	(pt 296 448)
+	(pt 296 416)
+)
+(connector
+	(text "phasecounterselect[2..0]" (rect 555 408 670 425)(font "Intel Clear" ))
+	(pt 672 424)
+	(pt 528 424)
+	(bus)
+)
+(connector
+	(text "phaseupdown" (rect 551 424 617 441)(font "Intel Clear" ))
+	(pt 672 440)
+	(pt 528 440)
+)
+(connector
+	(text "phasestep[0]" (rect 553 440 614 457)(font "Intel Clear" ))
+	(pt 672 456)
+	(pt 528 456)
+)
+(connector
+	(text "scanclk" (rect 550 456 585 473)(font "Intel Clear" ))
+	(pt 672 472)
+	(pt 528 472)
+)
+(connector
+	(pt 488 552)
+	(pt 488 376)
+)
+(connector
+	(text "clk50" (rect 595 1272 620 1289)(font "Intel Clear" ))
+	(pt 656 1288)
+	(pt 280 1288)
+)
+(connector
+	(pt 488 552)
+	(pt 280 552)
+)
+(connector
+	(pt 280 552)
+	(pt 280 1288)
+)
+(connector
+	(text "clkout" (rect 632 664 661 681)(font "Intel Clear" ))
+	(pt 584 680)
+	(pt 680 680)
+)
+(connector
+	(pt 584 680)
+	(pt 584 592)
+)
+(connector
+	(pt 1168 592)
+	(pt 584 592)
+)
+(connector
+	(pt 584 592)
+	(pt -240 592)
+)
+(connector
+	(text "clkout_ena" (rect 1051 1528 1104 1545)(font "Intel Clear" ))
+	(pt 1128 1544)
+	(pt 1024 1544)
+)
+(connector
+	(text "clkout" (rect 1705 1256 1734 1273)(font "Intel Clear" ))
+	(pt 1664 1272)
+	(pt 1768 1272)
+)
+(connector
+	(pt 1664 1272)
+	(pt 1664 976)
+)
+(connector
+	(pt 600 976)
+	(pt 1256 976)
+)
+(connector
+	(pt 1256 976)
+	(pt 1664 976)
+)
 (junction (pt 1704 1592))
 (junction (pt -832 1784))
 (junction (pt -872 1768))
 (junction (pt -888 1752))
 (junction (pt 1168 408))
 (junction (pt 1168 424))
+(junction (pt 1168 480))
+(junction (pt -768 464))
+(junction (pt -768 568))
+(junction (pt -768 672))
+(junction (pt -256 1248))
+(junction (pt 1168 552))
+(junction (pt -776 1392))
+(junction (pt 488 376))
+(junction (pt 584 592))
+(junction (pt 1256 976))
 (text "Can switch here whether we use sma or lvds" (rect 240 464 498 483)(font "Intel Clear" (font_size 8)))
 (text "LVDS input deserializers" (rect -568 360 -423 379)(font "Intel Clear" (font_size 8)))
 (text "50 MHz oscillator" (rect 352 336 454 355)(font "Intel Clear" (font_size 8)))
 (text "Buffer where samples are held" (rect -128 1104 52 1123)(font "Intel Clear" (font_size 8)))
 (text "SPI master" (rect 1848 1192 1912 1211)(font "Intel Clear" (font_size 8)))
-(text "MUX to select SPI input" (rect 1664 1008 1803 1027)(font "Intel Clear" (font_size 8)))
+(text "MUX to select SPI input" (rect 1672 1008 1811 1027)(font "Intel Clear" (font_size 8)))
 (text "USB data I/O block" (rect 736 600 849 619)(font "Intel Clear" (font_size 8)))
 (text "Main processor block" (rect 736 1016 859 1035)(font "Intel Clear" (font_size 8)))
 (text "for the external clock source..." (rect 240 480 411 499)(font "Intel Clear" (font_size 8)))
 (text "either lvdsin_clk or clk_ext_50" (rect 240 496 420 515)(font "Intel Clear" (font_size 8)))
 (text "Main PLL" (rect 824 280 878 299)(font "Intel Clear" (font_size 8)))
 (text "For writing and reading to flash, for firmware upgrade" (rect 1744 1400 2060 1419)(font "Intel Clear" (font_size 8)))
-(text "PLL for making 50 MHz from a 10 MHz external SMA ref clock" (rect -184 432 181 451)(font "Intel Clear" (font_size 8)))
+(text "PLL for making 50 MHz from a 10 MHz external SMA ref clock" (rect -184 360 181 379)(font "Intel Clear" (font_size 8)))
 (text "Output clocks to ADF4350 and SMA" (rect 1200 368 1413 387)(font "Intel Clear" (font_size 8)))
 (text "Output clock to LVDS" (rect 1888 440 2014 459)(font "Intel Clear" (font_size 8)))
 (text "Can switch LVDS clk out on/off" (rect 1592 384 1772 403)(font "Intel Clear" (font_size 8)))
