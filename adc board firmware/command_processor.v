@@ -53,7 +53,7 @@ module command_processor (
 	input wire lvdsin_spare,
 	output reg lvdsout_spare=0,
 	input wire [69:0] lvdsEbits, lvdsLbits,
-	output reg [1:0] leds, // controls LED3..2 (LED1..0 are controlled directly by ftdi245fifo module)
+	output reg led0, // controls LED2 (LED1..0 are controlled directly by ftdi245fifo module, LED3 is for neopixels on the front panel)
 
 	output reg [23:0] flash_addr,
 	output reg flash_bulk_erase,
@@ -68,7 +68,10 @@ module command_processor (
 
 	input flash_busy,
 	input flash_data_valid,
-	input [7:0] flash_dataout
+	input [7:0] flash_dataout,
+	
+	output reg [23:0] neo_color[2],
+	output reg send_color
 );
 
 integer version = 24; // firmware version
@@ -100,7 +103,7 @@ assign debugout[10] = (auxoutselector_sync==0) ? clklvds: auxtrigout; // SMA out
 wire fanon; assign debugout[11] = fanon; // the cooling fan (could be PWM'ed for finer control)
 
 assign flash_reset = ~rstn; // active high flash controller reset signal
-assign leds[0] = exttrigin; // LED2 (LED3 is used for controlling both the RGB LEDs on the front panel)
+assign led0 = exttrigin; // LED2 (LED3 is used for controlling both the RGB LEDs on the front panel)
 
 // variables in clklvds domain, writing into the RAM buffer
 integer		downsamplecounter = 1;
@@ -501,7 +504,6 @@ reg [7:0] scanclk_cycles = 0;
 reg [9:0] ram_preoffset = 0;
 integer overrange_counter[4];
 reg [15:0]	probecompcounter = 0;
-reg send_color = 1;
 reg [3:0] flashstate=0, flashbusycounter=0;
 reg [31:0] o_tdatatemp = 0;
 reg clkstrprob = 0;
@@ -1362,62 +1364,10 @@ always @ (posedge clklvds) begin
 
 end
 
-
-// Neopixel LED state control
-// Adapted from https://vivonomicon.com/2018/12/24/learning-how-to-fpga-with-neopixel-leds/
-reg [2:0] neostate;
-reg [1:0] npxc;
-reg [12:0] lpxc;
-reg [7:0] neobits;
-reg [1:0] neo_led_num;
-parameter neo_led_num_max = 2;
-reg [23:0] neo_color[neo_led_num_max];
 reg clk_over_4_counter = 0;
-
 always @ (posedge clk50) begin // Make 12.5 MHz clock
 	if (clk_over_4_counter) clk_over_4 <= ~clk_over_4;
 	clk_over_4_counter <= clk_over_4_counter + 1'b1;
-end
-always @ (posedge clk_over_4) begin // Process the state machine at each 12.5 MHz clock edge
-	// Process the state machine; states 0-3 are the four WS2812B 'ticks',
-	// each consisting of 80 * 4 = 320 nanoseconds. Four of those
-	// periods are then 1280 nanoseconds long, and we can get close to
-	// the ideal 1250ns period (and the minimum is 1200ns).
-	// A '1' is 3 high periods followed by 1 low period (960/320 ns)
-	// A '0' is 1 high period followed by 3 low periods (320/960 ns)
-	if (neostate == 0 || neostate == 1 || neostate == 2 || neostate == 3) begin
-		 npxc = npxc + 2'd1;
-		 if (npxc == 0) neostate = neostate + 3'd1;
-	end
-	if (neostate == 4) begin
-		 neobits = neobits + 8'd1;
-		 if (neobits == 24) begin
-			  neobits = 0;
-			  neostate = neostate + 3'd1;
-		 end
-		 else neostate = 0;
-	end
-	if (neostate == 5) begin
-		 neo_led_num = neo_led_num + 2'd1;
-		 if (neo_led_num == neo_led_num_max) begin
-			  neo_led_num = 0;
-			  neostate = neostate + 3'd1;
-		 end
-		 else neostate = 0;
-	end
-	if (neostate == 6) begin
-		 lpxc = lpxc + 13'd1;
-		 if (lpxc == 0 && send_color) neostate = 0;
-	end
-
-	if (neo_color[neo_led_num] & (1 << neobits)) begin // Set the correct pin state
-	  if (neostate == 0 || neostate == 1 || neostate == 2) leds[1] = 1;
-	  else if (neostate == 3 || neostate == 6) leds[1] = 0;
-	end
-	else begin
-	  if (neostate == 0) leds[1] = 1;
-	  else if (neostate == 1 || neostate == 2 || neostate == 3 || neostate == 6) leds[1] = 0;
-	end
 end
 
 // for pll reset, need to run the logic on the crystal directly, not the pll output

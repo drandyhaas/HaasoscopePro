@@ -21,9 +21,9 @@ https://fpgasoftware.intel.com/eula.
 */
 (header "symbol" (version "1.1"))
 (symbol
-	(rect 16 16 288 640)
+	(rect 16 16 288 672)
 	(text "command_processor" (rect 5 0 91 12)(font "Arial" ))
-	(text "inst" (rect 8 608 20 620)(font "Arial" ))
+	(text "inst" (rect 8 640 20 652)(font "Arial" ))
 	(port
 		(pt 0 32)
 		(input)
@@ -391,9 +391,9 @@ https://fpgasoftware.intel.com/eula.
 	(port
 		(pt 272 448)
 		(output)
-		(text "leds[1..0]" (rect 0 0 34 12)(font "Arial" ))
-		(text "leds[1..0]" (rect 217 443 251 455)(font "Arial" ))
-		(line (pt 272 448)(pt 256 448)(line_width 3))
+		(text "led0" (rect 0 0 15 12)(font "Arial" ))
+		(text "led0" (rect 236 443 251 455)(font "Arial" ))
+		(line (pt 272 448)(pt 256 448)(line_width 1))
 	)
 	(port
 		(pt 272 464)
@@ -458,13 +458,21 @@ https://fpgasoftware.intel.com/eula.
 		(text "clkout_ena" (rect 209 587 251 599)(font "Arial" ))
 		(line (pt 272 592)(pt 256 592)(line_width 1))
 	)
-	(parameter
-		"neo_led_num_max"
-		"2"
-		""
-		(type "PARAMETER_SIGNED_DEC")	)
-	(drawing
-		(rectangle (rect 16 16 256 608)(line_width 1))
+	(port
+		(pt 272 608)
+		(output)
+		(text "neo_color[0..1][23..0]" (rect 0 0 82 12)(font "Arial" ))
+		(text "neo_color[0..1][23..0]" (rect 169 603 251 615)(font "Arial" ))
+		(line (pt 272 608)(pt 256 608)(line_width 3))
 	)
-	(annotation_block (parameter)(rect 288 -64 388 16))
+	(port
+		(pt 272 624)
+		(output)
+		(text "send_color" (rect 0 0 43 12)(font "Arial" ))
+		(text "send_color" (rect 208 619 251 631)(font "Arial" ))
+		(line (pt 272 624)(pt 256 624)(line_width 1))
+	)
+	(drawing
+		(rectangle (rect 16 16 256 640)(line_width 1))
+	)
 )
