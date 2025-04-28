@@ -4,7 +4,7 @@ JedecChain;
 	DefaultMfr(6E);
 
 	P ActionCode(Cfg)
-		Device PartName(EP4CE30F23) Path("C:/gitwork/master/HaasoscopePro/adc board firmware/output_files/") File("coincidence.sof") MfrSpec(OpMask(1));
+		Device PartName(EP4CE30F23) Path("output_files/") File("coincidence.sof") MfrSpec(OpMask(1));
 
 ChainEnd;
 
