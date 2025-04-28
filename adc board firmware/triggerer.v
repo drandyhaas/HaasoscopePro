@@ -155,7 +155,9 @@ always @ (posedge clklvds or negedge rstn) begin
 			current_active_trigger_type <= triggertype_sync;
 			case(triggertype_sync)
 				8'd0 : ; // disable conditional triggering
-				default: acqstate <= 8'd249; // go to pre-aquisition
+				default: begin
+					if (triggerlive_sync) acqstate <= 8'd249; // go to pre-aquisition
+				end
 			endcase
 		end
 
@@ -166,7 +168,7 @@ always @ (posedge clklvds or negedge rstn) begin
 					triggercounter <= triggercounter + 16'd1;
 				end
 			end
-			else if (triggerlive_sync) begin
+			else begin
 				triggercounter <= 0; // will also use this to keep recording enough samples after the trigger, so reset
 				
 				if (current_active_trigger_type==1) rising<=1'b1;

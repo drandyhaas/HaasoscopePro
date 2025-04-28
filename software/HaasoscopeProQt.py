@@ -821,8 +821,10 @@ class MainWindow(TemplateBaseClass):
             rx_len = 0
             try:
                 readyevent = [0]*self.num_board
+                #print("\ngetevent")
                 for board in reversed(range(self.num_board)): # go backwards through the boards to make sure the ext triggers are active before the lower number board fires
                     readyevent[board] = self.getchannels(board)
+                    #if not readyevent[board]: print("board",board,"not ready")
                 for board in range(self.num_board):
                     if not readyevent[board]: continue
                     downsamplemergingcounter = self.getpredata(board)
@@ -874,16 +876,20 @@ class MainWindow(TemplateBaseClass):
         else:
             return 0
 
+    oldeventcounterdiff=-9999
+    doeventcounter = False
     def getpredata(self, board):
-        doeventcounter = False
-        if doeventcounter:
+        if self.doeventcounter:
             usbs[board].send(bytes([2, 3, 100, 100, 100, 100, 100, 100]))  # get eventcounter
             res = usbs[board].recv(4)
             eventcountertemp = res[0] + 256 * res[1] + 256 * 256 * res[2] + 256 * 256 * 256 * res[3]
             if eventcountertemp != self.eventcounter[board] + 1 and eventcountertemp != 0:  # check event count, but account for rollover
                 print("Event counter not incremented by 1?", eventcountertemp, self.eventcounter[board], " for board", board)
             self.eventcounter[board] = eventcountertemp
-            if board==0: print("eventcounter diff for board",board,"and",board+1,self.eventcounter[board]-self.eventcounter[board+1])
+            if board==0:
+                eventcounterdiff = self.eventcounter[board]-self.eventcounter[board+1]
+                if eventcounterdiff!=self.oldeventcounterdiff: print("eventcounter diff for board",board,"and",board+1,eventcounterdiff)
+                self.oldeventcounterdiff=eventcounterdiff
         downsamplemergingcounter = 0
         usbs[board].send(bytes([2, 4, 100, 100, 100, 100, 100, 100]))  # get downsamplemergingcounter
         res = usbs[board].recv(4)

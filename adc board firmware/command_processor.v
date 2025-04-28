@@ -208,7 +208,7 @@ always @ (posedge clk or negedge rstn) begin
                 triggertype <= rx_data[1]; // while we're at it, set the trigger type
                 channeltype <= rx_data[2]; // and the channel type (bit0: single or dual, bit1: oversampling (swapped inputs))
                 lengthtotake <= {rx_data[5],rx_data[4]};
-					 if (acqstate_sync == 0 || acqstate_sync == 249) triggerlive <= 1'b1; // gets reset in INIT state
+					 if (acqstate_sync == 0) triggerlive <= 1'b1; // gets reset in INIT state
                 o_tdata <= {4'd0,sample_triggered_sync,acqstate_sync}; // return acqstate, so we can see if we have an event ready to be read out, and which samples triggered (to prevent jitter)
                 `SEND_STD_USB_RESPONSE
             end
@@ -401,11 +401,16 @@ always @ (posedge clk or negedge rstn) begin
                 length <= 0;
                 didreadout <= 1'b1;
 					 triggerlive <= 1'b1; // gets reset in INIT state
+					 
+					 if (flashbusycounter==4) begin // wait for didreadout to allow trigger to get back to state 0 before lowering triggerlive in INIT state
+						 flashbusycounter<=0;		  //(reusing flashbusycounter since it can't conflict)
 
-                // Assuming that trigger type is changed, trigger will always be re-armed;
-                // For debuging current acqstate in the first byte
-                o_tdata <= {8'd0, 8'd0, 8'd0, acqstate_sync};
-                `SEND_STD_USB_RESPONSE
+						 // Assuming that trigger type is changed, trigger will always be re-armed;
+						 // For debuging current acqstate in the first byte
+						 o_tdata <= {8'd0, 8'd0, 8'd0, acqstate_sync};
+						 `SEND_STD_USB_RESPONSE
+					 end
+					 else flashbusycounter <= flashbusycounter+4'd1;
             end
 
             14 : begin // read-register function
