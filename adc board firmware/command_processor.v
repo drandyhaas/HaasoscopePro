@@ -152,7 +152,6 @@ reg 			st1zero, st2zero, st3zero, st4zero; // for sample_triggered
 always @ (posedge clklvds or negedge rstn) begin
 	if (~rstn) acqstate <= 8'd0;
 	else begin
-		triggerlive_sync       <= triggerlive;
 		lengthtotake_sync      <= lengthtotake;
 		prelengthtotake_sync   <= prelengthtotake;
 		triggertype_sync       <= triggertype;
@@ -167,6 +166,9 @@ always @ (posedge clklvds or negedge rstn) begin
 		triggerchan_sync       <= triggerchan;
 		dorolling_sync         <= dorolling; // TODO: to be removed
 		auxoutselector_sync	  <= auxoutselector;
+		if (triggerlive) begin
+			triggerlive_sync <= 1;
+		end
 
 		if (acqstate==251 || acqstate==0) begin
 			// not writing, while waiting to be read out or in initial state where trigger might be disabled
@@ -227,7 +229,11 @@ always @ (posedge clklvds or negedge rstn) begin
 			triggercounter <= 0; // set to 0 as this register will be used to count in pre-aquisition
 			current_active_trigger_type <= triggertype_sync;
 			case(triggertype_sync)
-				8'd0 : ; // disable conditional triggering
+				8'd0 : begin // disable conditional triggering
+					if (triggerlive_sync) begin
+						triggerlive_sync <= 0;
+					end
+				end
 				default: acqstate <= 8'd249; // go to pre-aquisition
 			endcase
 		end
@@ -252,6 +258,8 @@ always @ (posedge clklvds or negedge rstn) begin
 					8'd4 : acqstate <= 8'd6; // auto trigger (forces waveform capture unconditionally)
 					8'd5 : acqstate <= 8'd7; // external trigger, like from back panel SMA
 				endcase
+
+				triggerlive_sync <= 0;
 			end
 		end
 
@@ -772,7 +780,7 @@ always @ (posedge clk or negedge rstn) begin
 					 // in the separate "loop" over clklvds that should move acqstate to 0
                 length <= 0;
                 didreadout <= 1'b1;
-					 triggerlive <= 1'b1; // gets reset in INIT state
+                triggerlive <= 1'b1; // gets reset in INIT state
 
                 // Assuming that trigger type is changed, trigger will always be re-armed;
                 // For debuging current acqstate in the first byte
