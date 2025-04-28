@@ -53,8 +53,8 @@ module SPI_Master
    output reg o_SPI_Clk,
    input      i_SPI_MISO,
    output reg o_SPI_MOSI,
-	
-	input wire [1:0] spimode
+   
+   input wire [1:0] spimode
    );
 
   // SPI Interface (All Runs at SPI Clock Domain)

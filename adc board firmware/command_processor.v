@@ -1,97 +1,97 @@
 // the main module
 // gets commands from USB, and takes actions
 module command_processor (
-	input  wire        rstn,
-	input  wire        clk, // the main 50 MHz clock
-	
-	// to talk to data I/O FT232H USB2
-	output wire        i_tready, // AXI-stream slave
-	input  wire        i_tvalid, // ...
-	input  wire [ 7:0] i_tdata,
-	input  wire        o_tready, // AXI-stream master
-	output wire        o_tvalid, // ...
-	output wire [31:0] o_tdata,
-	output wire [ 3:0] o_tkeep,
-	output wire        o_tlast,
+   input  wire        rstn,
+   input  wire        clk, // the main 50 MHz clock
+   
+   // to talk to data I/O FT232H USB2
+   output wire        i_tready, // AXI-stream slave
+   input  wire        i_tvalid, // ...
+   input  wire [ 7:0] i_tdata,
+   input  wire        o_tready, // AXI-stream master
+   output wire        o_tvalid, // ...
+   output wire [31:0] o_tdata,
+   output wire [ 3:0] o_tkeep,
+   output wire        o_tlast,
 
-	output reg pllreset, // to reset pll's
+   output reg pllreset, // to reset pll's
 
-	// to talk over SPI
-	output reg 	[7:0]	spitx,
-	input  reg 	[7:0]	spirx,
-	input  reg 			spitxready,
-	output reg			spitxdv,
-	input  reg			spirxdv,
-	output reg 	[7:0]	spics, // which chip to talk to
+   // to talk over SPI
+   output reg  [7:0] spitx,
+   input  reg  [7:0] spirx,
+   input  reg        spitxready,
+   output reg        spitxdv,
+   input  reg        spirxdv,
+   output reg  [7:0] spics, // which chip to talk to
 
-	input wire 	[3:0]	lockinfo, // clock info
+   input wire  [3:0] lockinfo, // clock info
 
-	// reading from RAM
-	output reg 	[9:0] 	ram_rd_address=0,
-	input wire 	[559:0] 	lvdsbitsin, // input bits from fifo
+   // reading from RAM
+   output reg  [9:0]    ram_rd_address=0,
+   input wire  [559:0]  lvdsbitsin, // input bits from fifo
 
-	// to adjust pll phases
-	output reg	[2:0] phasecounterselect, // Dynamic phase shift counter Select. 000:all 001:M 010:C0 011:C1 100:C2 101:C3 110:C4. Registered in the rising edge of scanclk.
-	output reg 			phaseupdown=1, // Dynamic phase shift direction; 1:UP, 0:DOWN. Registered in the PLL on the rising edge of scanclk.
-	output reg 	[3:0] phasestep,
-	output reg 			scanclk=0,
+   // to adjust pll phases
+   output reg  [2:0] phasecounterselect, // Dynamic phase shift counter Select. 000:all 001:M 010:C0 011:C1 100:C2 101:C3 110:C4. Registered in the rising edge of scanclk.
+   output reg        phaseupdown=1, // Dynamic phase shift direction; 1:UP, 0:DOWN. Registered in the PLL on the rising edge of scanclk.
+   output reg  [3:0] phasestep,
+   output reg        scanclk=0,
 
-	output reg 	[2:0] spimisossel=0, //which spimiso to listen to
-	output reg [11:0]	debugout, 
-	input wire 	[3:0]	overrange,  //ORA0,A1,B0,B1
-	output reg 	[1:0] spi_mode=0,
-	input wire 	[7:0] boardin,
-	output wire [7:0] boardout=0,
-	output reg 			spireset_L=1'b1,
-	output reg 			clkswitch=0, // to switch between external clock and internal oscillator
-	input wire 			lvdsin_spare,
-	output reg 			lvdsout_spare=0,
-	input wire 			clk50, // needed while doing pllreset
-	output reg 			clk_over_4, // clock output for flash and RGB LEDs
+   output reg  [2:0] spimisossel=0, //which spimiso to listen to
+   output reg [11:0] debugout, 
+   input wire  [3:0] overrange,  //ORA0,A1,B0,B1
+   output reg  [1:0] spi_mode=0,
+   input wire  [7:0] boardin,
+   output wire [7:0] boardout=0,
+   output reg        spireset_L=1'b1,
+   output reg        clkswitch=0, // to switch between external clock and internal oscillator
+   input wire        lvdsin_spare,
+   output reg        lvdsout_spare=0,
+   input wire        clk50, // needed while doing pllreset
+   output reg        clk_over_4, // clock output for flash and RGB LEDs
 
-	// for flash firmware updating
-	output reg [23:0] flash_addr,
-	output reg 			flash_bulk_erase,
-	output reg [7:0] 	flash_datain,
-	output reg 			flash_rden,
-	output reg 			flash_read,
-	output reg 			flash_write,
-	output reg 			flash_reset,
-	input					flash_busy,
-	input 				flash_data_valid,
-	input [7:0] 		flash_dataout,
-	
-	// to turn control LVDS clk off
-	output reg clkout_ena=1,
-	
-	// to RGB LEDs
-	output reg [23:0] neo_color[2],
-	output reg send_color,
-	
-	// outputs to triggerer
-	output reg signed [11:0]  lowerthresh,
-	output reg signed [11:0]  upperthresh,
-	output reg [15:0]	lengthtotake,
-	output reg [15:0]	prelengthtotake,
-	output reg 			triggerlive,
-	output reg			didreadout,
-	output reg [7:0]	triggertype,
-	output reg [7:0] 	triggerToT,
-	output reg 			triggerchan,
-	output reg			dorolling,
-	output reg 			auxoutselector,
-	output reg [7:0]	channeltype,
-	output reg [7:0]	downsamplemerging,
-	output reg			highres,
-	output reg [4:0] 	downsample,
-	
-	// inputs from triggerer
-	input [7:0]		acqstate,
-	input [31:0]	eventcounter,
-	input [9:0]		ram_address_triggered,
-	input [19:0] 	sample_triggered,
-	input [7:0]		downsamplemergingcounter_triggered,
-	input [8:0]		triggerphase
+   // for flash firmware updating
+   output reg [23:0] flash_addr,
+   output reg        flash_bulk_erase,
+   output reg [7:0]  flash_datain,
+   output reg        flash_rden,
+   output reg        flash_read,
+   output reg        flash_write,
+   output reg        flash_reset,
+   input             flash_busy,
+   input             flash_data_valid,
+   input [7:0]       flash_dataout,
+   
+   // to turn control LVDS clk off
+   output reg clkout_ena=1,
+   
+   // to RGB LEDs
+   output reg [23:0] neo_color[2],
+   output reg send_color,
+   
+   // outputs to triggerer
+   output reg signed [11:0]  lowerthresh,
+   output reg signed [11:0]  upperthresh,
+   output reg [15:0] lengthtotake,
+   output reg [15:0] prelengthtotake,
+   output reg        triggerlive,
+   output reg        didreadout,
+   output reg [7:0]  triggertype,
+   output reg [7:0]  triggerToT,
+   output reg        triggerchan,
+   output reg        dorolling,
+   output reg        auxoutselector,
+   output reg [7:0]  channeltype,
+   output reg [7:0]  downsamplemerging,
+   output reg        highres,
+   output reg [4:0]  downsample,
+   
+   // inputs from triggerer
+   input [7:0]    acqstate,
+   input [31:0]   eventcounter,
+   input [9:0]    ram_address_triggered,
+   input [19:0]   sample_triggered,
+   input [7:0]    downsamplemergingcounter_triggered,
+   input [8:0]    triggerphase
 );
 
 integer version = 25; // firmware version
@@ -121,34 +121,34 @@ assign debugout[11]= fanon; // the cooling fan (could be PWM'ed for finer contro
 
 // variables in clk domain, reading out of the RAM buffer
 localparam [3:0] INIT=4'd0, RX=4'd1, PROCESS=4'd2, TX_DATA_CONST=4'd3, TX_DATA1=4'd4, TX_DATA2=4'd5, TX_DATA3=4'd6, TX_DATA4=4'd7, PLLCLOCK=4'd8, BOOTUP=4'd9;
-reg [ 3:0]	state = INIT;
-reg			didbootup = 0;
-reg [ 3:0]	rx_counter = 0;
-reg [ 7:0]	rx_data[7:0];
-integer		length = 0;
-reg [ 3:0]	spistate = 0;
-reg [5:0]	channel = 0;
-reg [5:0]	channel2 = 0; // the "channel" we are sending out for two-channel mode, to reorder samples
-reg [5:0]	spicscounter = 0;
-reg [7:0] 	pllclock_counter = 0; // for clock phase
-reg [7:0] 	scanclk_cycles = 0;
-reg [9:0] 	ram_preoffset = 0;
-integer 		overrange_counter[4];
-reg [15:0]	probecompcounter = 0;
-reg [3:0] 	flashstate=0, flashbusycounter=0;
-reg 			fanon = 0; 
-reg [31:0] 	o_tdatatemp = 0;
-reg 			clkstrprob = 0;
-reg [3:0] 	numones=0, numones2=0;
+reg [ 3:0]  state = INIT;
+reg         didbootup = 0;
+reg [ 3:0]  rx_counter = 0;
+reg [ 7:0]  rx_data[7:0];
+integer     length = 0;
+reg [ 3:0]  spistate = 0;
+reg [5:0]   channel = 0;
+reg [5:0]   channel2 = 0; // the "channel" we are sending out for two-channel mode, to reorder samples
+reg [5:0]   spicscounter = 0;
+reg [7:0]   pllclock_counter = 0; // for clock phase
+reg [7:0]   scanclk_cycles = 0;
+reg [9:0]   ram_preoffset = 0;
+integer     overrange_counter[4];
+reg [15:0]  probecompcounter = 0;
+reg [3:0]   flashstate=0, flashbusycounter=0;
+reg         fanon = 0; 
+reg [31:0]  o_tdatatemp = 0;
+reg         clkstrprob = 0;
+reg [3:0]   numones=0, numones2=0;
 
 // synced inputs from other clocks
-reg [ 7:0]	acqstate_sync = 0;
-integer		eventcounter_sync = 0;
-reg [ 9:0]	ram_address_triggered_sync = 0;
-reg [19:0] 	sample_triggered_sync = 0;
-reg [7:0]	downsamplemergingcounter_triggered_sync = 0;
-reg [8:0]	triggerphase_sync = 0;
-reg [7:0] 	boardin_sync = 0;
+reg [ 7:0]  acqstate_sync = 0;
+integer     eventcounter_sync = 0;
+reg [ 9:0]  ram_address_triggered_sync = 0;
+reg [19:0]  sample_triggered_sync = 0;
+reg [7:0]   downsamplemergingcounter_triggered_sync = 0;
+reg [8:0]   triggerphase_sync = 0;
+reg [7:0]   boardin_sync = 0;
 
 // Sequence of register writes that triggers sending 4 bytes usb response.
 `define SEND_STD_USB_RESPONSE \
@@ -178,9 +178,9 @@ always @ (posedge clk or negedge rstn) begin
             spitxdv <= 1'b0;
             spics <= 8'hff;
             channel <= 6'd0;
-				channel2 <= 6'd0;
+            channel2 <= 6'd0;
             triggerlive <= 1'b0;
-				didreadout <= 1'b0;
+            didreadout <= 1'b0;
             if (didbootup) state <= RX;
             else state <= BOOTUP;
         end
@@ -208,14 +208,14 @@ always @ (posedge clk or negedge rstn) begin
                 triggertype <= rx_data[1]; // while we're at it, set the trigger type
                 channeltype <= rx_data[2]; // and the channel type (bit0: single or dual, bit1: oversampling (swapped inputs))
                 lengthtotake <= {rx_data[5],rx_data[4]};
-					 if (acqstate_sync == 0) triggerlive <= 1'b1; // gets reset in INIT state
+                if (acqstate_sync == 0) triggerlive <= 1'b1; // gets reset in INIT state
                 o_tdata <= {4'd0,sample_triggered_sync,acqstate_sync}; // return acqstate, so we can see if we have an event ready to be read out, and which samples triggered (to prevent jitter)
                 `SEND_STD_USB_RESPONSE
             end
 
             2 : begin // reads version or does other stuff
                 case (rx_data[1]) 
-					 0: o_tdata <= version;
+                0: o_tdata <= version;
                 1: o_tdata <= {24'd0,boardin_sync};
                 2: o_tdata <= overrange_counter[rx_data[2][1:0]];
                 3: o_tdata <= eventcounter_sync;
@@ -236,15 +236,15 @@ always @ (posedge clk or negedge rstn) begin
                     dorolling <= rx_data[2][0];
                     o_tdata <= dorolling;
                 end
-					 9: begin
+                9: begin
                     clkout_ena <= rx_data[2][0];
                     o_tdata <= {31'd0,clkout_ena};
                 end
-					 10: begin
+                10: begin
                     auxoutselector <= rx_data[2][0];
                     o_tdata <= {31'd0,auxoutselector};
                 end
-					 endcase
+                endcase
                 `SEND_STD_USB_RESPONSE
             end
 
@@ -397,20 +397,20 @@ always @ (posedge clk or negedge rstn) begin
                 lengthtotake <= {rx_data[5],rx_data[4]};
 
                 // we might not have actually read out data yet; however, since we are force arming the trigger we are going to pretend that we did so
-					 // in the separate "loop" over clklvds that should move acqstate to 0
+                // in the separate "loop" over clklvds that should move acqstate to 0
                 length <= 0;
                 didreadout <= 1'b1;
-					 triggerlive <= 1'b1; // gets reset in INIT state
-					 
-					 if (flashbusycounter==4) begin // wait for didreadout to allow trigger to get back to state 0 before lowering triggerlive in INIT state
-						 flashbusycounter<=0;		  //(reusing flashbusycounter since it can't conflict)
+                triggerlive <= 1'b1; // gets reset in INIT state
+                
+                if (flashbusycounter==4) begin // wait for didreadout to allow trigger to get back to state 0 before lowering triggerlive in INIT state
+                   flashbusycounter<=0;        //(reusing flashbusycounter since it can't conflict)
 
-						 // Assuming that trigger type is changed, trigger will always be re-armed;
-						 // For debuging current acqstate in the first byte
-						 o_tdata <= {8'd0, 8'd0, 8'd0, acqstate_sync};
-						 `SEND_STD_USB_RESPONSE
-					 end
-					 else flashbusycounter <= flashbusycounter+4'd1;
+                   // Assuming that trigger type is changed, trigger will always be re-armed;
+                   // For debuging current acqstate in the first byte
+                   o_tdata <= {8'd0, 8'd0, 8'd0, acqstate_sync};
+                   `SEND_STD_USB_RESPONSE
+                end
+                else flashbusycounter <= flashbusycounter+4'd1;
             end
 
             14 : begin // read-register function
@@ -429,125 +429,125 @@ always @ (posedge clk or negedge rstn) begin
                     10: o_tdata <= {27'd0, downsample};
                     11: o_tdata <= {31'd0, highres};
                     12: o_tdata <= {20'd0, upperthresh};
-						  13: o_tdata <= {31'd0, flash_busy};
+                    13: o_tdata <= {31'd0, flash_busy};
                     default:
-								o_tdata <= {32'd0};
+                        o_tdata <= {32'd0};
                 endcase
                 `SEND_STD_USB_RESPONSE
             end
 
-				15 : begin // read from flash
-					case (flashstate)
+            15 : begin // read from flash
+               case (flashstate)
                0 : begin
-						if (!flash_busy) begin
-							flash_addr <= {rx_data[1],rx_data[2],rx_data[3]};
-							if (flashbusycounter==8) begin // wait for flash to not be busy, then start (need extra 2 clk_over_4 cycles according to note in datasheet)
-								flashbusycounter<=0;
-								flash_rden <= 1'b1;
-								flash_read <= 1'b1;
-								flashstate <= 4'd1;
-							end
-							else flashbusycounter <= flashbusycounter+4'd1;
-						end
-					end
-					1 : begin
-						if (flash_busy) begin // once busy, read has started
-							if (flashbusycounter==4) begin // wait for addr to register
-								flashbusycounter<=0;
-								flash_rden <= 1'b0;
-								flash_read <= 1'b0;
-								flashstate <= 4'd2;
-							end
-							else flashbusycounter <= flashbusycounter+4'd1;
-						end
-					end
-					2 : begin
-						if (flash_data_valid) begin // once we got data, we're done
-							flashstate <= 4'd0;
-							o_tdata <= {8'd0, 8'd0, 8'd0, flash_dataout};
-							`SEND_STD_USB_RESPONSE
-						end
-					end
+                  if (!flash_busy) begin
+                     flash_addr <= {rx_data[1],rx_data[2],rx_data[3]};
+                     if (flashbusycounter==8) begin // wait for flash to not be busy, then start (need extra 2 clk_over_4 cycles according to note in datasheet)
+                        flashbusycounter<=0;
+                        flash_rden <= 1'b1;
+                        flash_read <= 1'b1;
+                        flashstate <= 4'd1;
+                     end
+                     else flashbusycounter <= flashbusycounter+4'd1;
+                  end
+               end
+               1 : begin
+                  if (flash_busy) begin // once busy, read has started
+                     if (flashbusycounter==4) begin // wait for addr to register
+                        flashbusycounter<=0;
+                        flash_rden <= 1'b0;
+                        flash_read <= 1'b0;
+                        flashstate <= 4'd2;
+                     end
+                     else flashbusycounter <= flashbusycounter+4'd1;
+                  end
+               end
+               2 : begin
+                  if (flash_data_valid) begin // once we got data, we're done
+                     flashstate <= 4'd0;
+                     o_tdata <= {8'd0, 8'd0, 8'd0, flash_dataout};
+                     `SEND_STD_USB_RESPONSE
+                  end
+               end
                default : flashstate <= 4'd0;
                endcase
-				end
+            end
 
-				16 : begin // write to flash
-					case (flashstate)
+            16 : begin // write to flash
+               case (flashstate)
                0 : begin
-						if (!flash_busy) begin
-							flash_addr <= {rx_data[1],rx_data[2],rx_data[3]};
-							flash_datain <= rx_data[4];
-							if (flashbusycounter==8) begin // wait for flash to not be busy, then start (need extra 2 clk_over_4 cycles according to note in datasheet)
-								flashbusycounter<=0;
-								flashstate <= 4'd1;
-							end
-							else flashbusycounter <= flashbusycounter+4'd1;
-						end
-					end
-					1 : begin
-						if (flashbusycounter==4) begin // wait for data and addr to register
-							flashbusycounter<=0;
-							if (rx_data[5]==100 && rx_data[6]==101 && rx_data[7]==102) begin
-								flash_write <= 1'b1;
-								flashstate <= 4'd2;
-							end
-							else flashstate <= 4'd3;
-						end
-						else flashbusycounter <= flashbusycounter+4'd1;
-					end
-					2 : begin
-						if (flash_busy) begin // once busy
-							if (flashbusycounter==4) begin // wait for write to start
-								flashbusycounter<=0;
-								flash_write <= 1'b0;
-								flashstate <= 4'd3;
-							end
-							else flashbusycounter <= flashbusycounter+4'd1;
-						end
-					end
-					3 : begin // we'll return immediately, future operations will wait for busy to be deasserted
-						flashstate <= 4'd0;
-						o_tdata <= {8'd0, 8'd0, 8'd0, 8'd200};
-						`SEND_STD_USB_RESPONSE
-					end
+                  if (!flash_busy) begin
+                     flash_addr <= {rx_data[1],rx_data[2],rx_data[3]};
+                     flash_datain <= rx_data[4];
+                     if (flashbusycounter==8) begin // wait for flash to not be busy, then start (need extra 2 clk_over_4 cycles according to note in datasheet)
+                        flashbusycounter<=0;
+                        flashstate <= 4'd1;
+                     end
+                     else flashbusycounter <= flashbusycounter+4'd1;
+                  end
+               end
+               1 : begin
+                  if (flashbusycounter==4) begin // wait for data and addr to register
+                     flashbusycounter<=0;
+                     if (rx_data[5]==100 && rx_data[6]==101 && rx_data[7]==102) begin
+                        flash_write <= 1'b1;
+                        flashstate <= 4'd2;
+                     end
+                     else flashstate <= 4'd3;
+                  end
+                  else flashbusycounter <= flashbusycounter+4'd1;
+               end
+               2 : begin
+                  if (flash_busy) begin // once busy
+                     if (flashbusycounter==4) begin // wait for write to start
+                        flashbusycounter<=0;
+                        flash_write <= 1'b0;
+                        flashstate <= 4'd3;
+                     end
+                     else flashbusycounter <= flashbusycounter+4'd1;
+                  end
+               end
+               3 : begin // we'll return immediately, future operations will wait for busy to be deasserted
+                  flashstate <= 4'd0;
+                  o_tdata <= {8'd0, 8'd0, 8'd0, 8'd200};
+                  `SEND_STD_USB_RESPONSE
+               end
                default : flashstate <= 4'd0;
                endcase
-				end
+            end
 
-				17 : begin // erase flash
-					case (flashstate)
+            17 : begin // erase flash
+               case (flashstate)
                0 : begin
-						if (!flash_busy) begin
-							if (flashbusycounter==12) begin // wait for flash to not be busy, then start (need extra 2 clk_over_4 cycles according to note in datasheet)
-								flashbusycounter<=0;
-								if (rx_data[5]==100 && rx_data[6]==101 && rx_data[7]==102) begin
-									flash_bulk_erase <= 1'b1;
-									flashstate <= 4'd1;
-								end
-								else flashstate <= 4'd2;
-							end
-							else flashbusycounter <= flashbusycounter+4'd1;
-						end
-					end
-					1 : begin
-						if (flash_busy) begin // once busy, erase has started
-							if (flashbusycounter==12) begin // wait for erase to start
-								flashbusycounter<=0;
-								flash_bulk_erase <= 1'b0;
-								flashstate <= 4'd2;
-							end
-							else flashbusycounter <= flashbusycounter+4'd1;
-						end
-					end
-					2 : begin // we'll return immediately, future operations will wait for busy to be deasserted
-						flashstate <= 4'd0;
-						o_tdata <= {8'd0, 8'd0, 8'd0, 8'd222};
-						`SEND_STD_USB_RESPONSE
-					end
+                  if (!flash_busy) begin
+                     if (flashbusycounter==12) begin // wait for flash to not be busy, then start (need extra 2 clk_over_4 cycles according to note in datasheet)
+                        flashbusycounter<=0;
+                        if (rx_data[5]==100 && rx_data[6]==101 && rx_data[7]==102) begin
+                           flash_bulk_erase <= 1'b1;
+                           flashstate <= 4'd1;
+                        end
+                        else flashstate <= 4'd2;
+                     end
+                     else flashbusycounter <= flashbusycounter+4'd1;
+                  end
+               end
+               1 : begin
+                  if (flash_busy) begin // once busy, erase has started
+                     if (flashbusycounter==12) begin // wait for erase to start
+                        flashbusycounter<=0;
+                        flash_bulk_erase <= 1'b0;
+                        flashstate <= 4'd2;
+                     end
+                     else flashbusycounter <= flashbusycounter+4'd1;
+                  end
+               end
+               2 : begin // we'll return immediately, future operations will wait for busy to be deasserted
+                  flashstate <= 4'd0;
+                  o_tdata <= {8'd0, 8'd0, 8'd0, 8'd222};
+                  `SEND_STD_USB_RESPONSE
+               end
                default : flashstate <= 4'd0;
                endcase
-				end
+            end
 
             default: // some command we didn't know
             state <= RX;
@@ -577,8 +577,8 @@ always @ (posedge clk or negedge rstn) begin
         TX_DATA2 : begin
             o_tvalid <= 1'b0;
             if (o_tready) begin
-					 channel <= 6'd0;
-					 channel2 <= 6'd0;
+                channel <= 6'd0;
+                channel2 <= 6'd0;
                 state <= TX_DATA3; // wait for data
             end
         end
@@ -587,59 +587,59 @@ always @ (posedge clk or negedge rstn) begin
             if (o_tready) begin
                 o_tvalid <= 1'b1;
                 if (channel==48) begin
-						if (clkstrprob) o_tdata <= {16'hbeef,16'h01}; // marker, clkstr problem
-						else o_tdata <= {16'hbeef,16'h00}; // marker, no problems
-					 end
+                  if (clkstrprob) o_tdata <= {16'hbeef,16'h01}; // marker, clkstr problem
+                  else o_tdata <= {16'hbeef,16'h00}; // marker, no problems
+                end
                 else if (channel==44 || channel==46) begin
-						 numones=0;
-						 numones2=0;
-						 for (i=0; i<10; i++) begin
-							if (channel==44) begin
-							o_tdatatemp[i] = lvdsbitsin[14*(0+i)+13]; //samplestr 0-9
-							o_tdatatemp[i+16] = lvdsbitsin[14*(10+i)+13]; //samplestr 10-19
-							end
-							else begin
-							o_tdatatemp[i] = lvdsbitsin[14*(20+i)+13]; //samplestr 20-29
-							o_tdatatemp[i+16] = lvdsbitsin[14*(30+i)+13]; //samplestr 30-39
-							end
-							if (o_tdatatemp[i]) numones=numones+4'd1;
-							if (o_tdatatemp[i+16]) numones2=numones2+4'd1;
-						 end
-						 for (i=0; i<6; i++) begin
-							o_tdatatemp[i+10] = 0; //padding
-							o_tdatatemp[i+26] = 0; //padding
-						 end
-						 if (numones>1 || numones2>1) clkstrprob<=1'b1; // issue with str
-						 o_tdata <= o_tdatatemp;
-					 end
+                   numones=0;
+                   numones2=0;
+                   for (i=0; i<10; i++) begin
+                     if (channel==44) begin
+                     o_tdatatemp[i] = lvdsbitsin[14*(0+i)+13]; //samplestr 0-9
+                     o_tdatatemp[i+16] = lvdsbitsin[14*(10+i)+13]; //samplestr 10-19
+                     end
+                     else begin
+                     o_tdatatemp[i] = lvdsbitsin[14*(20+i)+13]; //samplestr 20-29
+                     o_tdatatemp[i+16] = lvdsbitsin[14*(30+i)+13]; //samplestr 30-39
+                     end
+                     if (o_tdatatemp[i]) numones=numones+4'd1;
+                     if (o_tdatatemp[i+16]) numones2=numones2+4'd1;
+                   end
+                   for (i=0; i<6; i++) begin
+                     o_tdatatemp[i+10] = 0; //padding
+                     o_tdatatemp[i+26] = 0; //padding
+                   end
+                   if (numones>1 || numones2>1) clkstrprob<=1'b1; // issue with str
+                   o_tdata <= o_tdatatemp;
+                end
                 else if (channel==40 || channel==42) begin
                    for (i=0; i<10; i++) begin
-							if (channel==40) begin
-							o_tdatatemp[i] = lvdsbitsin[14*(0+i)+12]; //sampleclk 0-9
-							o_tdatatemp[i+16] = lvdsbitsin[14*(10+i)+12]; //sampleclk 10-19
-							end
-							else begin
-							o_tdatatemp[i] = lvdsbitsin[14*(20+i)+12]; //sampleclk 20-29
-							o_tdatatemp[i+16] = lvdsbitsin[14*(30+i)+12]; //sampleclk 30-39
-							end
-						 end
-						 for (i=0; i<6; i++) begin
-							o_tdatatemp[i+10] = 0; //padding
-							o_tdatatemp[i+26] = 0; //padding
-						 end
-						 if ( (o_tdatatemp[9:0]!=10'd341 && o_tdatatemp[9:0]!=10'd682) ||
-								(o_tdatatemp[25:16]!=10'd341 && o_tdatatemp[25:16]!=10'd682) ) clkstrprob<=1'b1; // issue with clk
-						 o_tdata <= o_tdatatemp;
-					 end
+                     if (channel==40) begin
+                     o_tdatatemp[i] = lvdsbitsin[14*(0+i)+12]; //sampleclk 0-9
+                     o_tdatatemp[i+16] = lvdsbitsin[14*(10+i)+12]; //sampleclk 10-19
+                     end
+                     else begin
+                     o_tdatatemp[i] = lvdsbitsin[14*(20+i)+12]; //sampleclk 20-29
+                     o_tdatatemp[i+16] = lvdsbitsin[14*(30+i)+12]; //sampleclk 30-39
+                     end
+                   end
+                   for (i=0; i<6; i++) begin
+                     o_tdatatemp[i+10] = 0; //padding
+                     o_tdatatemp[i+26] = 0; //padding
+                   end
+                   if ( (o_tdatatemp[9:0]!=10'd341 && o_tdatatemp[9:0]!=10'd682) ||
+                        (o_tdatatemp[25:16]!=10'd341 && o_tdatatemp[25:16]!=10'd682) ) clkstrprob<=1'b1; // issue with clk
+                   o_tdata <= o_tdatatemp;
+                end
                 else begin // data
-						 if (channeltype[0]==1'b0) begin // single channel mode
-							o_tdata  <= {lvdsbitsin[14*(38-channel) +: 12], 4'd0, lvdsbitsin[14*(39-channel) +: 12], 4'd0};
-						 end
-						 else begin // two channel mode
-							o_tdata  <= {lvdsbitsin[14*(38-channel2) +: 12], 4'd0, lvdsbitsin[14*(39-channel2) +: 12], 4'd0};
-						 end
-						 clkstrprob <= 1'b0; // assume no clkstr problems, will check in next steps
-					 end
+                   if (channeltype[0]==1'b0) begin // single channel mode
+                     o_tdata  <= {lvdsbitsin[14*(38-channel) +: 12], 4'd0, lvdsbitsin[14*(39-channel) +: 12], 4'd0};
+                   end
+                   else begin // two channel mode
+                     o_tdata  <= {lvdsbitsin[14*(38-channel2) +: 12], 4'd0, lvdsbitsin[14*(39-channel2) +: 12], 4'd0};
+                   end
+                   clkstrprob <= 1'b0; // assume no clkstr problems, will check in next steps
+                end
                 channel <= channel + 6'd2;
                 channel2 <= channel2 + 6'd2;
                 state <= TX_DATA4;
@@ -652,9 +652,9 @@ always @ (posedge clk or negedge rstn) begin
                 if (length >= 4) begin
                     length <= length - 16'd4;
 
-						  if (channel==10) channel2 <= 6'd20;
-						  if (channel==20) channel2 <= 6'd10;
-						  if (channel==30) channel2 <= 6'd30;
+                    if (channel==10) channel2 <= 6'd20;
+                    if (channel==20) channel2 <= 6'd10;
+                    if (channel==30) channel2 <= 6'd30;
 
                     if (channel==50) begin
                         channel <= 0;
@@ -666,7 +666,7 @@ always @ (posedge clk or negedge rstn) begin
                 else begin
                     length <= 0;
                     channel <= 0;
-						  channel2 <= 0;
+                    channel2 <= 0;
                     didreadout <= 1'b1; // tell it we have read out this event (could be moved earlier?)
                     state <= RX;
                 end
@@ -706,39 +706,39 @@ end
 
 // sync inputs from other clocks
 always @ (posedge clk) begin
-	acqstate_sync <= acqstate;
-	eventcounter_sync <= eventcounter;
-	ram_address_triggered_sync <= ram_address_triggered;
-	sample_triggered_sync <= sample_triggered;
-	downsamplemergingcounter_triggered_sync <= downsamplemergingcounter_triggered;
-	triggerphase_sync <= triggerphase;
-	boardin_sync <= boardin;
-	for (i=0;i<4;i=i+1) if (overrange[i]) overrange_counter[i] <= overrange_counter[i] + 1;
+   acqstate_sync <= acqstate;
+   eventcounter_sync <= eventcounter;
+   ram_address_triggered_sync <= ram_address_triggered;
+   sample_triggered_sync <= sample_triggered;
+   downsamplemergingcounter_triggered_sync <= downsamplemergingcounter_triggered;
+   triggerphase_sync <= triggerphase;
+   boardin_sync <= boardin;
+   for (i=0;i<4;i=i+1) if (overrange[i]) overrange_counter[i] <= overrange_counter[i] + 1;
 end
 
 // make 12.5 MHz clock, for flash and RGB LEDs
 reg clk_over_4_counter = 0;
 always @ (posedge clk50) begin
-	if (clk_over_4_counter) clk_over_4 <= ~clk_over_4;
-	clk_over_4_counter <= clk_over_4_counter + 1'b1;
+   if (clk_over_4_counter) clk_over_4 <= ~clk_over_4;
+   clk_over_4_counter <= clk_over_4_counter + 1'b1;
 end
 
 // for pll reset, need to run the logic on the crystal directly, not the pll output
 reg [1:0] pllresetstate=0;
 reg pllreset2=0;
 always @ (posedge clk50) begin
-	case (pllresetstate)
+   case (pllresetstate)
     0 : begin
-		if (pllreset2) begin
-			pllreset <= 1'b1;
-			pllresetstate <= 2'd1;
-		end
-	end
-	1 : begin
-		pllreset<=1'b0;
-		if (!pllreset2) pllresetstate <= 2'd0;
-	end
-	endcase
+      if (pllreset2) begin
+         pllreset <= 1'b1;
+         pllresetstate <= 2'd1;
+      end
+   end
+   1 : begin
+      pllreset<=1'b0;
+      if (!pllreset2) pllresetstate <= 2'd0;
+   end
+   endcase
 end
 
 assign flash_reset = ~rstn; // active high flash controller reset signal

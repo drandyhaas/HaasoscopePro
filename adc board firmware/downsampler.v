@@ -2,92 +2,92 @@
 // also does downsampling
 module downsampler
 (
-	input wire clklvds, // clk1, runs at LVDS bit rate (ADC clk input rate) / 2
-	input wire [139:0] lvds1bits, lvds2bits, lvds3bits, lvds4bits,// rx_in[0] drives data to rx_out[(J-1)..0], rx_in[1] drives data to the next J number of bits on rx_out
-	output reg [559:0] lvdsbitsout, //output bits to fifo
-	
-	input integer		downsamplecounter,
-	output reg signed [11:0] samplevalue[40],
-	
-	// synced inputs from other clocks
-	input reg [7:0]	channeltype, 
-	input reg [7:0]	downsamplemerging,
-	input reg			highres, 
-	input reg [4:0] 	downsample
+   input wire clklvds, // clk1, runs at LVDS bit rate (ADC clk input rate) / 2
+   input wire [139:0] lvds1bits, lvds2bits, lvds3bits, lvds4bits,// rx_in[0] drives data to rx_out[(J-1)..0], rx_in[1] drives data to the next J number of bits on rx_out
+   output reg [559:0] lvdsbitsout, //output bits to fifo
+   
+   input integer     downsamplecounter,
+   output reg signed [11:0] samplevalue[40],
+   
+   // synced inputs from other clocks
+   input reg [7:0]   channeltype, 
+   input reg [7:0]   downsamplemerging,
+   input reg         highres, 
+   input reg [4:0]   downsample
 );
 
 // variables in clklvds domain, writing into the RAM buffer
 reg signed [11:0] samplevalue2[40];
 reg signed [11:0] samplevaluereg[40];
 reg signed [5+11:0] highressamplevalue[20];
-reg signed [47:0]	highressamplevalueavg0 = 0, highressamplevalueavgtemp0 = 0;
-reg signed [47:0]	highressamplevalueavg1 = 0, highressamplevalueavgtemp1 = 0;
-reg [1:0] 	sampleclkstr[40];
+reg signed [47:0] highressamplevalueavg0 = 0, highressamplevalueavgtemp0 = 0;
+reg signed [47:0] highressamplevalueavg1 = 0, highressamplevalueavgtemp1 = 0;
+reg [1:0]   sampleclkstr[40];
 
 // synced inputs from other clocks
-reg [7:0]	channeltype_sync;
-reg [7:0]	downsamplemerging_sync;
-reg			highres_sync;
-reg [4:0] 	downsample_sync;
+reg [7:0]   channeltype_sync;
+reg [7:0]   downsamplemerging_sync;
+reg         highres_sync;
+reg [4:0]   downsample_sync;
 
 // this is all for downsample merging, since 40 samples come in each clklvds tick
 integer i, j;
 always @ (posedge clklvds) begin
 
-	channeltype_sync       <= channeltype;
-	downsamplemerging_sync <= downsamplemerging;
-	highres_sync           <= highres;
-	downsample_sync        <= downsample;
+   channeltype_sync       <= channeltype;
+   downsamplemerging_sync <= downsamplemerging;
+   highres_sync           <= highres;
+   downsample_sync        <= downsample;
 
-	for (i=0;i<10;i=i+1) begin
-		samplevaluereg[0 +i]  <= {lvds1bits[110+i],lvds1bits[100+i],lvds1bits[90+i],lvds1bits[80+i],lvds1bits[70+i],lvds1bits[60+i],lvds1bits[50+i],lvds1bits[40+i],lvds1bits[30+i],lvds1bits[20+i],lvds1bits[10+i],lvds1bits[0+i]};
-		samplevaluereg[10+i]  <= {lvds2bits[110+i],lvds2bits[100+i],lvds2bits[90+i],lvds2bits[80+i],lvds2bits[70+i],lvds2bits[60+i],lvds2bits[50+i],lvds2bits[40+i],lvds2bits[30+i],lvds2bits[20+i],lvds2bits[10+i],lvds2bits[0+i]};
-		samplevaluereg[20+i]  <= {lvds3bits[110+i],lvds3bits[100+i],lvds3bits[90+i],lvds3bits[80+i],lvds3bits[70+i],lvds3bits[60+i],lvds3bits[50+i],lvds3bits[40+i],lvds3bits[30+i],lvds3bits[20+i],lvds3bits[10+i],lvds3bits[0+i]};
-		samplevaluereg[30+i]  <= {lvds4bits[110+i],lvds4bits[100+i],lvds4bits[90+i],lvds4bits[80+i],lvds4bits[70+i],lvds4bits[60+i],lvds4bits[50+i],lvds4bits[40+i],lvds4bits[30+i],lvds4bits[20+i],lvds4bits[10+i],lvds4bits[0+i]};
+   for (i=0;i<10;i=i+1) begin
+      samplevaluereg[0 +i]  <= {lvds1bits[110+i],lvds1bits[100+i],lvds1bits[90+i],lvds1bits[80+i],lvds1bits[70+i],lvds1bits[60+i],lvds1bits[50+i],lvds1bits[40+i],lvds1bits[30+i],lvds1bits[20+i],lvds1bits[10+i],lvds1bits[0+i]};
+      samplevaluereg[10+i]  <= {lvds2bits[110+i],lvds2bits[100+i],lvds2bits[90+i],lvds2bits[80+i],lvds2bits[70+i],lvds2bits[60+i],lvds2bits[50+i],lvds2bits[40+i],lvds2bits[30+i],lvds2bits[20+i],lvds2bits[10+i],lvds2bits[0+i]};
+      samplevaluereg[20+i]  <= {lvds3bits[110+i],lvds3bits[100+i],lvds3bits[90+i],lvds3bits[80+i],lvds3bits[70+i],lvds3bits[60+i],lvds3bits[50+i],lvds3bits[40+i],lvds3bits[30+i],lvds3bits[20+i],lvds3bits[10+i],lvds3bits[0+i]};
+      samplevaluereg[30+i]  <= {lvds4bits[110+i],lvds4bits[100+i],lvds4bits[90+i],lvds4bits[80+i],lvds4bits[70+i],lvds4bits[60+i],lvds4bits[50+i],lvds4bits[40+i],lvds4bits[30+i],lvds4bits[20+i],lvds4bits[10+i],lvds4bits[0+i]};
 
-		if (channeltype_sync[1] == 1'b0) begin // normal, not swapped
-			// don't invert input 0
-			samplevalue[0 +i] <= samplevaluereg[0 +i];
-			samplevalue[20+i] <= samplevaluereg[20+i];
-			if (channeltype_sync[0] == 1'b0) begin // single, also don't invert these on input 0
-				samplevalue[10+i] <= samplevaluereg[10+i];
-				samplevalue[30+i] <= samplevaluereg[30+i];
-			end
-			else begin // dual, inverted on input 1
-				samplevalue[10+i] <= (samplevaluereg[10+i]== -12'd2048) ? 12'd2047: -samplevaluereg[10+i]; // careful when inverting - there is no inverse of -2^12!
-				samplevalue[30+i] <= (samplevaluereg[30+i]== -12'd2048) ? 12'd2047: -samplevaluereg[30+i];
-			end
-		end
-		else begin // doing oversampling, swapped
-			// invert input 1
-			samplevalue[0 +i] <= (samplevaluereg[0 +i]== -12'd2048) ? 12'd2047: -samplevaluereg[0 +i];
-			samplevalue[20+i] <= (samplevaluereg[20+i]== -12'd2048) ? 12'd2047: -samplevaluereg[20+i];
-			// always in single mode while oversampling, also invert these on input 1
-			samplevalue[10+i] <= (samplevaluereg[10+i]== -12'd2048) ? 12'd2047: -samplevaluereg[10+i];
-			samplevalue[30+i] <= (samplevaluereg[30+i]== -12'd2048) ? 12'd2047: -samplevaluereg[30+i];
-		end
+      if (channeltype_sync[1] == 1'b0) begin // normal, not swapped
+         // don't invert input 0
+         samplevalue[0 +i] <= samplevaluereg[0 +i];
+         samplevalue[20+i] <= samplevaluereg[20+i];
+         if (channeltype_sync[0] == 1'b0) begin // single, also don't invert these on input 0
+            samplevalue[10+i] <= samplevaluereg[10+i];
+            samplevalue[30+i] <= samplevaluereg[30+i];
+         end
+         else begin // dual, inverted on input 1
+            samplevalue[10+i] <= (samplevaluereg[10+i]== -12'd2048) ? 12'd2047: -samplevaluereg[10+i]; // careful when inverting - there is no inverse of -2^12!
+            samplevalue[30+i] <= (samplevaluereg[30+i]== -12'd2048) ? 12'd2047: -samplevaluereg[30+i];
+         end
+      end
+      else begin // doing oversampling, swapped
+         // invert input 1
+         samplevalue[0 +i] <= (samplevaluereg[0 +i]== -12'd2048) ? 12'd2047: -samplevaluereg[0 +i];
+         samplevalue[20+i] <= (samplevaluereg[20+i]== -12'd2048) ? 12'd2047: -samplevaluereg[20+i];
+         // always in single mode while oversampling, also invert these on input 1
+         samplevalue[10+i] <= (samplevaluereg[10+i]== -12'd2048) ? 12'd2047: -samplevaluereg[10+i];
+         samplevalue[30+i] <= (samplevaluereg[30+i]== -12'd2048) ? 12'd2047: -samplevaluereg[30+i];
+      end
 
-		sampleclkstr[i]    <= {lvds1bits[130+i],lvds1bits[120+i]};
-		sampleclkstr[10+i] <= {lvds2bits[130+i],lvds2bits[120+i]};
-		sampleclkstr[20+i] <= {lvds3bits[130+i],lvds3bits[120+i]};
-		sampleclkstr[30+i] <= {lvds4bits[130+i],lvds4bits[120+i]};
-	end
+      sampleclkstr[i]    <= {lvds1bits[130+i],lvds1bits[120+i]};
+      sampleclkstr[10+i] <= {lvds2bits[130+i],lvds2bits[120+i]};
+      sampleclkstr[20+i] <= {lvds3bits[130+i],lvds3bits[120+i]};
+      sampleclkstr[30+i] <= {lvds4bits[130+i],lvds4bits[120+i]};
+   end
 
-	for (i=0;i<40;i=i+1) begin
-		lvdsbitsout[14*i+12 +:2] <= sampleclkstr[i]; // always use the same clk and str bits
-		samplevalue2[i] <= samplevalue[i]; // pipeline just so the delay is the same for this and higher downsample rates - also helps with timing closure
-	end
+   for (i=0;i<40;i=i+1) begin
+      lvdsbitsout[14*i+12 +:2] <= sampleclkstr[i]; // always use the same clk and str bits
+      samplevalue2[i] <= samplevalue[i]; // pipeline just so the delay is the same for this and higher downsample rates - also helps with timing closure
+   end
 
-	if (channeltype_sync[0]==1'b0) begin // single channel mode
+   if (channeltype_sync[0]==1'b0) begin // single channel mode
 
-			if (downsamplemerging_sync==1) begin // this is highest rate
-				for (i=0;i<10;i=i+1) begin // straighten the samples out
-					lvdsbitsout[14*(i*4+0) +:12] <= samplevalue2[30+1*i];
-					lvdsbitsout[14*(i*4+1) +:12] <= samplevalue2[20+1*i];
-					lvdsbitsout[14*(i*4+2) +:12] <= samplevalue2[10+1*i];
-					lvdsbitsout[14*(i*4+3) +:12] <= samplevalue2[ 0+1*i];
-				end
-			end
+         if (downsamplemerging_sync==1) begin // this is highest rate
+            for (i=0;i<10;i=i+1) begin // straighten the samples out
+               lvdsbitsout[14*(i*4+0) +:12] <= samplevalue2[30+1*i];
+               lvdsbitsout[14*(i*4+1) +:12] <= samplevalue2[20+1*i];
+               lvdsbitsout[14*(i*4+2) +:12] <= samplevalue2[10+1*i];
+               lvdsbitsout[14*(i*4+3) +:12] <= samplevalue2[ 0+1*i];
+            end
+         end
 
         if (downsamplemerging_sync==2) begin
             for (i=0;i<10;i=i+1) begin
@@ -178,21 +178,21 @@ always @ (posedge clklvds) begin
                 end
             end
         end
-	end
-	else begin // two channel mode
+   end
+   else begin // two channel mode
 
-			if (downsamplemerging_sync==1) begin // this is highest rate
-				for (i=0;i<5;i=i+1) begin // straighten the samples out
-					lvdsbitsout[14*(i*2+0 ) +:12] <= samplevalue2[20+1*i];
-					lvdsbitsout[14*(i*2+1 ) +:12] <= samplevalue2[ 0+1*i];
-					lvdsbitsout[14*(i*2+10) +:12] <= samplevalue2[30+1*i];
-					lvdsbitsout[14*(i*2+11) +:12] <= samplevalue2[10+1*i];
-					lvdsbitsout[14*(i*2+20) +:12] <= samplevalue2[25+1*i];
-					lvdsbitsout[14*(i*2+21) +:12] <= samplevalue2[ 5+1*i];
-					lvdsbitsout[14*(i*2+30) +:12] <= samplevalue2[35+1*i];
-					lvdsbitsout[14*(i*2+31) +:12] <= samplevalue2[15+1*i];
-				end
-			end
+         if (downsamplemerging_sync==1) begin // this is highest rate
+            for (i=0;i<5;i=i+1) begin // straighten the samples out
+               lvdsbitsout[14*(i*2+0 ) +:12] <= samplevalue2[20+1*i];
+               lvdsbitsout[14*(i*2+1 ) +:12] <= samplevalue2[ 0+1*i];
+               lvdsbitsout[14*(i*2+10) +:12] <= samplevalue2[30+1*i];
+               lvdsbitsout[14*(i*2+11) +:12] <= samplevalue2[10+1*i];
+               lvdsbitsout[14*(i*2+20) +:12] <= samplevalue2[25+1*i];
+               lvdsbitsout[14*(i*2+21) +:12] <= samplevalue2[ 5+1*i];
+               lvdsbitsout[14*(i*2+30) +:12] <= samplevalue2[35+1*i];
+               lvdsbitsout[14*(i*2+31) +:12] <= samplevalue2[15+1*i];
+            end
+         end
 
         if (downsamplemerging_sync==2) begin
             for (i=0;i<10;i=i+1) begin
@@ -302,7 +302,7 @@ always @ (posedge clklvds) begin
                 lvdsbitsout[14*(30) +:12] <= lvdsbitsout[14*(19) +:12];
             end
         end
-	end
+   end
 
 end
 
