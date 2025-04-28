@@ -32,6 +32,21 @@ set_false_path -from [get_registers command_processor:inst1|*] -to [get_register
 set_false_path -from [get_registers fpga_top_ft232h_tx_mass*rptr_grey*] -to [get_registers fpga_top_ft232h_tx_mass*rptr_grey*]
 set_false_path -from [get_registers fpga_top_ft232h_tx_mass*wptr_grey*] -to [get_registers fpga_top_ft232h_tx_mass*wptr_grey*]
 
+## Slow paths we don't care about
+set_false_path -from [get_registers command_processor:inst1|lowerthresh*]
+set_false_path -from [get_registers command_processor:inst1|upperthresh*]
+set_false_path -from [get_registers command_processor:inst1|lengthtotake*]
+set_false_path -from [get_registers command_processor:inst1|prelengthtotake*]
+set_false_path -from [get_registers command_processor:inst1|triggertype*]
+set_false_path -from [get_registers command_processor:inst1|triggerToT*]
+set_false_path -from [get_registers command_processor:inst1|triggerchan*]
+set_false_path -from [get_registers command_processor:inst1|dorolling*]
+set_false_path -from [get_registers command_processor:inst1|auxoutselector*]
+set_false_path -from [get_registers command_processor:inst1|channeltype*]
+set_false_path -from [get_registers command_processor:inst1|downsamplemerging*]
+set_false_path -from [get_registers command_processor:inst1|highres*]
+set_false_path -from [get_registers command_processor:inst1|downsample*]
+
 ## IO constraints
 set_max_delay -to [get_ports clk*] 10
 set_min_delay -to [get_ports clk*] -3

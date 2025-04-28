@@ -61,7 +61,7 @@ module command_processor (
 	input 				flash_data_valid,
 	input [7:0] 		flash_dataout,
 	
-	// to turn control LVDS clk out
+	// to turn control LVDS clk off
 	output reg clkout_ena=1,
 	
 	// to RGB LEDs
