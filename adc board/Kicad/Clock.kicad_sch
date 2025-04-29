@@ -1,7 +1,7 @@
 (kicad_sch
-	(version 20231120)
+	(version 20250114)
 	(generator "eeschema")
-	(generator_version "8.0")
+	(generator_version "9.0")
 	(uuid "7db200df-f3cb-4c07-8527-81abb21c32e8")
 	(paper "A4")
 	(lib_symbols
@@ -107,6 +107,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:ADF4350BCPZ"
 			(exclude_from_sim no)
@@ -170,18 +171,6 @@
 			(symbol "ADF4350BCPZ_1_0"
 				(polyline
 					(pts
-						(xy -30.48 -30.48) (xy 30.48 -30.48)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
 						(xy -30.48 30.48) (xy -30.48 -30.48)
 					)
 					(stroke
@@ -194,7 +183,7 @@
 				)
 				(polyline
 					(pts
-						(xy 30.48 -30.48) (xy 30.48 30.48)
+						(xy -30.48 -30.48) (xy 30.48 -30.48)
 					)
 					(stroke
 						(width 0.254)
@@ -207,6 +196,18 @@
 				(polyline
 					(pts
 						(xy 30.48 30.48) (xy -30.48 30.48)
+					)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 30.48 -30.48) (xy 30.48 30.48)
 					)
 					(stroke
 						(width 0.254)
@@ -234,186 +235,6 @@
 						)
 					)
 				)
-				(pin power_in line
-					(at -12.7 -35.56 90)
-					(length 5.08)
-					(name "AVDD"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "10"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at -7.62 -35.56 90)
-					(length 5.08)
-					(name "AGNDVCO@11"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "11"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at -2.54 -35.56 90)
-					(length 5.08)
-					(name "RFOUTA+"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "12"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at 2.54 -35.56 90)
-					(length 5.08)
-					(name "RFOUTA-"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "13"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at 7.62 -35.56 90)
-					(length 5.08)
-					(name "RFOUTB+"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "14"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at 12.7 -35.56 90)
-					(length 5.08)
-					(name "RFOUTB-"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "15"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at 17.78 -35.56 90)
-					(length 5.08)
-					(name "VVCO@16"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "16"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at 35.56 -17.78 180)
-					(length 5.08)
-					(name "VVCO@17"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "17"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at 35.56 -12.7 180)
-					(length 5.08)
-					(name "AGNDVCO@18"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "18"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at 35.56 -7.62 180)
-					(length 5.08)
-					(name "TEMP"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "19"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
 				(pin input line
 					(at -35.56 12.7 0)
 					(length 5.08)
@@ -433,186 +254,6 @@
 					)
 				)
 				(pin input line
-					(at 35.56 -2.54 180)
-					(length 5.08)
-					(name "VTUNE"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "20"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at 35.56 2.54 180)
-					(length 5.08)
-					(name "AGNDVCO@21"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "21"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input line
-					(at 35.56 7.62 180)
-					(length 5.08)
-					(name "RSET"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "22"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at 35.56 12.7 180)
-					(length 5.08)
-					(name "VCOM"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "23"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at 35.56 17.78 180)
-					(length 5.08)
-					(name "VREF"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "24"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at 17.78 35.56 270)
-					(length 5.08)
-					(name "LD"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "25"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input line
-					(at 12.7 35.56 270)
-					(length 5.08)
-					(name "PDBRF"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "26"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at 7.62 35.56 270)
-					(length 5.08)
-					(name "DGND"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "27"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at 2.54 35.56 270)
-					(length 5.08)
-					(name "DVDD"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "28"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input line
-					(at -2.54 35.56 270)
-					(length 5.08)
-					(name "REFIN"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "29"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input line
 					(at -35.56 7.62 0)
 					(length 5.08)
 					(name "LE"
@@ -623,60 +264,6 @@
 						)
 					)
 					(number "3"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin output line
-					(at -7.62 35.56 270)
-					(length 5.08)
-					(name "MUXOUT"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "30"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at -12.7 35.56 270)
-					(length 5.08)
-					(name "SDGND"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "31"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin power_in line
-					(at -17.78 35.56 270)
-					(length 5.08)
-					(name "SDVDD"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "32"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -775,6 +362,24 @@
 					)
 				)
 				(pin power_in line
+					(at -17.78 35.56 270)
+					(length 5.08)
+					(name "SDVDD"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "32"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
 					(at -17.78 -35.56 90)
 					(length 5.08)
 					(name "AGND"
@@ -785,6 +390,402 @@
 						)
 					)
 					(number "9"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at -12.7 35.56 270)
+					(length 5.08)
+					(name "SDGND"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "31"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at -12.7 -35.56 90)
+					(length 5.08)
+					(name "AVDD"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "10"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin output line
+					(at -7.62 35.56 270)
+					(length 5.08)
+					(name "MUXOUT"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "30"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at -7.62 -35.56 90)
+					(length 5.08)
+					(name "AGNDVCO@11"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "11"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at -2.54 35.56 270)
+					(length 5.08)
+					(name "REFIN"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "29"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin output line
+					(at -2.54 -35.56 90)
+					(length 5.08)
+					(name "RFOUTA+"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "12"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 2.54 35.56 270)
+					(length 5.08)
+					(name "DVDD"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "28"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin output line
+					(at 2.54 -35.56 90)
+					(length 5.08)
+					(name "RFOUTA-"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "13"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 7.62 35.56 270)
+					(length 5.08)
+					(name "DGND"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "27"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin output line
+					(at 7.62 -35.56 90)
+					(length 5.08)
+					(name "RFOUTB+"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "14"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at 12.7 35.56 270)
+					(length 5.08)
+					(name "PDBRF"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "26"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin output line
+					(at 12.7 -35.56 90)
+					(length 5.08)
+					(name "RFOUTB-"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "15"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin output line
+					(at 17.78 35.56 270)
+					(length 5.08)
+					(name "LD"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "25"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 17.78 -35.56 90)
+					(length 5.08)
+					(name "VVCO@16"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "16"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin output line
+					(at 35.56 17.78 180)
+					(length 5.08)
+					(name "VREF"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "24"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin output line
+					(at 35.56 12.7 180)
+					(length 5.08)
+					(name "VCOM"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "23"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at 35.56 7.62 180)
+					(length 5.08)
+					(name "RSET"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "22"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 35.56 2.54 180)
+					(length 5.08)
+					(name "AGNDVCO@21"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "21"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at 35.56 -2.54 180)
+					(length 5.08)
+					(name "VTUNE"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "20"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin output line
+					(at 35.56 -7.62 180)
+					(length 5.08)
+					(name "TEMP"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "19"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 35.56 -12.7 180)
+					(length 5.08)
+					(name "AGNDVCO@18"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "18"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 35.56 -17.78 180)
+					(length 5.08)
+					(name "VVCO@17"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "17"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -973,6 +974,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:CAPACITOR_NP_0402"
 			(exclude_from_sim no)
@@ -1033,17 +1035,6 @@
 			)
 			(symbol "CAPACITOR_NP_0402_1_0"
 				(rectangle
-					(start -1.778 -1.27)
-					(end 1.778 -0.508)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(rectangle
 					(start -1.778 0.508)
 					(end 1.778 1.27)
 					(stroke
@@ -1054,9 +1045,20 @@
 						(type outline)
 					)
 				)
+				(rectangle
+					(start -1.778 -1.27)
+					(end 1.778 -0.508)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
 				(polyline
 					(pts
-						(xy 0 -2.54) (xy 0 -1.016)
+						(xy 0 2.54) (xy 0 1.016)
 					)
 					(stroke
 						(width 0.1524)
@@ -1068,7 +1070,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 2.54) (xy 0 1.016)
+						(xy 0 -2.54) (xy 0 -1.016)
 					)
 					(stroke
 						(width 0.1524)
@@ -1115,6 +1117,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:MF_Passives_RESISTOR_0402"
 			(exclude_from_sim no)
@@ -1176,19 +1179,7 @@
 			(symbol "MF_Passives_RESISTOR_0402_1_0"
 				(polyline
 					(pts
-						(xy -1.016 -2.286) (xy 0 -2.54)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.016 -1.016) (xy 1.016 -1.651)
+						(xy -1.016 1.524) (xy 1.016 0.889)
 					)
 					(stroke
 						(width 0.1524)
@@ -1212,7 +1203,19 @@
 				)
 				(polyline
 					(pts
-						(xy -1.016 1.524) (xy 1.016 0.889)
+						(xy -1.016 -1.016) (xy 1.016 -1.651)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.016 -2.286) (xy 0 -2.54)
 					)
 					(stroke
 						(width 0.1524)
@@ -1236,19 +1239,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.016 -1.651) (xy -1.016 -2.286)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.016 -0.381) (xy -1.016 -1.016)
+						(xy 1.016 2.159) (xy -1.016 1.524)
 					)
 					(stroke
 						(width 0.1524)
@@ -1272,7 +1263,19 @@
 				)
 				(polyline
 					(pts
-						(xy 1.016 2.159) (xy -1.016 1.524)
+						(xy 1.016 -0.381) (xy -1.016 -1.016)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.016 -1.651) (xy -1.016 -2.286)
 					)
 					(stroke
 						(width 0.1524)
@@ -1319,6 +1322,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:supply1_GND"
 			(power)
@@ -1410,7 +1414,63 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
+	)
+	(text "Status outputs to FPGA"
+		(exclude_from_sim no)
+		(at 195.58 22.86 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "38819cb7-d43c-44e1-807a-e9cddabd20b4")
+	)
+	(text "50 MHz input clock\nfrom FPGA"
+		(exclude_from_sim no)
+		(at 63.5 30.48 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "a80fa634-0f36-4a93-968f-16130154935e")
+	)
+	(text "1.6 GHz differential\noutput clock to ADC"
+		(exclude_from_sim no)
+		(at 236.22 175.26 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "ad8a792b-cb48-4ed2-aa11-e799d7b4aa75")
+	)
+	(text "SPI from FPGA"
+		(exclude_from_sim no)
+		(at 40.64 66.04 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "b9ffe216-9d79-4a25-b9a7-034df7d836fa")
+	)
+	(text "Filter for PLL bandwidth"
+		(exclude_from_sim no)
+		(at 40.64 124.46 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "eded1ae4-fec5-42e7-9c3d-5d1a5dcc355e")
 	)
 	(junction
 		(at 58.42 129.54)
@@ -2294,64 +2354,8 @@
 		)
 		(uuid "fb678fb0-c43d-45ff-9797-31d8f99261df")
 	)
-	(text "Status outputs to FPGA"
-		(exclude_from_sim no)
-		(at 195.58 22.86 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "38819cb7-d43c-44e1-807a-e9cddabd20b4")
-	)
-	(text "50 MHz input clock\nfrom FPGA"
-		(exclude_from_sim no)
-		(at 63.5 30.48 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "a80fa634-0f36-4a93-968f-16130154935e")
-	)
-	(text "1.6 GHz differential\noutput clock to ADC"
-		(exclude_from_sim no)
-		(at 236.22 175.26 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "ad8a792b-cb48-4ed2-aa11-e799d7b4aa75")
-	)
-	(text "SPI from FPGA"
-		(exclude_from_sim no)
-		(at 40.64 66.04 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "b9ffe216-9d79-4a25-b9a7-034df7d836fa")
-	)
-	(text "Filter for PLL bandwidth"
-		(exclude_from_sim no)
-		(at 40.64 124.46 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "eded1ae4-fec5-42e7-9c3d-5d1a5dcc355e")
-	)
 	(label "VTUNE"
 		(at 104.14 129.54 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2362,7 +2366,6 @@
 	)
 	(label "REF_CLK"
 		(at 154.94 45.72 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2373,7 +2376,6 @@
 	)
 	(label "VOUT"
 		(at 190.5 152.4 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2384,7 +2386,6 @@
 	)
 	(label "CPOUT"
 		(at 40.64 129.54 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2395,7 +2396,6 @@
 	)
 	(label "REF_CLK"
 		(at 127 22.86 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2406,7 +2406,6 @@
 	)
 	(label "RFOUTA_N"
 		(at 190.5 170.18 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2417,7 +2416,6 @@
 	)
 	(label "RFOUTA_P"
 		(at 190.5 180.34 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2428,7 +2426,6 @@
 	)
 	(label "ADFCE"
 		(at 93.98 88.9 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2439,7 +2436,6 @@
 	)
 	(label "CPOUT"
 		(at 111.76 104.14 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2450,7 +2446,6 @@
 	)
 	(label "VTUNE"
 		(at 198.12 93.98 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)

@@ -1,7 +1,7 @@
 (kicad_sch
-	(version 20231120)
+	(version 20250114)
 	(generator "eeschema")
-	(generator_version "8.0")
+	(generator_version "9.0")
 	(uuid "9c8fdd77-5b9a-4717-85ef-b78e1980cf94")
 	(paper "User" 362.864 269.443)
 	(lib_symbols
@@ -65,17 +65,6 @@
 			)
 			(symbol "CAPACITOR_0402_N_1_0"
 				(rectangle
-					(start -2.032 -2.032)
-					(end 2.032 -1.524)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(rectangle
 					(start -2.032 -1.016)
 					(end 2.032 -0.508)
 					(stroke
@@ -86,9 +75,20 @@
 						(type outline)
 					)
 				)
+				(rectangle
+					(start -2.032 -2.032)
+					(end 2.032 -1.524)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
 				(polyline
 					(pts
-						(xy 0 -2.54) (xy 0 -2.032)
+						(xy 0 0) (xy 0 -0.508)
 					)
 					(stroke
 						(width 0.1524)
@@ -100,7 +100,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 0) (xy 0 -0.508)
+						(xy 0 -2.54) (xy 0 -2.032)
 					)
 					(stroke
 						(width 0.1524)
@@ -147,6 +147,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:CAPACITOR_0805_N"
 			(exclude_from_sim no)
@@ -208,17 +209,6 @@
 			)
 			(symbol "CAPACITOR_0805_N_1_0"
 				(rectangle
-					(start -2.032 -2.032)
-					(end 2.032 -1.524)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(rectangle
 					(start -2.032 -1.016)
 					(end 2.032 -0.508)
 					(stroke
@@ -229,9 +219,20 @@
 						(type outline)
 					)
 				)
+				(rectangle
+					(start -2.032 -2.032)
+					(end 2.032 -1.524)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
 				(polyline
 					(pts
-						(xy 0 -2.54) (xy 0 -2.032)
+						(xy 0 0) (xy 0 -0.508)
 					)
 					(stroke
 						(width 0.1524)
@@ -243,7 +244,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 0) (xy 0 -0.508)
+						(xy 0 -2.54) (xy 0 -2.032)
 					)
 					(stroke
 						(width 0.1524)
@@ -290,6 +291,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:GND"
 			(power)
@@ -381,6 +383,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:NFM31PC276B0J3L"
 			(exclude_from_sim no)
@@ -422,7 +425,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Murata NFM31PC Series, EMI Filter, 6.3 V dc, 6A 1206/3216 SMD, Flat Contact Termination, 3.2 x 1.6 x 1.3mm\n\nSource: https://psearch.en.murata.com/capacitor/product/NFM31PC276B0J3#.html  Datasheet "
+			(property "Description" "Murata NFM31PC Series, EMI Filter, 6.3 V dc, 6A 1206/3216 SMD, Flat Contact Termination, 3.2 x 1.6 x 1.3mm\n\nSource: https://psearch.en.murata.com/capacitor/product/NFM31PC276B0J3#.html  Datasheet"
 				(at 0 0 0)
 				(effects
 					(font
@@ -507,6 +510,24 @@
 					)
 				)
 				(pin bidirectional line
+					(at 12.7 17.78 270)
+					(length 5.08)
+					(name "GND_2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
 					(at 12.7 -17.78 90)
 					(length 5.08)
 					(name "GND_1"
@@ -542,25 +563,8 @@
 						)
 					)
 				)
-				(pin bidirectional line
-					(at 12.7 17.78 270)
-					(length 5.08)
-					(name "GND_2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "4"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:RES-0402"
 			(exclude_from_sim no)
@@ -717,6 +721,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:supply1_GND"
 			(power)
@@ -808,7 +813,74 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
+	)
+	(text "ADC power decoupling"
+		(exclude_from_sim no)
+		(at 109.22 33.02 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "2c2bcd71-898b-4627-b0aa-80c3ef7e4170")
+	)
+	(text "FPGA power decoupling"
+		(exclude_from_sim no)
+		(at 226.06 109.22 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "320240ea-800a-471c-8c40-1c78eb34488c")
+	)
+	(text "These transfer power to actual FPGA voltage inputs"
+		(exclude_from_sim no)
+		(at 226.06 43.18 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "86a792f8-563c-4a58-abb2-c8733e97f8e7")
+	)
+	(text "FPGA banks 1-7, for LVDS, and some other IO"
+		(exclude_from_sim no)
+		(at 276.86 81.28 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "c763a9c3-10e6-440b-be42-d8b9f6f3c4f5")
+	)
+	(text "ADC power filters, as recommended in datasheet"
+		(exclude_from_sim no)
+		(at 33.02 20.32 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "e7797c4a-2502-49e8-94f6-cbd0812c42cb")
+	)
+	(text "FPGA bank 8, for talking to FH232H, and some other IO"
+		(exclude_from_sim no)
+		(at 276.86 88.9 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "eb2721aa-ee22-4d97-9ea6-a4d696ff8b79")
 	)
 	(junction
 		(at 307.34 127)
@@ -2265,72 +2337,6 @@
 			(type solid)
 		)
 		(uuid "fdcd4fa7-c36b-42bd-82c6-6d682f7d613e")
-	)
-	(text "ADC power decoupling"
-		(exclude_from_sim no)
-		(at 109.22 33.02 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "2c2bcd71-898b-4627-b0aa-80c3ef7e4170")
-	)
-	(text "FPGA power decoupling"
-		(exclude_from_sim no)
-		(at 226.06 109.22 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "320240ea-800a-471c-8c40-1c78eb34488c")
-	)
-	(text "These transfer power to actual FPGA voltage inputs"
-		(exclude_from_sim no)
-		(at 226.06 43.18 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "86a792f8-563c-4a58-abb2-c8733e97f8e7")
-	)
-	(text "FPGA banks 1-7, for LVDS, and some other IO"
-		(exclude_from_sim no)
-		(at 276.86 81.28 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "c763a9c3-10e6-440b-be42-d8b9f6f3c4f5")
-	)
-	(text "ADC power filters, as recommended in datasheet"
-		(exclude_from_sim no)
-		(at 33.02 20.32 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "e7797c4a-2502-49e8-94f6-cbd0812c42cb")
-	)
-	(text "FPGA bank 8, for talking to FH232H, and some other IO"
-		(exclude_from_sim no)
-		(at 276.86 88.9 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "eb2721aa-ee22-4d97-9ea6-a4d696ff8b79")
 	)
 	(global_label "VA19"
 		(shape bidirectional)

@@ -1,7 +1,7 @@
 (kicad_sch
-	(version 20231120)
+	(version 20250114)
 	(generator "eeschema")
-	(generator_version "8.0")
+	(generator_version "9.0")
 	(uuid "add22c83-23c4-4702-8178-940d38debc94")
 	(paper "User" 344.602 251.638)
 	(lib_symbols
@@ -65,17 +65,6 @@
 			)
 			(symbol "CAPACITOR_0402_N_1_0"
 				(rectangle
-					(start -2.032 -2.032)
-					(end 2.032 -1.524)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(rectangle
 					(start -2.032 -1.016)
 					(end 2.032 -0.508)
 					(stroke
@@ -86,9 +75,20 @@
 						(type outline)
 					)
 				)
+				(rectangle
+					(start -2.032 -2.032)
+					(end 2.032 -1.524)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
 				(polyline
 					(pts
-						(xy 0 -2.54) (xy 0 -2.032)
+						(xy 0 0) (xy 0 -0.508)
 					)
 					(stroke
 						(width 0.1524)
@@ -100,7 +100,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 0) (xy 0 -0.508)
+						(xy 0 -2.54) (xy 0 -2.032)
 					)
 					(stroke
 						(width 0.1524)
@@ -147,6 +147,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:CAPACITOR_0805_N"
 			(exclude_from_sim no)
@@ -208,17 +209,6 @@
 			)
 			(symbol "CAPACITOR_0805_N_1_0"
 				(rectangle
-					(start -2.032 -2.032)
-					(end 2.032 -1.524)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(rectangle
 					(start -2.032 -1.016)
 					(end 2.032 -0.508)
 					(stroke
@@ -229,9 +219,20 @@
 						(type outline)
 					)
 				)
+				(rectangle
+					(start -2.032 -2.032)
+					(end 2.032 -1.524)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
 				(polyline
 					(pts
-						(xy 0 -2.54) (xy 0 -2.032)
+						(xy 0 0) (xy 0 -0.508)
 					)
 					(stroke
 						(width 0.1524)
@@ -243,7 +244,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 0) (xy 0 -0.508)
+						(xy 0 -2.54) (xy 0 -2.032)
 					)
 					(stroke
 						(width 0.1524)
@@ -290,6 +291,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:DIP-BLACK-MALE-HEADER-VERT(2P-2.54)"
 			(exclude_from_sim no)
@@ -353,18 +355,6 @@
 			(symbol "DIP-BLACK-MALE-HEADER-VERT(2P-2.54)_1_0"
 				(polyline
 					(pts
-						(xy -2.54 -5.08) (xy -2.54 5.08)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
 						(xy -2.54 5.08) (xy 2.54 5.08)
 					)
 					(stroke
@@ -377,7 +367,7 @@
 				)
 				(polyline
 					(pts
-						(xy 2.54 -5.08) (xy -2.54 -5.08)
+						(xy -2.54 -5.08) (xy -2.54 5.08)
 					)
 					(stroke
 						(width 0.254)
@@ -390,6 +380,18 @@
 				(polyline
 					(pts
 						(xy 2.54 5.08) (xy 2.54 -5.08)
+					)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 2.54 -5.08) (xy -2.54 -5.08)
 					)
 					(stroke
 						(width 0.254)
@@ -436,6 +438,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:INDUCTORPWR"
 			(exclude_from_sim no)
@@ -496,80 +499,8 @@
 			)
 			(symbol "INDUCTORPWR_1_0"
 				(arc
-					(start 0 -5.08)
-					(mid 0.898 -4.708)
-					(end 1.27 -3.81)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 -2.54)
-					(mid 0.898 -2.168)
-					(end 1.27 -1.27)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 0)
-					(mid 0.898 0.372)
-					(end 1.27 1.27)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 2.54)
+					(start 1.27 3.81)
 					(mid 0.898 2.912)
-					(end 1.27 3.81)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 1.27 -3.81)
-					(mid 0.898 -2.912)
-					(end 0 -2.54)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 1.27 -1.27)
-					(mid 0.898 -0.372)
-					(end 0 0)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 1.27 1.27)
-					(mid 0.898 2.168)
 					(end 0 2.54)
 					(stroke
 						(width 0.254)
@@ -580,9 +511,81 @@
 					)
 				)
 				(arc
-					(start 1.27 3.81)
+					(start 0 5.08)
 					(mid 0.898 4.708)
-					(end 0 5.08)
+					(end 1.27 3.81)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 1.27 1.27)
+					(mid 0.898 0.372)
+					(end 0 0)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 2.54)
+					(mid 0.898 2.168)
+					(end 1.27 1.27)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 1.27 -1.27)
+					(mid 0.898 -2.168)
+					(end 0 -2.54)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 0)
+					(mid 0.898 -0.372)
+					(end 1.27 -1.27)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 1.27 -3.81)
+					(mid 0.898 -4.708)
+					(end 0 -5.08)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -2.54)
+					(mid 0.898 -2.912)
+					(end 1.27 -3.81)
 					(stroke
 						(width 0.254)
 						(type solid)
@@ -628,6 +631,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:LEDCHIP-LED0603"
 			(exclude_from_sim no)
@@ -689,6 +693,30 @@
 			(symbol "LEDCHIP-LED0603_1_0"
 				(polyline
 					(pts
+						(xy -3.429 -2.159) (xy -3.048 -1.27) (xy -2.54 -1.778)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy -3.302 -3.302) (xy -2.921 -2.413) (xy -2.413 -2.921)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
 						(xy -2.032 -0.762) (xy -3.429 -2.159)
 					)
 					(stroke
@@ -705,30 +733,6 @@
 					)
 					(stroke
 						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0 -2.54) (xy -1.27 -2.54)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0 -2.54) (xy -1.27 0)
-					)
-					(stroke
-						(width 0.254)
 						(type solid)
 					)
 					(fill
@@ -761,7 +765,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.27 -2.54) (xy 0 -2.54)
+						(xy 0 -2.54) (xy -1.27 0)
 					)
 					(stroke
 						(width 0.254)
@@ -773,7 +777,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.27 0) (xy 0 -2.54)
+						(xy 0 -2.54) (xy -1.27 -2.54)
 					)
 					(stroke
 						(width 0.254)
@@ -797,26 +801,26 @@
 				)
 				(polyline
 					(pts
-						(xy -3.429 -2.159) (xy -3.048 -1.27) (xy -2.54 -1.778)
+						(xy 1.27 0) (xy 0 -2.54)
 					)
 					(stroke
-						(width 0.1524)
+						(width 0.254)
 						(type solid)
 					)
 					(fill
-						(type outline)
+						(type none)
 					)
 				)
 				(polyline
 					(pts
-						(xy -3.302 -3.302) (xy -2.921 -2.413) (xy -2.413 -2.921)
+						(xy 1.27 -2.54) (xy 0 -2.54)
 					)
 					(stroke
-						(width 0.1524)
+						(width 0.254)
 						(type solid)
 					)
 					(fill
-						(type outline)
+						(type none)
 					)
 				)
 				(pin passive line
@@ -856,6 +860,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:LMR33630ADDA"
 			(exclude_from_sim no)
@@ -897,7 +902,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "SIMPLE SWITCHER 3.8V to 36V, 3A Synchronous Buck Converter With Ultra-Low EMI\n\nSource: http://www.ti.com/lit/ds/symlink/lmr33630.pdf  Datasheet "
+			(property "Description" "SIMPLE SWITCHER 3.8V to 36V, 3A Synchronous Buck Converter With Ultra-Low EMI\n\nSource: http://www.ti.com/lit/ds/symlink/lmr33630.pdf  Datasheet"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1036,52 +1041,16 @@
 					)
 				)
 				(pin bidirectional line
-					(at 30.48 -7.62 180)
+					(at 15.24 -20.32 90)
 					(length 5.08)
-					(name "FB"
+					(name "EP"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "5"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 30.48 -5.08 180)
-					(length 5.08)
-					(name "VCC"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "6"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 30.48 -2.54 180)
-					(length 5.08)
-					(name "BOOT"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "7"
+					(number "9"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1108,16 +1077,52 @@
 					)
 				)
 				(pin bidirectional line
-					(at 15.24 -20.32 90)
+					(at 30.48 -2.54 180)
 					(length 5.08)
-					(name "EP"
+					(name "BOOT"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "9"
+					(number "7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 30.48 -5.08 180)
+					(length 5.08)
+					(name "VCC"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 30.48 -7.62 180)
+					(length 5.08)
+					(name "FB"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "5"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1126,6 +1131,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:RES-0402"
 			(exclude_from_sim no)
@@ -1282,6 +1288,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:SparkFun-PowerSymbols_GND"
 			(power)
@@ -1373,6 +1380,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:TPS7A7200RGTR"
 			(exclude_from_sim no)
@@ -1414,7 +1422,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "2A, Single Output, Very Low Input, Configurable Fixed (0.9 to 5.0V) Low-Dropout Linear Regulator\n\nSource: http://www.ti.com/lit/gpn/tps7a7200  Datasheet "
+			(property "Description" "2A, Single Output, Very Low Input, Configurable Fixed (0.9 to 5.0V) Low-Dropout Linear Regulator\n\nSource: http://www.ti.com/lit/gpn/tps7a7200  Datasheet"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1499,150 +1507,6 @@
 					)
 				)
 				(pin bidirectional line
-					(at 30.48 -5.08 180)
-					(length 5.08)
-					(name "1.6V"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "10"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 30.48 -2.54 180)
-					(length 5.08)
-					(name "SS"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "11"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 30.48 0 180)
-					(length 5.08)
-					(name "EN"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "12"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 20.32 17.78 270)
-					(length 5.08)
-					(name "IN_1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "13"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 17.78 17.78 270)
-					(length 5.08)
-					(name "IN_2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "14"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 15.24 17.78 270)
-					(length 5.08)
-					(name "OUT_1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "15"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 12.7 17.78 270)
-					(length 5.08)
-					(name "OUT_2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "16"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 10.16 17.78 270)
-					(length 5.08)
-					(name "EP"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "17"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
 					(at 0 -2.54 0)
 					(length 5.08)
 					(name "FB"
@@ -1697,6 +1561,24 @@
 					)
 				)
 				(pin bidirectional line
+					(at 10.16 17.78 270)
+					(length 5.08)
+					(name "EP"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "17"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
 					(at 10.16 -25.4 90)
 					(length 5.08)
 					(name "100MV"
@@ -1707,6 +1589,24 @@
 						)
 					)
 					(number "5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 12.7 17.78 270)
+					(length 5.08)
+					(name "OUT_2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "16"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1733,6 +1633,24 @@
 					)
 				)
 				(pin bidirectional line
+					(at 15.24 17.78 270)
+					(length 5.08)
+					(name "OUT_1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "15"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
 					(at 15.24 -25.4 90)
 					(length 5.08)
 					(name "GND"
@@ -1743,6 +1661,24 @@
 						)
 					)
 					(number "7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 17.78 17.78 270)
+					(length 5.08)
+					(name "IN_2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "14"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1769,6 +1705,78 @@
 					)
 				)
 				(pin bidirectional line
+					(at 20.32 17.78 270)
+					(length 5.08)
+					(name "IN_1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "13"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 30.48 0 180)
+					(length 5.08)
+					(name "EN"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "12"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 30.48 -2.54 180)
+					(length 5.08)
+					(name "SS"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "11"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 30.48 -5.08 180)
+					(length 5.08)
+					(name "1.6V"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "10"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
 					(at 30.48 -7.62 180)
 					(length 5.08)
 					(name "800MV"
@@ -1787,7 +1795,206 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
+	)
+	(text "1V9"
+		(exclude_from_sim no)
+		(at 165.1 193.04 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "05c6524e-14ca-43fa-8fd1-6ce238005ef3")
+	)
+	(text "1V1"
+		(exclude_from_sim no)
+		(at 165.1 124.46 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "068c2e2b-9df6-490e-b249-96724f8b1740")
+	)
+	(text "3V3"
+		(exclude_from_sim no)
+		(at 165.1 55.88 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "1bebc82e-a1b5-4318-bf8c-073423e283a4")
+	)
+	(text "V for 1.9V reg ~ 2.2V"
+		(exclude_from_sim no)
+		(at 50.8 195.58 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "1d64ba2e-93fe-4caa-8af3-5728ccdab495")
+	)
+	(text "= 0.5 + grounded inputs"
+		(exclude_from_sim no)
+		(at 208.28 218.44 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "29c741d8-4bfc-4ff6-9159-af7ad152bea5")
+	)
+	(text "V for 3.3V reg ~ 3.7V"
+		(exclude_from_sim no)
+		(at 48.26 58.42 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "54f39d8f-b7f9-4f9a-8db3-85f5a5b9be9b")
+	)
+	(text "V for 1.1V reg ~ 1.5V"
+		(exclude_from_sim no)
+		(at 48.26 124.46 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "9969c776-45e4-4f8d-a166-91c3eb0f33d6")
+	)
+	(text "= 0.5 + grounded inputs"
+		(exclude_from_sim no)
+		(at 294.64 218.44 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "a99e378b-6653-4d6c-b8db-d79077227ab8")
+	)
+	(text "VLVDS = 1.9V"
+		(exclude_from_sim no)
+		(at 251.46 193.04 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "ba34c198-3052-48be-a77a-9b533b2029a6")
+	)
+	(text "Need 3v3 plus 1v1 and 1v9 for the main ADC"
+		(exclude_from_sim no)
+		(at 20.32 25.4 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "c8b3e42c-d394-4e9c-b076-27d56956d3d4")
+	)
+	(text "Rbot = Rtop/(Vout-1)\n=100k/(1.5-1) = 200k"
+		(exclude_from_sim no)
+		(at 109.22 152.4 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "df9d8ff1-2911-4b1e-8415-b63e421c3dd2")
+	)
+	(text "Rbot = Rtop/(Vout-1)\n=100k/(3.7-1) = ~37k"
+		(exclude_from_sim no)
+		(at 109.22 86.36 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "e14e06e2-e026-4bfa-b721-bc66ff0d20ed")
+	)
+	(text "= 0.5 + grounded inputs"
+		(exclude_from_sim no)
+		(at 208.28 149.86 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "e487ad65-4ab6-409f-ad8f-c7f983be88b3")
+	)
+	(text "2A max current linear regs\nwith 180mV dropout at 2A"
+		(exclude_from_sim no)
+		(at 187.96 22.86 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "e94a9bcd-200f-4b7a-a4dd-1f370ec1ec48")
+	)
+	(text "Rbot = Rtop/(Vout-1)\n=100k/(2.2-1) = ~83k"
+		(exclude_from_sim no)
+		(at 121.92 223.52 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "f32724f4-fe9d-4163-987d-dfc4f0ed9b3e")
+	)
+	(text "= 0.5 + grounded inputs"
+		(exclude_from_sim no)
+		(at 208.28 81.28 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "f4e4116c-441f-4e52-be57-615919a7e327")
+	)
+	(text "3A max current buck converters\ntake in 5V and put out voltages\nfor linear reg that follows"
+		(exclude_from_sim no)
+		(at 48.26 50.8 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "f6810a41-3edb-4360-b9e2-17893dcaf5be")
+	)
+	(text "Enable after Power Good 1.9V"
+		(exclude_from_sim no)
+		(at 215.9 139.7 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "f9dc0565-7c2a-4820-85a9-86d9046f0397")
 	)
 	(junction
 		(at 198.12 228.6)
@@ -3921,207 +4128,8 @@
 		)
 		(uuid "fd5d0f95-63a4-418c-95a2-f2300b608cab")
 	)
-	(text "1V9"
-		(exclude_from_sim no)
-		(at 165.1 193.04 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "05c6524e-14ca-43fa-8fd1-6ce238005ef3")
-	)
-	(text "1V1"
-		(exclude_from_sim no)
-		(at 165.1 124.46 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "068c2e2b-9df6-490e-b249-96724f8b1740")
-	)
-	(text "3V3"
-		(exclude_from_sim no)
-		(at 165.1 55.88 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "1bebc82e-a1b5-4318-bf8c-073423e283a4")
-	)
-	(text "V for 1.9V reg ~ 2.2V"
-		(exclude_from_sim no)
-		(at 50.8 195.58 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "1d64ba2e-93fe-4caa-8af3-5728ccdab495")
-	)
-	(text "= 0.5 + grounded inputs"
-		(exclude_from_sim no)
-		(at 208.28 218.44 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "29c741d8-4bfc-4ff6-9159-af7ad152bea5")
-	)
-	(text "V for 3.3V reg ~ 3.7V"
-		(exclude_from_sim no)
-		(at 48.26 58.42 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "54f39d8f-b7f9-4f9a-8db3-85f5a5b9be9b")
-	)
-	(text "V for 1.1V reg ~ 1.5V"
-		(exclude_from_sim no)
-		(at 48.26 124.46 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "9969c776-45e4-4f8d-a166-91c3eb0f33d6")
-	)
-	(text "= 0.5 + grounded inputs"
-		(exclude_from_sim no)
-		(at 294.64 218.44 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "a99e378b-6653-4d6c-b8db-d79077227ab8")
-	)
-	(text "VLVDS = 1.9V"
-		(exclude_from_sim no)
-		(at 251.46 193.04 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "ba34c198-3052-48be-a77a-9b533b2029a6")
-	)
-	(text "Need 3v3 plus 1v1 and 1v9 for the main ADC"
-		(exclude_from_sim no)
-		(at 20.32 25.4 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "c8b3e42c-d394-4e9c-b076-27d56956d3d4")
-	)
-	(text "Rbot = Rtop/(Vout-1)\n=100k/(1.5-1) = 200k"
-		(exclude_from_sim no)
-		(at 109.22 152.4 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "df9d8ff1-2911-4b1e-8415-b63e421c3dd2")
-	)
-	(text "Rbot = Rtop/(Vout-1)\n=100k/(3.7-1) = ~37k"
-		(exclude_from_sim no)
-		(at 109.22 86.36 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "e14e06e2-e026-4bfa-b721-bc66ff0d20ed")
-	)
-	(text "= 0.5 + grounded inputs"
-		(exclude_from_sim no)
-		(at 208.28 149.86 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "e487ad65-4ab6-409f-ad8f-c7f983be88b3")
-	)
-	(text "2A max current linear regs\nwith 180mV dropout at 2A"
-		(exclude_from_sim no)
-		(at 187.96 22.86 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "e94a9bcd-200f-4b7a-a4dd-1f370ec1ec48")
-	)
-	(text "Rbot = Rtop/(Vout-1)\n=100k/(2.2-1) = ~83k"
-		(exclude_from_sim no)
-		(at 121.92 223.52 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "f32724f4-fe9d-4163-987d-dfc4f0ed9b3e")
-	)
-	(text "= 0.5 + grounded inputs"
-		(exclude_from_sim no)
-		(at 208.28 81.28 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "f4e4116c-441f-4e52-be57-615919a7e327")
-	)
-	(text "3A max current buck converters\ntake in 5V and put out voltages\nfor linear reg that follows"
-		(exclude_from_sim no)
-		(at 48.26 50.8 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "f6810a41-3edb-4360-b9e2-17893dcaf5be")
-	)
-	(text "Enable after Power Good 1.9V"
-		(exclude_from_sim no)
-		(at 215.9 139.7 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "f9dc0565-7c2a-4820-85a9-86d9046f0397")
-	)
 	(label "PG3V3"
 		(at 172.72 71.12 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4132,7 +4140,6 @@
 	)
 	(label "PG1V9"
 		(at 213.36 134.62 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4143,7 +4150,6 @@
 	)
 	(label "2V2"
 		(at 142.24 185.42 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4154,7 +4160,6 @@
 	)
 	(label "1V5"
 		(at 200.66 114.3 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4165,7 +4170,6 @@
 	)
 	(label "2V2"
 		(at 213.36 203.2 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4176,7 +4180,6 @@
 	)
 	(label "3V7"
 		(at 139.7 48.26 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4187,7 +4190,6 @@
 	)
 	(label "PG1V9D"
 		(at 259.08 208.28 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4198,7 +4200,6 @@
 	)
 	(label "2V2"
 		(at 299.72 203.2 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4209,7 +4210,6 @@
 	)
 	(label "2V2"
 		(at 127 203.2 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4220,7 +4220,6 @@
 	)
 	(label "1V5"
 		(at 124.46 132.08 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4231,7 +4230,6 @@
 	)
 	(label "2V2"
 		(at 287.02 182.88 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4242,7 +4240,6 @@
 	)
 	(label "1V5"
 		(at 139.7 114.3 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4253,7 +4250,6 @@
 	)
 	(label "PG1V9"
 		(at 172.72 208.28 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4264,7 +4260,6 @@
 	)
 	(label "2V2"
 		(at 200.66 182.88 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4275,7 +4270,6 @@
 	)
 	(label "3V7"
 		(at 200.66 45.72 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4286,7 +4280,6 @@
 	)
 	(label "3V7"
 		(at 213.36 66.04 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4297,7 +4290,6 @@
 	)
 	(label "PG1V1"
 		(at 172.72 139.7 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4308,7 +4300,6 @@
 	)
 	(label "3V7"
 		(at 124.46 66.04 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)

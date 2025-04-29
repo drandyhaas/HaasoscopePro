@@ -1,7 +1,7 @@
 (kicad_sch
-	(version 20231120)
+	(version 20250114)
 	(generator "eeschema")
-	(generator_version "8.0")
+	(generator_version "9.0")
 	(uuid "0f398657-fef8-40a5-b1ce-239d968bc32c")
 	(paper "User" 297.002 252.298)
 	(lib_symbols
@@ -63,10 +63,34 @@
 				)
 			)
 			(symbol "BU-SMB-V_1_0"
+				(polyline
+					(pts
+						(xy -2.54 0.508) (xy -0.762 0.508)
+					)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
 				(arc
-					(start -2.54 -2.54)
+					(start 0 -0.508)
 					(mid -0.9022 -1.9838)
-					(end 0 -0.508)
+					(end -2.54 -2.54)
+					(stroke
+						(width 0.3048)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start -2.54 2.54)
+					(mid -0.9022 1.9838)
+					(end 0 0.508)
 					(stroke
 						(width 0.3048)
 						(type solid)
@@ -77,7 +101,7 @@
 				)
 				(polyline
 					(pts
-						(xy -2.54 0.508) (xy -0.762 0.508)
+						(xy -0.762 0.508) (xy -0.508 0)
 					)
 					(stroke
 						(width 0.254)
@@ -101,31 +125,7 @@
 				)
 				(polyline
 					(pts
-						(xy -0.762 0.508) (xy -0.508 0)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
 						(xy -0.508 0) (xy -0.762 -0.508)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0 -2.54) (xy -0.762 -1.778)
 					)
 					(stroke
 						(width 0.254)
@@ -147,12 +147,12 @@
 						(type none)
 					)
 				)
-				(arc
-					(start 0 0.508)
-					(mid -0.9022 1.9838)
-					(end -2.54 2.54)
+				(polyline
+					(pts
+						(xy 0 -2.54) (xy -0.762 -1.778)
+					)
 					(stroke
-						(width 0.3048)
+						(width 0.254)
 						(type solid)
 					)
 					(fill
@@ -250,6 +250,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:CAPACITOR_0402_N"
 			(exclude_from_sim no)
@@ -311,17 +312,6 @@
 			)
 			(symbol "CAPACITOR_0402_N_1_0"
 				(rectangle
-					(start -2.032 -2.032)
-					(end 2.032 -1.524)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(rectangle
 					(start -2.032 -1.016)
 					(end 2.032 -0.508)
 					(stroke
@@ -332,9 +322,20 @@
 						(type outline)
 					)
 				)
+				(rectangle
+					(start -2.032 -2.032)
+					(end 2.032 -1.524)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
 				(polyline
 					(pts
-						(xy 0 -2.54) (xy 0 -2.032)
+						(xy 0 0) (xy 0 -0.508)
 					)
 					(stroke
 						(width 0.1524)
@@ -346,7 +347,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 0) (xy 0 -0.508)
+						(xy 0 -2.54) (xy 0 -2.032)
 					)
 					(stroke
 						(width 0.1524)
@@ -393,6 +394,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:CONN_08{dblquote}"
 			(exclude_from_sim no)
@@ -478,67 +480,7 @@
 				)
 				(polyline
 					(pts
-						(xy -1.27 -7.62) (xy 0 -7.62)
-					)
-					(stroke
-						(width 0.6096)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 -5.08) (xy 0 -5.08)
-					)
-					(stroke
-						(width 0.6096)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 -2.54) (xy 0 -2.54)
-					)
-					(stroke
-						(width 0.6096)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 0) (xy 0 0)
-					)
-					(stroke
-						(width 0.6096)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 2.54) (xy 0 2.54)
-					)
-					(stroke
-						(width 0.6096)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.27 5.08) (xy 0 5.08)
+						(xy -1.27 10.16) (xy 0 10.16)
 					)
 					(stroke
 						(width 0.6096)
@@ -562,7 +504,67 @@
 				)
 				(polyline
 					(pts
-						(xy -1.27 10.16) (xy 0 10.16)
+						(xy -1.27 5.08) (xy 0 5.08)
+					)
+					(stroke
+						(width 0.6096)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 2.54) (xy 0 2.54)
+					)
+					(stroke
+						(width 0.6096)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 0) (xy 0 0)
+					)
+					(stroke
+						(width 0.6096)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 -2.54) (xy 0 -2.54)
+					)
+					(stroke
+						(width 0.6096)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 -5.08) (xy 0 -5.08)
+					)
+					(stroke
+						(width 0.6096)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.27 -7.62) (xy 0 -7.62)
 					)
 					(stroke
 						(width 0.6096)
@@ -597,106 +599,16 @@
 					)
 				)
 				(pin passive line
-					(at 5.08 -7.62 180)
+					(at 5.08 10.16 180)
 					(length 5.08)
-					(name "1"
+					(name "8"
 						(effects
 							(font
 								(size 0 0)
 							)
 						)
 					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 5.08 -5.08 180)
-					(length 5.08)
-					(name "2"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 5.08 -2.54 180)
-					(length 5.08)
-					(name "3"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-					(number "3"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 5.08 0 180)
-					(length 5.08)
-					(name "4"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-					(number "4"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 5.08 2.54 180)
-					(length 5.08)
-					(name "5"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-					(number "5"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
-					(at 5.08 5.08 180)
-					(length 5.08)
-					(name "6"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-					(number "6"
+					(number "8"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -723,16 +635,106 @@
 					)
 				)
 				(pin passive line
-					(at 5.08 10.16 180)
+					(at 5.08 5.08 180)
 					(length 5.08)
-					(name "8"
+					(name "6"
 						(effects
 							(font
 								(size 0 0)
 							)
 						)
 					)
-					(number "8"
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 2.54 180)
+					(length 5.08)
+					(name "5"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
+					)
+					(number "5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 0 180)
+					(length 5.08)
+					(name "4"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 -2.54 180)
+					(length 5.08)
+					(name "3"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 -5.08 180)
+					(length 5.08)
+					(name "2"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 5.08 -7.62 180)
+					(length 5.08)
+					(name "1"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
+					)
+					(number "1"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -741,6 +743,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:DIP-BLACK-MALE-HEADER-VERT(2P-2.54)"
 			(exclude_from_sim no)
@@ -804,18 +807,6 @@
 			(symbol "DIP-BLACK-MALE-HEADER-VERT(2P-2.54)_1_0"
 				(polyline
 					(pts
-						(xy -2.54 -5.08) (xy -2.54 5.08)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
 						(xy -2.54 5.08) (xy 2.54 5.08)
 					)
 					(stroke
@@ -828,7 +819,7 @@
 				)
 				(polyline
 					(pts
-						(xy 2.54 -5.08) (xy -2.54 -5.08)
+						(xy -2.54 -5.08) (xy -2.54 5.08)
 					)
 					(stroke
 						(width 0.254)
@@ -841,6 +832,18 @@
 				(polyline
 					(pts
 						(xy 2.54 5.08) (xy 2.54 -5.08)
+					)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 2.54 -5.08) (xy -2.54 -5.08)
 					)
 					(stroke
 						(width 0.254)
@@ -887,6 +890,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:LEDCHIP-LED0603"
 			(exclude_from_sim no)
@@ -948,6 +952,30 @@
 			(symbol "LEDCHIP-LED0603_1_0"
 				(polyline
 					(pts
+						(xy -3.429 -2.159) (xy -3.048 -1.27) (xy -2.54 -1.778)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy -3.302 -3.302) (xy -2.921 -2.413) (xy -2.413 -2.921)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
 						(xy -2.032 -0.762) (xy -3.429 -2.159)
 					)
 					(stroke
@@ -964,30 +992,6 @@
 					)
 					(stroke
 						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0 -2.54) (xy -1.27 -2.54)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0 -2.54) (xy -1.27 0)
-					)
-					(stroke
-						(width 0.254)
 						(type solid)
 					)
 					(fill
@@ -1020,7 +1024,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.27 -2.54) (xy 0 -2.54)
+						(xy 0 -2.54) (xy -1.27 0)
 					)
 					(stroke
 						(width 0.254)
@@ -1032,7 +1036,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.27 0) (xy 0 -2.54)
+						(xy 0 -2.54) (xy -1.27 -2.54)
 					)
 					(stroke
 						(width 0.254)
@@ -1056,26 +1060,26 @@
 				)
 				(polyline
 					(pts
-						(xy -3.429 -2.159) (xy -3.048 -1.27) (xy -2.54 -1.778)
+						(xy 1.27 0) (xy 0 -2.54)
 					)
 					(stroke
-						(width 0.1524)
+						(width 0.254)
 						(type solid)
 					)
 					(fill
-						(type outline)
+						(type none)
 					)
 				)
 				(polyline
 					(pts
-						(xy -3.302 -3.302) (xy -2.921 -2.413) (xy -2.413 -2.921)
+						(xy 1.27 -2.54) (xy 0 -2.54)
 					)
 					(stroke
-						(width 0.1524)
+						(width 0.254)
 						(type solid)
 					)
 					(fill
-						(type outline)
+						(type none)
 					)
 				)
 				(pin passive line
@@ -1115,6 +1119,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:OSCILLATORSMD-5X3"
 			(exclude_from_sim no)
@@ -1178,18 +1183,6 @@
 			(symbol "OSCILLATORSMD-5X3_1_0"
 				(polyline
 					(pts
-						(xy -7.62 -5.08) (xy -7.62 5.08)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
 						(xy -7.62 5.08) (xy 7.62 5.08)
 					)
 					(stroke
@@ -1202,7 +1195,7 @@
 				)
 				(polyline
 					(pts
-						(xy 7.62 -5.08) (xy -7.62 -5.08)
+						(xy -7.62 -5.08) (xy -7.62 5.08)
 					)
 					(stroke
 						(width 0.254)
@@ -1224,6 +1217,36 @@
 						(type none)
 					)
 				)
+				(polyline
+					(pts
+						(xy 7.62 -5.08) (xy -7.62 -5.08)
+					)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(pin bidirectional line
+					(at -10.16 2.54 0)
+					(length 2.54)
+					(name "VCC"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
+					)
+				)
 				(pin bidirectional line
 					(at -10.16 -2.54 0)
 					(length 2.54)
@@ -1235,24 +1258,6 @@
 						)
 					)
 					(number "1"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 10.16 -2.54 180)
-					(length 2.54)
-					(name "GND"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
 						(effects
 							(font
 								(size 0 0)
@@ -1279,16 +1284,16 @@
 					)
 				)
 				(pin bidirectional line
-					(at -10.16 2.54 0)
+					(at 10.16 -2.54 180)
 					(length 2.54)
-					(name "VCC"
+					(name "GND"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "4"
+					(number "2"
 						(effects
 							(font
 								(size 0 0)
@@ -1297,6 +1302,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:RES-0402"
 			(exclude_from_sim no)
@@ -1453,6 +1459,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:RJ45-CONNECTOR-SHIELDED"
 			(exclude_from_sim no)
@@ -1515,18 +1522,6 @@
 			(symbol "RJ45-CONNECTOR-SHIELDED_1_0"
 				(polyline
 					(pts
-						(xy -5.08 -12.7) (xy 7.62 -12.7)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
 						(xy -5.08 10.16) (xy -5.08 -12.7)
 					)
 					(stroke
@@ -1539,7 +1534,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 -2.794) (xy 0 0.254)
+						(xy -5.08 -12.7) (xy 7.62 -12.7)
 					)
 					(stroke
 						(width 0.1524)
@@ -1563,31 +1558,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.2065 -5.08) (xy 1.2065 -2.794)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.2065 -2.794) (xy 0 -2.794)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.2065 0.254) (xy 1.2065 2.54)
+						(xy 0 -2.794) (xy 0 0.254)
 					)
 					(stroke
 						(width 0.1524)
@@ -1611,7 +1582,7 @@
 				)
 				(polyline
 					(pts
-						(xy 3.7465 -5.08) (xy 1.2065 -5.08)
+						(xy 1.2065 0.254) (xy 1.2065 2.54)
 					)
 					(stroke
 						(width 0.1524)
@@ -1623,7 +1594,7 @@
 				)
 				(polyline
 					(pts
-						(xy 3.7465 -3.048) (xy 2.9845 -3.048)
+						(xy 1.2065 -2.794) (xy 0 -2.794)
 					)
 					(stroke
 						(width 0.1524)
@@ -1635,7 +1606,7 @@
 				)
 				(polyline
 					(pts
-						(xy 3.7465 -3.048) (xy 3.7465 -5.08)
+						(xy 1.2065 -5.08) (xy 1.2065 -2.794)
 					)
 					(stroke
 						(width 0.1524)
@@ -1647,139 +1618,7 @@
 				)
 				(polyline
 					(pts
-						(xy 3.7465 -2.54) (xy 2.9845 -2.54)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 3.7465 -2.54) (xy 3.7465 -3.048)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 3.7465 -2.032) (xy 2.9845 -2.032)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 3.7465 -2.032) (xy 3.7465 -2.54)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 3.7465 -1.524) (xy 2.9845 -1.524)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 3.7465 -1.524) (xy 3.7465 -2.032)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 3.7465 -1.016) (xy 2.9845 -1.016)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 3.7465 -1.016) (xy 3.7465 -1.524)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 3.7465 -0.508) (xy 2.9845 -0.508)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 3.7465 -0.508) (xy 3.7465 -1.016)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 3.7465 0) (xy 2.9845 0)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 3.7465 0) (xy 3.7465 -0.508)
+						(xy 3.7465 2.54) (xy 3.7465 0.508)
 					)
 					(stroke
 						(width 0.1524)
@@ -1815,7 +1654,187 @@
 				)
 				(polyline
 					(pts
-						(xy 3.7465 2.54) (xy 3.7465 0.508)
+						(xy 3.7465 0) (xy 2.9845 0)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.7465 0) (xy 3.7465 -0.508)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.7465 -0.508) (xy 2.9845 -0.508)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.7465 -0.508) (xy 3.7465 -1.016)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.7465 -1.016) (xy 2.9845 -1.016)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.7465 -1.016) (xy 3.7465 -1.524)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.7465 -1.524) (xy 2.9845 -1.524)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.7465 -1.524) (xy 3.7465 -2.032)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.7465 -2.032) (xy 2.9845 -2.032)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.7465 -2.032) (xy 3.7465 -2.54)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.7465 -2.54) (xy 2.9845 -2.54)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.7465 -2.54) (xy 3.7465 -3.048)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.7465 -3.048) (xy 2.9845 -3.048)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.7465 -3.048) (xy 3.7465 -5.08)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.7465 -5.08) (xy 1.2065 -5.08)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 7.62 10.16) (xy -5.08 10.16)
 					)
 					(stroke
 						(width 0.1524)
@@ -1837,16 +1856,76 @@
 						(type none)
 					)
 				)
-				(polyline
-					(pts
-						(xy 7.62 10.16) (xy -5.08 10.16)
+				(pin bidirectional line
+					(at -2.54 -17.78 90)
+					(length 5.08)
+					(name "SHIELD"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
 					)
-					(stroke
-						(width 0.1524)
-						(type solid)
+					(number "S$1"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
 					)
-					(fill
-						(type none)
+				)
+				(pin bidirectional line
+					(at -2.54 -17.78 90)
+					(length 5.08)
+					(name "SHIELD"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "S$2"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at -2.54 -17.78 90)
+					(length 5.08)
+					(name "SHIELD"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "S$3"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at -2.54 -17.78 90)
+					(length 5.08)
+					(name "SHIELD"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "S$4"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
 					)
 				)
 				(pin passive line
@@ -1993,79 +2072,8 @@
 						)
 					)
 				)
-				(pin bidirectional line
-					(at -2.54 -17.78 90)
-					(length 5.08)
-					(name "SHIELD"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "S$1"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at -2.54 -17.78 90)
-					(length 5.08)
-					(name "SHIELD"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "S$2"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at -2.54 -17.78 90)
-					(length 5.08)
-					(name "SHIELD"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "S$3"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at -2.54 -17.78 90)
-					(length 5.08)
-					(name "SHIELD"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "S$4"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:SMACONNECTOR_EDGE"
 			(exclude_from_sim no)
@@ -2127,7 +2135,7 @@
 			(symbol "SMACONNECTOR_EDGE_1_0"
 				(polyline
 					(pts
-						(xy -5.08 -5.08) (xy -5.08 0)
+						(xy -5.08 5.08) (xy 5.08 5.08)
 					)
 					(stroke
 						(width 0.254)
@@ -2163,8 +2171,30 @@
 				)
 				(polyline
 					(pts
-						(xy -5.08 5.08) (xy 5.08 5.08)
+						(xy -5.08 -5.08) (xy -5.08 0)
 					)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center 0 0)
+					(radius 0.3592)
+					(stroke
+						(width 0.8128)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center 0 0)
+					(radius 2.54)
 					(stroke
 						(width 0.254)
 						(type solid)
@@ -2176,18 +2206,6 @@
 				(polyline
 					(pts
 						(xy 2.54 3.81) (xy 3.175 3.81)
-					)
-					(stroke
-						(width 0.127)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 3.175 3.175) (xy 2.54 3.81)
 					)
 					(stroke
 						(width 0.127)
@@ -2223,7 +2241,7 @@
 				)
 				(polyline
 					(pts
-						(xy 3.81 3.81) (xy 3.175 3.175)
+						(xy 3.175 3.175) (xy 2.54 3.81)
 					)
 					(stroke
 						(width 0.127)
@@ -2235,10 +2253,10 @@
 				)
 				(polyline
 					(pts
-						(xy 5.08 -5.08) (xy -5.08 -5.08)
+						(xy 3.81 3.81) (xy 3.175 3.175)
 					)
 					(stroke
-						(width 0.254)
+						(width 0.127)
 						(type solid)
 					)
 					(fill
@@ -2257,20 +2275,10 @@
 						(type none)
 					)
 				)
-				(circle
-					(center 0 0)
-					(radius 0.3592)
-					(stroke
-						(width 0.8128)
-						(type solid)
+				(polyline
+					(pts
+						(xy 5.08 -5.08) (xy -5.08 -5.08)
 					)
-					(fill
-						(type none)
-					)
-				)
-				(circle
-					(center 0 0)
-					(radius 2.54)
 					(stroke
 						(width 0.254)
 						(type solid)
@@ -2279,17 +2287,35 @@
 						(type none)
 					)
 				)
-				(pin power_in line
-					(at 2.54 -7.62 90)
+				(pin bidirectional line
+					(at -7.62 0 0)
 					(length 2.54)
-					(name "GND4"
+					(name "ANT"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "P"
 						(effects
 							(font
 								(size 0 0)
 							)
 						)
 					)
-					(number "GND@1"
+				)
+				(pin power_in line
+					(at -2.54 7.62 270)
+					(length 2.54)
+					(name "GND1"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
+					)
+					(number "GND@4"
 						(effects
 							(font
 								(size 0 0)
@@ -2334,34 +2360,16 @@
 					)
 				)
 				(pin power_in line
-					(at -2.54 7.62 270)
+					(at 2.54 -7.62 90)
 					(length 2.54)
-					(name "GND1"
+					(name "GND4"
 						(effects
 							(font
 								(size 0 0)
 							)
 						)
 					)
-					(number "GND@4"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at -7.62 0 0)
-					(length 2.54)
-					(name "ANT"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "P"
+					(number "GND@1"
 						(effects
 							(font
 								(size 0 0)
@@ -2370,6 +2378,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:supply1_GND"
 			(power)
@@ -2461,6 +2470,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:supply2_GND"
 			(power)
@@ -2576,7 +2586,129 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
+	)
+	(text "50 Ohm 1kHz / Aux output"
+		(exclude_from_sim no)
+		(at 116.84 114.3 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "34469687-e6b6-4682-addc-dc68f0fcd656")
+	)
+	(text "2.5V inputs and outputs to/from\nthe FPGA for status monitoring\nand control of things, etc."
+		(exclude_from_sim no)
+		(at 111.76 27.94 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "4a9492c7-04e7-4913-8e7c-001e6e0fb423")
+	)
+	(text "2.5V outputs from\nthe FPGA for debugging, etc.\nThese go to LEDs for monitoring"
+		(exclude_from_sim no)
+		(at 40.64 25.4 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "6c92d51d-5d4a-4ca3-9a45-5007961e8d7c")
+	)
+	(text "50 Ohm external trigger input"
+		(exclude_from_sim no)
+		(at 43.18 114.3 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "7916c57b-d9e0-476a-8f2c-5b9fbe556bac")
+	)
+	(text "Extra clock input and output"
+		(exclude_from_sim no)
+		(at 203.2 152.4 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "82d4b83a-9705-42f4-9edb-d9649766e527")
+	)
+	(text "LVDS outputs and inputs for sync between boards"
+		(exclude_from_sim no)
+		(at 66.04 177.8 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "aae2d623-1630-4f9e-b8b4-7bd6824f5993")
+	)
+	(text "Debugout10 is now the 50 Ohm 1kHz/Aux output"
+		(exclude_from_sim no)
+		(at 40.64 81.28 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "c0688ee1-71f5-4c0a-a702-09a2e1b94d05")
+	)
+	(text "Cyclone IV E left and right I/O banks support\ntrue LVDS transmitters, so use them for LVDS outputs"
+		(exclude_from_sim no)
+		(at 45.72 231.14 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "cb3e2fbd-3aa4-48ae-b79a-f74f8e9c6b29")
+	)
+	(text "1kOhm 1kHz output for probe compensation"
+		(exclude_from_sim no)
+		(at 203.2 114.3 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "e42804a7-2355-409d-81ff-f0ae4da37120")
+	)
+	(text "50 MHz clock for FPGA"
+		(exclude_from_sim no)
+		(at 203.2 182.88 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "f2cd2d08-1b21-4283-9571-ab299350bd37")
+	)
+	(text "Boardin 4 is now the ext trig input"
+		(exclude_from_sim no)
+		(at 121.92 45.72 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "f997c12f-7a52-43c3-9dce-35d61c4120cc")
 	)
 	(junction
 		(at 60.96 71.12)
@@ -3906,130 +4038,8 @@
 		)
 		(uuid "fda655ab-e273-4a9d-b9b2-07127ba06de5")
 	)
-	(text "50 Ohm 1kHz / Aux output"
-		(exclude_from_sim no)
-		(at 116.84 114.3 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "34469687-e6b6-4682-addc-dc68f0fcd656")
-	)
-	(text "2.5V inputs and outputs to/from\nthe FPGA for status monitoring\nand control of things, etc."
-		(exclude_from_sim no)
-		(at 111.76 27.94 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "4a9492c7-04e7-4913-8e7c-001e6e0fb423")
-	)
-	(text "2.5V outputs from\nthe FPGA for debugging, etc.\nThese go to LEDs for monitoring"
-		(exclude_from_sim no)
-		(at 40.64 25.4 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "6c92d51d-5d4a-4ca3-9a45-5007961e8d7c")
-	)
-	(text "50 Ohm external trigger input"
-		(exclude_from_sim no)
-		(at 43.18 114.3 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "7916c57b-d9e0-476a-8f2c-5b9fbe556bac")
-	)
-	(text "Extra clock input and output"
-		(exclude_from_sim no)
-		(at 203.2 152.4 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "82d4b83a-9705-42f4-9edb-d9649766e527")
-	)
-	(text "LVDS outputs and inputs for sync between boards"
-		(exclude_from_sim no)
-		(at 66.04 177.8 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "aae2d623-1630-4f9e-b8b4-7bd6824f5993")
-	)
-	(text "Debugout10 is now the 50 Ohm 1kHz/Aux output"
-		(exclude_from_sim no)
-		(at 40.64 81.28 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "c0688ee1-71f5-4c0a-a702-09a2e1b94d05")
-	)
-	(text "Cyclone IV E left and right I/O banks support\ntrue LVDS transmitters, so use them for LVDS outputs"
-		(exclude_from_sim no)
-		(at 45.72 231.14 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "cb3e2fbd-3aa4-48ae-b79a-f74f8e9c6b29")
-	)
-	(text "1kOhm 1kHz output for probe compensation"
-		(exclude_from_sim no)
-		(at 203.2 114.3 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "e42804a7-2355-409d-81ff-f0ae4da37120")
-	)
-	(text "50 MHz clock for FPGA"
-		(exclude_from_sim no)
-		(at 203.2 182.88 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "f2cd2d08-1b21-4283-9571-ab299350bd37")
-	)
-	(text "Boardin 4 is now the ext trig input"
-		(exclude_from_sim no)
-		(at 121.92 45.72 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "f997c12f-7a52-43c3-9dce-35d61c4120cc")
-	)
 	(label "N$52"
 		(at 142.24 127 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4040,7 +4050,6 @@
 	)
 	(label "1KHZOUT"
 		(at 203.2 124.46 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4051,7 +4060,6 @@
 	)
 	(label "1KHZOUT"
 		(at 111.76 73.66 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
