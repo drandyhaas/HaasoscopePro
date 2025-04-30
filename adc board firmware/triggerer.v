@@ -20,6 +20,7 @@ module triggerer(
    output reg [7:0]  downsamplemergingcounter_triggered,
    output reg [8:0]  triggerphase,
    output integer    downsamplecounter,
+   output integer    eventtime,
 
    // synced inputs from other clocks
    input reg signed [11:0]  lowerthresh,
@@ -74,6 +75,7 @@ reg [4:0]   downsample_sync = 0;
 reg         triggerlive_sync = 0;
 reg         didreadout_sync = 0;
 reg         exttrigin_sync = 0, exttrigin_sync_last = 0, exttrig_rising = 0;
+integer     eventtimecounter = 0;
 
 // this drives the trigger
 integer i;
@@ -95,6 +97,7 @@ always @ (posedge clklvds) begin
    downsample_sync        <= downsample;
    exttrigin_sync         <= exttrigin;
    exttrigin_sync_last    <= exttrigin_sync; // remember for next cycle
+   eventtimecounter       <= eventtimecounter + 1;
 
    if (acqstate==251 || acqstate==0) begin
       // not writing, while waiting to be read out or in initial state where trigger might be disabled
@@ -331,6 +334,7 @@ always @ (posedge clklvds) begin
       
       if (triggerphase == -9'd1) begin // just once
          triggerphase = 0;
+         eventtime <= eventtimecounter; // remember the time the trigger occurred
          
          // see whether the sample_triggered's have a 0 in the first 10 bits
          st1zero=0;

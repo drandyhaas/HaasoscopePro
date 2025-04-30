@@ -186,6 +186,13 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 0 384)(pt 16 384)(line_width 3))
 	)
 	(port
+		(pt 0 400)
+		(input)
+		(text "eventtime[31..0]" (rect 0 0 62 12)(font "Arial" ))
+		(text "eventtime[31..0]" (rect 21 395 83 407)(font "Arial" ))
+		(line (pt 0 400)(pt 16 400)(line_width 3))
+	)
+	(port
 		(pt 368 32)
 		(output)
 		(text "i_tready" (rect 0 0 33 12)(font "Arial" ))

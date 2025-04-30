@@ -316,7 +316,7 @@ https://fpgasoftware.intel.com/eula.
 	(input)
 	(rect -1104 1552 -936 1568)
 	(text "INPUT" (rect 125 0 153 10)(font "Arial" (font_size 6)))
-	(text "exttrigin" (rect 5 0 44 12)(font "Arial" ))
+	(text "exttrigin" (rect 5 0 43 12)(font "Arial" ))
 	(pt 168 8)
 	(drawing
 		(line (pt 84 12)(pt 109 12))
@@ -1763,14 +1763,14 @@ https://fpgasoftware.intel.com/eula.
 		(pt 296 32)
 		(output)
 		(text "lvdsbitsout[559..0]" (rect 0 0 92 12)(font "Arial" ))
-		(text "lvdsbitsout[559..0]" (rect 198 27 275 39)(font "Arial" ))
+		(text "lvdsbitsout[559..0]" (rect 198 27 290 39)(font "Arial" ))
 		(line (pt 296 32)(pt 280 32)(line_width 3))
 	)
 	(port
 		(pt 296 48)
 		(output)
 		(text "samplevalue[0..39][11..0]" (rect 0 0 126 12)(font "Arial" ))
-		(text "samplevalue[0..39][11..0]" (rect 169 43 275 55)(font "Arial" ))
+		(text "samplevalue[0..39][11..0]" (rect 169 43 295 55)(font "Arial" ))
 		(line (pt 296 48)(pt 280 48)(line_width 3))
 	)
 	(drawing
@@ -2012,6 +2012,13 @@ https://fpgasoftware.intel.com/eula.
 		(text "downsamplecounter[31..0]" (rect 239 219 347 231)(font "Arial" ))
 		(line (pt 368 224)(pt 352 224)(line_width 3))
 	)
+	(port
+		(pt 368 240)
+		(output)
+		(text "eventtime[31..0]" (rect 0 0 81 12)(font "Arial" ))
+		(text "eventtime[31..0]" (rect 279 235 347 247)(font "Arial" ))
+		(line (pt 368 240)(pt 352 240)(line_width 3))
+	)
 	(drawing
 		(rectangle (rect 16 16 352 352))
 	)
@@ -2180,6 +2187,13 @@ https://fpgasoftware.intel.com/eula.
 		(text "triggerphase[8..0]" (rect 0 0 86 12)(font "Arial" ))
 		(text "triggerphase[8..0]" (rect 21 379 107 391)(font "Arial" ))
 		(line (pt 0 384)(pt 16 384)(line_width 3))
+	)
+	(port
+		(pt 0 400)
+		(input)
+		(text "eventtime[31..0]" (rect 0 0 81 12)(font "Arial" ))
+		(text "eventtime[31..0]" (rect 21 395 102 407)(font "Arial" ))
+		(line (pt 0 400)(pt 16 400)(line_width 3))
 	)
 	(port
 		(pt 368 32)
@@ -4338,6 +4352,21 @@ https://fpgasoftware.intel.com/eula.
 	(pt -776 1496)
 	(pt -720 1496)
 	(color 170 255 0)
+)
+(connector
+	(pt -352 1688)
+	(pt 296 1688)
+	(bus)
+)
+(connector
+	(pt 296 1688)
+	(pt 296 1448)
+	(bus)
+)
+(connector
+	(pt 656 1448)
+	(pt 296 1448)
+	(bus)
 )
 (junction (pt 1704 1592))
 (junction (pt -872 1768))

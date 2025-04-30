@@ -878,6 +878,8 @@ class MainWindow(TemplateBaseClass):
 
     oldeventcounterdiff=-9999
     doeventcounter = False
+    oldeventtime=-9999
+    doeventtime = False
     def getpredata(self, board):
         if self.doeventcounter:
             usbs[board].send(bytes([2, 3, 100, 100, 100, 100, 100, 100]))  # get eventcounter
@@ -890,6 +892,13 @@ class MainWindow(TemplateBaseClass):
                 eventcounterdiff = self.eventcounter[board]-self.eventcounter[board+1]
                 if eventcounterdiff!=self.oldeventcounterdiff: print("eventcounter diff for board",board,"and",board+1,eventcounterdiff)
                 self.oldeventcounterdiff=eventcounterdiff
+        if self.doeventtime:
+            usbs[board].send(bytes([2, 11, 100, 100, 100, 100, 100, 100]))  # get eventtime
+            res = usbs[board].recv(4)
+            eventtime = res[0] + 256 * res[1] + 256 * 256 * res[2] + 256 * 256 * 256 * res[3]
+            eventtimediff = eventtime-self.oldeventtime
+            print("board",board,"triggered at clock cycle",eventtime,"a diff of",eventtimediff,"cycles",round(0.0125*eventtimediff,4),"us")
+            self.oldeventtime=eventtime
         downsamplemergingcounter = 0
         usbs[board].send(bytes([2, 4, 100, 100, 100, 100, 100, 100]))  # get downsamplemergingcounter
         res = usbs[board].recv(4)

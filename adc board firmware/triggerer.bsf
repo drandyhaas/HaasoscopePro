@@ -255,6 +255,13 @@ https://fpgasoftware.intel.com/eula.
 		(text "downsamplecounter[31..0]" (rect 246 219 347 231)(font "Arial" ))
 		(line (pt 368 224)(pt 352 224)(line_width 3))
 	)
+	(port
+		(pt 368 240)
+		(output)
+		(text "eventtime[31..0]" (rect 0 0 62 12)(font "Arial" ))
+		(text "eventtime[31..0]" (rect 285 235 347 247)(font "Arial" ))
+		(line (pt 368 240)(pt 352 240)(line_width 3))
+	)
 	(drawing
 		(rectangle (rect 16 16 352 352)(line_width 1))
 	)
