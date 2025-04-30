@@ -1,7 +1,7 @@
 (kicad_sch
-	(version 20231120)
+	(version 20250114)
 	(generator "eeschema")
-	(generator_version "8.0")
+	(generator_version "9.0")
 	(uuid "2fb1376c-6f9b-4fb9-a1c2-b396fe53aa39")
 	(paper "A4")
 	(lib_symbols
@@ -45,7 +45,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "2 Channel, 50 ksps to 200 ksps, 12-Bit A/D Converter\n\nSource: http://www.ti.com/lit/ds/symlink/adc102s021.pdf  Datasheet "
+			(property "Description" "2 Channel, 50 ksps to 200 ksps, 12-Bit A/D Converter\n\nSource: http://www.ti.com/lit/ds/symlink/adc102s021.pdf  Datasheet"
 				(at 0 0 0)
 				(effects
 					(font
@@ -184,34 +184,16 @@
 					)
 				)
 				(pin input line
-					(at 27.94 -7.62 180)
+					(at 27.94 0 180)
 					(length 5.08)
-					(name "IN1"
+					(name "SCLK"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "5"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input line
-					(at 27.94 -5.08 180)
-					(length 5.08)
-					(name "DIN"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "6"
+					(number "8"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -238,16 +220,34 @@
 					)
 				)
 				(pin input line
-					(at 27.94 0 180)
+					(at 27.94 -5.08 180)
 					(length 5.08)
-					(name "SCLK"
+					(name "DIN"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "8"
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at 27.94 -7.62 180)
+					(length 5.08)
+					(name "IN1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "5"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -256,6 +256,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:CAPACITOR0402_CAP"
 			(exclude_from_sim no)
@@ -316,17 +317,6 @@
 			)
 			(symbol "CAPACITOR0402_CAP_1_0"
 				(rectangle
-					(start -1.143 -2.032)
-					(end 1.143 -1.524)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(rectangle
 					(start -1.143 -1.016)
 					(end 1.143 -0.508)
 					(stroke
@@ -337,9 +327,20 @@
 						(type outline)
 					)
 				)
+				(rectangle
+					(start -1.143 -2.032)
+					(end 1.143 -1.524)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
 				(polyline
 					(pts
-						(xy 0 -5.08) (xy 0 -1.778)
+						(xy 0 2.54) (xy 0 -0.508)
 					)
 					(stroke
 						(width 0.1524)
@@ -351,7 +352,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 2.54) (xy 0 -0.508)
+						(xy 0 -5.08) (xy 0 -1.778)
 					)
 					(stroke
 						(width 0.1524)
@@ -398,6 +399,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:M02PTH"
 			(exclude_from_sim no)
@@ -483,7 +485,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.27 0) (xy 2.54 0)
+						(xy 1.27 2.54) (xy 2.54 2.54)
 					)
 					(stroke
 						(width 0.6096)
@@ -495,7 +497,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.27 2.54) (xy 2.54 2.54)
+						(xy 1.27 0) (xy 2.54 0)
 					)
 					(stroke
 						(width 0.6096)
@@ -530,24 +532,6 @@
 					)
 				)
 				(pin passive line
-					(at 7.62 0 180)
-					(length 5.08)
-					(name "1"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin passive line
 					(at 7.62 2.54 180)
 					(length 5.08)
 					(name "2"
@@ -565,7 +549,26 @@
 						)
 					)
 				)
+				(pin passive line
+					(at 7.62 0 180)
+					(length 5.08)
+					(name "1"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:MF_Passives_RESISTOR_0402"
 			(exclude_from_sim no)
@@ -627,19 +630,7 @@
 			(symbol "MF_Passives_RESISTOR_0402_1_0"
 				(polyline
 					(pts
-						(xy -1.016 -2.286) (xy 0 -2.54)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.016 -1.016) (xy 1.016 -1.651)
+						(xy -1.016 1.524) (xy 1.016 0.889)
 					)
 					(stroke
 						(width 0.1524)
@@ -663,7 +654,19 @@
 				)
 				(polyline
 					(pts
-						(xy -1.016 1.524) (xy 1.016 0.889)
+						(xy -1.016 -1.016) (xy 1.016 -1.651)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.016 -2.286) (xy 0 -2.54)
 					)
 					(stroke
 						(width 0.1524)
@@ -687,19 +690,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.016 -1.651) (xy -1.016 -2.286)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.016 -0.381) (xy -1.016 -1.016)
+						(xy 1.016 2.159) (xy -1.016 1.524)
 					)
 					(stroke
 						(width 0.1524)
@@ -723,7 +714,19 @@
 				)
 				(polyline
 					(pts
-						(xy 1.016 2.159) (xy -1.016 1.524)
+						(xy 1.016 -0.381) (xy -1.016 -1.016)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.016 -1.651) (xy -1.016 -2.286)
 					)
 					(stroke
 						(width 0.1524)
@@ -770,6 +773,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:RESISTOR0402_RES"
 			(exclude_from_sim no)
@@ -998,6 +1002,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:SMD-TRANSISTORS-NPN-25V-500MW-S8050(SOT-23)"
 			(exclude_from_sim no)
@@ -1059,7 +1064,7 @@
 			(symbol "SMD-TRANSISTORS-NPN-25V-500MW-S8050(SOT-23)_1_0"
 				(polyline
 					(pts
-						(xy 0 -2.54) (xy 0 0)
+						(xy 0 0) (xy 0 2.54)
 					)
 					(stroke
 						(width 0.1524)
@@ -1071,7 +1076,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 0) (xy 0 2.54)
+						(xy 0 0) (xy 2.54 2.54)
 					)
 					(stroke
 						(width 0.1524)
@@ -1095,7 +1100,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 0) (xy 2.54 2.54)
+						(xy 0 -2.54) (xy 0 0)
 					)
 					(stroke
 						(width 0.1524)
@@ -1175,24 +1180,6 @@
 					)
 				)
 				(pin passive line
-					(at 2.54 -5.08 90)
-					(length 2.54)
-					(name "E"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-				)
-				(pin passive line
 					(at 2.54 5.08 270)
 					(length 2.54)
 					(name "C"
@@ -1210,7 +1197,26 @@
 						)
 					)
 				)
+				(pin passive line
+					(at 2.54 -5.08 90)
+					(length 2.54)
+					(name "E"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
+					)
+				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:THERMISTOR-RES-NTC-100K(0603)"
 			(exclude_from_sim no)
@@ -1284,7 +1290,7 @@
 				)
 				(polyline
 					(pts
-						(xy -3.81 -1.27) (xy -3.81 0)
+						(xy -3.81 1.27) (xy 3.81 1.27)
 					)
 					(stroke
 						(width 0.1524)
@@ -1308,19 +1314,7 @@
 				)
 				(polyline
 					(pts
-						(xy -3.81 1.27) (xy 3.81 1.27)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 2.54 2.54) (xy -3.175 -3.175)
+						(xy -3.81 -1.27) (xy -3.81 0)
 					)
 					(stroke
 						(width 0.1524)
@@ -1344,7 +1338,19 @@
 				)
 				(polyline
 					(pts
-						(xy 3.81 -1.27) (xy -3.81 -1.27)
+						(xy 2.54 2.54) (xy -3.175 -3.175)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 3.81 1.27) (xy 3.81 0)
 					)
 					(stroke
 						(width 0.1524)
@@ -1368,7 +1374,7 @@
 				)
 				(polyline
 					(pts
-						(xy 3.81 1.27) (xy 3.81 0)
+						(xy 3.81 -1.27) (xy -3.81 -1.27)
 					)
 					(stroke
 						(width 0.1524)
@@ -1427,6 +1433,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:TLV9102IPWR"
 			(exclude_from_sim no)
@@ -1468,7 +1475,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Dual 1MHz, 16-V rail-to-rail input/output, low-offset voltage, low-power op amp\n\nSource: http://www.ti.com/lit/gpn/TLV9102  Datasheet "
+			(property "Description" "Dual 1MHz, 16-V rail-to-rail input/output, low-offset voltage, low-power op amp\n\nSource: http://www.ti.com/lit/gpn/TLV9102  Datasheet"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1607,34 +1614,16 @@
 					)
 				)
 				(pin bidirectional line
-					(at 27.94 -7.62 180)
+					(at 27.94 0 180)
 					(length 5.08)
-					(name "IN2+"
+					(name "V+"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "5"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 27.94 -5.08 180)
-					(length 5.08)
-					(name "IN2-"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "6"
+					(number "8"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1661,16 +1650,34 @@
 					)
 				)
 				(pin bidirectional line
-					(at 27.94 0 180)
+					(at 27.94 -5.08 180)
 					(length 5.08)
-					(name "V+"
+					(name "IN2-"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "8"
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 27.94 -7.62 180)
+					(length 5.08)
+					(name "IN2+"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "5"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1679,6 +1686,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:supply2_GND"
 			(power)
@@ -1794,7 +1802,129 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
+	)
+	(text "V across TDIODE, with 0.1mA is about\n0.681 when ADC running with clock,\n0.731 when off"
+		(exclude_from_sim no)
+		(at 195.58 66.04 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "25075966-fefe-4a0a-bb4e-7554ec0c30bb")
+	)
+	(text "Slow adc for temp monitoring"
+		(exclude_from_sim no)
+		(at 68.58 124.46 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "3dca2a13-5426-4975-a0a8-34d45507ae64")
+	)
+	(text "Monitor the temp of the PCB near FPGA"
+		(exclude_from_sim no)
+		(at 170.18 99.06 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "41145f2f-c5f1-4154-b59e-8484a182df8e")
+	)
+	(text "PWM signal from FPGA"
+		(exclude_from_sim no)
+		(at 172.72 170.18 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "853d3ee9-eb2f-45b4-96de-118d1ab2107e")
+	)
+	(text "Buffer inputs before feeding to slow adc"
+		(exclude_from_sim no)
+		(at 68.58 88.9 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "8dbf4b08-66bb-4f90-bec9-23d00ee34ed7")
+	)
+	(text "10kΩ 310uA 100mW ±1% 3380K ±1%\n0603 NTC Thermistors ROHS"
+		(exclude_from_sim no)
+		(at 180.34 121.92 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "9cbba6ad-8e95-465c-b671-474c7bbe2306")
+	)
+	(text "Monitor the temp of the main ADC"
+		(exclude_from_sim no)
+		(at 185.42 25.4 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "9da39379-69cc-4809-88b4-a57a5e8a5460")
+	)
+	(text "PWM 5V power to fan"
+		(exclude_from_sim no)
+		(at 200.66 152.4 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "b6ff3ca5-ff84-4a86-bdca-f230b5ecd6c2")
+	)
+	(text "Gain=1+3/1=4"
+		(exclude_from_sim no)
+		(at 119.38 43.18 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "b8cb4a79-f413-433c-8ec4-845833eb618d")
+	)
+	(text "Gain=1+1/10=1.1"
+		(exclude_from_sim no)
+		(at 104.14 68.58 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "bddf1188-c3a3-457f-87cd-e68631bbc65d")
+	)
+	(text "Amplify temp signals so they're\nin a good range for the slow ADC"
+		(exclude_from_sim no)
+		(at 71.12 35.56 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "f085870e-c026-47cb-9786-006043599f89")
 	)
 	(junction
 		(at 91.44 68.58)
@@ -2184,130 +2314,8 @@
 		)
 		(uuid "fe9253aa-602c-48ba-ad97-4c75eeb7ae1e")
 	)
-	(text "V across TDIODE, with 0.1mA is about\n0.681 when ADC running with clock,\n0.731 when off"
-		(exclude_from_sim no)
-		(at 195.58 66.04 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "25075966-fefe-4a0a-bb4e-7554ec0c30bb")
-	)
-	(text "Slow adc for temp monitoring"
-		(exclude_from_sim no)
-		(at 68.58 124.46 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "3dca2a13-5426-4975-a0a8-34d45507ae64")
-	)
-	(text "Monitor the temp of the PCB near FPGA"
-		(exclude_from_sim no)
-		(at 170.18 99.06 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "41145f2f-c5f1-4154-b59e-8484a182df8e")
-	)
-	(text "PWM signal from FPGA"
-		(exclude_from_sim no)
-		(at 172.72 170.18 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "853d3ee9-eb2f-45b4-96de-118d1ab2107e")
-	)
-	(text "Buffer inputs before feeding to slow adc"
-		(exclude_from_sim no)
-		(at 68.58 88.9 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "8dbf4b08-66bb-4f90-bec9-23d00ee34ed7")
-	)
-	(text "10kΩ 310uA 100mW ±1% 3380K ±1%\n0603 NTC Thermistors ROHS"
-		(exclude_from_sim no)
-		(at 180.34 121.92 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "9cbba6ad-8e95-465c-b671-474c7bbe2306")
-	)
-	(text "Monitor the temp of the main ADC"
-		(exclude_from_sim no)
-		(at 185.42 25.4 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "9da39379-69cc-4809-88b4-a57a5e8a5460")
-	)
-	(text "PWM 5V power to fan"
-		(exclude_from_sim no)
-		(at 200.66 152.4 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "b6ff3ca5-ff84-4a86-bdca-f230b5ecd6c2")
-	)
-	(text "Gain=1+3/1=4"
-		(exclude_from_sim no)
-		(at 119.38 43.18 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "b8cb4a79-f413-433c-8ec4-845833eb618d")
-	)
-	(text "Gain=1+1/10=1.1"
-		(exclude_from_sim no)
-		(at 104.14 68.58 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "bddf1188-c3a3-457f-87cd-e68631bbc65d")
-	)
-	(text "Amplify temp signals so they're\nin a good range for the slow ADC"
-		(exclude_from_sim no)
-		(at 71.12 35.56 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "f085870e-c026-47cb-9786-006043599f89")
-	)
 	(label "SLOWADCIN2"
 		(at 121.92 104.14 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2318,7 +2326,6 @@
 	)
 	(label "SLOWADCIN1"
 		(at 200.66 53.34 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2329,7 +2336,6 @@
 	)
 	(label "SLOWADCOUT2"
 		(at 121.92 99.06 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2340,7 +2346,6 @@
 	)
 	(label "SLOWADCOUT1"
 		(at 68.58 96.52 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2351,7 +2356,6 @@
 	)
 	(label "SLOWADCIN1-"
 		(at 68.58 99.06 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2362,7 +2366,6 @@
 	)
 	(label "SLOWADCIN2-"
 		(at 71.12 76.2 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2373,7 +2376,6 @@
 	)
 	(label "SLOWADCOUT2"
 		(at 68.58 139.7 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2384,7 +2386,6 @@
 	)
 	(label "SLOWADCIN1-"
 		(at 71.12 50.8 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2395,7 +2396,6 @@
 	)
 	(label "SLOWADCIN2"
 		(at 177.8 111.76 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2406,7 +2406,6 @@
 	)
 	(label "SLOWADCIN2-"
 		(at 121.92 101.6 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2417,7 +2416,6 @@
 	)
 	(label "SLOWADCOUT1"
 		(at 119.38 50.8 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2428,7 +2426,6 @@
 	)
 	(label "FAN-"
 		(at 210.82 170.18 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2439,7 +2436,6 @@
 	)
 	(label "SLOWADCIN1"
 		(at 68.58 101.6 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2450,7 +2446,6 @@
 	)
 	(label "SLOWADCOUT2"
 		(at 104.14 76.2 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2461,7 +2456,6 @@
 	)
 	(label "SLOWADCOUT1"
 		(at 124.46 139.7 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)

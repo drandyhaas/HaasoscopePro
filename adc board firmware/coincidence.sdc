@@ -32,6 +32,21 @@ set_false_path -from [get_registers command_processor:inst1|*] -to [get_register
 set_false_path -from [get_registers fpga_top_ft232h_tx_mass*rptr_grey*] -to [get_registers fpga_top_ft232h_tx_mass*rptr_grey*]
 set_false_path -from [get_registers fpga_top_ft232h_tx_mass*wptr_grey*] -to [get_registers fpga_top_ft232h_tx_mass*wptr_grey*]
 
+## Slow paths we don't care about
+set_false_path -from [get_registers command_processor:inst1|lowerthresh*]
+set_false_path -from [get_registers command_processor:inst1|upperthresh*]
+set_false_path -from [get_registers command_processor:inst1|lengthtotake*]
+set_false_path -from [get_registers command_processor:inst1|prelengthtotake*]
+set_false_path -from [get_registers command_processor:inst1|triggertype*]
+set_false_path -from [get_registers command_processor:inst1|triggerToT*]
+set_false_path -from [get_registers command_processor:inst1|triggerchan*]
+set_false_path -from [get_registers command_processor:inst1|dorolling*]
+set_false_path -from [get_registers command_processor:inst1|auxoutselector*]
+set_false_path -from [get_registers command_processor:inst1|channeltype*]
+set_false_path -from [get_registers command_processor:inst1|downsamplemerging*]
+set_false_path -from [get_registers command_processor:inst1|highres*]
+set_false_path -from [get_registers command_processor:inst1|downsample*]
+
 ## IO constraints
 set_max_delay -to [get_ports clk*] 10
 set_min_delay -to [get_ports clk*] -3
@@ -77,8 +92,8 @@ set_output_delay -clock clk50 0 [get_ports boardout* ]
 set_output_delay -clock clk50 0 [get_ports debugout* ]
 
 ## for exttrig SMA in and aux SMA out, on clklvds
-set_input_delay -clock pllmain|altpll_component|auto_generated|pll1|clk[1] -1 [get_ports boardin[4] ]
-set_output_delay -clock pllmain|altpll_component|auto_generated|pll1|clk[1] -1 [get_ports debugout[10] ]
+set_input_delay -clock pllmain|altpll_component|auto_generated|pll1|clk[1] -1 [get_ports exttrigin ]
+set_output_delay -clock pllmain|altpll_component|auto_generated|pll1|clk[1] -1 [get_ports auxout ]
 
 ## for flash I/O
 set_input_delay -clock clk_over_4 -5 [get_ports asmi*DATA0 ]

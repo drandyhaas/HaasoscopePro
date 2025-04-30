@@ -1,7 +1,7 @@
 (kicad_sch
-	(version 20231120)
+	(version 20250114)
 	(generator "eeschema")
-	(generator_version "8.0")
+	(generator_version "9.0")
 	(uuid "8c611416-8741-438f-b946-da5f342ca9f1")
 	(paper "A4")
 	(lib_symbols
@@ -65,17 +65,6 @@
 			)
 			(symbol "CAPACITOR_0402_N_1_0"
 				(rectangle
-					(start -2.032 -2.032)
-					(end 2.032 -1.524)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(rectangle
 					(start -2.032 -1.016)
 					(end 2.032 -0.508)
 					(stroke
@@ -86,9 +75,20 @@
 						(type outline)
 					)
 				)
+				(rectangle
+					(start -2.032 -2.032)
+					(end 2.032 -1.524)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
 				(polyline
 					(pts
-						(xy 0 -2.54) (xy 0 -2.032)
+						(xy 0 0) (xy 0 -0.508)
 					)
 					(stroke
 						(width 0.1524)
@@ -100,7 +100,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 0) (xy 0 -0.508)
+						(xy 0 -2.54) (xy 0 -2.032)
 					)
 					(stroke
 						(width 0.1524)
@@ -147,6 +147,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:CAPACITOR_0805_N"
 			(exclude_from_sim no)
@@ -208,17 +209,6 @@
 			)
 			(symbol "CAPACITOR_0805_N_1_0"
 				(rectangle
-					(start -2.032 -2.032)
-					(end 2.032 -1.524)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(rectangle
 					(start -2.032 -1.016)
 					(end 2.032 -0.508)
 					(stroke
@@ -229,9 +219,20 @@
 						(type outline)
 					)
 				)
+				(rectangle
+					(start -2.032 -2.032)
+					(end 2.032 -1.524)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
 				(polyline
 					(pts
-						(xy 0 -2.54) (xy 0 -2.032)
+						(xy 0 0) (xy 0 -0.508)
 					)
 					(stroke
 						(width 0.1524)
@@ -243,7 +244,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 0) (xy 0 -0.508)
+						(xy 0 -2.54) (xy 0 -2.032)
 					)
 					(stroke
 						(width 0.1524)
@@ -290,6 +291,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:DCBARRELPTH"
 			(exclude_from_sim no)
@@ -349,10 +351,10 @@
 				)
 			)
 			(symbol "DCBARRELPTH_1_0"
-				(arc
-					(start -4.445 3.175)
-					(mid -5.08 2.54)
-					(end -4.445 1.905)
+				(polyline
+					(pts
+						(xy -5.08 -2.54) (xy -3.81 -2.54)
+					)
 					(stroke
 						(width 0.254)
 						(type solid)
@@ -361,10 +363,10 @@
 						(type none)
 					)
 				)
-				(polyline
-					(pts
-						(xy -5.08 -2.54) (xy -3.81 -2.54)
-					)
+				(arc
+					(start -4.445 1.905)
+					(mid -5.08 2.54)
+					(end -4.445 3.175)
 					(stroke
 						(width 0.254)
 						(type solid)
@@ -399,7 +401,31 @@
 				)
 				(polyline
 					(pts
-						(xy 0 -2.54) (xy -1.27 -2.54)
+						(xy 0 3.175) (xy -4.445 3.175)
+					)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 3.175) (xy 0 1.905)
+					)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0 1.905) (xy -4.445 1.905)
 					)
 					(stroke
 						(width 0.254)
@@ -423,31 +449,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 1.905) (xy -4.445 1.905)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0 3.175) (xy -4.445 3.175)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0 3.175) (xy 0 1.905)
+						(xy 0 -2.54) (xy -1.27 -2.54)
 					)
 					(stroke
 						(width 0.254)
@@ -458,16 +460,16 @@
 					)
 				)
 				(pin power_in line
-					(at 2.54 -2.54 180)
+					(at 2.54 2.54 180)
 					(length 2.54)
-					(name "GND"
+					(name "PWR"
 						(effects
 							(font
 								(size 0 0)
 							)
 						)
 					)
-					(number "GND"
+					(number "PWR"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -494,16 +496,16 @@
 					)
 				)
 				(pin power_in line
-					(at 2.54 2.54 180)
+					(at 2.54 -2.54 180)
 					(length 2.54)
-					(name "PWR"
+					(name "GND"
 						(effects
 							(font
 								(size 0 0)
 							)
 						)
 					)
-					(number "PWR"
+					(number "GND"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -512,6 +514,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:DIP-BLACK-MALE-HEADER-VERT(2P-2.54)"
 			(exclude_from_sim no)
@@ -575,18 +578,6 @@
 			(symbol "DIP-BLACK-MALE-HEADER-VERT(2P-2.54)_1_0"
 				(polyline
 					(pts
-						(xy -2.54 -5.08) (xy -2.54 5.08)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
 						(xy -2.54 5.08) (xy 2.54 5.08)
 					)
 					(stroke
@@ -599,7 +590,7 @@
 				)
 				(polyline
 					(pts
-						(xy 2.54 -5.08) (xy -2.54 -5.08)
+						(xy -2.54 -5.08) (xy -2.54 5.08)
 					)
 					(stroke
 						(width 0.254)
@@ -612,6 +603,18 @@
 				(polyline
 					(pts
 						(xy 2.54 5.08) (xy 2.54 -5.08)
+					)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 2.54 -5.08) (xy -2.54 -5.08)
 					)
 					(stroke
 						(width 0.254)
@@ -658,6 +661,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:INDUCTORPWR"
 			(exclude_from_sim no)
@@ -718,80 +722,8 @@
 			)
 			(symbol "INDUCTORPWR_1_0"
 				(arc
-					(start 0 -5.08)
-					(mid 0.898 -4.708)
-					(end 1.27 -3.81)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 -2.54)
-					(mid 0.898 -2.168)
-					(end 1.27 -1.27)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 0)
-					(mid 0.898 0.372)
-					(end 1.27 1.27)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 0 2.54)
+					(start 1.27 3.81)
 					(mid 0.898 2.912)
-					(end 1.27 3.81)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 1.27 -3.81)
-					(mid 0.898 -2.912)
-					(end 0 -2.54)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 1.27 -1.27)
-					(mid 0.898 -0.372)
-					(end 0 0)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start 1.27 1.27)
-					(mid 0.898 2.168)
 					(end 0 2.54)
 					(stroke
 						(width 0.254)
@@ -802,9 +734,81 @@
 					)
 				)
 				(arc
-					(start 1.27 3.81)
+					(start 0 5.08)
 					(mid 0.898 4.708)
-					(end 0 5.08)
+					(end 1.27 3.81)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 1.27 1.27)
+					(mid 0.898 0.372)
+					(end 0 0)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 2.54)
+					(mid 0.898 2.168)
+					(end 1.27 1.27)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 1.27 -1.27)
+					(mid 0.898 -2.168)
+					(end 0 -2.54)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 0)
+					(mid 0.898 -0.372)
+					(end 1.27 -1.27)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 1.27 -3.81)
+					(mid 0.898 -4.708)
+					(end 0 -5.08)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -2.54)
+					(mid 0.898 -2.912)
+					(end 1.27 -3.81)
 					(stroke
 						(width 0.254)
 						(type solid)
@@ -850,6 +854,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:LEDCHIP-LED0603"
 			(exclude_from_sim no)
@@ -911,6 +916,30 @@
 			(symbol "LEDCHIP-LED0603_1_0"
 				(polyline
 					(pts
+						(xy -3.429 -2.159) (xy -3.048 -1.27) (xy -2.54 -1.778)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy -3.302 -3.302) (xy -2.921 -2.413) (xy -2.413 -2.921)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
 						(xy -2.032 -0.762) (xy -3.429 -2.159)
 					)
 					(stroke
@@ -927,30 +956,6 @@
 					)
 					(stroke
 						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0 -2.54) (xy -1.27 -2.54)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 0 -2.54) (xy -1.27 0)
-					)
-					(stroke
-						(width 0.254)
 						(type solid)
 					)
 					(fill
@@ -983,7 +988,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.27 -2.54) (xy 0 -2.54)
+						(xy 0 -2.54) (xy -1.27 0)
 					)
 					(stroke
 						(width 0.254)
@@ -995,7 +1000,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.27 0) (xy 0 -2.54)
+						(xy 0 -2.54) (xy -1.27 -2.54)
 					)
 					(stroke
 						(width 0.254)
@@ -1019,26 +1024,26 @@
 				)
 				(polyline
 					(pts
-						(xy -3.429 -2.159) (xy -3.048 -1.27) (xy -2.54 -1.778)
+						(xy 1.27 0) (xy 0 -2.54)
 					)
 					(stroke
-						(width 0.1524)
+						(width 0.254)
 						(type solid)
 					)
 					(fill
-						(type outline)
+						(type none)
 					)
 				)
 				(polyline
 					(pts
-						(xy -3.302 -3.302) (xy -2.921 -2.413) (xy -2.413 -2.921)
+						(xy 1.27 -2.54) (xy 0 -2.54)
 					)
 					(stroke
-						(width 0.1524)
+						(width 0.254)
 						(type solid)
 					)
 					(fill
-						(type outline)
+						(type none)
 					)
 				)
 				(pin passive line
@@ -1078,6 +1083,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:LMR33630ADDA"
 			(exclude_from_sim no)
@@ -1119,7 +1125,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "SIMPLE SWITCHER 3.8V to 36V, 3A Synchronous Buck Converter With Ultra-Low EMI\n\nSource: http://www.ti.com/lit/ds/symlink/lmr33630.pdf  Datasheet "
+			(property "Description" "SIMPLE SWITCHER 3.8V to 36V, 3A Synchronous Buck Converter With Ultra-Low EMI\n\nSource: http://www.ti.com/lit/ds/symlink/lmr33630.pdf  Datasheet"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1258,52 +1264,16 @@
 					)
 				)
 				(pin bidirectional line
-					(at 30.48 -7.62 180)
+					(at 15.24 -20.32 90)
 					(length 5.08)
-					(name "FB"
+					(name "EP"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "5"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 30.48 -5.08 180)
-					(length 5.08)
-					(name "VCC"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "6"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 30.48 -2.54 180)
-					(length 5.08)
-					(name "BOOT"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "7"
+					(number "9"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1330,16 +1300,52 @@
 					)
 				)
 				(pin bidirectional line
-					(at 15.24 -20.32 90)
+					(at 30.48 -2.54 180)
 					(length 5.08)
-					(name "EP"
+					(name "BOOT"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "9"
+					(number "7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 30.48 -5.08 180)
+					(length 5.08)
+					(name "VCC"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 30.48 -7.62 180)
+					(length 5.08)
+					(name "FB"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "5"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1348,6 +1354,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:RES-0402"
 			(exclude_from_sim no)
@@ -1504,6 +1511,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:SparkFun-PowerSymbols_GND"
 			(power)
@@ -1595,7 +1603,74 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
+	)
+	(text "Make 5V from 12V in case USB C insufficient"
+		(exclude_from_sim no)
+		(at 60.96 114.3 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "207c78c6-6efd-4348-9a2b-dc1f2d7b3f77")
+	)
+	(text "12V input, in case USB C insufficient"
+		(exclude_from_sim no)
+		(at 73.66 43.18 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "22b95870-4f36-41dc-9ec0-09362d1211cd")
+	)
+	(text "Detect if 12V is connected,\nso we can disconnect from USB power\nWhen 12V jack is connected, GNDBREAK pin\nis not connected to GND anymore, and is then\npulled up to 5V (being generated by 12V)\nWhen 12V jack is not connected,\nGNDBREAK is conencted to GND"
+		(exclude_from_sim no)
+		(at 40.64 91.44 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "2ac5c3c2-ffdf-4f6f-ab8c-8f711103070a")
+	)
+	(text "5V input, needed unless there is 12V input\nCan also be taken from USB C of course"
+		(exclude_from_sim no)
+		(at 213.36 127 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "59a058b7-fef5-4440-a6d9-fe835e8a63b5")
+	)
+	(text "To FPGA to see if 12V connected"
+		(exclude_from_sim no)
+		(at 35.56 154.94 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "8b5c6886-3368-4096-8f6b-8b36d82b9ad7")
+	)
+	(text "Rbot = Rtop/(Vout-1)\n=100k/(5-1) = ~25k"
+		(exclude_from_sim no)
+		(at 139.7 142.24 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "cc0442d2-2649-4724-9832-80ffb4db80c1")
 	)
 	(junction
 		(at 121.92 73.66)
@@ -2379,75 +2454,8 @@
 		)
 		(uuid "fab96dff-c808-4213-a2f0-97e77ce44d6a")
 	)
-	(text "Make 5V from 12V in case USB C insufficient"
-		(exclude_from_sim no)
-		(at 60.96 114.3 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "207c78c6-6efd-4348-9a2b-dc1f2d7b3f77")
-	)
-	(text "12V input, in case USB C insufficient"
-		(exclude_from_sim no)
-		(at 73.66 43.18 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "22b95870-4f36-41dc-9ec0-09362d1211cd")
-	)
-	(text "Detect if 12V is connected,\nso we can disconnect from USB power\nWhen 12V jack is connected, GNDBREAK pin\nis not connected to GND anymore, and is then\npulled up to 5V (being generated by 12V)\nWhen 12V jack is not connected,\nGNDBREAK is conencted to GND"
-		(exclude_from_sim no)
-		(at 40.64 91.44 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "2ac5c3c2-ffdf-4f6f-ab8c-8f711103070a")
-	)
-	(text "5V input, needed unless there is 12V input\nCan also be taken from USB C of course"
-		(exclude_from_sim no)
-		(at 213.36 127 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "59a058b7-fef5-4440-a6d9-fe835e8a63b5")
-	)
-	(text "To FPGA to see if 12V connected"
-		(exclude_from_sim no)
-		(at 35.56 154.94 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "8b5c6886-3368-4096-8f6b-8b36d82b9ad7")
-	)
-	(text "Rbot = Rtop/(Vout-1)\n=100k/(5-1) = ~25k"
-		(exclude_from_sim no)
-		(at 139.7 142.24 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "cc0442d2-2649-4724-9832-80ffb4db80c1")
-	)
 	(label "12V"
 		(at 50.8 129.54 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -2458,7 +2466,6 @@
 	)
 	(label "12V"
 		(at 104.14 58.42 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)

@@ -9,7 +9,7 @@
 //--------------------------------------------------------------------------------------------------------
 
 module fpga_top_ft232h_tx_mass (
-	 input  wire         rstn,
+    input  wire         rstn,
     input  wire         clk,            // main clock, connect to on-board crystal oscillator
     output wire  [ 1:0] LED,
     
@@ -24,17 +24,17 @@ module fpga_top_ft232h_tx_mass (
     output wire         ftdi_rd_n,      // to FT232H's pin26 (RD#)
     output wire         ftdi_wr_n,      // to FT232H's pin27 (WR#)
     inout        [ 7:0] ftdi_data,      // to FT232H's pin20~13 (ADBUS7~ADBUS0)
-	 
-	// user AXI-stream signals
-	input  wire        rx_tready,
-	output wire        rx_tvalid,
-	output wire [ 7:0] rx_tdata,
+    
+   // user AXI-stream signals
+   input  wire        rx_tready,
+   output wire        rx_tvalid,
+   output wire [ 7:0] rx_tdata,
 
-	output wire        tx_tready,
-	input  wire        tx_tvalid,
-	input  wire [31:0] tx_tdata,
-	input  wire [ 3:0] tx_tkeep,
-	input  wire        tx_tlast
+   output wire        tx_tready,
+   input  wire        tx_tvalid,
+   input  wire [31:0] tx_tdata,
+   input  wire [ 3:0] tx_tkeep,
+   input  wire        tx_tlast
 );
 
 assign ftdi_resetn = 1'b1;  // 1=normal operation , !!!!!! UnComment this line if this signal is connected to FPGA !!!!!!

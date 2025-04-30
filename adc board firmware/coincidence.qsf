@@ -276,7 +276,6 @@ set_location_assignment PIN_A19 -to debugout[6]
 set_location_assignment PIN_A20 -to debugout[7]
 set_location_assignment PIN_B13 -to debugout[8]
 set_location_assignment PIN_B14 -to debugout[9]
-set_location_assignment PIN_B15 -to debugout[10]
 set_location_assignment PIN_B16 -to debugout[11]
 set_location_assignment PIN_B17 -to boardout[0]
 set_location_assignment PIN_B18 -to boardout[1]
@@ -290,7 +289,6 @@ set_location_assignment PIN_C17 -to boardin[0]
 set_location_assignment PIN_D13 -to boardin[1]
 set_location_assignment PIN_D15 -to boardin[2]
 set_location_assignment PIN_D17 -to boardin[3]
-set_location_assignment PIN_E16 -to boardin[4]
 set_location_assignment PIN_E15 -to boardin[5]
 set_location_assignment PIN_E12 -to boardin[6]
 set_location_assignment PIN_E14 -to boardin[7]
@@ -395,11 +393,14 @@ set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to "asmi:inst4|asm
 set_location_assignment PIN_E2 -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_SCE"
 set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_SCE"
 set_global_assignment -name SMART_RECOMPILE ON
-set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
 set_global_assignment -name BDF_FILE coincidence.bdf
 set_global_assignment -name SDC_FILE coincidence.sdc
 set_global_assignment -name VERILOG_FILE command_processor.v
-set_global_assignment -name VERILOG_FILE SPI_Master.v
+set_global_assignment -name VERILOG_FILE triggerer.v
+set_global_assignment -name VERILOG_FILE downsampler.v
+set_global_assignment -name CDF_FILE Chain1.cdf
+set_global_assignment -name CDF_FILE Chain2.cdf
+set_global_assignment -name CDF_FILE Chain2compressed.cdf
 set_global_assignment -name QSYS_FILE asmi.qsys
 set_global_assignment -name QSYS_FILE clkctrl.qsys
 set_global_assignment -name QIP_FILE fifo1.qip
@@ -407,10 +408,8 @@ set_global_assignment -name QIP_FILE lvds1.qip
 set_global_assignment -name QIP_FILE pll1.qip
 set_global_assignment -name QIP_FILE pll2.qip
 set_global_assignment -name QIP_FILE rambuffer.qip
-set_global_assignment -name CDF_FILE Chain1.cdf
-set_global_assignment -name CDF_FILE Chain2.cdf
-set_global_assignment -name CDF_FILE Chain2compressed.cdf
 set_global_assignment -name VERILOG_FILE neo_driver.v
+set_global_assignment -name VERILOG_FILE SPI_Master.v
 set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/fpga_ft232h_example/fpga_top_ft232h_tx_mass.v
 set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/fpga_ft232h_example/clock_beat.v
 set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/ftdi_245fifo/resetn_sync.v
@@ -425,3 +424,6 @@ set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/ftdi_245fifo/axi_stream
 set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/ftdi_245fifo/axi_stream_packing.v
 set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/ftdi_245fifo/axi_stream_downsizing.v
 set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/ftdi_245fifo/axi_stream_assert.v
+set_location_assignment PIN_E16 -to exttrigin
+set_location_assignment PIN_B15 -to auxout
+set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

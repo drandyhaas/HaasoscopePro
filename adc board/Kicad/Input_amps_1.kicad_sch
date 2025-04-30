@@ -1,7 +1,7 @@
 (kicad_sch
-	(version 20231120)
+	(version 20250114)
 	(generator "eeschema")
-	(generator_version "8.0")
+	(generator_version "9.0")
 	(uuid "3008e8d1-59d4-444e-b441-166789fbf3bb")
 	(paper "User" 386.055 230.327)
 	(lib_symbols
@@ -64,17 +64,6 @@
 			)
 			(symbol "CAPACITOR_NP_0402_1_0"
 				(rectangle
-					(start -1.778 -1.27)
-					(end 1.778 -0.508)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(rectangle
 					(start -1.778 0.508)
 					(end 1.778 1.27)
 					(stroke
@@ -85,9 +74,20 @@
 						(type outline)
 					)
 				)
+				(rectangle
+					(start -1.778 -1.27)
+					(end 1.778 -0.508)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
 				(polyline
 					(pts
-						(xy 0 -2.54) (xy 0 -1.016)
+						(xy 0 2.54) (xy 0 1.016)
 					)
 					(stroke
 						(width 0.1524)
@@ -99,7 +99,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 2.54) (xy 0 1.016)
+						(xy 0 -2.54) (xy 0 -1.016)
 					)
 					(stroke
 						(width 0.1524)
@@ -146,6 +146,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:DAC8562SDGSR"
 			(exclude_from_sim no)
@@ -187,7 +188,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "16-bit, dual-channel, low-power, ultra-low glitch, voltage output DAC with 2.5V, 4ppm/C reference\n\nSource: http://www.ti.com/lit/gpn/dac8562  Datasheet "
+			(property "Description" "16-bit, dual-channel, low-power, ultra-low glitch, voltage output DAC with 2.5V, 4ppm/C reference\n\nSource: http://www.ti.com/lit/gpn/dac8562  Datasheet"
 				(at 0 0 0)
 				(effects
 					(font
@@ -272,24 +273,6 @@
 					)
 				)
 				(pin bidirectional line
-					(at 43.18 0 180)
-					(length 5.08)
-					(name "VREFIN/VREFOUT"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "10"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
 					(at 0 -2.54 0)
 					(length 5.08)
 					(name "VOUTB"
@@ -362,16 +345,16 @@
 					)
 				)
 				(pin bidirectional line
-					(at 43.18 -10.16 180)
+					(at 43.18 0 180)
 					(length 5.08)
-					(name "~{SYNC}"
+					(name "VREFIN/VREFOUT"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "6"
+					(number "10"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -380,16 +363,16 @@
 					)
 				)
 				(pin bidirectional line
-					(at 43.18 -7.62 180)
+					(at 43.18 -2.54 180)
 					(length 5.08)
-					(name "SCLK"
+					(name "AVDD"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "7"
+					(number "9"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -416,16 +399,34 @@
 					)
 				)
 				(pin bidirectional line
-					(at 43.18 -2.54 180)
+					(at 43.18 -7.62 180)
 					(length 5.08)
-					(name "AVDD"
+					(name "SCLK"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "9"
+					(number "7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 43.18 -10.16 180)
+					(length 5.08)
+					(name "~{SYNC}"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "6"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -434,6 +435,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:LMH5401IRMST"
 			(exclude_from_sim no)
@@ -475,7 +477,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Texas Instruments LMH5401IRMST, RF Amplifier Differential, 14-Pin UQFN\n\nSource: http://www.ti.com/lit/gpn/lmh5401  Datasheet "
+			(property "Description" "Texas Instruments LMH5401IRMST, RF Amplifier Differential, 14-Pin UQFN\n\nSource: http://www.ti.com/lit/gpn/lmh5401  Datasheet"
 				(at 0 0 0)
 				(effects
 					(font
@@ -552,96 +554,6 @@
 						)
 					)
 					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 30.48 -5.08 180)
-					(length 5.08)
-					(name "VS+_2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "10"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 30.48 -7.62 180)
-					(length 5.08)
-					(name "GND_1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "11"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 30.48 -10.16 180)
-					(length 5.08)
-					(name "OUT-"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "12"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 30.48 -12.7 180)
-					(length 5.08)
-					(name "OUT+"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "13"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 30.48 -15.24 180)
-					(length 5.08)
-					(name "GND_2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "14"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -793,7 +705,98 @@
 						)
 					)
 				)
+				(pin bidirectional line
+					(at 30.48 -5.08 180)
+					(length 5.08)
+					(name "VS+_2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "10"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 30.48 -7.62 180)
+					(length 5.08)
+					(name "GND_1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "11"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 30.48 -10.16 180)
+					(length 5.08)
+					(name "OUT-"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "12"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 30.48 -12.7 180)
+					(length 5.08)
+					(name "OUT+"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "13"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 30.48 -15.24 180)
+					(length 5.08)
+					(name "GND_2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "14"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:LMH6401IRMZR"
 			(exclude_from_sim no)
@@ -835,7 +838,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Differential Amplifiers 4.5 GHz Ultra Wideband Digital Variable Gain Amplifier 16-UQFN-HR -40 to 85\n\nSource: http://www.ti.com/lit/ds/symlink/lmh6401.pdf  Datasheet "
+			(property "Description" "Differential Amplifiers 4.5 GHz Ultra Wideband Digital Variable Gain Amplifier 16-UQFN-HR -40 to 85\n\nSource: http://www.ti.com/lit/ds/symlink/lmh6401.pdf  Datasheet"
 				(at 0 0 0)
 				(effects
 					(font
@@ -912,6 +915,150 @@
 						)
 					)
 					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 0 -2.54 0)
+					(length 5.08)
+					(name "INP"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 0 -5.08 0)
+					(length 5.08)
+					(name "INM"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 0 -7.62 0)
+					(length 5.08)
+					(name "SDO"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 0 -10.16 0)
+					(length 5.08)
+					(name "VS-_1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 0 -12.7 0)
+					(length 5.08)
+					(name "PD"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 0 -15.24 0)
+					(length 5.08)
+					(name "VOCM"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 0 -17.78 0)
+					(length 5.08)
+					(name "VS+_1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "8"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 0 -20.32 0)
+					(length 5.08)
+					(name "GND_1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "9"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1100,24 +1247,6 @@
 					)
 				)
 				(pin bidirectional line
-					(at 0 -2.54 0)
-					(length 5.08)
-					(name "INP"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
 					(at 30.48 -22.86 180)
 					(length 5.08)
 					(name "20"
@@ -1135,133 +1264,8 @@
 						)
 					)
 				)
-				(pin bidirectional line
-					(at 0 -5.08 0)
-					(length 5.08)
-					(name "INM"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "3"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 0 -7.62 0)
-					(length 5.08)
-					(name "SDO"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "4"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 0 -10.16 0)
-					(length 5.08)
-					(name "VS-_1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "5"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 0 -12.7 0)
-					(length 5.08)
-					(name "PD"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "6"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 0 -15.24 0)
-					(length 5.08)
-					(name "VOCM"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "7"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 0 -17.78 0)
-					(length 5.08)
-					(name "VS+_1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "8"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 0 -20.32 0)
-					(length 5.08)
-					(name "GND_1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "9"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:MF_Passives_RESISTOR_0402"
 			(exclude_from_sim no)
@@ -1323,19 +1327,7 @@
 			(symbol "MF_Passives_RESISTOR_0402_1_0"
 				(polyline
 					(pts
-						(xy -1.016 -2.286) (xy 0 -2.54)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.016 -1.016) (xy 1.016 -1.651)
+						(xy -1.016 1.524) (xy 1.016 0.889)
 					)
 					(stroke
 						(width 0.1524)
@@ -1359,7 +1351,19 @@
 				)
 				(polyline
 					(pts
-						(xy -1.016 1.524) (xy 1.016 0.889)
+						(xy -1.016 -1.016) (xy 1.016 -1.651)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.016 -2.286) (xy 0 -2.54)
 					)
 					(stroke
 						(width 0.1524)
@@ -1383,19 +1387,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.016 -1.651) (xy -1.016 -2.286)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.016 -0.381) (xy -1.016 -1.016)
+						(xy 1.016 2.159) (xy -1.016 1.524)
 					)
 					(stroke
 						(width 0.1524)
@@ -1419,7 +1411,19 @@
 				)
 				(polyline
 					(pts
-						(xy 1.016 2.159) (xy -1.016 1.524)
+						(xy 1.016 -0.381) (xy -1.016 -1.016)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.016 -1.651) (xy -1.016 -2.286)
 					)
 					(stroke
 						(width 0.1524)
@@ -1466,6 +1470,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:OPA859IDSGR"
 			(exclude_from_sim no)
@@ -1507,7 +1512,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "1.8 GHz Unity-Gain Bandwidth, 3.3 nV/Hz, FET Input Amplifier\n\nSource: http://www.ti.com/lit/gpn/opa859  Datasheet "
+			(property "Description" "1.8 GHz Unity-Gain Bandwidth, 3.3 nV/Hz, FET Input Amplifier\n\nSource: http://www.ti.com/lit/gpn/opa859  Datasheet"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1645,17 +1650,53 @@
 						)
 					)
 				)
-				(pin power_in line
-					(at 25.4 -7.62 180)
+				(pin bidirectional line
+					(at 12.7 -27.94 90)
 					(length 5.08)
-					(name "VS-"
+					(name "THERMAL"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "5"
+					(number "9"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at 25.4 0 180)
+					(length 5.08)
+					(name "PD"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "8"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 25.4 -2.54 180)
+					(length 5.08)
+					(name "VS+"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "7"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1682,52 +1723,16 @@
 					)
 				)
 				(pin power_in line
-					(at 25.4 -2.54 180)
+					(at 25.4 -7.62 180)
 					(length 5.08)
-					(name "VS+"
+					(name "VS-"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "7"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input line
-					(at 25.4 0 180)
-					(length 5.08)
-					(name "PD"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "8"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 12.7 -27.94 90)
-					(length 5.08)
-					(name "THERMAL"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "9"
+					(number "5"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1736,6 +1741,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:SN74AVC4T774PWR"
 			(exclude_from_sim no)
@@ -1777,7 +1783,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "4-Bit Dual-Supply Bus Transceiver With Configurable Voltage-Level Shifting and 3-State Outputs\n\nSource: http://www.ti.com/lit/gpn/sn74avc4t774  Datasheet "
+			(property "Description" "4-Bit Dual-Supply Bus Transceiver With Configurable Voltage-Level Shifting and 3-State Outputs\n\nSource: http://www.ti.com/lit/gpn/sn74avc4t774  Datasheet"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1854,132 +1860,6 @@
 						)
 					)
 					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 27.94 -15.24 180)
-					(length 5.08)
-					(name "GND"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "10"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 27.94 -12.7 180)
-					(length 5.08)
-					(name "B4"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "11"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 27.94 -10.16 180)
-					(length 5.08)
-					(name "B3"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "12"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 27.94 -7.62 180)
-					(length 5.08)
-					(name "B2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "13"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 27.94 -5.08 180)
-					(length 5.08)
-					(name "B1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "14"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 27.94 -2.54 180)
-					(length 5.08)
-					(name "VCCB"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "15"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 27.94 0 180)
-					(length 5.08)
-					(name "VCCA"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "16"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -2114,6 +1994,132 @@
 					)
 				)
 				(pin bidirectional line
+					(at 27.94 0 180)
+					(length 5.08)
+					(name "VCCA"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "16"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 27.94 -2.54 180)
+					(length 5.08)
+					(name "VCCB"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "15"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 27.94 -5.08 180)
+					(length 5.08)
+					(name "B1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "14"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 27.94 -7.62 180)
+					(length 5.08)
+					(name "B2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "13"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 27.94 -10.16 180)
+					(length 5.08)
+					(name "B3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "12"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 27.94 -12.7 180)
+					(length 5.08)
+					(name "B4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "11"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 27.94 -15.24 180)
+					(length 5.08)
+					(name "GND"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "10"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
 					(at 27.94 -17.78 180)
 					(length 5.08)
 					(name "~{OE}"
@@ -2132,6 +2138,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:TLV9102IPWR"
 			(exclude_from_sim no)
@@ -2173,7 +2180,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Dual 1MHz, 16-V rail-to-rail input/output, low-offset voltage, low-power op amp\n\nSource: http://www.ti.com/lit/gpn/TLV9102  Datasheet "
+			(property "Description" "Dual 1MHz, 16-V rail-to-rail input/output, low-offset voltage, low-power op amp\n\nSource: http://www.ti.com/lit/gpn/TLV9102  Datasheet"
 				(at 0 0 0)
 				(effects
 					(font
@@ -2312,34 +2319,16 @@
 					)
 				)
 				(pin bidirectional line
-					(at 27.94 -7.62 180)
+					(at 27.94 0 180)
 					(length 5.08)
-					(name "IN2+"
+					(name "V+"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "5"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 27.94 -5.08 180)
-					(length 5.08)
-					(name "IN2-"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "6"
+					(number "8"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -2366,16 +2355,34 @@
 					)
 				)
 				(pin bidirectional line
-					(at 27.94 0 180)
+					(at 27.94 -5.08 180)
 					(length 5.08)
-					(name "V+"
+					(name "IN2-"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "8"
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 27.94 -7.62 180)
+					(length 5.08)
+					(name "IN2+"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "5"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -2384,6 +2391,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:supply2_GND"
 			(power)
@@ -2499,7 +2507,195 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
+	)
+	(text "DAC output 2\nis used on sheet 4\nfor channel 2"
+		(exclude_from_sim no)
+		(at 20.32 208.28 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "22736fd1-c088-4914-8126-e21547b600e6")
+	)
+	(text "SPI from FPGA"
+		(exclude_from_sim no)
+		(at 101.6 210.82 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "230664a0-de1e-4ff1-8468-8d64295aea55")
+	)
+	(text "Buffered DAC output\nfor DC offset"
+		(exclude_from_sim no)
+		(at 68.58 81.28 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "376c21b9-0aec-426a-b56c-ed0167bfe56c")
+	)
+	(text "DAC output\n0 to 2.5V"
+		(exclude_from_sim no)
+		(at 40.64 182.88 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "4a83ce26-a1b4-4f03-b165-692e405d3373")
+	)
+	(text "To ADC input B"
+		(exclude_from_sim no)
+		(at 347.98 63.5 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "4c56fdc4-6e4c-4a02-94c5-7183b7295a17")
+	)
+	(text "Buffered DAC output\nfor DC offset"
+		(exclude_from_sim no)
+		(at 68.58 81.28 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "53aac443-39b0-4761-9cb3-54be6686115b")
+	)
+	(text "Level shifter for SPI\nAmp <-> FPGA\n2.5V <-> 3.3V"
+		(exclude_from_sim no)
+		(at 238.76 154.94 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "57217b91-584e-433a-9423-40320428b518")
+	)
+	(text "SPI to/from FPGA"
+		(exclude_from_sim no)
+		(at 200.66 134.62 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "710da9f9-38b2-4a60-8b2e-dfbd53bc9c2f")
+	)
+	(text "FB and OUT\nare connected\ninternally for\nlowest input C"
+		(exclude_from_sim no)
+		(at 88.9 124.46 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "87aee9a2-b289-48a5-8f54-5b5ad4caa126")
+	)
+	(text "Single-ended to differential\namp with gain 4x"
+		(exclude_from_sim no)
+		(at 124.46 76.2 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "9528a21f-b515-4050-b624-45bdff6a464f")
+	)
+	(text "Buffered DAC output\n-1.25 to 1.25V"
+		(exclude_from_sim no)
+		(at 40.64 134.62 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "a96d8632-5fdc-4980-9841-9741138b990b")
+	)
+	(text "Variable gain amp\ngain 0.5x to 20x"
+		(exclude_from_sim no)
+		(at 238.76 81.28 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "adb75940-ab35-4bb1-b081-2fe267515af7")
+	)
+	(text "SPI"
+		(exclude_from_sim no)
+		(at 251.46 99.06 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "cc676896-21b6-423f-adec-ddf34bbcdc2d")
+	)
+	(text "Subtract 2.5V/2 from DAC out"
+		(exclude_from_sim no)
+		(at 71.12 170.18 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "daa3c528-ce00-45f7-8e3a-adfe02440a5f")
+	)
+	(text "50 Ohm input\nfrom previous sheet"
+		(exclude_from_sim no)
+		(at 17.78 60.96 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "dad35680-5782-4a50-9e1b-a7ecf2ec8f18")
+	)
+	(text "2.5V ref voltage\nfrom DAC, also\nused on sheet 4\nfor channel 2"
+		(exclude_from_sim no)
+		(at 124.46 182.88 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "e17cbcf0-93ae-445a-afb3-598c92f461dc")
+	)
+	(text "Buffer with high bandwidth"
+		(exclude_from_sim no)
+		(at 60.96 96.52 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "e2f2f213-d3e3-4ed3-ada9-2793d090c3b6")
 	)
 	(junction
 		(at 86.36 106.68)
@@ -3957,196 +4153,8 @@
 		)
 		(uuid "ff46f271-12f7-4b51-b7fd-16ae744c7061")
 	)
-	(text "DAC output 2\nis used on sheet 4\nfor channel 2"
-		(exclude_from_sim no)
-		(at 20.32 208.28 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "22736fd1-c088-4914-8126-e21547b600e6")
-	)
-	(text "SPI from FPGA"
-		(exclude_from_sim no)
-		(at 101.6 210.82 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "230664a0-de1e-4ff1-8468-8d64295aea55")
-	)
-	(text "Buffered DAC output\nfor DC offset"
-		(exclude_from_sim no)
-		(at 68.58 81.28 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "376c21b9-0aec-426a-b56c-ed0167bfe56c")
-	)
-	(text "DAC output\n0 to 2.5V"
-		(exclude_from_sim no)
-		(at 40.64 182.88 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "4a83ce26-a1b4-4f03-b165-692e405d3373")
-	)
-	(text "To ADC input B"
-		(exclude_from_sim no)
-		(at 347.98 63.5 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "4c56fdc4-6e4c-4a02-94c5-7183b7295a17")
-	)
-	(text "Buffered DAC output\nfor DC offset"
-		(exclude_from_sim no)
-		(at 68.58 81.28 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "53aac443-39b0-4761-9cb3-54be6686115b")
-	)
-	(text "Level shifter for SPI\nAmp <-> FPGA\n2.5V <-> 3.3V"
-		(exclude_from_sim no)
-		(at 238.76 154.94 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "57217b91-584e-433a-9423-40320428b518")
-	)
-	(text "SPI to/from FPGA"
-		(exclude_from_sim no)
-		(at 200.66 134.62 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "710da9f9-38b2-4a60-8b2e-dfbd53bc9c2f")
-	)
-	(text "FB and OUT\nare connected\ninternally for\nlowest input C"
-		(exclude_from_sim no)
-		(at 88.9 124.46 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "87aee9a2-b289-48a5-8f54-5b5ad4caa126")
-	)
-	(text "Single-ended to differential\namp with gain 4x"
-		(exclude_from_sim no)
-		(at 124.46 76.2 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "9528a21f-b515-4050-b624-45bdff6a464f")
-	)
-	(text "Buffered DAC output\n-1.25 to 1.25V"
-		(exclude_from_sim no)
-		(at 40.64 134.62 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "a96d8632-5fdc-4980-9841-9741138b990b")
-	)
-	(text "Variable gain amp\ngain 0.5x to 20x"
-		(exclude_from_sim no)
-		(at 238.76 81.28 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "adb75940-ab35-4bb1-b081-2fe267515af7")
-	)
-	(text "SPI"
-		(exclude_from_sim no)
-		(at 251.46 99.06 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "cc676896-21b6-423f-adec-ddf34bbcdc2d")
-	)
-	(text "Subtract 2.5V/2 from DAC out"
-		(exclude_from_sim no)
-		(at 71.12 170.18 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "daa3c528-ce00-45f7-8e3a-adfe02440a5f")
-	)
-	(text "50 Ohm input\nfrom previous sheet"
-		(exclude_from_sim no)
-		(at 17.78 60.96 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "dad35680-5782-4a50-9e1b-a7ecf2ec8f18")
-	)
-	(text "2.5V ref voltage\nfrom DAC, also\nused on sheet 4\nfor channel 2"
-		(exclude_from_sim no)
-		(at 124.46 182.88 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "e17cbcf0-93ae-445a-afb3-598c92f461dc")
-	)
-	(text "Buffer with high bandwidth"
-		(exclude_from_sim no)
-		(at 60.96 96.52 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "e2f2f213-d3e3-4ed3-ada9-2793d090c3b6")
-	)
 	(label "AMPSDI"
 		(at 223.52 45.72 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4157,7 +4165,6 @@
 	)
 	(label "AOUTSMA_P"
 		(at 218.44 48.26 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4168,7 +4175,6 @@
 	)
 	(label "AMPSDO"
 		(at 266.7 137.16 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4179,7 +4185,6 @@
 	)
 	(label "AMPSCLK"
 		(at 264.16 53.34 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4190,7 +4195,6 @@
 	)
 	(label "AMPOUT_P"
 		(at 264.16 45.72 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4201,7 +4205,6 @@
 	)
 	(label "DACOUT1"
 		(at 43.18 157.48 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4212,7 +4215,6 @@
 	)
 	(label "AMPSCLK"
 		(at 266.7 129.54 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4223,7 +4225,6 @@
 	)
 	(label "AOFFSET"
 		(at 78.74 60.96 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4234,7 +4235,6 @@
 	)
 	(label "AOUTSMA_N"
 		(at 180.34 58.42 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4245,7 +4245,6 @@
 	)
 	(label "AIN_P"
 		(at 111.76 60.96 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4256,7 +4255,6 @@
 	)
 	(label "DACAMPOUT1"
 		(at 43.18 111.76 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4267,7 +4265,6 @@
 	)
 	(label "OFFSETOUT"
 		(at 88.9 109.22 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4278,7 +4275,6 @@
 	)
 	(label "AOUT_P"
 		(at 154.94 60.96 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4289,7 +4285,6 @@
 	)
 	(label "1V25OUT-1"
 		(at 43.18 160.02 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4300,7 +4295,6 @@
 	)
 	(label "1V25OUT-1"
 		(at 109.22 152.4 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4311,7 +4305,6 @@
 	)
 	(label "AIN_N"
 		(at 111.76 58.42 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4322,7 +4315,6 @@
 	)
 	(label "AMPOUT_P"
 		(at 307.34 58.42 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4333,7 +4325,6 @@
 	)
 	(label "AMPSCS"
 		(at 264.16 55.88 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4344,7 +4335,6 @@
 	)
 	(label "AMPOUT_N"
 		(at 307.34 55.88 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4355,7 +4345,6 @@
 	)
 	(label "AOUTSMA_P"
 		(at 180.34 60.96 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4366,7 +4355,6 @@
 	)
 	(label "DACOUT1"
 		(at 43.18 195.58 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4377,7 +4365,6 @@
 	)
 	(label "AOUT_N"
 		(at 154.94 58.42 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4388,7 +4375,6 @@
 	)
 	(label "AMPSDI"
 		(at 266.7 134.62 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4399,7 +4385,6 @@
 	)
 	(label "DACAMPOUT1"
 		(at 43.18 152.4 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4410,7 +4395,6 @@
 	)
 	(label "AMPOUT_N"
 		(at 223.52 68.58 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4421,7 +4405,6 @@
 	)
 	(label "AOUTSMA_N"
 		(at 218.44 50.8 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4432,7 +4415,6 @@
 	)
 	(label "OFFSETOUT"
 		(at 66.04 71.12 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4443,7 +4425,6 @@
 	)
 	(label "AMPSDO"
 		(at 223.52 53.34 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4454,7 +4435,6 @@
 	)
 	(label "AMPSCS"
 		(at 266.7 132.08 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)

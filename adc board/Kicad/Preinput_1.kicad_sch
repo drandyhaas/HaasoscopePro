@@ -1,7 +1,7 @@
 (kicad_sch
-	(version 20231120)
+	(version 20250114)
 	(generator "eeschema")
-	(generator_version "8.0")
+	(generator_version "9.0")
 	(uuid "9d68eec6-f91c-4325-941d-44ff7dc8598a")
 	(paper "User" 505.739 210.007)
 	(lib_symbols
@@ -64,17 +64,6 @@
 			)
 			(symbol "C-EUC0805_1_0"
 				(rectangle
-					(start -2.032 -2.032)
-					(end 2.032 -1.524)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(rectangle
 					(start -2.032 -1.016)
 					(end 2.032 -0.508)
 					(stroke
@@ -85,9 +74,20 @@
 						(type outline)
 					)
 				)
+				(rectangle
+					(start -2.032 -2.032)
+					(end 2.032 -1.524)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
 				(polyline
 					(pts
-						(xy 0 -2.54) (xy 0 -2.032)
+						(xy 0 0) (xy 0 -0.508)
 					)
 					(stroke
 						(width 0.1524)
@@ -99,7 +99,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 0) (xy 0 -0.508)
+						(xy 0 -2.54) (xy 0 -2.032)
 					)
 					(stroke
 						(width 0.1524)
@@ -146,6 +146,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:CAPACITOR_NP_0402"
 			(exclude_from_sim no)
@@ -206,17 +207,6 @@
 			)
 			(symbol "CAPACITOR_NP_0402_1_0"
 				(rectangle
-					(start -1.778 -1.27)
-					(end 1.778 -0.508)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type outline)
-					)
-				)
-				(rectangle
 					(start -1.778 0.508)
 					(end 1.778 1.27)
 					(stroke
@@ -227,9 +217,20 @@
 						(type outline)
 					)
 				)
+				(rectangle
+					(start -1.778 -1.27)
+					(end 1.778 -0.508)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
 				(polyline
 					(pts
-						(xy 0 -2.54) (xy 0 -1.016)
+						(xy 0 2.54) (xy 0 1.016)
 					)
 					(stroke
 						(width 0.1524)
@@ -241,7 +242,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 2.54) (xy 0 1.016)
+						(xy 0 -2.54) (xy 0 -1.016)
 					)
 					(stroke
 						(width 0.1524)
@@ -288,6 +289,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:G6K-2F-RF-T-TR03_DC5"
 			(exclude_from_sim no)
@@ -329,7 +331,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "High Frequency / RF Relays 3GHz SpSavGrd NoLtch DPDT 5DC 100mW TR300\n\nSource: http://omronfs.omron.com/en_US/ecb/products/pdf/en-g6k_2f_rf.pdf  Datasheet "
+			(property "Description" "High Frequency / RF Relays 3GHz SpSavGrd NoLtch DPDT 5DC 100mW TR300\n\nSource: http://omronfs.omron.com/en_US/ecb/products/pdf/en-g6k_2f_rf.pdf  Datasheet"
 				(at 0 0 0)
 				(effects
 					(font
@@ -396,150 +398,6 @@
 					)
 				)
 				(pin bidirectional line
-					(at 0 -2.54 0)
-					(length 5.08)
-					(name "COIL+"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 0 -7.62 0)
-					(length 5.08)
-					(name "NC_1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 0 -12.7 0)
-					(length 5.08)
-					(name "COM_1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "3"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 0 -17.78 0)
-					(length 5.08)
-					(name "NO_1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "4"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 33.02 -17.78 180)
-					(length 5.08)
-					(name "NO_2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "5"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 33.02 -12.7 180)
-					(length 5.08)
-					(name "COM_2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "6"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 33.02 -7.62 180)
-					(length 5.08)
-					(name "NC_2"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "7"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 33.02 -2.54 180)
-					(length 5.08)
-					(name "COIL-"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "8"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
 					(at 0 0 0)
 					(length 5.08)
 					(name "GND_1"
@@ -558,16 +416,16 @@
 					)
 				)
 				(pin bidirectional line
-					(at 33.02 0 180)
+					(at 0 -2.54 0)
 					(length 5.08)
-					(name "GND_10"
+					(name "COIL+"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "MP10"
+					(number "1"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -594,6 +452,24 @@
 					)
 				)
 				(pin bidirectional line
+					(at 0 -7.62 0)
+					(length 5.08)
+					(name "NC_1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
 					(at 0 -10.16 0)
 					(length 5.08)
 					(name "GND_3"
@@ -604,6 +480,24 @@
 						)
 					)
 					(number "MP3"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 0 -12.7 0)
+					(length 5.08)
+					(name "COM_1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -630,6 +524,24 @@
 					)
 				)
 				(pin bidirectional line
+					(at 0 -17.78 0)
+					(length 5.08)
+					(name "NO_1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
 					(at 0 -20.32 0)
 					(length 5.08)
 					(name "GND_5"
@@ -648,16 +560,16 @@
 					)
 				)
 				(pin bidirectional line
-					(at 33.02 -20.32 180)
+					(at 33.02 0 180)
 					(length 5.08)
-					(name "GND_6"
+					(name "GND_10"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "MP6"
+					(number "MP10"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -666,16 +578,52 @@
 					)
 				)
 				(pin bidirectional line
-					(at 33.02 -15.24 180)
+					(at 33.02 -2.54 180)
 					(length 5.08)
-					(name "GND_7"
+					(name "COIL-"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "MP7"
+					(number "8"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 33.02 -5.08 180)
+					(length 5.08)
+					(name "GND_9"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "MP9"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 33.02 -7.62 180)
+					(length 5.08)
+					(name "NC_2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "7"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -702,16 +650,70 @@
 					)
 				)
 				(pin bidirectional line
-					(at 33.02 -5.08 180)
+					(at 33.02 -12.7 180)
 					(length 5.08)
-					(name "GND_9"
+					(name "COM_2"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "MP9"
+					(number "6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 33.02 -15.24 180)
+					(length 5.08)
+					(name "GND_7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "MP7"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 33.02 -17.78 180)
+					(length 5.08)
+					(name "NO_2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "5"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at 33.02 -20.32 180)
+					(length 5.08)
+					(name "GND_6"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "MP6"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -720,6 +722,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:MF_Passives_RESISTOR_0402"
 			(exclude_from_sim no)
@@ -781,19 +784,7 @@
 			(symbol "MF_Passives_RESISTOR_0402_1_0"
 				(polyline
 					(pts
-						(xy -1.016 -2.286) (xy 0 -2.54)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.016 -1.016) (xy 1.016 -1.651)
+						(xy -1.016 1.524) (xy 1.016 0.889)
 					)
 					(stroke
 						(width 0.1524)
@@ -817,7 +808,19 @@
 				)
 				(polyline
 					(pts
-						(xy -1.016 1.524) (xy 1.016 0.889)
+						(xy -1.016 -1.016) (xy 1.016 -1.651)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy -1.016 -2.286) (xy 0 -2.54)
 					)
 					(stroke
 						(width 0.1524)
@@ -841,19 +844,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.016 -1.651) (xy -1.016 -2.286)
-					)
-					(stroke
-						(width 0.1524)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.016 -0.381) (xy -1.016 -1.016)
+						(xy 1.016 2.159) (xy -1.016 1.524)
 					)
 					(stroke
 						(width 0.1524)
@@ -877,7 +868,19 @@
 				)
 				(polyline
 					(pts
-						(xy 1.016 2.159) (xy -1.016 1.524)
+						(xy 1.016 -0.381) (xy -1.016 -1.016)
+					)
+					(stroke
+						(width 0.1524)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.016 -1.651) (xy -1.016 -2.286)
 					)
 					(stroke
 						(width 0.1524)
@@ -924,6 +927,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:MOLEX_BNC_73100-0105"
 			(exclude_from_sim no)
@@ -985,18 +989,6 @@
 			(symbol "MOLEX_BNC_73100-0105_1_0"
 				(polyline
 					(pts
-						(xy -3.81 -2.54) (xy 1.27 -2.54)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
 						(xy -3.81 2.54) (xy -3.81 -2.54)
 					)
 					(stroke
@@ -1009,43 +1001,7 @@
 				)
 				(polyline
 					(pts
-						(xy 1.27 -2.54) (xy 1.27 -1.27)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.27 -1.27) (xy 2.54 -1.27)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.27 1.27) (xy 1.27 -1.27)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 1.27 1.27) (xy 1.27 2.54)
+						(xy -3.81 -2.54) (xy 1.27 -2.54)
 					)
 					(stroke
 						(width 0.254)
@@ -1069,10 +1025,46 @@
 				)
 				(polyline
 					(pts
-						(xy 2.54 -5.08) (xy 2.54 -1.27)
+						(xy 1.27 1.27) (xy 1.27 2.54)
 					)
 					(stroke
-						(width 0.1524)
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.27 1.27) (xy 1.27 -1.27)
+					)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.27 -1.27) (xy 2.54 -1.27)
+					)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.27 -2.54) (xy 1.27 -1.27)
+					)
+					(stroke
+						(width 0.254)
 						(type solid)
 					)
 					(fill
@@ -1093,10 +1085,10 @@
 				)
 				(polyline
 					(pts
-						(xy 3.81 -1.524) (xy 4.064 -1.524)
+						(xy 2.54 -5.08) (xy 2.54 -1.27)
 					)
 					(stroke
-						(width 0.254)
+						(width 0.1524)
 						(type solid)
 					)
 					(fill
@@ -1105,19 +1097,7 @@
 				)
 				(polyline
 					(pts
-						(xy 3.81 -1.27) (xy 3.81 -1.524)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 3.81 -1.27) (xy 4.064 -1.27)
+						(xy 3.81 1.524) (xy 4.064 1.524)
 					)
 					(stroke
 						(width 0.254)
@@ -1153,7 +1133,7 @@
 				)
 				(polyline
 					(pts
-						(xy 3.81 1.524) (xy 4.064 1.524)
+						(xy 3.81 -1.27) (xy 3.81 -1.524)
 					)
 					(stroke
 						(width 0.254)
@@ -1165,7 +1145,7 @@
 				)
 				(polyline
 					(pts
-						(xy 4.064 -1.524) (xy 4.064 -1.27)
+						(xy 3.81 -1.27) (xy 4.064 -1.27)
 					)
 					(stroke
 						(width 0.254)
@@ -1177,19 +1157,7 @@
 				)
 				(polyline
 					(pts
-						(xy 4.064 -1.27) (xy 5.08 -1.27)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 4.064 1.27) (xy 3.81 1.27)
+						(xy 3.81 -1.524) (xy 4.064 -1.524)
 					)
 					(stroke
 						(width 0.254)
@@ -1213,10 +1181,46 @@
 				)
 				(polyline
 					(pts
-						(xy 5.08 -5.08) (xy 2.54 -5.08)
+						(xy 4.064 1.27) (xy 3.81 1.27)
 					)
 					(stroke
-						(width 0.1524)
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 4.064 -1.27) (xy 5.08 -1.27)
+					)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 4.064 -1.524) (xy 4.064 -1.27)
+					)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 5.08 1.27) (xy 4.064 1.27)
+					)
+					(stroke
+						(width 0.254)
 						(type solid)
 					)
 					(fill
@@ -1237,14 +1241,32 @@
 				)
 				(polyline
 					(pts
-						(xy 5.08 1.27) (xy 4.064 1.27)
+						(xy 5.08 -5.08) (xy 2.54 -5.08)
 					)
 					(stroke
-						(width 0.254)
+						(width 0.1524)
 						(type solid)
 					)
 					(fill
 						(type none)
+					)
+				)
+				(pin bidirectional line
+					(at 7.62 0 180)
+					(length 2.54)
+					(name "SIGNAL"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
+					)
+					(number "SIGNAL"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
 					)
 				)
 				(pin bidirectional line
@@ -1283,25 +1305,8 @@
 						)
 					)
 				)
-				(pin bidirectional line
-					(at 7.62 0 180)
-					(length 2.54)
-					(name "SIGNAL"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-					(number "SIGNAL"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:OPA859IDSGR"
 			(exclude_from_sim no)
@@ -1343,7 +1348,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "1.8 GHz Unity-Gain Bandwidth, 3.3 nV/Hz, FET Input Amplifier\n\nSource: http://www.ti.com/lit/gpn/opa859  Datasheet "
+			(property "Description" "1.8 GHz Unity-Gain Bandwidth, 3.3 nV/Hz, FET Input Amplifier\n\nSource: http://www.ti.com/lit/gpn/opa859  Datasheet"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1481,17 +1486,53 @@
 						)
 					)
 				)
-				(pin power_in line
-					(at 25.4 -7.62 180)
+				(pin bidirectional line
+					(at 12.7 -27.94 90)
 					(length 5.08)
-					(name "VS-"
+					(name "THERMAL"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "5"
+					(number "9"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin input line
+					(at 25.4 0 180)
+					(length 5.08)
+					(name "PD"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "8"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin power_in line
+					(at 25.4 -2.54 180)
+					(length 5.08)
+					(name "VS+"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "7"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1518,52 +1559,16 @@
 					)
 				)
 				(pin power_in line
-					(at 25.4 -2.54 180)
+					(at 25.4 -7.62 180)
 					(length 5.08)
-					(name "VS+"
+					(name "VS-"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "7"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin input line
-					(at 25.4 0 180)
-					(length 5.08)
-					(name "PD"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "8"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 12.7 -27.94 90)
-					(length 5.08)
-					(name "THERMAL"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "9"
+					(number "5"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -1572,6 +1577,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:SMACONNECTOR_EDGE"
 			(exclude_from_sim no)
@@ -1633,7 +1639,7 @@
 			(symbol "SMACONNECTOR_EDGE_1_0"
 				(polyline
 					(pts
-						(xy -5.08 -5.08) (xy -5.08 0)
+						(xy -5.08 5.08) (xy 5.08 5.08)
 					)
 					(stroke
 						(width 0.254)
@@ -1669,8 +1675,30 @@
 				)
 				(polyline
 					(pts
-						(xy -5.08 5.08) (xy 5.08 5.08)
+						(xy -5.08 -5.08) (xy -5.08 0)
 					)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center 0 0)
+					(radius 0.3592)
+					(stroke
+						(width 0.8128)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(circle
+					(center 0 0)
+					(radius 2.54)
 					(stroke
 						(width 0.254)
 						(type solid)
@@ -1682,18 +1710,6 @@
 				(polyline
 					(pts
 						(xy 2.54 3.81) (xy 3.175 3.81)
-					)
-					(stroke
-						(width 0.127)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy 3.175 3.175) (xy 2.54 3.81)
 					)
 					(stroke
 						(width 0.127)
@@ -1729,7 +1745,7 @@
 				)
 				(polyline
 					(pts
-						(xy 3.81 3.81) (xy 3.175 3.175)
+						(xy 3.175 3.175) (xy 2.54 3.81)
 					)
 					(stroke
 						(width 0.127)
@@ -1741,10 +1757,10 @@
 				)
 				(polyline
 					(pts
-						(xy 5.08 -5.08) (xy -5.08 -5.08)
+						(xy 3.81 3.81) (xy 3.175 3.175)
 					)
 					(stroke
-						(width 0.254)
+						(width 0.127)
 						(type solid)
 					)
 					(fill
@@ -1763,20 +1779,10 @@
 						(type none)
 					)
 				)
-				(circle
-					(center 0 0)
-					(radius 0.3592)
-					(stroke
-						(width 0.8128)
-						(type solid)
+				(polyline
+					(pts
+						(xy 5.08 -5.08) (xy -5.08 -5.08)
 					)
-					(fill
-						(type none)
-					)
-				)
-				(circle
-					(center 0 0)
-					(radius 2.54)
 					(stroke
 						(width 0.254)
 						(type solid)
@@ -1785,17 +1791,35 @@
 						(type none)
 					)
 				)
-				(pin power_in line
-					(at 2.54 -7.62 90)
+				(pin bidirectional line
+					(at -7.62 0 0)
 					(length 2.54)
-					(name "GND4"
+					(name "ANT"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "P"
 						(effects
 							(font
 								(size 0 0)
 							)
 						)
 					)
-					(number "GND@1"
+				)
+				(pin power_in line
+					(at -2.54 7.62 270)
+					(length 2.54)
+					(name "GND1"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
+					)
+					(number "GND@4"
 						(effects
 							(font
 								(size 0 0)
@@ -1840,34 +1864,16 @@
 					)
 				)
 				(pin power_in line
-					(at -2.54 7.62 270)
+					(at 2.54 -7.62 90)
 					(length 2.54)
-					(name "GND1"
+					(name "GND4"
 						(effects
 							(font
 								(size 0 0)
 							)
 						)
 					)
-					(number "GND@4"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at -7.62 0 0)
-					(length 2.54)
-					(name "ANT"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "P"
+					(number "GND@1"
 						(effects
 							(font
 								(size 0 0)
@@ -1876,6 +1882,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:SMD-TRANSISTORS-NPN-25V-500MW-S8050(SOT-23)"
 			(exclude_from_sim no)
@@ -1937,7 +1944,7 @@
 			(symbol "SMD-TRANSISTORS-NPN-25V-500MW-S8050(SOT-23)_1_0"
 				(polyline
 					(pts
-						(xy 0 -2.54) (xy 0 0)
+						(xy 0 0) (xy 0 2.54)
 					)
 					(stroke
 						(width 0.1524)
@@ -1949,7 +1956,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 0) (xy 0 2.54)
+						(xy 0 0) (xy 2.54 2.54)
 					)
 					(stroke
 						(width 0.1524)
@@ -1973,7 +1980,7 @@
 				)
 				(polyline
 					(pts
-						(xy 0 0) (xy 2.54 2.54)
+						(xy 0 -2.54) (xy 0 0)
 					)
 					(stroke
 						(width 0.1524)
@@ -2053,24 +2060,6 @@
 					)
 				)
 				(pin passive line
-					(at 2.54 -5.08 90)
-					(length 2.54)
-					(name "E"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-					(number "2"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-				)
-				(pin passive line
 					(at 2.54 5.08 270)
 					(length 2.54)
 					(name "C"
@@ -2088,7 +2077,26 @@
 						)
 					)
 				)
+				(pin passive line
+					(at 2.54 -5.08 90)
+					(length 2.54)
+					(name "E"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
+					)
+				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:TLP3475_TP,F"
 			(exclude_from_sim no)
@@ -2130,7 +2138,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Solid State Relays - PCB Mount Photorelay Voff=40V Ion=0.12A Ron=14Ohm\n\nSource: https://toshiba.semicon-storage.com/info/docget.jsp?did=15250&prodName=TLP3475  Datasheet "
+			(property "Description" "Solid State Relays - PCB Mount Photorelay Voff=40V Ion=0.12A Ron=14Ohm\n\nSource: https://toshiba.semicon-storage.com/info/docget.jsp?did=15250&prodName=TLP3475  Datasheet"
 				(at 0 0 0)
 				(effects
 					(font
@@ -2197,6 +2205,24 @@
 					)
 				)
 				(pin bidirectional line
+					(at 0 0 0)
+					(length 5.08)
+					(name "DRAIN_2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "4"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
 					(at 0 -2.54 0)
 					(length 5.08)
 					(name "ANODE"
@@ -2207,24 +2233,6 @@
 						)
 					)
 					(number "1"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at 35.56 -2.54 180)
-					(length 5.08)
-					(name "CATHODE"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "2"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -2251,16 +2259,16 @@
 					)
 				)
 				(pin bidirectional line
-					(at 0 0 0)
+					(at 35.56 -2.54 180)
 					(length 5.08)
-					(name "DRAIN_2"
+					(name "CATHODE"
 						(effects
 							(font
 								(size 1.27 1.27)
 							)
 						)
 					)
-					(number "4"
+					(number "2"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -2269,6 +2277,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:USB-TYPE-ATHT-RA"
 			(exclude_from_sim no)
@@ -2332,18 +2341,6 @@
 			(symbol "USB-TYPE-ATHT-RA_1_0"
 				(polyline
 					(pts
-						(xy -12.7 -10.16) (xy 5.08 -10.16)
-					)
-					(stroke
-						(width 0.254)
-						(type solid)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
 						(xy -12.7 10.16) (xy -12.7 -10.16)
 					)
 					(stroke
@@ -2356,7 +2353,7 @@
 				)
 				(polyline
 					(pts
-						(xy 5.08 -10.16) (xy 5.08 10.16)
+						(xy -12.7 -10.16) (xy 5.08 -10.16)
 					)
 					(stroke
 						(width 0.254)
@@ -2378,6 +2375,18 @@
 						(type none)
 					)
 				)
+				(polyline
+					(pts
+						(xy 5.08 -10.16) (xy 5.08 10.16)
+					)
+					(stroke
+						(width 0.254)
+						(type solid)
+					)
+					(fill
+						(type none)
+					)
+				)
 				(text "USB Type A"
 					(at -7.62 -5.08 900)
 					(effects
@@ -2385,6 +2394,42 @@
 							(size 1.27 1.0795)
 						)
 						(justify left bottom)
+					)
+				)
+				(pin bidirectional line
+					(at -2.54 -12.7 90)
+					(length 2.54)
+					(name "SHELL"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "S$1"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
+					)
+				)
+				(pin bidirectional line
+					(at -2.54 -12.7 90)
+					(length 2.54)
+					(name "SHELL"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "S$2"
+						(effects
+							(font
+								(size 0 0)
+							)
+						)
 					)
 				)
 				(pin power_in line
@@ -2459,43 +2504,8 @@
 						)
 					)
 				)
-				(pin bidirectional line
-					(at -2.54 -12.7 90)
-					(length 2.54)
-					(name "SHELL"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "S$1"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-				)
-				(pin bidirectional line
-					(at -2.54 -12.7 90)
-					(length 2.54)
-					(name "SHELL"
-						(effects
-							(font
-								(size 1.27 1.27)
-							)
-						)
-					)
-					(number "S$2"
-						(effects
-							(font
-								(size 0 0)
-							)
-						)
-					)
-				)
 			)
+			(embedded_fonts no)
 		)
 		(symbol "haasoscope_pro_adc_fpga_board-eagle-import:supply2_GND"
 			(power)
@@ -2611,7 +2621,184 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
+	)
+	(text "I=10mA suggested\n2.5V - 1.3V forward voltage drop = 1.2V\n1.2V/120Ohm=10mA"
+		(exclude_from_sim no)
+		(at 436.88 96.52 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "117bf358-f676-4831-9de2-bb27dea6464c")
+	)
+	(text "FB and OUT\nare connected\ninternally for\nlowest input C"
+		(exclude_from_sim no)
+		(at 231.14 73.66 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "3ac6df35-b444-44dc-abfa-8387c2bb1113")
+	)
+	(text "RF relay for input Z"
+		(exclude_from_sim no)
+		(at 200.66 91.44 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "4541a7d6-aee6-4929-a24b-bdf303daa615")
+	)
+	(text "BNC input"
+		(exclude_from_sim no)
+		(at 17.78 101.6 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "7ad4990c-f781-46bf-9a85-72b0c281fed7")
+	)
+	(text "RF relay for attenuator"
+		(exclude_from_sim no)
+		(at 304.8 91.44 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "915e2651-a0cc-4b3b-a2ac-6cf136be7346")
+	)
+	(text "To input amps\non next sheet"
+		(exclude_from_sim no)
+		(at 452.12 119.38 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "95ad6426-2745-4ae7-a6a2-5dbe8c9d9512")
+	)
+	(text "RC freq for 50 Ohm * 1uF is ~3kHz,\nso frequencies less than that will be filtered\nZ~1.5 Ohm at 2 GHz\nfor CL05A105KA5NQNC"
+		(exclude_from_sim no)
+		(at 398.78 124.46 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "9a06e977-97c5-411a-a889-0df8833a5b8b")
+	)
+	(text "RF relay driver\nfor input Z"
+		(exclude_from_sim no)
+		(at 203.2 134.62 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "a243918a-3612-49f1-ba52-fdfb58e66f6a")
+	)
+	(text "RF relay driver\nfor splitting"
+		(exclude_from_sim no)
+		(at 96.52 134.62 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "a7754d71-c01b-4d13-8144-d6b2df24b8f5")
+	)
+	(text "50 Ohm resistive\nsplitter/combiner\nOutput -6dB"
+		(exclude_from_sim no)
+		(at 96.52 53.34 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "a9d8060d-12c0-48ae-829d-ecaee7c85f2e")
+	)
+	(text "RF relay driver\nfor attenuator"
+		(exclude_from_sim no)
+		(at 309.88 134.62 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "ab76b7b5-7409-4b77-97c3-d9d9f3f187a9")
+	)
+	(text "Buffer with high bandwidth\nfor 1 MOhm -> 50 Ohm"
+		(exclude_from_sim no)
+		(at 203.2 38.1 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "afbb2195-f009-47f9-9aac-3c8716edf6e4")
+	)
+	(text "RF relay for splitting"
+		(exclude_from_sim no)
+		(at 93.98 91.44 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "b0f59ae9-030a-4812-b63d-dead21f4a2e6")
+	)
+	(text "Pi attenuator\n1/5, -14dB\n50 Ohm"
+		(exclude_from_sim no)
+		(at 312.42 48.26 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "ba091096-5609-4420-9b72-6679f7bf1723")
+	)
+	(text "AC/DC coupling"
+		(exclude_from_sim no)
+		(at 408.94 81.28 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "be0832cd-2336-4150-856b-459eb62d1217")
+	)
+	(text "5V USB for front panel"
+		(exclude_from_sim no)
+		(at 17.78 147.32 0)
+		(effects
+			(font
+				(size 1.778 1.5113)
+			)
+			(justify left bottom)
+		)
+		(uuid "f0de080a-3986-4839-826c-70a3a5ea5fe4")
 	)
 	(junction
 		(at 185.42 58.42)
@@ -4317,185 +4504,8 @@
 		)
 		(uuid "fdf5839c-0ce9-4c90-be3a-d13ae2664c71")
 	)
-	(text "I=10mA suggested\n2.5V - 1.3V forward voltage drop = 1.2V\n1.2V/120Ohm=10mA"
-		(exclude_from_sim no)
-		(at 436.88 96.52 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "117bf358-f676-4831-9de2-bb27dea6464c")
-	)
-	(text "FB and OUT\nare connected\ninternally for\nlowest input C"
-		(exclude_from_sim no)
-		(at 231.14 73.66 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "3ac6df35-b444-44dc-abfa-8387c2bb1113")
-	)
-	(text "RF relay for input Z"
-		(exclude_from_sim no)
-		(at 200.66 91.44 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "4541a7d6-aee6-4929-a24b-bdf303daa615")
-	)
-	(text "BNC input"
-		(exclude_from_sim no)
-		(at 17.78 101.6 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "7ad4990c-f781-46bf-9a85-72b0c281fed7")
-	)
-	(text "RF relay for attenuator"
-		(exclude_from_sim no)
-		(at 304.8 91.44 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "915e2651-a0cc-4b3b-a2ac-6cf136be7346")
-	)
-	(text "To input amps\non next sheet"
-		(exclude_from_sim no)
-		(at 452.12 119.38 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "95ad6426-2745-4ae7-a6a2-5dbe8c9d9512")
-	)
-	(text "RC freq for 50 Ohm * 1uF is ~3kHz,\nso frequencies less than that will be filtered\nZ~1.5 Ohm at 2 GHz\nfor CL05A105KA5NQNC"
-		(exclude_from_sim no)
-		(at 398.78 124.46 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "9a06e977-97c5-411a-a889-0df8833a5b8b")
-	)
-	(text "RF relay driver\nfor input Z"
-		(exclude_from_sim no)
-		(at 203.2 134.62 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "a243918a-3612-49f1-ba52-fdfb58e66f6a")
-	)
-	(text "RF relay driver\nfor splitting"
-		(exclude_from_sim no)
-		(at 96.52 134.62 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "a7754d71-c01b-4d13-8144-d6b2df24b8f5")
-	)
-	(text "50 Ohm resistive\nsplitter/combiner\nOutput -6dB"
-		(exclude_from_sim no)
-		(at 96.52 53.34 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "a9d8060d-12c0-48ae-829d-ecaee7c85f2e")
-	)
-	(text "RF relay driver\nfor attenuator"
-		(exclude_from_sim no)
-		(at 309.88 134.62 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "ab76b7b5-7409-4b77-97c3-d9d9f3f187a9")
-	)
-	(text "Buffer with high bandwidth\nfor 1 MOhm -> 50 Ohm"
-		(exclude_from_sim no)
-		(at 203.2 38.1 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "afbb2195-f009-47f9-9aac-3c8716edf6e4")
-	)
-	(text "RF relay for splitting"
-		(exclude_from_sim no)
-		(at 93.98 91.44 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "b0f59ae9-030a-4812-b63d-dead21f4a2e6")
-	)
-	(text "Pi attenuator\n1/5, -14dB\n50 Ohm"
-		(exclude_from_sim no)
-		(at 312.42 48.26 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "ba091096-5609-4420-9b72-6679f7bf1723")
-	)
-	(text "AC/DC coupling"
-		(exclude_from_sim no)
-		(at 408.94 81.28 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "be0832cd-2336-4150-856b-459eb62d1217")
-	)
-	(text "5V USB for front panel"
-		(exclude_from_sim no)
-		(at 17.78 147.32 0)
-		(effects
-			(font
-				(size 1.778 1.5113)
-			)
-			(justify left bottom)
-		)
-		(uuid "f0de080a-3986-4839-826c-70a3a5ea5fe4")
-	)
 	(label "COIL2-"
 		(at 332.74 139.7 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4506,7 +4516,6 @@
 	)
 	(label "OUTPATH"
 		(at 231.14 109.22 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4517,7 +4526,6 @@
 	)
 	(label "SPLIT"
 		(at 78.74 114.3 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4528,7 +4536,6 @@
 	)
 	(label "1MPATH50"
 		(at 248.92 55.88 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4539,7 +4546,6 @@
 	)
 	(label "50PATH"
 		(at 185.42 104.14 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4550,7 +4556,6 @@
 	)
 	(label "50PATH"
 		(at 231.14 104.14 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4561,7 +4566,6 @@
 	)
 	(label "NOFILT"
 		(at 337.82 104.14 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4572,7 +4576,6 @@
 	)
 	(label "FILTIN"
 		(at 294.64 55.88 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4583,7 +4586,6 @@
 	)
 	(label "1MPATH"
 		(at 172.72 58.42 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4594,7 +4596,6 @@
 	)
 	(label "1MPATH"
 		(at 185.42 114.3 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4605,7 +4606,6 @@
 	)
 	(label "FILTOUT"
 		(at 337.82 114.3 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4616,7 +4616,6 @@
 	)
 	(label "1MPATH50"
 		(at 231.14 114.3 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4627,7 +4626,6 @@
 	)
 	(label "OUTSPLITTER"
 		(at 185.42 109.22 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4638,7 +4636,6 @@
 	)
 	(label "SPLITOUT"
 		(at 124.46 114.3 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4649,7 +4646,6 @@
 	)
 	(label "COIL2-"
 		(at 337.82 99.06 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4660,7 +4656,6 @@
 	)
 	(label "COIL3-"
 		(at 124.46 99.06 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4671,7 +4666,6 @@
 	)
 	(label "OUTPATH"
 		(at 292.1 109.22 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4682,7 +4676,6 @@
 	)
 	(label "COIL1-"
 		(at 231.14 99.06 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4693,7 +4686,6 @@
 	)
 	(label "COIL3-"
 		(at 119.38 139.7 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4704,7 +4696,6 @@
 	)
 	(label "INPATH"
 		(at 35.56 109.22 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4715,7 +4706,6 @@
 	)
 	(label "FILTIN"
 		(at 292.1 114.3 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4726,7 +4716,6 @@
 	)
 	(label "NOSPLIT"
 		(at 124.46 104.14 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4737,7 +4726,6 @@
 	)
 	(label "NOFILT"
 		(at 292.1 104.14 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4748,7 +4736,6 @@
 	)
 	(label "OUTSPLIT"
 		(at 116.84 58.42 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4759,7 +4746,6 @@
 	)
 	(label "SPLIT"
 		(at 78.74 58.42 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4770,7 +4756,6 @@
 	)
 	(label "COIL1-"
 		(at 226.06 139.7 90)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4781,7 +4766,6 @@
 	)
 	(label "OUTPATHFILT"
 		(at 386.08 109.22 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4792,7 +4776,6 @@
 	)
 	(label "OUTPATHFILT"
 		(at 337.82 109.22 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4803,7 +4786,6 @@
 	)
 	(label "OUTSPLITTER"
 		(at 124.46 109.22 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4814,7 +4796,6 @@
 	)
 	(label "INPATH"
 		(at 78.74 109.22 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4825,7 +4806,6 @@
 	)
 	(label "SPLITOUT"
 		(at 116.84 73.66 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4836,7 +4816,6 @@
 	)
 	(label "FILTOUT"
 		(at 332.74 55.88 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
@@ -4847,7 +4826,6 @@
 	)
 	(label "NOSPLIT"
 		(at 78.74 104.14 0)
-		(fields_autoplaced yes)
 		(effects
 			(font
 				(size 1.2446 1.2446)
