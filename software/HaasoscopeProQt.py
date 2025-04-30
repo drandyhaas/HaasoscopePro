@@ -855,7 +855,7 @@ class MainWindow(TemplateBaseClass):
         if self.doexttrig[board] > 0: tt = 3
         elif self.doextsmatrig[board] > 0: tt = 5
         usbs[board].send(bytes([1, tt, self.dotwochannel+2*self.dooversample, 99] + inttobytes(
-            self.expect_samples - self.triggerpos + 1)))  # length to take after trigger (last 4 bytes)
+            self.expect_samples + self.expect_samples_extra - self.triggerpos + 1)))  # length to take after trigger (last 4 bytes)
         triggercounter = usbs[board].recv(4)  # get the 4 bytes
         acqstate = triggercounter[0]
         if acqstate == 251:  # an event is ready to be read out
