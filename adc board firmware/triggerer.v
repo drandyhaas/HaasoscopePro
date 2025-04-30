@@ -73,6 +73,7 @@ reg [7:0]   downsamplemerging_sync = 0;
 reg [4:0]   downsample_sync = 0;
 reg         triggerlive_sync = 0;
 reg         didreadout_sync = 0;
+reg         exttrigin_sync = 0, exttrigin_sync_last = 0, exttrig_rising = 0;
 
 // this drives the trigger
 integer i;
@@ -92,6 +93,8 @@ always @ (posedge clklvds) begin
    channeltype_sync       <= channeltype;
    downsamplemerging_sync <= downsamplemerging;
    downsample_sync        <= downsample;
+   exttrigin_sync         <= exttrigin;
+   exttrigin_sync_last    <= exttrigin_sync; // remember for next cycle
 
    if (acqstate==251 || acqstate==0) begin
       // not writing, while waiting to be read out or in initial state where trigger might be disabled
@@ -110,13 +113,13 @@ always @ (posedge clklvds) begin
             ram_wr <= 1'b1;
          end
          else begin
-             downsamplemergingcounter <= downsamplemergingcounter + 8'd1;
-             ram_wr <= 1'b0;
+            downsamplemergingcounter <= downsamplemergingcounter + 8'd1;
+            ram_wr <= 1'b0;
          end
       end
       else begin
-          downsamplecounter <= downsamplecounter  +1;
-          ram_wr <= 1'b0;
+         downsamplecounter <= downsamplecounter  +1;
+         ram_wr <= 1'b0;
       end
    end
 
@@ -147,6 +150,7 @@ always @ (posedge clklvds) begin
       downsamplemergingcounter_triggered <= -8'd1;
       lvdsout_trig <= 0;
       lvdsout_trig_b <= 0;
+      exttrig_rising <= 0;
       downsamplecounter <= 1;
       downsamplemergingcounter <= 1;
       triggercounter <= 0; // set to 0 as this register will be used to count in pre-aquisition
@@ -223,32 +227,32 @@ always @ (posedge clklvds) begin
                ( (samplevalue[ 0+i]<lowerthresh_sync && !rising) || (samplevalue[ 0+i]>upperthresh_sync && rising) ) ) begin
                firingsecondstep=1'b1;
                if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
-                   sample_triggered[10+9-i] <= 1'b1; // remember the samples that caused the trigger
-                   downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+                  sample_triggered[10+9-i] <= 1'b1; // remember the samples that caused the trigger
+                  downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
                end
             end
             if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
                ( (samplevalue[10+i]<lowerthresh_sync && !rising) || (samplevalue[10+i]>upperthresh_sync && rising) ) ) begin
                firingsecondstep=1'b1;
                if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
-                   sample_triggered2[10+9-i] <= 1'b1; // remember the samples that caused the trigger
-                   downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+                  sample_triggered2[10+9-i] <= 1'b1; // remember the samples that caused the trigger
+                  downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
                end
             end
             if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
                ( (samplevalue[20+i]<lowerthresh_sync && !rising) || (samplevalue[20+i]>upperthresh_sync && rising) ) ) begin
                firingsecondstep=1'b1;
                if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
-                   sample_triggered3[10+9-i] <= 1'b1; // remember the samples that caused the trigger
-                   downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+                  sample_triggered3[10+9-i] <= 1'b1; // remember the samples that caused the trigger
+                  downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
                end
             end
             if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
                ( (samplevalue[30+i]<lowerthresh_sync && !rising) || (samplevalue[30+i]>upperthresh_sync && rising) ) ) begin
                firingsecondstep=1'b1;
                if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
-                   sample_triggered4[10+9-i] <= 1'b1; // remember the samples that caused the trigger
-                   downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+                  sample_triggered4[10+9-i] <= 1'b1; // remember the samples that caused the trigger
+                  downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
                end
             end
         end
@@ -256,11 +260,11 @@ always @ (posedge clklvds) begin
          if (firingsecondstep) begin
             if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) tot_counter <= tot_counter + 8'd1;
             if (tot_counter>=triggerToT_sync && (triggerToT_sync==0 || downsamplemergingcounter==downsamplemergingcounter_triggered) ) begin
-                ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-                lvdsout_trig <= 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
-                lvdsout_trig_b <= 1'b1; // and backwards
-                acqstate <= 8'd250;
-            end
+               ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+               lvdsout_trig <= 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
+               lvdsout_trig_b <= 1'b1; // and backwards
+               acqstate <= 8'd250;
+   end
          end
          
       end
@@ -270,19 +274,19 @@ always @ (posedge clklvds) begin
          if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
          else begin
              if (lvdsin_trig) begin
-                 ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-                 lvdsout_trig <= 1'b1; // tell the others forwards
-                 sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
-                 downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
-                 acqstate <= 8'd250;
-             end
+               ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+               lvdsout_trig <= 1'b1; // tell the others forwards
+               sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
+               downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
+               acqstate <= 8'd250;
+    end
              if (lvdsin_trig_b) begin
-                 ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-                 lvdsout_trig_b <= 1'b1; // tell the others backwards
-                 sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
-                 downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
-                 acqstate <= 8'd250;
-             end
+               ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+               lvdsout_trig_b <= 1'b1; // tell the others backwards
+               sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
+               downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
+               acqstate <= 8'd250;
+    end
          end
    end
 
@@ -297,14 +301,17 @@ always @ (posedge clklvds) begin
    7: begin // external trigger, like from the back panel SMA (5)
         if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
         else begin
-            if (exttrigin) begin
-                 ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-                 lvdsout_trig <= 1'b1; // tell the others forwards
-                 lvdsout_trig_b <= 1'b1; // tell the others backwards
-                 sample_triggered <= 0; // we didn't measure the trigger edge - going to be some jitter unfortunately
-                 downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
-                 acqstate <= 8'd250;
-             end
+            if (exttrigin_sync && !exttrigin_sync_last) exttrig_rising=1'b1; // remember seeing rising edge of exttrigin_sync
+            if (exttrig_rising && exttrigin_sync) tot_counter <= tot_counter + 8'd1; // keep counting while exttrigin is high
+            else tot_counter<=0; // if exttrigin goes low, reset counter
+            if (exttrig_rising && tot_counter>=triggerToT_sync) begin
+               ram_address_triggered <= ram_wr_address - triggerToT_sync + 10'd3; // remember where the trigger happened, + trigger delay
+               lvdsout_trig <= 1'b1; // tell the others forwards
+               lvdsout_trig_b <= 1'b1; // tell the others backwards
+               sample_triggered <= 0; // we didn't measure the trigger edge - going to be some jitter unfortunately
+               downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
+               acqstate <= 8'd250;
+            end
         end
    end
 
@@ -312,7 +319,7 @@ always @ (posedge clklvds) begin
       rollingtriggercounter <= 0; // reset after getting an event
       if (triggercounter<lengthtotake_sync) begin
          if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) begin
-             triggercounter <= triggercounter + 16'd1;
+            triggercounter <= triggercounter + 16'd1;
          end
       end
       else begin
