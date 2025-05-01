@@ -173,7 +173,7 @@ module pll1 (
 		altpll_component.clk4_duty_cycle = 50,
 		altpll_component.clk4_multiply_by = 8,
 		altpll_component.clk4_phase_shift = "0",
-		altpll_component.compensate_clock = "CLK0",
+		altpll_component.compensate_clock = "CLK2",
 		altpll_component.inclk0_input_frequency = 20000,
 		altpll_component.inclk1_input_frequency = 20000,
 		altpll_component.intended_device_family = "Cyclone IV E",
@@ -223,7 +223,7 @@ module pll1 (
 		altpll_component.port_extclk2 = "PORT_UNUSED",
 		altpll_component.port_extclk3 = "PORT_UNUSED",
 		altpll_component.primary_clock = "inclk0",
-		altpll_component.self_reset_on_loss_lock = "OFF",
+		altpll_component.self_reset_on_loss_lock = "ON",
 		altpll_component.switch_over_type = "AUTO",
 		altpll_component.vco_frequency_control = "MANUAL_PHASE",
 		altpll_component.vco_phase_shift_step = 1,
@@ -249,7 +249,7 @@ endmodule
 // Retrieval info: PRIVATE: CNX_NO_COMPENSATE_RADIO STRING "0"
 // Retrieval info: PRIVATE: CREATE_CLKBAD_CHECK STRING "1"
 // Retrieval info: PRIVATE: CREATE_INCLK1_CHECK STRING "1"
-// Retrieval info: PRIVATE: CUR_DEDICATED_CLK STRING "c0"
+// Retrieval info: PRIVATE: CUR_DEDICATED_CLK STRING "c2"
 // Retrieval info: PRIVATE: CUR_FBIN_CLK STRING "c0"
 // Retrieval info: PRIVATE: DEVICE_SPEED_GRADE STRING "7"
 // Retrieval info: PRIVATE: DIV_FACTOR0 NUMERIC "4"
@@ -346,7 +346,7 @@ endmodule
 // Retrieval info: PRIVATE: RECONFIG_FILE STRING "pll1.mif"
 // Retrieval info: PRIVATE: SACN_INPUTS_CHECK STRING "0"
 // Retrieval info: PRIVATE: SCAN_FEATURE_ENABLED STRING "1"
-// Retrieval info: PRIVATE: SELF_RESET_LOCK_LOSS STRING "0"
+// Retrieval info: PRIVATE: SELF_RESET_LOCK_LOSS STRING "1"
 // Retrieval info: PRIVATE: SHORT_SCAN_RADIO STRING "0"
 // Retrieval info: PRIVATE: SPREAD_FEATURE_ENABLED STRING "0"
 // Retrieval info: PRIVATE: SPREAD_FREQ STRING "50.000"
@@ -396,7 +396,7 @@ endmodule
 // Retrieval info: CONSTANT: CLK4_DUTY_CYCLE NUMERIC "50"
 // Retrieval info: CONSTANT: CLK4_MULTIPLY_BY NUMERIC "8"
 // Retrieval info: CONSTANT: CLK4_PHASE_SHIFT STRING "0"
-// Retrieval info: CONSTANT: COMPENSATE_CLOCK STRING "CLK0"
+// Retrieval info: CONSTANT: COMPENSATE_CLOCK STRING "CLK2"
 // Retrieval info: CONSTANT: INCLK0_INPUT_FREQUENCY NUMERIC "20000"
 // Retrieval info: CONSTANT: INCLK1_INPUT_FREQUENCY NUMERIC "20000"
 // Retrieval info: CONSTANT: INTENDED_DEVICE_FAMILY STRING "Cyclone IV E"
@@ -445,7 +445,7 @@ endmodule
 // Retrieval info: CONSTANT: PORT_extclk2 STRING "PORT_UNUSED"
 // Retrieval info: CONSTANT: PORT_extclk3 STRING "PORT_UNUSED"
 // Retrieval info: CONSTANT: PRIMARY_CLOCK STRING "inclk0"
-// Retrieval info: CONSTANT: SELF_RESET_ON_LOSS_LOCK STRING "OFF"
+// Retrieval info: CONSTANT: SELF_RESET_ON_LOSS_LOCK STRING "ON"
 // Retrieval info: CONSTANT: SWITCH_OVER_TYPE STRING "AUTO"
 // Retrieval info: CONSTANT: VCO_FREQUENCY_CONTROL STRING "MANUAL_PHASE"
 // Retrieval info: CONSTANT: VCO_PHASE_SHIFT_STEP NUMERIC "1"
