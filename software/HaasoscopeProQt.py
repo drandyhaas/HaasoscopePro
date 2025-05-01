@@ -443,6 +443,7 @@ class MainWindow(TemplateBaseClass):
 
     def downpos3(self):
         self.dophase(self.activeboard, plloutnum=3, updown=0)
+        switchclock(usbs, self.activeboard) # just hacked in for now
 
     def downpos4(self):
         self.dophase(self.activeboard, plloutnum=4, updown=0)
@@ -459,7 +460,7 @@ class MainWindow(TemplateBaseClass):
         self.phasenbad[board] = [0]*12 # reset nbad counters
         self.expect_samples = 1000
         self.dodrawing = False
-        switchclock(usbs,board)
+        #switchclock(usbs,board)
 
     def adjustclocks(self, board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr):
         debugphase=False
@@ -1411,6 +1412,7 @@ class MainWindow(TemplateBaseClass):
         setupboard(usbs[board], self.dopattern, self.dotwochannel, self.dooverrange)
         for c in range(self.num_chan_per_board): setchanacdc(usbs[board], c, 0, self.dooversample)
         self.pllreset(board)
+        switchclock(usbs, board)
         auxoutselector(usbs[board],0)
         return 1
 
