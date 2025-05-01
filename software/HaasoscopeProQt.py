@@ -117,6 +117,7 @@ class MainWindow(TemplateBaseClass):
     nsubsamples = 10 * 4 + 8 + 2  # extra 4+4 for clk+str, and 2 clkstrprob beef
     sample_triggered = [0] * num_board
     triggerphase = [0] * num_board
+    downsamplemergingcounter = [0] * num_board
     fitwidthfraction = 0.2
     extrigboardstdcorrection = 1
     extrigboardmeancorrection = 0
@@ -429,6 +430,7 @@ class MainWindow(TemplateBaseClass):
 
     def uppos4(self):
         self.dophase(self.activeboard, plloutnum=4, updown=1)
+        setsplit(usbs[self.activeboard],True) # just hacked in for now
 
     def downpos(self):
         self.dophase(self.activeboard, plloutnum=0, updown=0)
@@ -444,6 +446,7 @@ class MainWindow(TemplateBaseClass):
 
     def downpos4(self):
         self.dophase(self.activeboard, plloutnum=4, updown=0)
+        setsplit(usbs[self.activeboard],False) # just hacked in for now
 
     def pllreset(self, board):
         if not board: board = self.activeboard # if we called it from the button
@@ -822,16 +825,31 @@ class MainWindow(TemplateBaseClass):
             try:
                 readyevent = [0]*self.num_board
                 #print("\ngetevent")
-                for board in reversed(range(self.num_board)): # go backwards through the boards to make sure the ext triggers are active before the lower number board fires
+                noextboards=[]
+                for board in range(self.num_board): # go through the ext trig boards first to make sure the ext triggers are active before the non-ext trig boards fire
+                    if not self.doexttrig[board]:
+                        noextboards.append(board)
+                        continue
                     readyevent[board] = self.getchannels(board)
-                    #if not readyevent[board]: print("board",board,"not ready")
+                    if readyevent[board]:
+                        #print("board",board,"ready")
+                        self.getpredata(board) # gets info needed for trigger time adjustments
+                    #else: print("board",board,"not ready")
+                for board in noextboards:
+                    readyevent[board] = self.getchannels(board)
+                    if readyevent[board]:
+                        #print("noext board", board, "ready")
+                        self.getpredata(board) # gets info needed for trigger time adjustments
+                    #else: print("noext board", board, "not ready")
+                #if not any(readyevent): print("none ready")
                 for board in range(self.num_board):
-                    if not readyevent[board]: continue
-                    downsamplemergingcounter = self.getpredata(board)
+                    if not readyevent[board]:
+                        #print("board",board,"data not ready?")
+                        continue
                     data = self.getdata(usbs[board])
                     rx_len = rx_len + len(data)
                     if self.dofft and board==self.activeboard: self.plot_fft()
-                    self.drawchannels(data, board, downsamplemergingcounter)
+                    self.drawchannels(data, board)
                 if self.getone and rx_len > 0:
                     self.dostartstop()
                     self.drawtext()
@@ -899,15 +917,14 @@ class MainWindow(TemplateBaseClass):
             eventtimediff = eventtime-self.oldeventtime
             print("board",board,"triggered at clock cycle",eventtime,"a diff of",eventtimediff,"cycles",round(0.0125*eventtimediff,4),"us")
             self.oldeventtime=eventtime
-        downsamplemergingcounter = 0
-        usbs[board].send(bytes([2, 4, 100, 100, 100, 100, 100, 100]))  # get downsamplemergingcounter
+        self.downsamplemergingcounter[board] = 0
+        usbs[board].send(bytes([2, 4, 100, 100, 100, 100, 100, 100]))  # get downsamplemergingcounter and triggerphase
         res = usbs[board].recv(4)
-        if self.downsamplemerging > 1: downsamplemergingcounter = res[0]
-        if downsamplemergingcounter == self.downsamplemerging:
+        if self.downsamplemerging > 1: self.downsamplemergingcounter[board] = res[0]
+        if self.downsamplemergingcounter[board] == self.downsamplemerging:
             if not self.doexttrig[board]:
-                downsamplemergingcounter = 0
+                self.downsamplemergingcounter[board] = 0
         self.triggerphase[board]=res[1]
-        return downsamplemergingcounter
 
     def getdata(self, usb):
         expect_len = (self.expect_samples+ self.expect_samples_extra) * 2 * self.nsubsamples # length to request: each adc bit is stored as 10 bits in 2 bytes, a couple extra for shifting later
@@ -922,7 +939,7 @@ class MainWindow(TemplateBaseClass):
             # oldbytes()
         return data
 
-    def drawchannels(self, data, board, downsamplemergingcounter):
+    def drawchannels(self, data, board):
         if self.dofast: return
         if self.doexttrig[board]:
             if board % 2 == 1: boardtouse = board-1
@@ -949,7 +966,7 @@ class MainWindow(TemplateBaseClass):
             if self.dooversample and board % 2 == 0:
                 npunpackedsamples += self.extrigboardmeancorrection
                 npunpackedsamples *= self.extrigboardstdcorrection
-        downsampleoffset = 2 * (sample_triggered_touse + (downsamplemergingcounter-1)%self.downsamplemerging * 10) // self.downsamplemerging
+        downsampleoffset = 2 * (sample_triggered_touse + (self.downsamplemergingcounter[board]-1)%self.downsamplemerging * 10) // self.downsamplemerging
         if not self.dotwochannel: downsampleoffset *= 2
         if self.doexttrig[board]:
             if self.dotwochannel: downsampleoffset -= self.toff // self.downsamplefactor // 2
