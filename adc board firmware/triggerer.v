@@ -223,9 +223,8 @@ always @ (posedge clklvds) begin
    2 : begin // ready for second part of trigger condition to be met
       if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
       else begin
-        firingsecondstep=1'b0;
-        
-        for (i=0;i<10;i=i+1) begin
+         firingsecondstep=1'b0;
+         for (i=0;i<10;i=i+1) begin
             if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
                ( (samplevalue[ 0+i]<lowerthresh_sync && !rising) || (samplevalue[ 0+i]>upperthresh_sync && rising) ) ) begin
                firingsecondstep=1'b1;
@@ -258,8 +257,7 @@ always @ (posedge clklvds) begin
                   downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
                end
             end
-        end
-        
+         end
          if (firingsecondstep) begin
             if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) tot_counter <= tot_counter + 8'd1;
             if (tot_counter>=triggerToT_sync && (triggerToT_sync==0 || downsamplemergingcounter==downsamplemergingcounter_triggered) ) begin
@@ -267,30 +265,29 @@ always @ (posedge clklvds) begin
                lvdsout_trig <= 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
                lvdsout_trig_b <= 1'b1; // and backwards
                acqstate <= 8'd250;
-   end
+            end
          end
-         
       end
    end
 
-   5 : begin // external trigger, like from another board (3)
-         if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
-         else begin
-             if (lvdsin_trig) begin
-               ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-               lvdsout_trig <= 1'b1; // tell the others forwards
-               sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
-               downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
-               acqstate <= 8'd250;
-    end
-             if (lvdsin_trig_b) begin
-               ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-               lvdsout_trig_b <= 1'b1; // tell the others backwards
-               sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
-               downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
-               acqstate <= 8'd250;
-    end
+   5 : begin // external trigger from another board (3)
+      if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
+      else begin
+         if (lvdsin_trig) begin
+            ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+            lvdsout_trig <= 1'b1; // tell the others forwards
+            sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
+            downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
+            acqstate <= 8'd250;
          end
+         if (lvdsin_trig_b) begin
+            ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+            lvdsout_trig_b <= 1'b1; // tell the others backwards
+            sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
+            downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
+            acqstate <= 8'd250;
+         end
+      end
    end
 
    6: begin // force waveform capture (4)         
@@ -301,21 +298,21 @@ always @ (posedge clklvds) begin
       acqstate <= 8'd250;
    end
    
-   7: begin // external trigger, like from the back panel SMA (5)
-        if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
-        else begin
-            if (exttrigin_sync && !exttrigin_sync_last) exttrig_rising=1'b1; // remember seeing rising edge of exttrigin_sync
-            if (exttrig_rising && exttrigin_sync) tot_counter <= tot_counter + 8'd1; // keep counting while exttrigin is high
-            else tot_counter<=0; // if exttrigin goes low, reset counter
-            if (exttrig_rising && tot_counter>=triggerToT_sync) begin
-               ram_address_triggered <= ram_wr_address - triggerToT_sync + 10'd3; // remember where the trigger happened, + trigger delay
-               lvdsout_trig <= 1'b1; // tell the others forwards
-               lvdsout_trig_b <= 1'b1; // tell the others backwards
-               sample_triggered <= 0; // we didn't measure the trigger edge - going to be some jitter unfortunately
-               downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
-               acqstate <= 8'd250;
-            end
-        end
+   7: begin // external trigger from the back panel SMA (5)
+      if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
+      else begin
+         if (exttrigin_sync && !exttrigin_sync_last) exttrig_rising=1'b1; // remember seeing rising edge of exttrigin_sync
+         if (exttrig_rising && exttrigin_sync) tot_counter <= tot_counter + 8'd1; // keep counting while exttrigin is high
+         else tot_counter<=0; // if exttrigin goes low, reset counter
+         if (exttrig_rising && tot_counter>=triggerToT_sync) begin
+            ram_address_triggered <= ram_wr_address - triggerToT_sync + 10'd3; // remember where the trigger happened, + trigger delay
+            lvdsout_trig <= 1'b1; // tell the others forwards
+            lvdsout_trig_b <= 1'b1; // tell the others backwards
+            sample_triggered <= 0; // we didn't measure the trigger edge - going to be some jitter unfortunately
+            downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
+            acqstate <= 8'd250;
+         end
+      end
    end
 
    250 : begin // triggered, now taking more data

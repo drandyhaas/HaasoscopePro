@@ -1,5 +1,4 @@
-// the main module
-// gets commands from USB, and takes actions
+// the main module: gets commands from USB, and takes actions
 module command_processor (
    input  wire        rstn,
    input  wire        clk, // the main 50 MHz clock
@@ -85,7 +84,7 @@ module command_processor (
    output reg        highres,
    output reg [4:0]  downsample,
    
-   // inputs from triggerer
+   // synced inputs from triggerer
    input [7:0]    acqstate,
    input [31:0]   eventcounter,
    input [9:0]    ram_address_triggered,
@@ -154,9 +153,9 @@ reg [7:0]   boardin_sync = 0;
 
 // Sequence of register writes that triggers sending 4 bytes usb response.
 `define SEND_STD_USB_RESPONSE \
-    length <= 4; \
-    o_tvalid <= 1'b1; \
-    state <= TX_DATA_CONST;
+   length <= 4; \
+   o_tvalid <= 1'b1; \
+   state <= TX_DATA_CONST;
 
 integer i;
 always @ (posedge clk) begin
@@ -196,254 +195,253 @@ always @ (posedge clk) begin
 
    RX : begin
       if (i_tvalid) begin // get 8 bytes
-          rx_data[rx_counter] <= i_tdata;
-          if (rx_counter==7) begin
-              state <= PROCESS;
-              rx_counter <= 0;
-          end
-          else rx_counter <= rx_counter + 4'd1;
+         rx_data[rx_counter] <= i_tdata;
+         if (rx_counter==7) begin
+            state <= PROCESS;
+            rx_counter <= 0;
+         end
+         else rx_counter <= rx_counter + 4'd1;
       end
    end
 
    PROCESS : begin // do something, based on the command in the first byte
       case (rx_data[0])
       0 : begin // send a length of bytes from the RAM buffer
-          length <= {rx_data[7],rx_data[6],rx_data[5],rx_data[4]};
-          ram_rd_address <= ram_address_triggered_sync - ram_preoffset; // set the address to read from at the triggered point - an offset, to see what happened before the trigger
-          state <= TX_DATA1;
+         length <= {rx_data[7],rx_data[6],rx_data[5],rx_data[4]};
+         ram_rd_address <= ram_address_triggered_sync - ram_preoffset; // set the address to read from at the triggered point - an offset, to see what happened before the trigger
+         state <= TX_DATA1;
       end
 
       1 : begin // sets length of data to take, activates trigger for new event if we don't already have one
-          triggertype <= rx_data[1]; // while we're at it, set the trigger type
-          channeltype <= rx_data[2]; // and the channel type (bit0: single or dual, bit1: oversampling (swapped inputs))
-          lengthtotake <= {rx_data[5],rx_data[4]};
-          if (acqstate_sync == 0) triggerlive <= 1'b1; // gets reset in INIT state
-          o_tdata <= {4'd0,sample_triggered_sync,acqstate_sync}; // return acqstate, so we can see if we have an event ready to be read out, and which samples triggered (to prevent jitter)
-          `SEND_STD_USB_RESPONSE
+         triggertype <= rx_data[1]; // while we're at it, set the trigger type
+         channeltype <= rx_data[2]; // and the channel type (bit0: single or dual, bit1: oversampling (swapped inputs))
+         lengthtotake <= {rx_data[5],rx_data[4]};
+         if (acqstate_sync == 0) triggerlive <= 1'b1; // gets reset in INIT state
+         o_tdata <= {4'd0,sample_triggered_sync,acqstate_sync}; // return acqstate, so we can see if we have an event ready to be read out, and which samples triggered (to prevent jitter)
+         `SEND_STD_USB_RESPONSE
       end
 
       2 : begin // reads version or does other stuff
-          case (rx_data[1]) 
-          0: o_tdata <= version;
-          1: o_tdata <= {24'd0,boardin_sync};
-          2: o_tdata <= overrange_counter[rx_data[2][1:0]];
-          3: o_tdata <= eventcounter_sync;
-          4: o_tdata <= {16'd0,triggerphase_sync[7:0],downsamplemergingcounter_triggered_sync};
-          5: begin
-              lvdsout_spare <= rx_data[2][0]; // used for telling order of devices
-              o_tdata <= {8'd0, 7'd0,lvdsin_spare, 4'd0,lockinfo, 7'd0,~clkswitch};
-          end
-          6: begin
-              fanon <= rx_data[2][0];
-              o_tdata <= fanon;
-          end
-          7: begin
-              prelengthtotake <= {rx_data[3],rx_data[2]};
-              o_tdata <= prelengthtotake;
-          end
-          8: begin
-              dorolling <= rx_data[2][0];
-              o_tdata <= dorolling;
-          end
-          9: begin
-              clkout_ena <= rx_data[2][0];
-              o_tdata <= {31'd0,clkout_ena};
-          end
-          10: begin
-              auxoutselector <= rx_data[2][0];
-              o_tdata <= {31'd0,auxoutselector};
-          end
-          11: o_tdata <= eventtime_sync;
-          endcase
-          `SEND_STD_USB_RESPONSE
+         case (rx_data[1]) 
+         0: o_tdata <= version;
+         1: o_tdata <= {24'd0,boardin_sync};
+         2: o_tdata <= overrange_counter[rx_data[2][1:0]];
+         3: o_tdata <= eventcounter_sync;
+         4: o_tdata <= {16'd0,triggerphase_sync[7:0],downsamplemergingcounter_triggered_sync};
+         5: begin
+            lvdsout_spare <= rx_data[2][0]; // used for telling order of devices
+            o_tdata <= {8'd0, 7'd0,lvdsin_spare, 4'd0,lockinfo, 7'd0,~clkswitch};
+         end
+         6: begin
+            fanon <= rx_data[2][0];
+            o_tdata <= fanon;
+         end
+         7: begin
+            prelengthtotake <= {rx_data[3],rx_data[2]};
+            o_tdata <= prelengthtotake;
+         end
+         8: begin
+            dorolling <= rx_data[2][0];
+            o_tdata <= dorolling;
+         end
+         9: begin
+            clkout_ena <= rx_data[2][0];
+            o_tdata <= {31'd0,clkout_ena};
+         end
+         10: begin
+            auxoutselector <= rx_data[2][0];
+            o_tdata <= {31'd0,auxoutselector};
+         end
+         11: o_tdata <= eventtime_sync;
+         endcase
+         `SEND_STD_USB_RESPONSE
       end
 
       3 : begin // SPI command
-          case (spistate)
-          0 : begin
-              spimisossel <= rx_data[1][2:0]; // select requested data from chip
-              spics[rx_data[1][2:0]] <= 1'b0; //select requested chip
-              spitx <= rx_data[2]; //first byte to send
-              if (spicscounter==6'd10) begin // wait a bit for cs to go low
-                  spicscounter <= 6'd0;
-                  spistate <= 4'd1;
-              end
-              else spicscounter <= spicscounter + 6'd1;
-          end
-          1 : begin
-              if (spitxready) begin
-                  spitxdv <= 1'b1;
-                  if (rx_data[7]==2) spistate <= 4'd4; //sending 2 bytes
-                  else spistate <= 4'd2; // sending more than 2 bytes
-              end
-          end
-          2 : begin
-              spitxdv <= 1'b0;
-              spitx <= rx_data[3];//second byte to send
-              spistate <= 4'd3;
-          end
-          3 : begin
-              if (spitxready) begin
-                  spitxdv <= 1'b1;
-                  spistate <= 4'd4;
-              end
-          end
-          4 : begin
-              spitxdv <= 1'b0;
-              spitx <= rx_data[4];//third byte to send (ignored during read)
-              if (spirxdv) begin
-                  spistate <= 4'd5;
-                  o_tdata[15:8] <= spirx; // send back the SPI data read during byte 1 (used for slowadc)
-              end
-          end
-          5 : begin
-              if (spitxready) begin
-                  spitxdv <= 1'b1;
-                  if (rx_data[7]==4) spistate <= 4'd6; // send the 4th byte
-                  else spistate <= 4'd8; // skip the 4th byte
-              end
-          end
-          6 : begin
-              spitxdv <= 1'b0;
-              spitx <= rx_data[5];//fourth byte to send
-              spistate <= 4'd7;
-          end
-          7 : begin
-              if (spitxready) begin
-                  spitxdv <= 1'b1;
-                  spistate <= 4'd8;
-              end
-          end
-          8 : begin
-              spitxdv <= 1'b0;
-              if (spirxdv) begin
-                  spistate <= 4'd9;
-                  o_tdata[7:0] <= spirx; // send back the SPI data read
-              end
-          end
-          9 : begin
-              if (spicscounter==6'd35) begin // wait a bit before setting cs high
-                  spicscounter<=6'd0;
-                  spistate <= 4'd0;
-                  `SEND_STD_USB_RESPONSE
-              end
-              else spicscounter <= spicscounter + 6'd1;
-          end
-          default : spistate <= 4'd0;
-          endcase
+         case (spistate)
+         0 : begin
+            spimisossel <= rx_data[1][2:0]; // select requested data from chip
+            spics[rx_data[1][2:0]] <= 1'b0; //select requested chip
+            spitx <= rx_data[2]; //first byte to send
+            if (spicscounter==6'd10) begin // wait a bit for cs to go low
+               spicscounter <= 6'd0;
+               spistate <= 4'd1;
+            end
+            else spicscounter <= spicscounter + 6'd1;
+         end
+         1 : begin
+            if (spitxready) begin
+               spitxdv <= 1'b1;
+               if (rx_data[7]==2) spistate <= 4'd4; //sending 2 bytes
+               else spistate <= 4'd2; // sending more than 2 bytes
+            end
+         end
+         2 : begin
+            spitxdv <= 1'b0;
+            spitx <= rx_data[3];//second byte to send
+            spistate <= 4'd3;
+         end
+         3 : begin
+            if (spitxready) begin
+               spitxdv <= 1'b1;
+               spistate <= 4'd4;
+            end
+         end
+         4 : begin
+            spitxdv <= 1'b0;
+            spitx <= rx_data[4];//third byte to send (ignored during read)
+            if (spirxdv) begin
+               spistate <= 4'd5;
+               o_tdata[15:8] <= spirx; // send back the SPI data read during byte 1 (used for slowadc)
+            end
+         end
+         5 : begin
+            if (spitxready) begin
+               spitxdv <= 1'b1;
+               if (rx_data[7]==4) spistate <= 4'd6; // send the 4th byte
+               else spistate <= 4'd8; // skip the 4th byte
+            end
+         end
+         6 : begin
+            spitxdv <= 1'b0;
+            spitx <= rx_data[5];//fourth byte to send
+            spistate <= 4'd7;
+         end
+         7 : begin
+            if (spitxready) begin
+               spitxdv <= 1'b1;
+               spistate <= 4'd8;
+            end
+         end
+         8 : begin
+            spitxdv <= 1'b0;
+            if (spirxdv) begin
+               spistate <= 4'd9;
+               o_tdata[7:0] <= spirx; // send back the SPI data read
+            end
+         end
+         9 : begin
+            if (spicscounter==6'd35) begin // wait a bit before setting cs high
+               spicscounter<=6'd0;
+               spistate <= 4'd0;
+               `SEND_STD_USB_RESPONSE
+            end
+            else spicscounter <= spicscounter + 6'd1;
+         end
+         default : spistate <= 4'd0;
+         endcase
       end
 
       4 : begin // set SPI_MODE (see SPI_Master.v)
-          spireset_L <= 1'b0;
-          spi_mode <= rx_data[1][1:0];
-          o_tdata <= rx_data[1];
-          `SEND_STD_USB_RESPONSE
+         spireset_L <= 1'b0;
+         spi_mode <= rx_data[1][1:0];
+         o_tdata <= rx_data[1];
+         `SEND_STD_USB_RESPONSE
       end
 
       5 : begin // reset plls
-          pllreset2 <= 1'b1;
-          o_tdata <= 5;
-          `SEND_STD_USB_RESPONSE
+         pllreset2 <= 1'b1;
+         o_tdata <= 5;
+         `SEND_STD_USB_RESPONSE
       end
 
       6 : begin // for clock phase adjustment
-          phasecounterselect <= rx_data[2][2:0];// 000:all 001:M 010:C0 011:C1 100:C2 101:C3 110:C4.
-          phaseupdown <= rx_data[3][0]; // up or down
-          scanclk <= 1'b0; // start low
-          phasestep[rx_data[1]] <= 1'b1; // assert - the index here selects which pll to adjust
-          pllclock_counter <= 0;
-          scanclk_cycles <= 0;
-          state <= PLLCLOCK;
+         phasecounterselect <= rx_data[2][2:0];// 000:all 001:M 010:C0 011:C1 100:C2 101:C3 110:C4.
+         phaseupdown <= rx_data[3][0]; // up or down
+         scanclk <= 1'b0; // start low
+         phasestep[rx_data[1]] <= 1'b1; // assert - the index here selects which pll to adjust
+         pllclock_counter <= 0;
+         scanclk_cycles <= 0;
+         state <= PLLCLOCK;
       end
 
       7 : begin // try to switch clocks
-          clkswitch <= ~clkswitch;
-          o_tdata <= {8'd0,8'd0,4'd0,lockinfo,7'd0,~clkswitch};
-          `SEND_STD_USB_RESPONSE
+         clkswitch <= ~clkswitch;
+         o_tdata <= {8'd0,8'd0,4'd0,lockinfo,7'd0,~clkswitch};
+         `SEND_STD_USB_RESPONSE
       end
 
       8 : begin // trigger settings
-          lowerthresh <= ((rx_data[1] - rx_data[2] - 12'd128)<<4) + 12'd8;
-          upperthresh <= ((rx_data[1] + rx_data[2] - 12'd128)<<4) + 12'd8;
-          ram_preoffset <= (rx_data[3][1:0]<<8) + rx_data[4];
-          triggerToT <= rx_data[5];
-          triggerchan <= rx_data[6][0];
-          o_tdata <= 8;
-          `SEND_STD_USB_RESPONSE
+         lowerthresh <= ((rx_data[1] - rx_data[2] - 12'd128)<<4) + 12'd8;
+         upperthresh <= ((rx_data[1] + rx_data[2] - 12'd128)<<4) + 12'd8;
+         ram_preoffset <= (rx_data[3][1:0]<<8) + rx_data[4];
+         triggerToT <= rx_data[5];
+         triggerchan <= rx_data[6][0];
+         o_tdata <= 8;
+         `SEND_STD_USB_RESPONSE
       end
 
       9 : begin // downsample and highres settings
-          downsample <= rx_data[1][4:0];
-          highres <= rx_data[2][0];
-          downsamplemerging <= rx_data[3];
-          o_tdata <= 9;
-          `SEND_STD_USB_RESPONSE
+         downsample <= rx_data[1][4:0];
+         highres <= rx_data[2][0];
+         downsamplemerging <= rx_data[3];
+         o_tdata <= 9;
+         `SEND_STD_USB_RESPONSE
       end
 
       10 : begin // boardout controls
-          boardout[rx_data[1][2:0]] <= rx_data[2][0]; // set bit given by rx_data1 to value in rx_data2
-          o_tdata <= boardout;
-          `SEND_STD_USB_RESPONSE
+         boardout[rx_data[1][2:0]] <= rx_data[2][0]; // set bit given by rx_data1 to value in rx_data2
+         o_tdata <= boardout;
+         `SEND_STD_USB_RESPONSE
       end
 
       11 : begin // LED controls
-          neo_color[0] <= {rx_data[4],rx_data[3],rx_data[2]};
-          neo_color[1] <= {rx_data[7],rx_data[6],rx_data[5]};
-          send_color <= rx_data[1][0];
-          o_tdata <= 123;
-          `SEND_STD_USB_RESPONSE
+         neo_color[0] <= {rx_data[4],rx_data[3],rx_data[2]};
+         neo_color[1] <= {rx_data[7],rx_data[6],rx_data[5]};
+         send_color <= rx_data[1][0];
+         o_tdata <= 123;
+         `SEND_STD_USB_RESPONSE
       end
 
       12 : begin
-          // Return acqstate, so we can see if we have an event ready to be read out,
-          // and which samples triggered (to prevent jitter)
-          o_tdata <= {4'd0,sample_triggered_sync,acqstate_sync};
-          `SEND_STD_USB_RESPONSE
+         // Return acqstate, so we can see if we have an event ready to be read out,
+         // and which samples triggered (to prevent jitter)
+         o_tdata <= {4'd0,sample_triggered_sync,acqstate_sync};
+         `SEND_STD_USB_RESPONSE
       end
 
       13 : begin // force-arm-trigger function
-          triggertype <= rx_data[1]; // set the trigger type
-          channeltype <= rx_data[2]; // the channel type (bit0: single or dual, bit1: oversampling (swapped inputs))
-          lengthtotake <= {rx_data[5],rx_data[4]};
+         triggertype <= rx_data[1]; // set the trigger type
+         channeltype <= rx_data[2]; // the channel type (bit0: single or dual, bit1: oversampling (swapped inputs))
+         lengthtotake <= {rx_data[5],rx_data[4]};
 
-          // we might not have actually read out data yet; however, since we are force arming the trigger we are going to pretend that we did so
-          // in the separate "loop" over clklvds that should move acqstate to 0
-          length <= 0;
-          didreadout <= 1'b1;
-          triggerlive <= 1'b1; // gets reset in INIT state
-          
-          if (flashbusycounter==4) begin // wait for didreadout to allow trigger to get back to state 0 before lowering triggerlive in INIT state
-             flashbusycounter<=0;        //(reusing flashbusycounter since it can't conflict)
+         // we might not have actually read out data yet; however, since we are force arming the trigger we are going to pretend that we did so
+         // in the separate "loop" over clklvds that should move acqstate to 0
+         length <= 0;
+         didreadout <= 1'b1;
+         triggerlive <= 1'b1; // gets reset in INIT state
+         
+         if (flashbusycounter==4) begin // wait for didreadout to allow trigger to get back to state 0 before lowering triggerlive in INIT state
+            flashbusycounter<=0;        //(reusing flashbusycounter since it can't conflict)
 
-             // Assuming that trigger type is changed, trigger will always be re-armed;
-             // For debuging current acqstate in the first byte
-             o_tdata <= {8'd0, 8'd0, 8'd0, acqstate_sync};
-             `SEND_STD_USB_RESPONSE
-          end
-          else flashbusycounter <= flashbusycounter+4'd1;
+            // Assuming that trigger type is changed, trigger will always be re-armed;
+            // For debuging current acqstate in the first byte
+            o_tdata <= {8'd0, 8'd0, 8'd0, acqstate_sync};
+            `SEND_STD_USB_RESPONSE
+         end
+         else flashbusycounter <= flashbusycounter+4'd1;
       end
 
       14 : begin // read-register function
-          // Returns "register" (some are wires) value indentified by a number in rx_data[1]
-          case (rx_data[1])
-              0 : o_tdata <= {22'd0, ram_preoffset};
-              1 : o_tdata <= {22'd0, ram_address_triggered_sync};
-              2 : o_tdata <= {28'd0, spistate};
-              3 : o_tdata <= version;
-              4 : o_tdata <= {24'd0, boardin_sync};
-              5 : o_tdata <= {24'd0, acqstate_sync};
-              6 : o_tdata <= eventcounter_sync;
-              7 : o_tdata <= {12'd0, sample_triggered_sync};
-              8 : o_tdata <= {24'd0, downsamplemergingcounter_triggered_sync};
-              9 : o_tdata <= {24'd0, downsamplemerging};
-              10: o_tdata <= {27'd0, downsample};
-              11: o_tdata <= {31'd0, highres};
-              12: o_tdata <= {20'd0, upperthresh};
-              13: o_tdata <= {31'd0, flash_busy};
-              default:
-                  o_tdata <= {32'd0};
-          endcase
-          `SEND_STD_USB_RESPONSE
+         // Returns "register" (some are wires) value indentified by a number in rx_data[1]
+         case (rx_data[1])
+            0 : o_tdata <= {22'd0, ram_preoffset};
+            1 : o_tdata <= {22'd0, ram_address_triggered_sync};
+            2 : o_tdata <= {28'd0, spistate};
+            3 : o_tdata <= version;
+            4 : o_tdata <= {24'd0, boardin_sync};
+            5 : o_tdata <= {24'd0, acqstate_sync};
+            6 : o_tdata <= eventcounter_sync;
+            7 : o_tdata <= {12'd0, sample_triggered_sync};
+            8 : o_tdata <= {24'd0, downsamplemergingcounter_triggered_sync};
+            9 : o_tdata <= {24'd0, downsamplemerging};
+            10: o_tdata <= {27'd0, downsample};
+            11: o_tdata <= {31'd0, highres};
+            12: o_tdata <= {20'd0, upperthresh};
+            13: o_tdata <= {31'd0, flash_busy};
+            default: o_tdata <= {32'd0};
+         endcase
+         `SEND_STD_USB_RESPONSE
       end
 
       15 : begin // read from flash
@@ -567,130 +565,130 @@ always @ (posedge clk) begin
 
    TX_DATA_CONST : begin
       if (o_tready) begin
-          if (length >= 4) begin
-              length <= length - 16'd4;
-          end else begin
-              length <= 0;
-              o_tvalid <= 1'b0;
-              state <= INIT;
-          end
+         if (length >= 4) begin
+            length <= length - 16'd4;
+         end else begin
+            length <= 0;
+            o_tvalid <= 1'b0;
+            state <= INIT;
+         end
       end
    end
 
    TX_DATA1 : begin
       o_tvalid <= 1'b0;
       if (o_tready) begin
-          state <= TX_DATA2; // wait for data
+         state <= TX_DATA2; // wait for data
       end
    end
 
    TX_DATA2 : begin
       o_tvalid <= 1'b0;
       if (o_tready) begin
-          channel <= 6'd0;
-          channel2 <= 6'd0;
-          state <= TX_DATA3; // wait for data
+         channel <= 6'd0;
+         channel2 <= 6'd0;
+         state <= TX_DATA3; // wait for data
       end
    end
 
    TX_DATA3 : begin
       if (o_tready) begin
-          o_tvalid <= 1'b1;
-          if (channel==48) begin
+         o_tvalid <= 1'b1;
+         if (channel==48) begin
             if (clkstrprob) o_tdata <= {16'hbeef,16'h01}; // marker, clkstr problem
             else o_tdata <= {16'hbeef,16'h00}; // marker, no problems
-          end
-          else if (channel==44 || channel==46) begin
-             numones=0;
-             numones2=0;
-             for (i=0; i<10; i++) begin
+         end
+         else if (channel==44 || channel==46) begin
+            numones=0;
+            numones2=0;
+            for (i=0; i<10; i++) begin
                if (channel==44) begin
-               o_tdatatemp[i] = lvdsbitsin[14*(0+i)+13]; //samplestr 0-9
-               o_tdatatemp[i+16] = lvdsbitsin[14*(10+i)+13]; //samplestr 10-19
+                  o_tdatatemp[i] = lvdsbitsin[14*(0+i)+13]; //samplestr 0-9
+                  o_tdatatemp[i+16] = lvdsbitsin[14*(10+i)+13]; //samplestr 10-19
                end
                else begin
-               o_tdatatemp[i] = lvdsbitsin[14*(20+i)+13]; //samplestr 20-29
-               o_tdatatemp[i+16] = lvdsbitsin[14*(30+i)+13]; //samplestr 30-39
+                  o_tdatatemp[i] = lvdsbitsin[14*(20+i)+13]; //samplestr 20-29
+                  o_tdatatemp[i+16] = lvdsbitsin[14*(30+i)+13]; //samplestr 30-39
                end
                if (o_tdatatemp[i]) numones=numones+4'd1;
                if (o_tdatatemp[i+16]) numones2=numones2+4'd1;
-             end
-             for (i=0; i<6; i++) begin
+            end
+            for (i=0; i<6; i++) begin
                o_tdatatemp[i+10] = 0; //padding
                o_tdatatemp[i+26] = 0; //padding
-             end
-             if (numones>1 || numones2>1) clkstrprob<=1'b1; // issue with str
-             o_tdata <= o_tdatatemp;
-          end
-          else if (channel==40 || channel==42) begin
-             for (i=0; i<10; i++) begin
+            end
+            if (numones>1 || numones2>1) clkstrprob<=1'b1; // issue with str
+            o_tdata <= o_tdatatemp;
+         end
+         else if (channel==40 || channel==42) begin
+            for (i=0; i<10; i++) begin
                if (channel==40) begin
-               o_tdatatemp[i] = lvdsbitsin[14*(0+i)+12]; //sampleclk 0-9
-               o_tdatatemp[i+16] = lvdsbitsin[14*(10+i)+12]; //sampleclk 10-19
+                  o_tdatatemp[i] = lvdsbitsin[14*(0+i)+12]; //sampleclk 0-9
+                  o_tdatatemp[i+16] = lvdsbitsin[14*(10+i)+12]; //sampleclk 10-19
                end
                else begin
-               o_tdatatemp[i] = lvdsbitsin[14*(20+i)+12]; //sampleclk 20-29
-               o_tdatatemp[i+16] = lvdsbitsin[14*(30+i)+12]; //sampleclk 30-39
+                  o_tdatatemp[i] = lvdsbitsin[14*(20+i)+12]; //sampleclk 20-29
+                  o_tdatatemp[i+16] = lvdsbitsin[14*(30+i)+12]; //sampleclk 30-39
                end
-             end
-             for (i=0; i<6; i++) begin
+            end
+            for (i=0; i<6; i++) begin
                o_tdatatemp[i+10] = 0; //padding
                o_tdatatemp[i+26] = 0; //padding
-             end
-             if ( (o_tdatatemp[9:0]!=10'd341 && o_tdatatemp[9:0]!=10'd682) ||
-                  (o_tdatatemp[25:16]!=10'd341 && o_tdatatemp[25:16]!=10'd682) ) clkstrprob<=1'b1; // issue with clk
-             o_tdata <= o_tdatatemp;
-          end
-          else begin // data
-             if (channeltype[0]==1'b0) begin // single channel mode
+            end
+            if ( (o_tdatatemp[9:0]!=10'd341 && o_tdatatemp[9:0]!=10'd682) ||
+                 (o_tdatatemp[25:16]!=10'd341 && o_tdatatemp[25:16]!=10'd682) ) clkstrprob<=1'b1; // issue with clk
+            o_tdata <= o_tdatatemp;
+         end
+         else begin // data
+            if (channeltype[0]==1'b0) begin // single channel mode
                o_tdata  <= {lvdsbitsin[14*(38-channel) +: 12], 4'd0, lvdsbitsin[14*(39-channel) +: 12], 4'd0};
-             end
-             else begin // two channel mode
+            end
+            else begin // two channel mode
                o_tdata  <= {lvdsbitsin[14*(38-channel2) +: 12], 4'd0, lvdsbitsin[14*(39-channel2) +: 12], 4'd0};
-             end
-             clkstrprob <= 1'b0; // assume no clkstr problems, will check in next steps
-          end
-          channel <= channel + 6'd2;
-          channel2 <= channel2 + 6'd2;
-          state <= TX_DATA4;
+            end
+            clkstrprob <= 1'b0; // assume no clkstr problems, will check in next steps
+         end
+         channel <= channel + 6'd2;
+         channel2 <= channel2 + 6'd2;
+         state <= TX_DATA4;
       end
    end
 
    TX_DATA4 : begin
       if (o_tready) begin
-          o_tvalid <= 1'b0;
-          if (length >= 4) begin
-              length <= length - 16'd4;
+         o_tvalid <= 1'b0;
+         if (length >= 4) begin
+            length <= length - 16'd4;
 
-              if (channel==10) channel2 <= 6'd20;
-              if (channel==20) channel2 <= 6'd10;
-              if (channel==30) channel2 <= 6'd30;
+            if (channel==10) channel2 <= 6'd20;
+            if (channel==20) channel2 <= 6'd10;
+            if (channel==30) channel2 <= 6'd30;
 
-              if (channel==50) begin
-                  channel <= 0;
-                  ram_rd_address <= ram_rd_address + 10'd1;
-                  state <= TX_DATA1;
-              end
-              else state <= TX_DATA3;
-          end
-          else begin
-              length <= 0;
-              channel <= 0;
-              channel2 <= 0;
-              didreadout <= 1'b1; // tell it we have read out this event (could be moved earlier?)
-              state <= RX;
-          end
+            if (channel==50) begin
+               channel <= 0;
+               ram_rd_address <= ram_rd_address + 10'd1;
+               state <= TX_DATA1;
+            end
+            else state <= TX_DATA3;
+         end
+         else begin
+            length <= 0;
+            channel <= 0;
+            channel2 <= 0;
+            didreadout <= 1'b1; // tell it we have read out this event (could be moved earlier?)
+            state <= RX;
+         end
       end
    end
 
    PLLCLOCK : begin // to step the clock phase, you have to toggle scanclk a few times
       pllclock_counter <= pllclock_counter+8'd1;
       if (pllclock_counter[4]) begin
-          scanclk <= ~scanclk;
-          pllclock_counter <= 0;
-          scanclk_cycles <= scanclk_cycles + 8'd1;
-          if (scanclk_cycles>5) phasestep[rx_data[1]] <= 1'b0; // deassert!
-          if (scanclk_cycles>7) state <= INIT;
+         scanclk <= ~scanclk;
+         pllclock_counter <= 0;
+         scanclk_cycles <= scanclk_cycles + 8'd1;
+         if (scanclk_cycles>5) phasestep[rx_data[1]] <= 1'b0; // deassert!
+         if (scanclk_cycles>7) state <= INIT;
       end
    end
 
@@ -725,7 +723,7 @@ reg [1:0] pllresetstate=0;
 reg pllreset2=0;
 always @ (posedge clk50) begin
    case (pllresetstate)
-    0 : begin
+   0 : begin
       if (pllreset2) begin
          pllreset <= 1'b1;
          pllresetstate <= 2'd1;

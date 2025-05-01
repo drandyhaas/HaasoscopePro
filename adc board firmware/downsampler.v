@@ -1,5 +1,4 @@
-// handles the raw LVDS inputs and orders them into samples
-// also does downsampling
+// handles the raw LVDS inputs and orders them into samples, also does downsampling
 module downsampler
 (
    input wire clklvds, // clk1, runs at LVDS bit rate (ADC clk input rate) / 2
