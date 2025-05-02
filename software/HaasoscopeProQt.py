@@ -67,7 +67,7 @@ class MainWindow(TemplateBaseClass):
     activeboard = 0
     activexychannel = 0
     tad = [0] * num_board
-    toff = 0
+    toff = 31
     themuxoutV = True
     phasecs = []
     for ph in range(len(usbs)): phasecs.append([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
@@ -420,7 +420,7 @@ class MainWindow(TemplateBaseClass):
         self.dophase(self.activeboard, plloutnum=0, updown=1)
 
     def uppos1(self):
-        self.dophase(self.activeboard, plloutnum=1, updown=1)
+        self.dophase(self.activeboard, plloutnum=1, updown=1, quiet=True)
 
     def uppos2(self):
         self.dophase(self.activeboard, plloutnum=2, updown=1)
@@ -869,9 +869,13 @@ class MainWindow(TemplateBaseClass):
                                              round(self.lastrate * self.lastsize / 1e6, 3), "MB/s")
                 self.oldnevents = self.nevents
 
+    doexttrigecho = [False] * num_board
     def getchannels(self, board):
         tt = self.triggertype
-        if self.doexttrig[board] > 0: tt = 3
+        if self.doexttrig[board] > 0:
+            self.doexttrigecho[board] = True
+            if self.doexttrigecho[board]: tt = 30
+            else: tt = 3
         elif self.doextsmatrig[board] > 0: tt = 5
         usbs[board].send(bytes([1, tt, self.dotwochannel+2*self.dooversample, 99] + inttobytes(
             self.expect_samples + self.expect_samples_extra - self.triggerpos + 1)))  # length to take after trigger (last 4 bytes)
@@ -899,6 +903,7 @@ class MainWindow(TemplateBaseClass):
     doeventcounter = False
     oldeventtime=-9999
     doeventtime = False
+    lvdstrigdelay = [0] * num_board
     def getpredata(self, board):
         if self.doeventcounter:
             usbs[board].send(bytes([2, 3, 100, 100, 100, 100, 100, 100]))  # get eventcounter
@@ -926,6 +931,16 @@ class MainWindow(TemplateBaseClass):
             if not self.doexttrig[board]:
                 self.downsamplemergingcounter[board] = 0
         self.triggerphase[board]=res[1]
+
+        if not self.doexttrig[board] and any(self.doexttrigecho):
+            usbs[board].send(bytes([2, 12, 100, 100, 100, 100, 100, 100]))  # get ext trig echo delay
+            res = usbs[board].recv(4)
+            lvdstrigdelay = res[0]
+            echoboard=-1
+            for theb in range(self.num_board): # find the board index we're echoing from
+                if self.doexttrigecho[theb]: echoboard=theb
+            if lvdstrigdelay!=self.lvdstrigdelay[echoboard]: print("clklvdsphase for board", board, "is", lvdstrigdelay)
+            self.lvdstrigdelay[echoboard] = lvdstrigdelay
 
     def getdata(self, usb):
         expect_len = (self.expect_samples+ self.expect_samples_extra) * 2 * self.nsubsamples # length to request: each adc bit is stored as 10 bits in 2 bytes, a couple extra for shifting later
@@ -970,8 +985,9 @@ class MainWindow(TemplateBaseClass):
         downsampleoffset = 2 * (sample_triggered_touse + (self.downsamplemergingcounter[board]-1)%self.downsamplemerging * 10) // self.downsamplemerging
         if not self.dotwochannel: downsampleoffset *= 2
         if self.doexttrig[board]:
-            if self.dotwochannel: downsampleoffset -= self.toff // self.downsamplefactor // 2
-            else: downsampleoffset -= self.toff // self.downsamplefactor
+            toff = self.toff + 8*self.lvdstrigdelay[board] # 2.5 ns is the period of clklvds, which is 8 samples (1ns/3.2 per sample)
+            if self.dotwochannel: downsampleoffset -= toff // self.downsamplefactor // 2
+            else: downsampleoffset -= toff // self.downsamplefactor
         datasize = self.xydata[board][1].size
         for s in range(0, self.expect_samples+self.expect_samples_extra):
 
@@ -1262,6 +1278,7 @@ class MainWindow(TemplateBaseClass):
 
     def init(self):
         self.tot()
+        self.ui.ToffBox.setValue(self.toff)
         self.setupchannels()
         self.launch()
         self.doleds()

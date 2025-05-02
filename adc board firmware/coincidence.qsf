@@ -398,6 +398,7 @@ set_global_assignment -name SDC_FILE coincidence.sdc
 set_global_assignment -name VERILOG_FILE command_processor.v
 set_global_assignment -name VERILOG_FILE triggerer.v
 set_global_assignment -name VERILOG_FILE downsampler.v
+set_global_assignment -name VERILOG_FILE phase_detector.v
 set_global_assignment -name CDF_FILE Chain1.cdf
 set_global_assignment -name CDF_FILE Chain2.cdf
 set_global_assignment -name CDF_FILE Chain2compressed.cdf

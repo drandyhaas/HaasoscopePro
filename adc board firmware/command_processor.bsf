@@ -193,6 +193,13 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 0 400)(pt 16 400)(line_width 3))
 	)
 	(port
+		(pt 0 416)
+		(input)
+		(text "phase_diff[7..0]" (rect 0 0 62 12)(font "Arial" ))
+		(text "phase_diff[7..0]" (rect 21 411 83 423)(font "Arial" ))
+		(line (pt 0 416)(pt 16 416)(line_width 3))
+	)
+	(port
 		(pt 368 32)
 		(output)
 		(text "i_tready" (rect 0 0 33 12)(font "Arial" ))

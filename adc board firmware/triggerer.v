@@ -75,6 +75,7 @@ reg [4:0]   downsample_sync = 0;
 reg         triggerlive_sync = 0;
 reg         didreadout_sync = 0;
 reg         exttrigin_sync = 0, exttrigin_sync_last = 0, exttrig_rising = 0;
+reg         lvdsin_trig_sync = 0;
 integer     eventtimecounter = 0;
 
 // this drives the trigger
@@ -98,6 +99,7 @@ always @ (posedge clklvds) begin
    exttrigin_sync         <= exttrigin;
    exttrigin_sync_last    <= exttrigin_sync; // remember for next cycle
    eventtimecounter       <= eventtimecounter + 1;
+   lvdsin_trig_sync       <= lvdsin_trig;
 
    if (acqstate==251 || acqstate==0) begin
       // not writing, while waiting to be read out or in initial state where trigger might be disabled
@@ -185,6 +187,7 @@ always @ (posedge clklvds) begin
             8'd3 : acqstate <= 8'd5; // external trigger from another board over LVDS
             8'd4 : acqstate <= 8'd6; // auto trigger (forces waveform capture unconditionally)
             8'd5 : acqstate <= 8'd7; // external trigger, like from back panel SMA
+            8'd30: acqstate <= 8'd5; // external trigger from another board over LVDS, with echo sent back
          endcase
       end
    end
@@ -273,11 +276,12 @@ always @ (posedge clklvds) begin
    5 : begin // external trigger from another board (3)
       if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
       else begin
-         if (lvdsin_trig) begin
+         if (lvdsin_trig_sync) begin
             ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
             lvdsout_trig <= 1'b1; // tell the others forwards
             sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
             downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
+            if (current_active_trigger_type==30) lvdsout_trig_b <= 1; // echo back, if we're supposed to, for measuring time offset
             acqstate <= 8'd250;
          end
          if (lvdsin_trig_b) begin
