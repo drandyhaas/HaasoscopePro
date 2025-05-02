@@ -460,7 +460,9 @@ class MainWindow(TemplateBaseClass):
         self.phasenbad[board] = [0]*12 # reset nbad counters
         self.expect_samples = 1000
         self.dodrawing = False
+        self.doexttrigecho[board] = True
         #switchclock(usbs,board)
+        #CALLBACK is to adjustclocks, below, which runs for each event and then finishes up at the end of that function
 
     def adjustclocks(self, board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr):
         debugphase=False
@@ -493,10 +495,11 @@ class MainWindow(TemplateBaseClass):
                 self.dophase(board, plloutnum, 1, pllnum=0, quiet=(i != n - 1)) # adjust phase of plloutnum
                 self.dophase(board, plloutnum2, 1, pllnum=0, quiet=(i != n - 1))  # adjust phase of plloutnum
             self.plljustreset[board] += self.plljustresetdir[board]
-        elif self.plljustreset[board] == -2:
+        elif self.plljustreset[board] == -2: # pllreset is now ALMOST DONE
             self.depth()
+            self.doexttrigecho[board] = False
             self.plljustreset[board] += self.plljustresetdir[board]
-        elif self.plljustreset[board] == -3:
+        elif self.plljustreset[board] == -3: # pllreset is now DONE
             self.dodrawing = True
             self.plljustreset[board] += self.plljustresetdir[board]
 
@@ -571,32 +574,35 @@ class MainWindow(TemplateBaseClass):
     def triggerlevelchanged(self, value):
         if value + self.triggerdelta < 256 and value - self.triggerdelta > 0:
             self.triggerlevel = value
-            for usb in usbs: self.sendtriggerinfo(usb)
+            for board in range(self.num_board): self.sendtriggerinfo(board)
             self.drawtriggerlines()
 
     def triggerdeltachanged(self, value):
         if value + self.triggerlevel < 256 and self.triggerlevel - value > 0:
             self.triggerdelta = value
-            for usb in usbs: self.sendtriggerinfo(usb)
+            for board in range(self.num_board): self.sendtriggerinfo(board)
 
     def triggerposchanged(self, value):
         self.triggerpos = int(self.expect_samples * value / 100)
-        for usb in usbs: self.sendtriggerinfo(usb)
+        for board in range(self.num_board): self.sendtriggerinfo(board)
         self.drawtriggerlines()
 
     def triggerchanchanged(self):
         self.triggerchan = self.ui.triggerChanBox.value()
-        for usb in usbs: self.sendtriggerinfo(usb)
+        for board in range(self.num_board): self.sendtriggerinfo(board)
 
-    def sendtriggerinfo(self, usb):
-        usb.send(bytes([8, self.triggerlevel + 1, self.triggerdelta, int(self.triggerpos / 256), self.triggerpos % 256,
+    def sendtriggerinfo(self, board):
+        triggerpos = self.triggerpos
+        if self.doexttrig[board]: triggerpos += self.lvdstrigdelay[board] // 5
+        #print("board", board, "triggerpos", triggerpos)
+        usbs[board].send(bytes([8, self.triggerlevel + 1, self.triggerdelta, int(triggerpos / 256), triggerpos % 256,
                         self.triggertimethresh, self.triggerchan, 100]))
-        usb.recv(4)
+        usbs[board].recv(4)
         # length to take after trigger is self.expect_samples - self.triggerpos + 1
         # we want self.expected_samples - that, which is about self.triggerpos, and then pad a little
-        prelengthtotake = self.triggerpos + 4
-        usb.send(bytes([2, 7]+inttobytes(prelengthtotake)+[0,0]))
-        usb.recv(4)
+        prelengthtotake = self.triggerpos + 5
+        usbs[board].send(bytes([2, 7]+inttobytes(prelengthtotake)+[0,0]))
+        usbs[board].recv(4)
 
     def drawtriggerlines(self):
         self.hline = (self.triggerlevel - 127) * self.yscale * 16 * 16
@@ -610,7 +616,7 @@ class MainWindow(TemplateBaseClass):
 
     def tot(self):
         self.triggertimethresh = self.ui.totBox.value()
-        for usb in usbs: self.sendtriggerinfo(usb)
+        for board in range(self.num_board): self.sendtriggerinfo(board)
 
     def depth(self):
         self.expect_samples = self.ui.depthBox.value()
@@ -873,7 +879,6 @@ class MainWindow(TemplateBaseClass):
     def getchannels(self, board):
         tt = self.triggertype
         if self.doexttrig[board] > 0:
-            self.doexttrigecho[board] = True
             if self.doexttrigecho[board]: tt = 30
             else: tt = 3
         elif self.doextsmatrig[board] > 0: tt = 5
@@ -939,7 +944,7 @@ class MainWindow(TemplateBaseClass):
             echoboard=-1
             for theb in range(self.num_board): # find the board index we're echoing from
                 if self.doexttrigecho[theb]: echoboard=theb
-            if lvdstrigdelay!=self.lvdstrigdelay[echoboard]: print("clklvdsphase for board", board, "is", lvdstrigdelay)
+            if lvdstrigdelay!=self.lvdstrigdelay[echoboard]: print("lvdstrigdelay for board", board, "is", lvdstrigdelay)
             self.lvdstrigdelay[echoboard] = lvdstrigdelay
 
     def getdata(self, usb):
@@ -985,7 +990,7 @@ class MainWindow(TemplateBaseClass):
         downsampleoffset = 2 * (sample_triggered_touse + (self.downsamplemergingcounter[board]-1)%self.downsamplemerging * 10) // self.downsamplemerging
         if not self.dotwochannel: downsampleoffset *= 2
         if self.doexttrig[board]:
-            toff = self.toff + 8*self.lvdstrigdelay[board] # 2.5 ns is the period of clklvds, which is 8 samples (1ns/3.2 per sample)
+            toff = self.toff + 8*(self.lvdstrigdelay[board]%5) # 2.5 ns is the period of clklvds, which is 8 samples (1ns/3.2 per sample), we just do the mod here, but the majority of it is handled in setting triggerpos
             if self.dotwochannel: downsampleoffset -= toff // self.downsamplefactor // 2
             else: downsampleoffset -= toff // self.downsamplefactor
         datasize = self.xydata[board][1].size

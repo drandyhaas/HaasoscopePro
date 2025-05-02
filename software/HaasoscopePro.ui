@@ -668,11 +668,14 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="accelerated">
+         <bool>true</bool>
+        </property>
         <property name="suffix">
          <string/>
         </property>
         <property name="minimum">
-         <number>0</number>
+         <number>-1000</number>
         </property>
         <property name="maximum">
          <number>1000</number>
