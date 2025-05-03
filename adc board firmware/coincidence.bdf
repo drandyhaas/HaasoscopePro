@@ -1896,9 +1896,9 @@ https://fpgasoftware.intel.com/eula.
 	(port
 		(pt 0 288)
 		(input)
-		(text "auxoutselector" (rect 0 0 71 12)(font "Arial" ))
-		(text "auxoutselector" (rect 21 283 92 295)(font "Arial" ))
-		(line (pt 0 288)(pt 16 288))
+		(text "auxoutselector[3..0]" (rect 0 0 97 12)(font "Arial" ))
+		(text "auxoutselector[3..0]" (rect 21 283 118 295)(font "Arial" ))
+		(line (pt 0 288)(pt 16 288)(line_width 3))
 	)
 	(port
 		(pt 0 304)
@@ -2051,8 +2051,8 @@ https://fpgasoftware.intel.com/eula.
 	(port
 		(pt 192 32)
 		(output)
-		(text "phase_diff[7..0]" (rect 0 0 79 12)(font "Arial" ))
-		(text "phase_diff[7..0]" (rect 105 27 171 39)(font "Arial" ))
+		(text "phase_diff[6..0]" (rect 0 0 79 12)(font "Arial" ))
+		(text "phase_diff[6..0]" (rect 105 27 171 39)(font "Arial" ))
 		(line (pt 192 32)(pt 176 32)(line_width 3))
 	)
 	(drawing
@@ -2234,8 +2234,8 @@ https://fpgasoftware.intel.com/eula.
 	(port
 		(pt 0 416)
 		(input)
-		(text "phase_diff[7..0]" (rect 0 0 79 12)(font "Arial" ))
-		(text "phase_diff[7..0]" (rect 21 411 100 423)(font "Arial" ))
+		(text "phase_diff[6..0]" (rect 0 0 79 12)(font "Arial" ))
+		(text "phase_diff[6..0]" (rect 21 411 100 423)(font "Arial" ))
 		(line (pt 0 416)(pt 16 416)(line_width 3))
 	)
 	(port
@@ -2535,9 +2535,9 @@ https://fpgasoftware.intel.com/eula.
 	(port
 		(pt 368 704)
 		(output)
-		(text "auxoutselector" (rect 0 0 71 12)(font "Arial" ))
-		(text "auxoutselector" (rect 287 699 347 711)(font "Arial" ))
-		(line (pt 368 704)(pt 352 704))
+		(text "auxoutselector[3..0]" (rect 0 0 97 12)(font "Arial" ))
+		(text "auxoutselector[3..0]" (rect 265 699 347 711)(font "Arial" ))
+		(line (pt 368 704)(pt 352 704)(line_width 3))
 	)
 	(port
 		(pt 368 720)
@@ -2671,10 +2671,6 @@ https://fpgasoftware.intel.com/eula.
 (connector
 	(pt 1024 1800)
 	(pt 1200 1800)
-)
-(connector
-	(pt 1024 1752)
-	(pt 1264 1752)
 )
 (connector
 	(pt 1024 1720)
@@ -2957,18 +2953,6 @@ https://fpgasoftware.intel.com/eula.
 	(bus)
 )
 (connector
-	(pt -904 1736)
-	(pt -904 1968)
-)
-(connector
-	(pt 1264 1968)
-	(pt -904 1968)
-)
-(connector
-	(pt 1264 1752)
-	(pt 1264 1968)
-)
-(connector
 	(pt 1280 1736)
 	(pt 1280 1984)
 )
@@ -3079,10 +3063,6 @@ https://fpgasoftware.intel.com/eula.
 (connector
 	(pt -920 1720)
 	(pt -720 1720)
-)
-(connector
-	(pt -904 1736)
-	(pt -720 1736)
 )
 (connector
 	(pt -888 1752)
@@ -4465,6 +4445,31 @@ https://fpgasoftware.intel.com/eula.
 	(pt 160 1392)
 	(bus)
 )
+(connector
+	(pt 1024 1752)
+	(pt 1264 1752)
+	(bus)
+)
+(connector
+	(pt -904 1736)
+	(pt -904 1968)
+	(bus)
+)
+(connector
+	(pt 1264 1968)
+	(pt -904 1968)
+	(bus)
+)
+(connector
+	(pt 1264 1752)
+	(pt 1264 1968)
+	(bus)
+)
+(connector
+	(pt -904 1736)
+	(pt -720 1736)
+	(bus)
+)
 (junction (pt 1704 1592))
 (junction (pt -872 1768))
 (junction (pt -888 1752))
@@ -4510,3 +4515,4 @@ https://fpgasoftware.intel.com/eula.
 (text "PLL phase paths" (rect 520 504 660 527)(font "Intel Clear" (color 255 170 0)(font_size 12)))
 (text "Clock status paths" (rect 1056 536 1209 559)(font "Intel Clear" (color 0 0 255)(font_size 12)))
 (text "Reset paths" (rect 424 1032 524 1055)(font "Intel Clear" (color 170 255 0)(font_size 12)))
+(text "For finding ext trig delays" (rect -80 1328 71 1347)(font "Intel Clear" (font_size 8)))

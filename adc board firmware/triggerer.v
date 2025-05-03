@@ -33,7 +33,7 @@ module triggerer(
    input reg [7:0]   triggerToT,
    input reg         triggerchan,
    input reg         dorolling,
-   input reg         auxoutselector,
+   input reg [3:0]   auxoutselector,
    input reg [7:0]   channeltype,
    input reg [7:0]   downsamplemerging,
    input reg [4:0]   downsample
@@ -43,7 +43,12 @@ module triggerer(
 assign led = exttrigin;
 
 //auxout is debugout[10], SMA out on back panel
-assign auxout = (auxoutselector_sync==0) ? clklvds: auxtrigout;
+assign auxout = 
+   (auxoutselector_sync==0) ? 1'b0: 
+   (auxoutselector_sync==1) ? auxtrigout : 
+   (auxoutselector_sync==2) ? eventtimecounter[15] : 
+   (auxoutselector_sync==3) ? clklvds : 
+   1'b0;
 
 integer     rollingtriggercounter = 0;
 reg [7:0]   tot_counter = 0;
@@ -68,7 +73,7 @@ reg [ 7:0]  triggertype_sync = 0;
 reg [ 7:0]  triggerToT_sync = 0;
 reg         triggerchan_sync = 0;
 reg         dorolling_sync = 0;
-reg         auxoutselector_sync = 0;
+reg [3:0]   auxoutselector_sync = 0;
 reg [ 7:0]  channeltype_sync = 0;
 reg [7:0]   downsamplemerging_sync = 0;
 reg [4:0]   downsample_sync = 0;
@@ -273,7 +278,7 @@ always @ (posedge clklvds) begin
       end
    end
 
-   5 : begin // external trigger from another board (3)
+   5 : begin // external trigger from another board (3, or 30 for extra echos)
       if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
       else begin
          if (lvdsin_trig_sync) begin

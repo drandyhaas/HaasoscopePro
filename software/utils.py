@@ -57,7 +57,7 @@ def send_leds(usb, r1,g1,b1, r2,g2,b2): # ch0, ch1
     usb.recv(4)
 
 def auxoutselector(usb, val, doprint=True):
-    usb.send(bytes([2, 10, val, 0, 99, 99, 99, 99])) # set aux out SMA on back panel to clklvds (0) or trig out (1)
+    usb.send(bytes([2, 10, val, 0, 99, 99, 99, 99])) # set aux out SMA on back panel
     res = usb.recv(4)
     if doprint: print("auxoutselector now",val,"and was",res[0])
 

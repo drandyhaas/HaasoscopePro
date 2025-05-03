@@ -139,9 +139,9 @@ https://fpgasoftware.intel.com/eula.
 	(port
 		(pt 0 288)
 		(input)
-		(text "auxoutselector" (rect 0 0 56 12)(font "Arial" ))
-		(text "auxoutselector" (rect 21 283 77 295)(font "Arial" ))
-		(line (pt 0 288)(pt 16 288)(line_width 1))
+		(text "auxoutselector[3..0]" (rect 0 0 76 12)(font "Arial" ))
+		(text "auxoutselector[3..0]" (rect 21 283 97 295)(font "Arial" ))
+		(line (pt 0 288)(pt 16 288)(line_width 3))
 	)
 	(port
 		(pt 0 304)

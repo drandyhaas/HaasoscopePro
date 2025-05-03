@@ -1819,6 +1819,63 @@
         </property>
        </widget>
       </widget>
+      <widget class="QComboBox" name="Auxout_comboBox">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>520</y>
+         <width>111</width>
+         <height>22</height>
+        </rect>
+       </property>
+       <property name="currentText">
+        <string>Gnd</string>
+       </property>
+       <property name="currentIndex">
+        <number>0</number>
+       </property>
+       <property name="maxVisibleItems">
+        <number>10</number>
+       </property>
+       <item>
+        <property name="text">
+         <string>Gnd</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Trigger</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Square</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Clock</string>
+        </property>
+       </item>
+      </widget>
+      <widget class="QLabel" name="label_22">
+       <property name="geometry">
+        <rect>
+         <x>130</x>
+         <y>520</y>
+         <width>47</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="font">
+        <font>
+         <family>Arial</family>
+        </font>
+       </property>
+       <property name="text">
+        <string>Aux out</string>
+       </property>
+      </widget>
      </widget>
     </item>
    </layout>
@@ -1851,7 +1908,6 @@
      <string>Other</string>
     </property>
     <addaction name="separator"/>
-    <addaction name="actionTriggerout"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
@@ -1867,48 +1923,14 @@
     <string>Record to file</string>
    </property>
   </action>
-  <action name="actionRead_from_file">
-   <property name="text">
-    <string>Read from file</string>
-   </property>
-  </action>
-  <action name="actionStore_to_file">
-   <property name="text">
-    <string>Store to file</string>
-   </property>
-  </action>
   <action name="actionDo_autocalibration">
    <property name="text">
-    <string>Do autocalibration</string>
-   </property>
-  </action>
-  <action name="actionOutput_clk_left">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Output clk left</string>
-   </property>
-  </action>
-  <action name="actionAllow_same_chan_coin">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Allow same chan coin</string>
+    <string>Oversampling cal</string>
    </property>
   </action>
   <action name="actionUpdate_firmware">
    <property name="text">
     <string>Update firmware</string>
-   </property>
-  </action>
-  <action name="actionTriggerout">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Trigger out</string>
    </property>
   </action>
  </widget>

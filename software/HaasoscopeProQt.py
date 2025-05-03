@@ -187,7 +187,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.fftCheck.clicked.connect(self.fft)
         self.ui.actionDo_autocalibration.triggered.connect(self.autocalibration)
         self.ui.actionUpdate_firmware.triggered.connect(self.update_firmware)
-        self.ui.actionTriggerout.triggered.connect(self.triggerout)
+        self.ui.Auxout_comboBox.currentIndexChanged.connect(self.auxout)
         self.dofft = False
         self.db = False
         self.lastTime = time.time()
@@ -1113,8 +1113,8 @@ class MainWindow(TemplateBaseClass):
 
         self.ui.textBrowser.setText(thestr)
 
-    def triggerout(self):
-        val = self.ui.actionTriggerout.isChecked()
+    def auxout(self):
+        val = self.ui.Auxout_comboBox.currentIndex()
         for board in range(self.num_board):
             auxoutselector(usbs[board],val)
 
