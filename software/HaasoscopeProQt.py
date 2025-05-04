@@ -524,12 +524,12 @@ class MainWindow(TemplateBaseClass):
         board = self.ui.boardBox.value()
         self.doexttrig[board] = value
         self.ui.exttrigCheck.setChecked(value)
-        print("doexttrig", self.doexttrig[board], "for board", board)
+        #print("doexttrig", self.doexttrig[board], "for board", board)
         if self.doexttrig[board]: self.ui.extsmatrigCheck.setEnabled(False)
         else: self.ui.extsmatrigCheck.setEnabled(True)
         r = self.ui.rollingButton.isChecked()
         if self.doexttrig[board]: r = False
-        print("setting rolling",r,"for board",board)
+        #print("setting rolling",r,"for board",board)
         usbs[board].send(bytes([2, 8, r, 0, 100, 100, 100, 100]))
         usbs[board].recv(4)
         if self.doexttrig[board]:
@@ -537,6 +537,7 @@ class MainWindow(TemplateBaseClass):
             self.doexttrigecho[board] = True # and turn on for this one
         else:
             self.doexttrigecho[board] = False  # turn off for this one since it's not doing exttrig anymore
+        self.sendtriggerinfo(board) # to account for trigger time delay or not
 
     def extsmatrig(self):
         self.doextsmatrig[self.activeboard] = self.ui.extsmatrigCheck.isChecked()
@@ -949,8 +950,10 @@ class MainWindow(TemplateBaseClass):
                 if self.doexttrigecho[theb]: echoboard=theb
             if echoboard>board: lvdstrigdelay = res[0]
             else: lvdstrigdelay = res[1]
-            if lvdstrigdelay!=self.lvdstrigdelay[echoboard]: print("lvdstrigdelay from board", board, "to board", echoboard, "is", lvdstrigdelay)
-            self.lvdstrigdelay[echoboard] = lvdstrigdelay
+            if lvdstrigdelay!=self.lvdstrigdelay[echoboard]:
+                print("lvdstrigdelay from board", board, "to board", echoboard, "is", lvdstrigdelay)
+                self.lvdstrigdelay[echoboard] = lvdstrigdelay
+                self.tot() # to adjust trigger time to account for delay
 
     def getdata(self, usb):
         expect_len = (self.expect_samples+ self.expect_samples_extra) * 2 * self.nsubsamples # length to request: each adc bit is stored as 10 bits in 2 bytes, a couple extra for shifting later
