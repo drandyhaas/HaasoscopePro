@@ -461,6 +461,7 @@ class MainWindow(TemplateBaseClass):
         self.expect_samples = 1000
         self.dodrawing = False
         #switchclock(usbs,board)
+        self.doexttrigecho[board] = True
         #CALLBACK is to adjustclocks, below, which runs for each event and then finishes up at the end of that function
 
     def adjustclocks(self, board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr):
@@ -499,7 +500,7 @@ class MainWindow(TemplateBaseClass):
             self.plljustreset[board] += self.plljustresetdir[board]
         elif self.plljustreset[board] == -3: # pllreset is now DONE
             self.dodrawing = True
-            self.plljustreset[board] += self.plljustresetdir[board]
+            self.plljustreset[board] = -10
 
     def wheelEvent(self, event):  # QWheelEvent
         if hasattr(event, "delta"):
@@ -944,7 +945,6 @@ class MainWindow(TemplateBaseClass):
         if not self.doexttrig[board] and any(self.doexttrigecho):
             usbs[board].send(bytes([2, 12, 100, 100, 100, 100, 100, 100]))  # get ext trig echo delay
             res = usbs[board].recv(4)
-
             echoboard=-1
             for theb in range(self.num_board): # find the board index we're echoing from
                 if self.doexttrigecho[theb]: echoboard=theb
@@ -954,6 +954,8 @@ class MainWindow(TemplateBaseClass):
                 print("lvdstrigdelay from board", board, "to board", echoboard, "is", lvdstrigdelay)
                 self.lvdstrigdelay[echoboard] = lvdstrigdelay
                 self.tot() # to adjust trigger time to account for delay
+            else:
+                if all(item <= -10 for item in self.plljustreset): self.doexttrigecho[echoboard]=False
 
     def getdata(self, usb):
         expect_len = (self.expect_samples+ self.expect_samples_extra) * 2 * self.nsubsamples # length to request: each adc bit is stored as 10 bits in 2 bytes, a couple extra for shifting later
