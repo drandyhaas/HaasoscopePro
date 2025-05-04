@@ -67,7 +67,7 @@ class MainWindow(TemplateBaseClass):
     activeboard = 0
     activexychannel = 0
     tad = [0] * num_board
-    toff = 31
+    toff = 40
     themuxoutV = True
     phasecs = []
     for ph in range(len(usbs)): phasecs.append([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
