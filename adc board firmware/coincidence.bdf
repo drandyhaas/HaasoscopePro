@@ -2024,7 +2024,7 @@ https://fpgasoftware.intel.com/eula.
 	)
 )
 (symbol
-	(rect -104 1360 88 1472)
+	(rect 328 1472 520 1584)
 	(text "phase_detector" (rect 5 0 80 12)(font "Arial" ))
 	(text "inst7" (rect 8 96 31 108)(font "Arial" ))
 	(port
@@ -2053,6 +2053,42 @@ https://fpgasoftware.intel.com/eula.
 		(output)
 		(text "phase_diff[6..0]" (rect 0 0 79 12)(font "Arial" ))
 		(text "phase_diff[6..0]" (rect 105 27 171 39)(font "Arial" ))
+		(line (pt 192 32)(pt 176 32)(line_width 3))
+	)
+	(drawing
+		(rectangle (rect 16 16 176 96))
+	)
+)
+(symbol
+	(rect 328 1696 520 1808)
+	(text "phase_detector" (rect 5 0 80 12)(font "Arial" ))
+	(text "inst10" (rect 8 96 36 113)(font "Intel Clear" ))
+	(port
+		(pt 0 32)
+		(input)
+		(text "clk_fast" (rect 0 0 40 12)(font "Arial" ))
+		(text "clk_fast" (rect 21 27 61 39)(font "Arial" ))
+		(line (pt 0 32)(pt 16 32))
+	)
+	(port
+		(pt 0 48)
+		(input)
+		(text "stop" (rect 0 0 21 12)(font "Arial" ))
+		(text "stop" (rect 21 43 42 55)(font "Arial" ))
+		(line (pt 0 48)(pt 16 48))
+	)
+	(port
+		(pt 0 64)
+		(input)
+		(text "start" (rect 0 0 22 12)(font "Arial" ))
+		(text "start" (rect 21 59 43 71)(font "Arial" ))
+		(line (pt 0 64)(pt 16 64))
+	)
+	(port
+		(pt 192 32)
+		(output)
+		(text "phase_diff[6..0]" (rect 0 0 79 12)(font "Arial" ))
+		(text "phase_diff[6..0]" (rect 105 27 184 39)(font "Arial" ))
 		(line (pt 192 32)(pt 176 32)(line_width 3))
 	)
 	(drawing
@@ -2237,6 +2273,13 @@ https://fpgasoftware.intel.com/eula.
 		(text "phase_diff[6..0]" (rect 0 0 79 12)(font "Arial" ))
 		(text "phase_diff[6..0]" (rect 21 411 100 423)(font "Arial" ))
 		(line (pt 0 416)(pt 16 416)(line_width 3))
+	)
+	(port
+		(pt 0 432)
+		(input)
+		(text "phase_diff_b[6..0]" (rect 0 0 90 12)(font "Arial" ))
+		(text "phase_diff_b[6..0]" (rect 21 427 111 439)(font "Arial" ))
+		(line (pt 0 432)(pt 16 432)(line_width 3))
 	)
 	(port
 		(pt 368 32)
@@ -4301,20 +4344,6 @@ https://fpgasoftware.intel.com/eula.
 	(color 0 170 0)
 )
 (connector
-	(pt 656 1464)
-	(pt 160 1464)
-	(bus)
-)
-(connector
-	(pt -936 1528)
-	(pt -720 1528)
-)
-(connector
-	(pt 160 1464)
-	(pt 160 1392)
-	(bus)
-)
-(connector
 	(pt -936 1544)
 	(pt -904 1544)
 )
@@ -4327,21 +4356,8 @@ https://fpgasoftware.intel.com/eula.
 	(pt -320 1512)
 )
 (connector
-	(pt -320 1424)
-	(pt -104 1424)
-)
-(connector
-	(pt -104 1408)
-	(pt -904 1408)
-)
-(connector
 	(pt -904 1408)
 	(pt -904 1544)
-)
-(connector
-	(pt -376 1392)
-	(pt -104 1392)
-	(color 0 170 0)
 )
 (connector
 	(text "clklvdsout" (rect -840 1152 -791 1169)(font "Intel Clear" ))
@@ -4406,10 +4422,6 @@ https://fpgasoftware.intel.com/eula.
 	(bus)
 )
 (connector
-	(pt -352 1528)
-	(pt -240 1528)
-)
-(connector
 	(pt -352 1544)
 	(pt -240 1544)
 )
@@ -4441,11 +4453,6 @@ https://fpgasoftware.intel.com/eula.
 	(pt -240 1512)
 )
 (connector
-	(pt 88 1392)
-	(pt 160 1392)
-	(bus)
-)
-(connector
 	(pt 1024 1752)
 	(pt 1264 1752)
 	(bus)
@@ -4470,6 +4477,130 @@ https://fpgasoftware.intel.com/eula.
 	(pt -720 1736)
 	(bus)
 )
+(connector
+	(pt -376 1392)
+	(pt 112 1392)
+	(color 0 170 0)
+)
+(connector
+	(pt 112 1504)
+	(pt 112 1392)
+	(color 0 170 0)
+)
+(connector
+	(pt -904 1408)
+	(pt 96 1408)
+)
+(connector
+	(pt 96 1408)
+	(pt 96 1520)
+)
+(connector
+	(pt 96 1520)
+	(pt 328 1520)
+)
+(connector
+	(pt 328 1536)
+	(pt 80 1536)
+)
+(connector
+	(pt 80 1424)
+	(pt 80 1536)
+)
+(connector
+	(pt -320 1424)
+	(pt 80 1424)
+)
+(connector
+	(pt -824 1528)
+	(pt -824 1864)
+)
+(connector
+	(pt -936 1528)
+	(pt -824 1528)
+)
+(connector
+	(pt -824 1528)
+	(pt -720 1528)
+)
+(connector
+	(pt 112 1504)
+	(pt 312 1504)
+	(color 0 170 0)
+)
+(connector
+	(pt 312 1504)
+	(pt 328 1504)
+	(color 0 170 0)
+)
+(connector
+	(pt -320 1528)
+	(pt -320 1760)
+)
+(connector
+	(pt -352 1528)
+	(pt -320 1528)
+)
+(connector
+	(pt -320 1528)
+	(pt -240 1528)
+)
+(connector
+	(pt -320 1760)
+	(pt 328 1760)
+)
+(connector
+	(pt 328 1744)
+	(pt 312 1744)
+)
+(connector
+	(pt 312 1744)
+	(pt 312 1864)
+)
+(connector
+	(pt -824 1864)
+	(pt 312 1864)
+)
+(connector
+	(pt 656 1464)
+	(pt 536 1464)
+	(bus)
+)
+(connector
+	(pt 536 1504)
+	(pt 536 1464)
+	(bus)
+)
+(connector
+	(pt 520 1504)
+	(pt 536 1504)
+	(bus)
+)
+(connector
+	(pt 520 1728)
+	(pt 552 1728)
+	(bus)
+)
+(connector
+	(pt 552 1728)
+	(pt 552 1480)
+	(bus)
+)
+(connector
+	(pt 656 1480)
+	(pt 552 1480)
+	(bus)
+)
+(connector
+	(pt 328 1728)
+	(pt 312 1728)
+	(color 0 170 0)
+)
+(connector
+	(pt 312 1728)
+	(pt 312 1504)
+	(color 0 170 0)
+)
 (junction (pt 1704 1592))
 (junction (pt -872 1768))
 (junction (pt -888 1752))
@@ -4489,6 +4620,9 @@ https://fpgasoftware.intel.com/eula.
 (junction (pt -320 1512))
 (junction (pt -920 1168))
 (junction (pt -256 1080))
+(junction (pt -824 1528))
+(junction (pt -320 1528))
+(junction (pt 312 1504))
 (text "Can switch here whether we use sma or lvds" (rect 216 464 474 483)(font "Intel Clear" (font_size 8)))
 (text "LVDS input deserializers" (rect -568 360 -423 379)(font "Intel Clear" (font_size 8)))
 (text "50 MHz oscillator" (rect 352 336 454 355)(font "Intel Clear" (font_size 8)))

@@ -460,7 +460,6 @@ class MainWindow(TemplateBaseClass):
         self.phasenbad[board] = [0]*12 # reset nbad counters
         self.expect_samples = 1000
         self.dodrawing = False
-        self.doexttrigecho[board] = True
         #switchclock(usbs,board)
         #CALLBACK is to adjustclocks, below, which runs for each event and then finishes up at the end of that function
 
@@ -497,7 +496,6 @@ class MainWindow(TemplateBaseClass):
             self.plljustreset[board] += self.plljustresetdir[board]
         elif self.plljustreset[board] == -2: # pllreset is now ALMOST DONE
             self.depth()
-            self.doexttrigecho[board] = False
             self.plljustreset[board] += self.plljustresetdir[board]
         elif self.plljustreset[board] == -3: # pllreset is now DONE
             self.dodrawing = True
@@ -526,7 +524,7 @@ class MainWindow(TemplateBaseClass):
         board = self.ui.boardBox.value()
         self.doexttrig[board] = value
         self.ui.exttrigCheck.setChecked(value)
-        #print("doexttrig", self.doexttrig[board], "for board", board)
+        print("doexttrig", self.doexttrig[board], "for board", board)
         if self.doexttrig[board]: self.ui.extsmatrigCheck.setEnabled(False)
         else: self.ui.extsmatrigCheck.setEnabled(True)
         r = self.ui.rollingButton.isChecked()
@@ -534,6 +532,11 @@ class MainWindow(TemplateBaseClass):
         print("setting rolling",r,"for board",board)
         usbs[board].send(bytes([2, 8, r, 0, 100, 100, 100, 100]))
         usbs[board].recv(4)
+        if self.doexttrig[board]:
+            self.doexttrigecho = [False] * self.num_board  # turn off doexttrigecho for all other boards
+            self.doexttrigecho[board] = True # and turn on for this one
+        else:
+            self.doexttrigecho[board] = False  # turn off for this one since it's not doing exttrig anymore
 
     def extsmatrig(self):
         self.doextsmatrig[self.activeboard] = self.ui.extsmatrigCheck.isChecked()
@@ -940,11 +943,13 @@ class MainWindow(TemplateBaseClass):
         if not self.doexttrig[board] and any(self.doexttrigecho):
             usbs[board].send(bytes([2, 12, 100, 100, 100, 100, 100, 100]))  # get ext trig echo delay
             res = usbs[board].recv(4)
-            lvdstrigdelay = res[0]
+
             echoboard=-1
             for theb in range(self.num_board): # find the board index we're echoing from
                 if self.doexttrigecho[theb]: echoboard=theb
-            if lvdstrigdelay!=self.lvdstrigdelay[echoboard]: print("lvdstrigdelay for board", board, "is", lvdstrigdelay)
+            if echoboard>board: lvdstrigdelay = res[0]
+            else: lvdstrigdelay = res[1]
+            if lvdstrigdelay!=self.lvdstrigdelay[echoboard]: print("lvdstrigdelay from board", board, "to board", echoboard, "is", lvdstrigdelay)
             self.lvdstrigdelay[echoboard] = lvdstrigdelay
 
     def getdata(self, usb):

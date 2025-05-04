@@ -80,7 +80,7 @@ reg [4:0]   downsample_sync = 0;
 reg         triggerlive_sync = 0;
 reg         didreadout_sync = 0;
 reg         exttrigin_sync = 0, exttrigin_sync_last = 0, exttrig_rising = 0;
-reg         lvdsin_trig_sync = 0;
+reg         lvdsin_trig_sync = 0, lvdsin_trig_b_sync = 0;
 integer     eventtimecounter = 0;
 
 // this drives the trigger
@@ -105,6 +105,7 @@ always @ (posedge clklvds) begin
    exttrigin_sync_last    <= exttrigin_sync; // remember for next cycle
    eventtimecounter       <= eventtimecounter + 1;
    lvdsin_trig_sync       <= lvdsin_trig;
+   lvdsin_trig_b_sync     <= lvdsin_trig_b;
 
    if (acqstate==251 || acqstate==0) begin
       // not writing, while waiting to be read out or in initial state where trigger might be disabled
@@ -139,8 +140,8 @@ always @ (posedge clklvds) begin
          sample_triggered <= 0;
          downsamplemergingcounter_triggered <= downsamplemergingcounter;
          ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-         lvdsout_trig <= 1'b1; // tell the others (maybe want to do rolling trigger on just the first board?)
-         //lvdsout_trig_b <= 1'b1; // no need, just going forwards?
+         lvdsout_trig <= 1'b1; // tell the others
+         lvdsout_trig_b <= 1'b1;
          acqstate <= 8'd250; // trigger
       end
       else rollingtriggercounter <= rollingtriggercounter + 1;
@@ -289,11 +290,12 @@ always @ (posedge clklvds) begin
             if (current_active_trigger_type==30) lvdsout_trig_b <= 1; // echo back, if we're supposed to, for measuring time offset
             acqstate <= 8'd250;
          end
-         if (lvdsin_trig_b) begin
+         if (lvdsin_trig_b_sync) begin
             ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
             lvdsout_trig_b <= 1'b1; // tell the others backwards
             sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
             downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
+            if (current_active_trigger_type==30) lvdsout_trig <= 1; // echo back, if we're supposed to, for measuring time offset
             acqstate <= 8'd250;
          end
       end
