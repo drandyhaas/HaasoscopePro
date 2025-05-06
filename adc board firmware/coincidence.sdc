@@ -25,7 +25,7 @@ derive_pll_clocks
 derive_clock_uncertainty -add
 
 ## Declare that these clocks are asynchronous
-set_clock_groups -asynchronous -group {clk50 *pllmain*pll1|clk[*]} -group {lvdsin_clk clk_ext otherclkpll* *pll1|clk[*]~1} -group {ftdi_clk} -group {scanclk} -group {spireset}
+set_clock_groups -asynchronous -group {clk50 pllmain*pll1|clk[*]} -group {lvdsin_clk clk_ext otherclkpll* pllmain*pll1|clk[*]~1} -group {ftdi_clk} -group {scanclk} -group {spireset}
 
 ## Ignores
 set_false_path -from [get_registers command_processor:inst1|*] -to [get_registers command_processor:inst1|*_sync*]
@@ -46,6 +46,10 @@ set_false_path -from [get_registers command_processor:inst1|channeltype*]
 set_false_path -from [get_registers command_processor:inst1|downsamplemerging*]
 set_false_path -from [get_registers command_processor:inst1|highres*]
 set_false_path -from [get_registers command_processor:inst1|downsample*]
+
+## can ignore
+set_false_path -from [get_registers triggerer:inst9|lvdsout_trig] -to [get_registers phase_detector:inst* ]
+set_false_path -from [get_registers triggerer:inst9|lvdsout_trig_b] -to [get_registers phase_detector:inst* ]
 
 ## IO constraints
 set_max_delay -to [get_ports clk*] 10

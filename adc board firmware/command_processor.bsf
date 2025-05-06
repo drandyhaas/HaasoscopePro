@@ -195,15 +195,15 @@ https://fpgasoftware.intel.com/eula.
 	(port
 		(pt 0 416)
 		(input)
-		(text "phase_diff[6..0]" (rect 0 0 62 12)(font "Arial" ))
-		(text "phase_diff[6..0]" (rect 21 411 83 423)(font "Arial" ))
+		(text "phase_diff[15..0]" (rect 0 0 66 12)(font "Arial" ))
+		(text "phase_diff[15..0]" (rect 21 411 87 423)(font "Arial" ))
 		(line (pt 0 416)(pt 16 416)(line_width 3))
 	)
 	(port
 		(pt 0 432)
 		(input)
-		(text "phase_diff_b[6..0]" (rect 0 0 73 12)(font "Arial" ))
-		(text "phase_diff_b[6..0]" (rect 21 427 94 439)(font "Arial" ))
+		(text "phase_diff_b[15..0]" (rect 0 0 76 12)(font "Arial" ))
+		(text "phase_diff_b[15..0]" (rect 21 427 97 439)(font "Arial" ))
 		(line (pt 0 432)(pt 16 432)(line_width 3))
 	)
 	(port

@@ -466,7 +466,7 @@ class MainWindow(TemplateBaseClass):
         self.expect_samples = 1000
         self.dodrawing = False
         #switchclock(usbs,board)
-        self.doexttrigecho[board] = True
+        if self.num_board>1 and self.doexttrig[board]: self.doexttrigecho[board] = True
         #CALLBACK is to adjustclocks, below, which runs for each event and then finishes up at the end of that function
 
     def adjustclocks(self, board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr):
@@ -919,6 +919,7 @@ class MainWindow(TemplateBaseClass):
     oldeventtime=-9999
     doeventtime = False
     lvdstrigdelay = [0] * num_board
+    lastlvdstrigdelay = [0] * num_board
     def getpredata(self, board):
         if self.doeventcounter:
             usbs[board].send(bytes([2, 3, 100, 100, 100, 100, 100, 100]))  # get eventcounter
@@ -948,19 +949,29 @@ class MainWindow(TemplateBaseClass):
         self.triggerphase[board]=res[1]
 
         if not self.doexttrig[board] and any(self.doexttrigecho):
-            usbs[board].send(bytes([2, 12, 100, 100, 100, 100, 100, 100]))  # get ext trig echo delay
-            res = usbs[board].recv(4)
             echoboard=-1
             for theb in range(self.num_board): # find the board index we're echoing from
                 if self.doexttrigecho[theb]: echoboard=theb
-            if echoboard>board: lvdstrigdelay = res[0]
-            else: lvdstrigdelay = res[1]
-            if lvdstrigdelay!=self.lvdstrigdelay[echoboard]:
-                print("lvdstrigdelay from board", board, "to board", echoboard, "is", lvdstrigdelay)
-                self.lvdstrigdelay[echoboard] = lvdstrigdelay
-                self.tot() # to adjust trigger time to account for delay
+            if echoboard>board:
+                usbs[board].send(bytes([2, 12, 100, 100, 100, 100, 100, 100]))  # get ext trig echo forwards delay
+                res = usbs[board].recv(4)
+                #print("lvdstrigdelay from echo forwards phases ", res[0],res[1],res[2],res[3])
             else:
-                if all(item <= -10 for item in self.plljustreset): self.doexttrigecho[echoboard]=False
+                usbs[board].send(bytes([2, 13, 100, 100, 100, 100, 100, 100]))  # get ext trig echo backwards delay
+                res = usbs[board].recv(4)
+                #print("lvdstrigdelay from echo backwards phases ", res[0],res[1],res[2],res[3])
+            if res[0] == res[1]:
+                lvdstrigdelay = res[0]
+                if echoboard<board: lvdstrigdelay += 1
+                if lvdstrigdelay == self.lastlvdstrigdelay[echoboard]:
+                    self.lvdstrigdelay[echoboard] = lvdstrigdelay
+                    self.tot()  # to adjust trigger time to account for delay
+                    if all(item <= -10 for item in self.plljustreset):
+                        print("lvdstrigdelay from board", board, "to board", echoboard, "is", lvdstrigdelay)
+                        self.doexttrigecho[echoboard] = False
+                self.lastlvdstrigdelay[echoboard] = lvdstrigdelay
+            else:
+                if all(item <= -10 for item in self.plljustreset): self.dophase(board, plloutnum=3, updown=1, quiet=True)
 
     def getdata(self, usb):
         expect_len = (self.expect_samples+ self.expect_samples_extra) * 2 * self.nsubsamples # length to request: each adc bit is stored as 10 bits in 2 bytes, a couple extra for shifting later

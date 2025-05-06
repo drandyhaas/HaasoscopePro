@@ -21,7 +21,7 @@ https://fpgasoftware.intel.com/eula.
 */
 (header "symbol" (version "1.1"))
 (symbol
-	(rect 16 16 208 128)
+	(rect 16 16 216 128)
 	(text "phase_detector" (rect 5 0 66 12)(font "Arial" ))
 	(text "inst" (rect 8 96 20 108)(font "Arial" ))
 	(port
@@ -46,13 +46,13 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 0 64)(pt 16 64)(line_width 1))
 	)
 	(port
-		(pt 192 32)
+		(pt 200 32)
 		(output)
-		(text "phase_diff[6..0]" (rect 0 0 62 12)(font "Arial" ))
-		(text "phase_diff[6..0]" (rect 109 27 171 39)(font "Arial" ))
-		(line (pt 192 32)(pt 176 32)(line_width 3))
+		(text "phase_diff[15..0]" (rect 0 0 66 12)(font "Arial" ))
+		(text "phase_diff[15..0]" (rect 113 27 179 39)(font "Arial" ))
+		(line (pt 200 32)(pt 184 32)(line_width 3))
 	)
 	(drawing
-		(rectangle (rect 16 16 176 96)(line_width 1))
+		(rectangle (rect 16 16 184 96)(line_width 1))
 	)
 )

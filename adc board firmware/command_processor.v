@@ -92,8 +92,8 @@ module command_processor (
    input [7:0]    downsamplemergingcounter_triggered,
    input [8:0]    triggerphase,
    input [31:0]   eventtime,
-   input [6:0]    phase_diff,
-   input [6:0]    phase_diff_b
+   input [15:0]    phase_diff,
+   input [15:0]    phase_diff_b
 );
 
 integer version = 26; // firmware version
@@ -152,8 +152,8 @@ reg [7:0]   downsamplemergingcounter_triggered_sync = 0;
 reg [8:0]   triggerphase_sync = 0;
 integer     eventtime_sync = 0;
 reg [7:0]   boardin_sync = 0;
-reg [6:0]   phase_diff_sync = 0;
-reg [6:0]   phase_diff_b_sync = 0;
+reg [15:0]   phase_diff_sync = 0;
+reg [15:0]   phase_diff_b_sync = 0;
 
 // Sequence of register writes that triggers sending 4 bytes usb response.
 `define SEND_STD_USB_RESPONSE \
@@ -259,7 +259,8 @@ always @ (posedge clk) begin
             o_tdata <= {28'd0,auxoutselector};
          end
          11: o_tdata <= eventtime_sync;
-         12: o_tdata <= {16'd0,1'b0,phase_diff_b_sync,1'b0,phase_diff_sync};
+         12: o_tdata <= {16'd0,phase_diff_sync};
+         13: o_tdata <= {16'd0,phase_diff_b_sync};
          endcase
          `SEND_STD_USB_RESPONSE
       end
