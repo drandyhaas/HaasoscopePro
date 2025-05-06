@@ -196,8 +196,7 @@ def clockswitch(usb, board, quiet):
     else:
         print("Board", board, "locked to internal clock")
 
-def switchclock(usbs, board):
-    usb = usbs[board]
+def switchclock(usb, board):
     clockswitch(usb, board, True)
     clockswitch(usb, board, False)
 
@@ -232,7 +231,7 @@ def setsplit(usb, split):
     controlbit = 7
     usb.send(bytes([10, controlbit, split, 0, 0, 0, 0, 0]))
     usb.recv(4)
-    print("Split", split)
+    #print("Split", split)
 
 def boardinbits(usb):
     usb.send(bytes([2, 1, 0, 100, 100, 100, 100, 100]))  # get board in

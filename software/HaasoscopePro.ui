@@ -1908,6 +1908,8 @@
      <string>Other</string>
     </property>
     <addaction name="separator"/>
+    <addaction name="actionForce_split"/>
+    <addaction name="actionForce_switch_clocks"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
@@ -1931,6 +1933,16 @@
   <action name="actionUpdate_firmware">
    <property name="text">
     <string>Update firmware</string>
+   </property>
+  </action>
+  <action name="actionForce_split">
+   <property name="text">
+    <string>Force split chan 1</string>
+   </property>
+  </action>
+  <action name="actionForce_switch_clocks">
+   <property name="text">
+    <string>Force switch clocks</string>
    </property>
   </action>
  </widget>

@@ -187,6 +187,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.fftCheck.clicked.connect(self.fft)
         self.ui.actionDo_autocalibration.triggered.connect(self.autocalibration)
         self.ui.actionUpdate_firmware.triggered.connect(self.update_firmware)
+        self.ui.actionForce_split.triggered.connect( self.force_split )
+        self.ui.actionForce_switch_clocks.triggered.connect( self.force_switch_clocks )
         self.ui.Auxout_comboBox.currentIndexChanged.connect(self.auxout)
         self.dofft = False
         self.db = False
@@ -207,6 +209,12 @@ class MainWindow(TemplateBaseClass):
         self.ui.statusBar.showMessage("Hello!")
         self.ui.plot.setBackground('w')
         self.show()
+
+    def force_split(self):
+        setsplit(usbs[self.activeboard], True)
+
+    def force_switch_clocks(self):
+        switchclock(usbs[self.activeboard], self.activeboard)
 
     def boardchanged(self):
         self.activeboard = self.ui.boardBox.value()
@@ -430,7 +438,6 @@ class MainWindow(TemplateBaseClass):
 
     def uppos4(self):
         self.dophase(self.activeboard, plloutnum=4, updown=1)
-        setsplit(usbs[self.activeboard],True) # just hacked in for now
 
     def downpos(self):
         self.dophase(self.activeboard, plloutnum=0, updown=0)
@@ -443,11 +450,9 @@ class MainWindow(TemplateBaseClass):
 
     def downpos3(self):
         self.dophase(self.activeboard, plloutnum=3, updown=0)
-        switchclock(usbs, self.activeboard) # just hacked in for now
 
     def downpos4(self):
         self.dophase(self.activeboard, plloutnum=4, updown=0)
-        setsplit(usbs[self.activeboard],False) # just hacked in for now
 
     def pllreset(self, board):
         if not board: board = self.activeboard # if we called it from the button
@@ -1444,7 +1449,7 @@ class MainWindow(TemplateBaseClass):
         setupboard(usbs[board], self.dopattern, self.dotwochannel, self.dooverrange)
         for c in range(self.num_chan_per_board): setchanacdc(usbs[board], c, 0, self.dooversample)
         self.pllreset(board)
-        switchclock(usbs, board)
+        switchclock(usbs[board], board)
         auxoutselector(usbs[board],0)
         return 1
 
