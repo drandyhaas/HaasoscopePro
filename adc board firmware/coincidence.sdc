@@ -25,7 +25,7 @@ derive_pll_clocks
 derive_clock_uncertainty -add
 
 ## Declare that these clocks are asynchronous
-set_clock_groups -asynchronous -group {clk50 pllmain*pll1|clk[*]} -group {lvdsin_clk clk_ext otherclkpll* pllmain*pll1|clk[*]~1} -group {ftdi_clk} -group {scanclk} -group {spireset}
+set_clock_groups -asynchronous -group {clk50 oscpll* clk_ext extpll* pllmain*pll1|clk[*]} -group {lvdsin_clk pllmain*pll1|clk[*]~1} -group {ftdi_clk} -group {scanclk} -group {spireset}
 
 ## Ignores
 set_false_path -from [get_registers command_processor:inst1|*] -to [get_registers command_processor:inst1|*_sync*]

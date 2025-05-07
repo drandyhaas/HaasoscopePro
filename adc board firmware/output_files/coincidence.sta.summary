@@ -170,7 +170,7 @@ Type  : Slow 1200mV 85C Model Minimum Pulse Width 'lvdsin_clk'
 Slack : 6.218
 TNS   : 0.000
 
-Type  : Slow 1200mV 85C Model Minimum Pulse Width 'inst12|altpll_component|auto_generated|pll1|clk[0]'
+Type  : Slow 1200mV 85C Model Minimum Pulse Width 'oscpll|altpll_component|auto_generated|pll1|clk[0]'
 Slack : 6.232
 TNS   : 0.000
 
@@ -370,7 +370,7 @@ Type  : Slow 1200mV 0C Model Minimum Pulse Width 'lvdsin_clk'
 Slack : 6.211
 TNS   : 0.000
 
-Type  : Slow 1200mV 0C Model Minimum Pulse Width 'inst12|altpll_component|auto_generated|pll1|clk[0]'
+Type  : Slow 1200mV 0C Model Minimum Pulse Width 'oscpll|altpll_component|auto_generated|pll1|clk[0]'
 Slack : 6.226
 TNS   : 0.000
 
@@ -566,7 +566,7 @@ Type  : Fast 1200mV 0C Model Minimum Pulse Width 'pllmain|altpll_component|auto_
 Slack : 5.998
 TNS   : 0.000
 
-Type  : Fast 1200mV 0C Model Minimum Pulse Width 'inst12|altpll_component|auto_generated|pll1|clk[0]'
+Type  : Fast 1200mV 0C Model Minimum Pulse Width 'oscpll|altpll_component|auto_generated|pll1|clk[0]'
 Slack : 6.230
 TNS   : 0.000
 
