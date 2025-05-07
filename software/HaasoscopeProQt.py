@@ -603,7 +603,9 @@ class MainWindow(TemplateBaseClass):
 
     def sendtriggerinfo(self, board):
         triggerpos = self.triggerpos
-        if self.doexttrig[board]: triggerpos += int(self.lvdstrigdelay[board] / 5)
+        if self.doexttrig[board]:
+            if self.dotwochannel: triggerpos += int(8*self.lvdstrigdelay[board] / 40 / self.downsamplefactor / 2)
+            else: triggerpos += int(8*self.lvdstrigdelay[board] / 40 / self.downsamplefactor)
         #print("board", board, "triggerpos", triggerpos)
         usbs[board].send(bytes([8, self.triggerlevel + 1, self.triggerdelta, int(triggerpos / 256), triggerpos % 256,
                         self.triggertimethresh, self.triggerchan, 100]))
@@ -1020,9 +1022,9 @@ class MainWindow(TemplateBaseClass):
         downsampleoffset = 2 * (sample_triggered_touse + (self.downsamplemergingcounter[board]-1)%self.downsamplemerging * 10) // self.downsamplemerging
         if not self.dotwochannel: downsampleoffset *= 2
         if self.doexttrig[board]:
-            toff = self.toff + int(8*self.lvdstrigdelay[board])%40 # 2.5 ns is the period of clklvds, which is 8 samples (1ns/3.2 per sample), we just do the mod here, but the majority of it is handled in setting triggerpos
-            if self.dotwochannel: downsampleoffset -= toff // self.downsamplefactor // 2
-            else: downsampleoffset -= toff // self.downsamplefactor
+            # 2.5 ns is the period of clklvds, which is 8 samples (1ns/3.2 per sample), we just do the mod here, but the majority of it is handled in setting triggerpos
+            if self.dotwochannel: downsampleoffset -= int(self.toff/self.downsamplefactor/2) + int(8*self.lvdstrigdelay[board]/self.downsamplefactor/2) %40
+            else: downsampleoffset -= int(self.toff/self.downsamplefactor) + int(8*self.lvdstrigdelay[board]/self.downsamplefactor) %40
         datasize = self.xydata[board][1].size
         for s in range(0, self.expect_samples+self.expect_samples_extra):
 
