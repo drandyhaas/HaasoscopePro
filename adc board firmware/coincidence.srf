@@ -30,5 +30,11 @@
 { "" "" "" "Following 1 pins must use external clamping diodes." {  } {  } 0 169180 "" 0 0 "Design Software" 0 -1 0 ""}
 { "" "" "" "Asmi_parallel_0: Used altera_asmi_parallel 23.1 (instead of 24.1)" {  } {  } 0 12251 "" 0 0 "Design Software" 0 -1 0 ""}
 { "" "" "" "Found invalid Fitter assignments. See the Ignored Assignments panel in the Fitter Compilation Report for more information." {  } {  } 0 171167 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "Ignored filter at coincidence.sdc(28): extpll* could not be matched with a clock" {  } {  } 0 332174 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "No exact pin location assignment(s) for 6 pins of 143 total pins. For the list of pins please refer to the I/O Assignment Warnings table in the fitter report." {  } {  } 0 169085 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "PLL \"pll1:pllmain\|altpll:altpll_component\|pll1_altpll:auto_generated\|pll1\" input clock inclk\[0\] is not fully compensated and may have reduced jitter performance because it is fed by a non-dedicated input" {  } {  } 0 15055 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "PLL \"pll1:pllmain\|altpll:altpll_component\|pll1_altpll:auto_generated\|pll1\" output port clk\[1\] feeds output pin \"lvdsout_clk~output\" via non-dedicated routing -- jitter performance depends on switching rate of other design elements. Use PLL dedicated clock outputs to ensure jitter performance" {  } {  } 0 15064 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "PLL \"pll1:pllmain\|altpll:altpll_component\|pll1_altpll:auto_generated\|pll1\" output port clk\[2\] feeds output pin \"clkout2~output\" via non-dedicated routing -- jitter performance depends on switching rate of other design elements. Use PLL dedicated clock outputs to ensure jitter performance" {  } {  } 0 15064 "" 0 0 "Design Software" 0 -1 0 ""}
+{ "" "" "" "PLL \"pll1:pllmain\|altpll:altpll_component\|pll1_altpll:auto_generated\|pll1\" output port clk\[2\] feeds output pin \"clkout~output\" via non-dedicated routing -- jitter performance depends on switching rate of other design elements. Use PLL dedicated clock outputs to ensure jitter performance" {  } {  } 0 15064 "" 0 0 "Design Software" 0 -1 0 ""}
 { "" "" "" "*" {  } {  } 0 15705 "" 0 0 "Design Software" 0 -1 0 ""}
 { "" "" "" "*" {  } {  } 0 176674 "" 0 0 "Design Software" 0 -1 0 ""}

@@ -1,7 +1,9 @@
 Warning (292013): Feature LogicLock is only available with a valid subscription license. You can purchase a software subscription to gain full access to this feature.
 Warning (15714): Some pins have incomplete I/O assignments. Refer to the I/O Assignment Warnings report for details
 Warning (176674): Following 64 pins are differential I/O pins but do not have their complement pins. Hence, the Fitter automatically created the complement pins.
+Critical Warning (169085): No exact pin location assignment(s) for 6 pins of 143 total pins. For the list of pins please refer to the I/O Assignment Warnings table in the fitter report.
 Warning (335093): The Timing Analyzer is analyzing 1 combinational loops as latches. For more details, run the Check Timing command in the Timing Analyzer or view the "User-Specified and Inferred Latches" table in the Analysis & Synthesis report.
+Warning (332174): Ignored filter at coincidence.sdc(28): extpll* could not be matched with a clock File: C:/gitwork/master/HaasoscopePro/adc board firmware/coincidence.sdc Line: 28
 Extra Info (176273): Performing register packing on registers with non-logic cell location assignments
 Extra Info (176274): Completed register packing on registers with non-logic cell location assignments
 Extra Info (176236): Started Fast Input/Output/OE register processing
@@ -10,5 +12,9 @@ Extra Info (176238): Start inferring scan chains for DSP blocks
 Extra Info (176239): Inferring scan chains for DSP blocks is complete
 Extra Info (176248): Moving registers into I/O cells, Multiplier Blocks, and RAM blocks to improve timing and density
 Extra Info (176249): Finished moving registers into I/O cells, Multiplier Blocks, and RAM blocks
+Warning (15055): PLL "pll1:pllmain|altpll:altpll_component|pll1_altpll:auto_generated|pll1" input clock inclk[0] is not fully compensated and may have reduced jitter performance because it is fed by a non-dedicated input File: C:/gitwork/master/HaasoscopePro/adc board firmware/db/pll1_altpll.v Line: 499
+Warning (15064): PLL "pll1:pllmain|altpll:altpll_component|pll1_altpll:auto_generated|pll1" output port clk[1] feeds output pin "lvdsout_clk~output" via non-dedicated routing -- jitter performance depends on switching rate of other design elements. Use PLL dedicated clock outputs to ensure jitter performance File: C:/gitwork/master/HaasoscopePro/adc board firmware/db/pll1_altpll.v Line: 499
+Warning (15064): PLL "pll1:pllmain|altpll:altpll_component|pll1_altpll:auto_generated|pll1" output port clk[2] feeds output pin "clkout2~output" via non-dedicated routing -- jitter performance depends on switching rate of other design elements. Use PLL dedicated clock outputs to ensure jitter performance File: C:/gitwork/master/HaasoscopePro/adc board firmware/db/pll1_altpll.v Line: 499
+Warning (15064): PLL "pll1:pllmain|altpll:altpll_component|pll1_altpll:auto_generated|pll1" output port clk[2] feeds output pin "clkout~output" via non-dedicated routing -- jitter performance depends on switching rate of other design elements. Use PLL dedicated clock outputs to ensure jitter performance File: C:/gitwork/master/HaasoscopePro/adc board firmware/db/pll1_altpll.v Line: 499
 Warning (171167): Found invalid Fitter assignments. See the Ignored Assignments panel in the Fitter Compilation Report for more information.
 Warning (169180): Following 1 pins must use external clamping diodes.
