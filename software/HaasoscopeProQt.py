@@ -67,11 +67,11 @@ class MainWindow(TemplateBaseClass):
     activeboard = 0
     activexychannel = 0
     tad = [0] * num_board
-    toff = 40
+    toff = 36
     themuxoutV = True
     phasecs = []
     for ph in range(len(usbs)): phasecs.append([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
-    phaseoffset = 1 # how many positive phase steps to take from middle of good range
+    phaseoffset = 0 # how many positive phase steps to take from middle of good range
     doexttrig = [0] * num_board
     doextsmatrig = [0] * num_board
     paused = True # will unpause with dostartstop at startup
@@ -603,7 +603,7 @@ class MainWindow(TemplateBaseClass):
 
     def sendtriggerinfo(self, board):
         triggerpos = self.triggerpos
-        if self.doexttrig[board]: triggerpos += self.lvdstrigdelay[board] // 5
+        if self.doexttrig[board]: triggerpos += int(self.lvdstrigdelay[board] / 5)
         #print("board", board, "triggerpos", triggerpos)
         usbs[board].send(bytes([8, self.triggerlevel + 1, self.triggerdelta, int(triggerpos / 256), triggerpos % 256,
                         self.triggertimethresh, self.triggerchan, 100]))
@@ -764,6 +764,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.plot.setRange(xRange=(self.min_x, self.max_x), padding=0.00)
         self.ui.plot.setRange(yRange=(self.min_y, self.max_y), padding=0.01)
         self.drawtriggerlines()
+        self.tot()
         self.ui.timebaseBox.setText("2^"+str(self.downsample))
 
     def risingfalling(self):
@@ -960,18 +961,18 @@ class MainWindow(TemplateBaseClass):
                 usbs[board].send(bytes([2, 13, 100, 100, 100, 100, 100, 100]))  # get ext trig echo backwards delay
                 res = usbs[board].recv(4)
                 #print("lvdstrigdelay from echo backwards phases ", res[0],res[1],res[2],res[3])
-            if res[0] == res[1]:
-                lvdstrigdelay = res[0]
-                if echoboard<board: lvdstrigdelay += 1
-                if lvdstrigdelay == self.lastlvdstrigdelay[echoboard]:
-                    self.lvdstrigdelay[echoboard] = lvdstrigdelay
-                    self.tot()  # to adjust trigger time to account for delay
-                    if all(item <= -10 for item in self.plljustreset):
-                        print("lvdstrigdelay from board", board, "to board", echoboard, "is", lvdstrigdelay)
-                        self.doexttrigecho[echoboard] = False
-                self.lastlvdstrigdelay[echoboard] = lvdstrigdelay
-            else:
-                if all(item <= -10 for item in self.plljustreset): self.dophase(board, plloutnum=3, updown=1, quiet=True)
+            #if res[0] == res[1]:
+            lvdstrigdelay = (res[0] + res[1]) / 4
+            if echoboard<board: lvdstrigdelay += 2
+            if lvdstrigdelay == self.lastlvdstrigdelay[echoboard]:
+                self.lvdstrigdelay[echoboard] = lvdstrigdelay
+                self.tot()  # to adjust trigger time to account for delay
+                if all(item <= -10 for item in self.plljustreset):
+                    print("lvdstrigdelay from board", board, "to board", echoboard, "is", lvdstrigdelay)
+                    self.doexttrigecho[echoboard] = False
+            self.lastlvdstrigdelay[echoboard] = lvdstrigdelay
+            #else:
+            #    if all(item <= -10 for item in self.plljustreset): self.dophase(board, plloutnum=3, updown=1, quiet=True)
 
     def getdata(self, usb):
         expect_len = (self.expect_samples+ self.expect_samples_extra) * 2 * self.nsubsamples # length to request: each adc bit is stored as 10 bits in 2 bytes, a couple extra for shifting later
@@ -1016,7 +1017,7 @@ class MainWindow(TemplateBaseClass):
         downsampleoffset = 2 * (sample_triggered_touse + (self.downsamplemergingcounter[board]-1)%self.downsamplemerging * 10) // self.downsamplemerging
         if not self.dotwochannel: downsampleoffset *= 2
         if self.doexttrig[board]:
-            toff = self.toff + 8*(self.lvdstrigdelay[board]%5) # 2.5 ns is the period of clklvds, which is 8 samples (1ns/3.2 per sample), we just do the mod here, but the majority of it is handled in setting triggerpos
+            toff = self.toff + int(8*self.lvdstrigdelay[board])%40 # 2.5 ns is the period of clklvds, which is 8 samples (1ns/3.2 per sample), we just do the mod here, but the majority of it is handled in setting triggerpos
             if self.dotwochannel: downsampleoffset -= toff // self.downsamplefactor // 2
             else: downsampleoffset -= toff // self.downsamplefactor
         datasize = self.xydata[board][1].size
@@ -1460,7 +1461,7 @@ class MainWindow(TemplateBaseClass):
         setupboard(usbs[board], self.dopattern, self.dotwochannel, self.dooverrange)
         for c in range(self.num_chan_per_board): setchanacdc(usbs[board], c, 0, self.dooversample)
         self.pllreset(board)
-        switchclock(usbs[board], board)
+        #switchclock(usbs[board], board)
         auxoutselector(usbs[board],0)
         return 1
 

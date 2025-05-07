@@ -408,6 +408,7 @@ set_global_assignment -name QIP_FILE fifo1.qip
 set_global_assignment -name QIP_FILE lvds1.qip
 set_global_assignment -name QIP_FILE pll1.qip
 set_global_assignment -name QIP_FILE pll2.qip
+set_global_assignment -name QIP_FILE pll3.qip
 set_global_assignment -name QIP_FILE rambuffer.qip
 set_global_assignment -name VERILOG_FILE neo_driver.v
 set_global_assignment -name VERILOG_FILE SPI_Master.v

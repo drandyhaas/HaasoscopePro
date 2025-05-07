@@ -5,8 +5,8 @@ create_clock -name clk50 -period  20.000  [get_ports clk50]
 ## 12.5MHz LED clock
 create_clock -name clk_over_4 -period  80.000  [get_nodes command_processor:inst1|clk_over_4]
 
-## 50MHz lvds clock
-create_clock -name lvdsin_clk -period  20.000 [get_ports lvdsin_clk]
+## 80MHz lvds clock
+create_clock -name lvdsin_clk -period  12.500 [get_ports lvdsin_clk]
 
 ## 10MHz external sma clock
 create_clock -name clk_ext -period  100.000 [get_ports clk_ext]
@@ -46,6 +46,7 @@ set_false_path -from [get_registers command_processor:inst1|channeltype*]
 set_false_path -from [get_registers command_processor:inst1|downsamplemerging*]
 set_false_path -from [get_registers command_processor:inst1|highres*]
 set_false_path -from [get_registers command_processor:inst1|downsample*]
+set_false_path -from [get_registers command_processor:inst1|clkout_ena]
 
 ## can ignore
 set_false_path -from [get_registers triggerer:inst9|lvdsout_trig] -to [get_registers phase_detector:inst* ]
@@ -58,9 +59,9 @@ set_max_delay -to [get_ports ftdi_*] 10
 set_min_delay -to [get_ports ftdi_*] 0
 set_max_delay -from [get_ports ftdi_*] 10
 set_min_delay -from [get_ports ftdi_*] 0
-set_max_delay -from [get_ports lvds?in*] 7.0
-set_min_delay -from [get_ports lvds?in*] 0.0
-set_max_delay -from [get_ports lvdsin_*] 9
+set_max_delay -from [get_ports lvds?in*] 5.5
+set_min_delay -from [get_ports lvds?in*] 0
+set_max_delay -from [get_ports lvdsin_*] 10
 set_min_delay -from [get_ports lvdsin_*] 2
 set_max_delay -to [get_ports lvdsout*] 10
 set_min_delay -to [get_ports lvdsout*] -3
