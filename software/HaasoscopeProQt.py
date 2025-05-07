@@ -961,18 +961,21 @@ class MainWindow(TemplateBaseClass):
                 usbs[board].send(bytes([2, 13, 100, 100, 100, 100, 100, 100]))  # get ext trig echo backwards delay
                 res = usbs[board].recv(4)
                 #print("lvdstrigdelay from echo backwards phases ", res[0],res[1],res[2],res[3])
-            #if res[0] == res[1]:
-            lvdstrigdelay = (res[0] + res[1]) / 4
-            if echoboard<board: lvdstrigdelay += 2
-            if lvdstrigdelay == self.lastlvdstrigdelay[echoboard]:
-                self.lvdstrigdelay[echoboard] = lvdstrigdelay
-                self.tot()  # to adjust trigger time to account for delay
+            if res[0] == res[1]:
+                lvdstrigdelay = (res[0] + res[1]) / 4
+                if echoboard<board: lvdstrigdelay += 2
+                if lvdstrigdelay == self.lastlvdstrigdelay[echoboard]:
+                    self.lvdstrigdelay[echoboard] = lvdstrigdelay
+                    self.tot()  # to adjust trigger time to account for delay
+                    if all(item <= -10 for item in self.plljustreset):
+                        print("lvdstrigdelay from board", board, "to board", echoboard, "is", lvdstrigdelay)
+                        self.doexttrigecho[echoboard] = False
+                self.lastlvdstrigdelay[echoboard] = lvdstrigdelay
+            else:
                 if all(item <= -10 for item in self.plljustreset):
-                    print("lvdstrigdelay from board", board, "to board", echoboard, "is", lvdstrigdelay)
-                    self.doexttrigecho[echoboard] = False
-            self.lastlvdstrigdelay[echoboard] = lvdstrigdelay
-            #else:
-            #    if all(item <= -10 for item in self.plljustreset): self.dophase(board, plloutnum=3, updown=1, quiet=True)
+                    self.dophase(board, plloutnum=0, updown=1, quiet=False)
+                    self.dophase(board, plloutnum=1, updown=1, quiet=False)
+                    self.dophase(board, plloutnum=2, updown=1, quiet=False)
 
     def getdata(self, usb):
         expect_len = (self.expect_samples+ self.expect_samples_extra) * 2 * self.nsubsamples # length to request: each adc bit is stored as 10 bits in 2 bytes, a couple extra for shifting later
