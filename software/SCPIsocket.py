@@ -1,5 +1,6 @@
 import socket
 import struct
+import random
 
 HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
 PORT = 32001        # Port to listen on (non-privileged ports are > 1023)
@@ -35,8 +36,10 @@ def data_channel(chan):
     for thesamp in range(memdepth):
         val+=.1
         if val>=maxval: val=-maxval
-        scaledval = int(val/scale)
-        #print(val,scaledval)
+        finalval = val + (-0.5*random.random())
+        scaledval = int(finalval/scale)
+        if scaledval<-32767: scaledval=-32767
+        if scaledval>32767: scaledval=32767
         res+=scaledval.to_bytes(2, byteorder='little', signed=True)
     return res
 
