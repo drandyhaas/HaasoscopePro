@@ -42,26 +42,27 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         while True:
             data = conn.recv(1024)
             if not data: break
-            print(data)
-            if data==b'*IDN?\n':
-                conn.sendall(b"DrAndyHaas Electronics,HaasoscopePro,v1.0,v26,\n")
-            if data==b'RATES?\n':
-                conn.sendall(b"1000000,2000000,\n")
-            if data==b'DEPTHS?\n':
-                conn.sendall(b"400,800,2000,8000,40000,\n")
-            if data == b'START\n':
-                print("Run")
-            if data == b'STOP\n':
-                print("Stop")
-            if data == b'SINGLE\n':
-                print("Single")
-            if data == b'FORCE\n':
-                print("Force")
             if data == b'K':
-                print("Get event")
+                #print("Get event")
                 conn.sendall(data_seqnum())
                 conn.sendall(data_numchan())
                 conn.sendall(data_fspersample())
                 conn.sendall(data_triggerpos())
                 conn.sendall(data_wfms_per_s())
                 for c in range(numchan): conn.sendall(data_channel(c))
+            else:
+                print(data)
+                if data==b'*IDN?\n':
+                    conn.sendall(b"DrAndyHaas Electronics,HaasoscopePro,v1.0,v26,\n")
+                if data==b'RATES?\n':
+                    conn.sendall(b"1000000,2000000,\n")
+                if data==b'DEPTHS?\n':
+                    conn.sendall(b"400,800,2000,8000,40000,\n")
+                if data == b'START\n':
+                    print("Run")
+                if data == b'STOP\n':
+                    print("Stop")
+                if data == b'SINGLE\n':
+                    print("Single")
+                if data == b'FORCE\n':
+                    print("Force")
