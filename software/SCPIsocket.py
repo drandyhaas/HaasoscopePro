@@ -21,15 +21,23 @@ def data_channel(chan):
     res = bytearray([chan]) # channel index
     memdepth = 40*100
     res += memdepth.to_bytes(8,"little")
-    res += struct.pack('f', 0.01) # scale
-    res += struct.pack('f', 0.5) # offset
-    res += struct.pack('f', 1.0) # trigphase
+    maxval = 5.0
+    scale = maxval/pow(2,15)
+    res += struct.pack('f', scale) # scale
+    offset = 0.0
+    res += struct.pack('f', offset) # offset
+    trigphase = 1.0
+    res += struct.pack('f', trigphase) # trigphase
     res += bytearray([0]) # clipping?
-    val=-100
+
+    #these are the samples, 16-bit signed
+    val=-maxval
     for thesamp in range(memdepth):
-        val+=1
-        if val>100: val=-100
-        res+=val.to_bytes(1, byteorder='little', signed=True)
+        val+=.1
+        if val>=maxval: val=-maxval
+        scaledval = int(val/scale)
+        #print(val,scaledval)
+        res+=scaledval.to_bytes(2, byteorder='little', signed=True)
     return res
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
