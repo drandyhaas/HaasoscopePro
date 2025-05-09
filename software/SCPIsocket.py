@@ -1,6 +1,8 @@
 import socket
 import struct
 import random
+import math
+import time
 
 class hspro_socket:
     hspro = None
@@ -32,11 +34,14 @@ class hspro_socket:
     def data_wfms_per_s(self):
         return struct.pack('d', self.wfms_per_s)
 
+    issending = False
     def data_channel(self,chan):
+        self.issending = True
         res = bytearray([chan]) # channel index
         hsprochan = chan
         if not self.hspro.dotwochannel: hsprochan*=2 # we use just every other channel in single-channel mode
-        self.memdepth = self.hspro.xydata[hsprochan][1].size
+        memdepth = self.hspro.xydata[hsprochan][1].size
+        if memdepth < self.memdepth: self.memdepth = memdepth
         res += self.memdepth.to_bytes(8,"little")
         scale = self.maxval/pow(2,15)
         res += struct.pack('f', scale) # scale
@@ -46,11 +51,14 @@ class hspro_socket:
 
         #these are the samples, 16-bit signed
         for thesamp in range(self.memdepth):
-            val = self.hspro.xydata[hsprochan][1][thesamp]
-            scaledval = int(val/scale)
+            val = self.hspro.xydata[hsprochan][1][thesamp] / scale
+            if math.isinf(val) or math.isnan(val): scaledval=0
+            else: scaledval = int(val)
             if scaledval<-32767: scaledval=-32767
             if scaledval>32767: scaledval=32767
             res+=scaledval.to_bytes(2, byteorder='little', signed=True)
+        self.memdepth = memdepth # update at the end in case it's changed
+        self.issending = False
         return res
 
     runthethread = True

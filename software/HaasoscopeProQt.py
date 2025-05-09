@@ -754,6 +754,9 @@ class MainWindow(TemplateBaseClass):
             self.max_x = tp + (1-tpfrac) * self.max_x/self.downsamplezoom
         else:
             self.min_x = 0
+
+        if hasattr(self,"hsprosock"):
+            while self.hsprosock.issending: time.sleep(.001)
         if self.dotwochannel:
             for c in range(self.num_chan_per_board * self.num_board):
                 self.xydata[c][0] = np.array([range(0, 2 * 10 * self.expect_samples)]) * (
@@ -791,6 +794,7 @@ class MainWindow(TemplateBaseClass):
         print("do direct array drawing now",self.dodirect)
 
     def updateplot(self):
+        while self.hsprosock.issending: time.sleep(.001)
         self.getevent()
         now = time.time()
         dt = now - self.lastTime + 0.00001
@@ -1417,6 +1421,8 @@ class MainWindow(TemplateBaseClass):
             print("Don't know how to set lights for",self.num_board,"boards yet!")
 
     def setupchannels(self):
+        if hasattr(self,"hsprosock"):
+            while self.hsprosock.issending: time.sleep(.001)
         if self.dotwochannel:
             self.xydata = np.empty([int(self.num_chan_per_board * self.num_board), 2, 2 * 10 * self.expect_samples], dtype=float)
         else:
