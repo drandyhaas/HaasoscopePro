@@ -8,9 +8,8 @@ class hspro_socket:
     HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
     PORT = 32001        # Port to listen on (non-privileged ports are > 1023)
 
-    numchan = 1
     eventnum = 1
-    fspersample = 312500 # for downsample = 1
+    numchan = 1
     triggerpos = 0
     wfms_per_s = 100.0
     memdepth = 40 * 100 # for depth = 100
@@ -22,9 +21,12 @@ class hspro_socket:
     def data_seqnum(self):
         return self.eventnum.to_bytes(4,"little")
     def data_numchan(self):
+        if self.hspro.dotwochannel: self.numchan = self.hspro.num_board * 2
+        else: self.numchan = self.hspro.num_board
         return self.numchan.to_bytes(2,"little")
     def data_fspersample(self):
-        return self.fspersample.to_bytes(8,"little")
+        fspersample = int(312500 * self.hspro.downsamplefactor)
+        return fspersample.to_bytes(8,"little")
     def data_triggerpos(self):
         return self.triggerpos.to_bytes(8,"little")
     def data_wfms_per_s(self):
@@ -32,7 +34,9 @@ class hspro_socket:
 
     def data_channel(self,chan):
         res = bytearray([chan]) # channel index
-        self.memdepth = self.hspro.xydata[chan][1].size
+        hsprochan = chan
+        if not self.hspro.dotwochannel: hsprochan*=2 # we use just every other channel in single-channel mode
+        self.memdepth = self.hspro.xydata[hsprochan][1].size
         res += self.memdepth.to_bytes(8,"little")
         scale = self.maxval/pow(2,15)
         res += struct.pack('f', scale) # scale
@@ -42,9 +46,8 @@ class hspro_socket:
 
         #these are the samples, 16-bit signed
         for thesamp in range(self.memdepth):
-            val = self.hspro.xydata[chan][1][thesamp]
-            finalval = val # + (-0.5*random.random())
-            scaledval = int(finalval/scale)
+            val = self.hspro.xydata[hsprochan][1][thesamp]
+            scaledval = int(val/scale)
             if scaledval<-32767: scaledval=-32767
             if scaledval>32767: scaledval=32767
             res+=scaledval.to_bytes(2, byteorder='little', signed=True)
