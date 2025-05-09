@@ -3,6 +3,7 @@ import struct
 import random
 
 class hspro_socket:
+    hspro = None
 
     HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
     PORT = 32001        # Port to listen on (non-privileged ports are > 1023)
@@ -18,8 +19,6 @@ class hspro_socket:
     offset = 0.0
     clipping = 0
 
-    xydata = None # fed in by parent
-
     def data_seqnum(self):
         return self.eventnum.to_bytes(4,"little")
     def data_numchan(self):
@@ -33,7 +32,7 @@ class hspro_socket:
 
     def data_channel(self,chan):
         res = bytearray([chan]) # channel index
-        self.memdepth = self.xydata[chan][1].size
+        self.memdepth = self.hspro.xydata[chan][1].size
         res += self.memdepth.to_bytes(8,"little")
         scale = self.maxval/pow(2,15)
         res += struct.pack('f', scale) # scale
@@ -43,7 +42,7 @@ class hspro_socket:
 
         #these are the samples, 16-bit signed
         for thesamp in range(self.memdepth):
-            val = self.xydata[chan][1][thesamp]
+            val = self.hspro.xydata[chan][1][thesamp]
             finalval = val # + (-0.5*random.random())
             scaledval = int(finalval/scale)
             if scaledval<-32767: scaledval=-32767

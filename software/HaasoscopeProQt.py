@@ -792,7 +792,6 @@ class MainWindow(TemplateBaseClass):
 
     def updateplot(self):
         self.getevent()
-        if self.hsprosock.connected: self.hsprosock.xydata = self.xydata
         now = time.time()
         dt = now - self.lastTime + 0.00001
         self.lastTime = now
@@ -1333,7 +1332,7 @@ class MainWindow(TemplateBaseClass):
     def open_socket(self):
         print("starting socket thread")
         self.hsprosock = hspro_socket()
-        self.hsprosock.xydata = self.xydata
+        self.hsprosock.hspro = self
         self.hsprosock.runthethread = True
         self.hsprosock_t1 = threading.Thread(target=self.hsprosock.open_socket, args=(10,))
         self.hsprosock_t1.start()
