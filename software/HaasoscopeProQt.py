@@ -967,17 +967,17 @@ class MainWindow(TemplateBaseClass):
                 #print("lvdstrigdelay from echo backwards phases ", res[0],res[1],res[2],res[3])
             if res[0] == res[1]:
                 lvdstrigdelay = (res[0] + res[1]) / 4
-                if echoboard<board: lvdstrigdelay += 2
+                if echoboard<board: lvdstrigdelay += round(lvdstrigdelay/11.5,1) # this has to be tuned a little experimentally
                 if lvdstrigdelay == self.lastlvdstrigdelay[echoboard]:
                     self.lvdstrigdelay[echoboard] = lvdstrigdelay
-                    self.tot()  # to adjust trigger time to account for delay
+                    self.tot() # to adjust trigger time to account for delay
                     if all(item <= -10 for item in self.plljustreset):
-                        print("lvdstrigdelay from board", board, "to board", echoboard, "is", lvdstrigdelay)
+                        print("lvdstrigdelay from board", board, "to echoboard", echoboard, "is", lvdstrigdelay)
                         self.doexttrigecho[echoboard] = False
                 self.lastlvdstrigdelay[echoboard] = lvdstrigdelay
             else:
-                if all(item <= -10 for item in self.plljustreset):
-                    self.dophase(board, plloutnum=0, updown=1, quiet=True)
+                if all(item <= -10 for item in self.plljustreset): # adjust phases so the trigger singals are lined up in phase
+                    self.dophase(board, plloutnum=0, updown=1, quiet=True) # moving all clocks together will not mess up the ADC phases
                     self.dophase(board, plloutnum=1, updown=1, quiet=True)
                     self.dophase(board, plloutnum=2, updown=1, quiet=True)
 
