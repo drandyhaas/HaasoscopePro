@@ -929,7 +929,7 @@ class MainWindow(TemplateBaseClass):
         if self.doeventcounter:
             usbs[board].send(bytes([2, 3, 100, 100, 100, 100, 100, 100]))  # get eventcounter
             res = usbs[board].recv(4)
-            eventcountertemp = res[0] + 256 * res[1] + 256 * 256 * res[2] + 256 * 256 * 256 * res[3]
+            eventcountertemp = int.from_bytes(res,"little")
             if eventcountertemp != self.eventcounter[board] + 1 and eventcountertemp != 0:  # check event count, but account for rollover
                 print("Event counter not incremented by 1?", eventcountertemp, self.eventcounter[board], " for board", board)
             self.eventcounter[board] = eventcountertemp
@@ -937,10 +937,10 @@ class MainWindow(TemplateBaseClass):
                 eventcounterdiff = self.eventcounter[board]-self.eventcounter[board+1]
                 if eventcounterdiff!=self.oldeventcounterdiff: print("eventcounter diff for board",board,"and",board+1,eventcounterdiff)
                 self.oldeventcounterdiff=eventcounterdiff
-        if self.doeventtime:
+        if self.doeventtime and board==0:
             usbs[board].send(bytes([2, 11, 100, 100, 100, 100, 100, 100]))  # get eventtime
             res = usbs[board].recv(4)
-            eventtime = res[0] + 256 * res[1] + 256 * 256 * res[2] + 256 * 256 * 256 * res[3]
+            eventtime = int.from_bytes(res,"little")
             eventtimediff = eventtime-self.oldeventtime
             print("board",board,"triggered at clock cycle",eventtime,"a diff of",eventtimediff,"cycles",round(0.0125*eventtimediff,4),"us")
             self.oldeventtime=eventtime

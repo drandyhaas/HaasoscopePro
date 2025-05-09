@@ -7,7 +7,9 @@ from utils import *
 def version(usb):
     usb.send(bytes([2, 0, 100, 100, 100, 100, 100, 100]))  # get version
     res = usb.recv(4)
-    if len(res)==4: print("Firmware version", res[3], res[2], res[1], res[0])
+    ver = int.from_bytes(res,"little")
+    if len(res)==4: print("Firmware version", ver)
+    return ver
 
 def connectdevices():
     usbs = []
