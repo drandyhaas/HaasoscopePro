@@ -9,6 +9,8 @@ from scipy.signal import resample
 import struct
 from usbs import *
 from board import *
+from SCPIsocket import hspro_socket
+import threading
 
 usbs = connectdevices()
 if len(usbs)==0: sys.exit(0)
@@ -1324,7 +1326,19 @@ class MainWindow(TemplateBaseClass):
         self.timechanged()
         self.use_ext_trigs()
         self.dostartstop()
+        self.open_socket()
         return 1
+
+    def open_socket(self):
+        print("starting socket thread")
+        self.hsprosock = hspro_socket()
+        self.hsprosock.runthethread = True
+        self.hsprosock_t1 = threading.Thread(target=self.hsprosock.open_socket, args=(10,))
+        self.hsprosock_t1.start()
+
+    def close_socket(self):
+        self.hsprosock.runthethread = False
+        self.hsprosock_t1.join()
 
     def doleds(self):
         if self.num_board==1:
@@ -1472,6 +1486,7 @@ class MainWindow(TemplateBaseClass):
 
     def closeEvent(self, event):
         print("Handling closeEvent", event)
+        self.close_socket()
         self.timer.stop()
         self.timer2.stop()
         if self.fftui != 0: self.fftui.close()
