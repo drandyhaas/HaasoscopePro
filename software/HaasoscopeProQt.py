@@ -792,7 +792,7 @@ class MainWindow(TemplateBaseClass):
 
     def updateplot(self):
         self.getevent()
-        self.statuscounter = self.statuscounter + 1
+        if self.hsprosock.connected: self.hsprosock.xydata = self.xydata
         now = time.time()
         dt = now - self.lastTime + 0.00001
         self.lastTime = now
@@ -801,6 +801,7 @@ class MainWindow(TemplateBaseClass):
         else:
             s = np.clip(dt * 3., 0, 1)
             self.fps = self.fps * (1 - s) + (1.0 / dt) * s
+        self.statuscounter = self.statuscounter + 1
         if self.statuscounter % 20 == 0: self.ui.statusBar.showMessage("%0.2f fps, %d events, %0.2f Hz, %0.2f MB/s" % (
             self.fps, self.nevents, self.lastrate, self.lastrate * self.lastsize / 1e6))
         if not self.dodrawing: return
@@ -977,9 +978,9 @@ class MainWindow(TemplateBaseClass):
                 self.lastlvdstrigdelay[echoboard] = lvdstrigdelay
             else:
                 if all(item <= -10 for item in self.plljustreset):
-                    self.dophase(board, plloutnum=0, updown=1, quiet=False)
-                    self.dophase(board, plloutnum=1, updown=1, quiet=False)
-                    self.dophase(board, plloutnum=2, updown=1, quiet=False)
+                    self.dophase(board, plloutnum=0, updown=1, quiet=True)
+                    self.dophase(board, plloutnum=1, updown=1, quiet=True)
+                    self.dophase(board, plloutnum=2, updown=1, quiet=True)
 
     def getdata(self, usb):
         expect_len = (self.expect_samples+ self.expect_samples_extra) * 2 * self.nsubsamples # length to request: each adc bit is stored as 10 bits in 2 bytes, a couple extra for shifting later
@@ -1332,6 +1333,7 @@ class MainWindow(TemplateBaseClass):
     def open_socket(self):
         print("starting socket thread")
         self.hsprosock = hspro_socket()
+        self.hsprosock.xydata = self.xydata
         self.hsprosock.runthethread = True
         self.hsprosock_t1 = threading.Thread(target=self.hsprosock.open_socket, args=(10,))
         self.hsprosock_t1.start()

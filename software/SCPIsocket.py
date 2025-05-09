@@ -9,14 +9,16 @@ class hspro_socket:
 
     numchan = 1
     eventnum = 1
-    fspersample = 100*256
-    triggerpos = 19
+    fspersample = 312500 # for downsample = 1
+    triggerpos = 0
     wfms_per_s = 100.0
-    memdepth = 40 * 100
+    memdepth = 40 * 100 # for depth = 100
     maxval = 5.0
-    trigphase = 1.0
-    offset = 0.75
+    trigphase = 0.0
+    offset = 0.0
     clipping = 0
+
+    xydata = None # fed in by parent
 
     def data_seqnum(self):
         return self.eventnum.to_bytes(4,"little")
@@ -31,6 +33,7 @@ class hspro_socket:
 
     def data_channel(self,chan):
         res = bytearray([chan]) # channel index
+        self.memdepth = self.xydata[chan][1].size
         res += self.memdepth.to_bytes(8,"little")
         scale = self.maxval/pow(2,15)
         res += struct.pack('f', scale) # scale
@@ -39,11 +42,9 @@ class hspro_socket:
         res += bytearray([self.clipping]) # clipping?
 
         #these are the samples, 16-bit signed
-        val=-self.maxval
         for thesamp in range(self.memdepth):
-            val+=.1
-            if val>=self.maxval: val=-self.maxval
-            finalval = val + (-0.5*random.random())
+            val = self.xydata[chan][1][thesamp]
+            finalval = val # + (-0.5*random.random())
             scaledval = int(finalval/scale)
             if scaledval<-32767: scaledval=-32767
             if scaledval>32767: scaledval=32767
@@ -52,6 +53,7 @@ class hspro_socket:
 
     runthethread = True
     opened = False
+    connected = False
     def open_socket(self,arg1):
         print('started socket with arg1',arg1)
         while self.runthethread:
@@ -61,12 +63,14 @@ class hspro_socket:
                 self.s.settimeout(1)
                 print("socket listening on",self.HOST,self.PORT)
                 self.opened = True
+                self.connected = False
                 while self.runthethread and self.opened:
                     try:
                         conn, addr = self.s.accept()
                         with conn:
                             print(f"Connected by {addr}")
                             while self.runthethread and self.opened:
+                                self.connected = True
                                 data = conn.recv(1024)
                                 if not data:
                                     self.s.close()
