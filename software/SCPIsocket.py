@@ -4,10 +4,26 @@ import random
 import math
 import time
 
+
+def split_bytearray(data, delimiter):
+    split_list = []
+    start = 0
+    while True:
+        try:
+            index = data.index(delimiter, start)
+            split_list.append(data[start:index])
+            start = index + len(delimiter)
+        except ValueError:
+            split_list.append(data[start:])
+            break
+    return split_list
+
+
 class hspro_socket:
     hspro = None
 
-    HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
+    #HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
+    HOST = '0.0.0.0'    # Listen on all interfaces
     PORT = 32001        # Port to listen on (non-privileged ports are > 1023)
 
     eventnum = 1
@@ -85,29 +101,44 @@ class hspro_socket:
                                 if not data:
                                     self.s.close()
                                     self.opened = False
-                                if data == b'K':
-                                    #print("Get event")
-                                    conn.sendall(self.data_seqnum())
-                                    conn.sendall(self.data_numchan())
-                                    conn.sendall(self.data_fspersample())
-                                    conn.sendall(self.data_triggerpos())
-                                    conn.sendall(self.data_wfms_per_s())
-                                    for c in range(self.numchan): conn.sendall(self.data_channel(c))
-                                else:
-                                    print(data)
-                                    if data==b'*IDN?\n':
-                                        conn.sendall(b"DrAndyHaas Electronics,HaasoscopePro,v1.0,v26,\n")
-                                    if data==b'RATES?\n':
-                                        conn.sendall(b"1000000,2000000,\n")
-                                    if data==b'DEPTHS?\n':
-                                        conn.sendall(b"400,800,2000,8000,40000,\n")
-                                    if data == b'START\n':
-                                        print("Run")
-                                    if data == b'STOP\n':
-                                        print("Stop")
-                                    if data == b'SINGLE\n':
-                                        print("Single")
-                                    if data == b'FORCE\n':
-                                        print("Force")
+                                #print("Got data:",data)
+                                commands = split_bytearray(data, b'\n')
+                                #print(commands)
+                                for com in commands:
+                                    if com == b'': continue # empty from end of line
+                                    elif com == b'K':
+                                        #print("Got command: Get event")
+                                        conn.sendall(self.data_seqnum())
+                                        conn.sendall(self.data_numchan())
+                                        conn.sendall(self.data_fspersample())
+                                        conn.sendall(self.data_triggerpos())
+                                        conn.sendall(self.data_wfms_per_s())
+                                        for c in range(self.numchan): conn.sendall(self.data_channel(c))
+                                    else:
+                                        if com==b'*IDN?':
+                                            print("Got command: IDN")
+                                            conn.sendall(b"DrAndyHaas Electronics,HaasoscopePro,v1.0,v26,\n")
+                                        elif com==b'RATES?':
+                                            print("Got command: Rates")
+                                            conn.sendall(b"1000000,2000000,\n")
+                                        elif com==b'DEPTHS?':
+                                            print("Got command: Depths")
+                                            conn.sendall(b"400,800,2000,8000,40000,\n")
+                                        elif com == b'START':
+                                            print("Got command: Start")
+                                            #print(self.hspro.paused)
+                                            #if self.hspro.paused: self.hspro.dostartstop()
+                                        elif com == b'STOP':
+                                            print("Got command: Stop")
+                                            #print(self.hspro.paused)
+                                            #if not self.hspro.paused: self.hspro.dostartstop()
+                                        elif com == b'SINGLE':
+                                            print("Got command: Single")
+                                            #self.hspro.getone = True
+                                            #if self.hspro.paused: self.hspro.dostartstop()
+                                        elif com == b'FORCE':
+                                            print("Got command: Force")
+                                        else:
+                                            print("Got command:", com)
                     except socket.timeout:
                         pass
