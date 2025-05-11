@@ -4,11 +4,11 @@ import ftd2xx, sys
 from USB_FT232H import UsbFt232hSync245mode
 from utils import *
 
-def version(usb):
+def version(usb, quiet=True):
     usb.send(bytes([2, 0, 100, 100, 100, 100, 100, 100]))  # get version
     res = usb.recv(4)
     ver = int.from_bytes(res,"little")
-    if len(res)==4: print("Firmware version", ver)
+    if len(res)==4 and not quiet: print("Firmware version", ver)
     return ver
 
 def connectdevices():

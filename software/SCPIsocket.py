@@ -4,7 +4,6 @@ import random
 import math
 import time
 
-
 def split_bytearray(data, delimiter):
     split_list = []
     start = 0
@@ -17,7 +16,6 @@ def split_bytearray(data, delimiter):
             split_list.append(data[start:])
             break
     return split_list
-
 
 class hspro_socket:
     hspro = None
@@ -117,13 +115,15 @@ class hspro_socket:
                                     else:
                                         if com==b'*IDN?':
                                             print("Got command: IDN")
-                                            conn.sendall(b"DrAndyHaas Electronics,HaasoscopePro,v1.0,v26,\n")
+                                            conn.sendall(b"DrAndyHaas,HaasoscopePro,v1,2025,\n")
                                         elif com==b'RATES?':
                                             print("Got command: Rates")
-                                            conn.sendall(b"1000000,2000000,\n")
+                                            rate = str(3.2e9/self.hspro.downsamplefactor) + ",\n"
+                                            conn.sendall(bytes(rate,'utf-8'))
                                         elif com==b'DEPTHS?':
                                             print("Got command: Depths")
-                                            conn.sendall(b"400,800,2000,8000,40000,\n")
+                                            depth = str(self.hspro.expect_samples * 40)+",\n"
+                                            conn.sendall(bytes(depth,'utf-8'))
                                         elif com == b'START':
                                             print("Got command: Start")
                                             if self.hspro.getone: self.hspro.ui.singleButton.clicked.emit()
@@ -143,4 +143,8 @@ class hspro_socket:
                                         else:
                                             print("Got command:", com)
                     except socket.timeout:
+                        pass
+                    except ConnectionResetError:
+                        print("Got remote connection error")
+                        self.opened = False
                         pass

@@ -1483,7 +1483,10 @@ class MainWindow(TemplateBaseClass):
 
     def setup_connection(self, board):
         print("Setting up board",board)
-        #version(usbs[board])
+        ver = version(usbs[board],False)
+        if not hasattr(self,"firmwareversion"): self.firmwareversion = ver
+        else:
+            if self.firmwareversion != ver: self.firmwareversion = "various"
         self.adfreset(board)
         setupboard(usbs[board], self.dopattern, self.dotwochannel, self.dooverrange)
         for c in range(self.num_chan_per_board): setchanacdc(usbs[board], c, 0, self.dooversample)
