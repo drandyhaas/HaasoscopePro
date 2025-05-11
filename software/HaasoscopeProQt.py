@@ -794,7 +794,8 @@ class MainWindow(TemplateBaseClass):
         print("do direct array drawing now",self.dodirect)
 
     def updateplot(self):
-        while self.hsprosock.issending: time.sleep(.001)
+        if hasattr(self,"hsprosock"):
+            while self.hsprosock.issending: time.sleep(.001)
         self.getevent()
         now = time.time()
         dt = now - self.lastTime + 0.00001

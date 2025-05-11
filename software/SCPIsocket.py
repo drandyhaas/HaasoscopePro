@@ -126,18 +126,20 @@ class hspro_socket:
                                             conn.sendall(b"400,800,2000,8000,40000,\n")
                                         elif com == b'START':
                                             print("Got command: Start")
-                                            #print(self.hspro.paused)
-                                            #if self.hspro.paused: self.hspro.dostartstop()
+                                            if self.hspro.getone: self.hspro.ui.singleButton.clicked.emit()
+                                            if self.hspro.paused: self.hspro.ui.runButton.clicked.emit()
                                         elif com == b'STOP':
                                             print("Got command: Stop")
-                                            #print(self.hspro.paused)
-                                            #if not self.hspro.paused: self.hspro.dostartstop()
+                                            if not self.hspro.paused: self.hspro.ui.runButton.clicked.emit()
                                         elif com == b'SINGLE':
                                             print("Got command: Single")
-                                            #self.hspro.getone = True
-                                            #if self.hspro.paused: self.hspro.dostartstop()
+                                            if not self.hspro.getone: self.hspro.ui.singleButton.clicked.emit()
+                                            if self.hspro.paused: self.hspro.ui.runButton.clicked.emit()
                                         elif com == b'FORCE':
                                             print("Got command: Force")
+                                            if not self.hspro.isrolling: self.hspro.ui.rollingButton.clicked.emit()
+                                            if not self.hspro.getone: self.hspro.ui.singleButton.clicked.emit()
+                                            if self.hspro.paused: self.hspro.ui.runButton.clicked.emit()
                                         else:
                                             print("Got command:", com)
                     except socket.timeout:
