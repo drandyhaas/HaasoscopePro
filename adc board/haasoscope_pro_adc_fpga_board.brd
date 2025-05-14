@@ -11637,6 +11637,7 @@ You are welcome to use this library for commercial purposes. For attribution, we
 <element name="IC7" library="TPS7A7200RGTR" package="QFN50P300X300X100-17N" value="TPS7A7200RGTR" x="151.5" y="100" smashed="yes">
 <attribute name="DESCRIPTION" value="2A, Single Output, Very Low Input, Configurable Fixed (0.9 to 5.0V) Low-Dropout Linear Regulator" x="147.5" y="112" size="1.778" layer="27" display="off"/>
 <attribute name="HEIGHT" value="1mm" x="147.5" y="112" size="1.778" layer="27" display="off"/>
+<attribute name="JLC_ROTATION" value="270" x="151.5" y="100" size="1.778" layer="27" display="off"/>
 <attribute name="MANUFACTURER_NAME" value="Texas Instruments" x="147.5" y="112" size="1.778" layer="27" display="off"/>
 <attribute name="MANUFACTURER_PART_NUMBER" value="TPS7A7200RGTR" x="147.5" y="112" size="1.778" layer="27" display="off"/>
 <attribute name="MOUSER_PART_NUMBER" value="595-TPS7A7200RGTR" x="147.5" y="112" size="1.778" layer="27" display="off"/>
