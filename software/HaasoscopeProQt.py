@@ -881,6 +881,7 @@ class MainWindow(TemplateBaseClass):
                     self.dostartstop()
                     self.drawtext()
             except ftd2xx.DeviceError:
+                self.close_socket()
                 print("Device error")
                 sys.exit(1)
             if self.db: print(time.time() - self.oldtime, "done with evt", self.nevents)
@@ -1530,6 +1531,7 @@ if __name__ == '__main__': # calls setup_connection for each board, then init
             sys.exit(2)
     except ftd2xx.DeviceError:
         print("Device com failed!")
+        self.close_socket()
     if standalone:
         rv = app.exec_()
         sys.exit(rv)
