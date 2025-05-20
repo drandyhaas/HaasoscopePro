@@ -70,6 +70,7 @@ class MainWindow(TemplateBaseClass):
     activexychannel = 0
     tad = [0] * num_board
     toff = 36
+    triggershift = 2 # amount to shift trigger earlier, so we have time to shift later on for toff etc.
     themuxoutV = True
     phasecs = []
     for ph in range(len(usbs)): phasecs.append([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
@@ -604,7 +605,7 @@ class MainWindow(TemplateBaseClass):
         for board in range(self.num_board): self.sendtriggerinfo(board)
 
     def sendtriggerinfo(self, board):
-        triggerpos = self.triggerpos
+        triggerpos = self.triggerpos + self.triggershift # move actual trigger a little earlier, so we have time to shift a bit later on (downsamplemerging, delayoffset, toff etc.)
         if self.doexttrig[board]:
             if self.dotwochannel: triggerpos += int(8*self.lvdstrigdelay[board] / 40 / self.downsamplefactor / 2)
             else: triggerpos += int(8*self.lvdstrigdelay[board] / 40 / self.downsamplefactor)
@@ -1028,6 +1029,7 @@ class MainWindow(TemplateBaseClass):
                 npunpackedsamples += self.extrigboardmeancorrection
                 npunpackedsamples *= self.extrigboardstdcorrection
         downsampleoffset = 2 * (sample_triggered_touse + (self.downsamplemergingcounter[board]-1)%self.downsamplemerging * 10) // self.downsamplemerging
+        downsampleoffset += 20*self.triggershift # account for having moved actual trigger a little earlier, so we had time to shift a bit now for things like toff
         if not self.dotwochannel: downsampleoffset *= 2
         if self.doexttrig[board]:
             # 2.5 ns is the period of clklvds, which is 8 samples (1ns/3.2 per sample), we just do the mod here, but the majority of it is handled in setting triggerpos
