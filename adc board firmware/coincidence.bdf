@@ -38,7 +38,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 117 12)(pt 121 8))
 	)
 	(text "VCC" (rect 136 7 156 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect -216 48 -152 72))
+	(annotation_block (location)(rect -216 48 -158 67))
 )
 (pin
 	(input)
@@ -55,7 +55,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 117 12)(pt 121 8))
 	)
 	(text "VCC" (rect 136 7 156 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect 424 704 480 728))
+	(annotation_block (location)(rect 424 704 488 723))
 )
 (pin
 	(input)
@@ -72,7 +72,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 117 12)(pt 121 8))
 	)
 	(text "VCC" (rect 136 7 156 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect 424 736 480 760))
+	(annotation_block (location)(rect 424 736 489 755))
 )
 (pin
 	(input)
@@ -89,7 +89,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 117 12)(pt 121 8))
 	)
 	(text "VCC" (rect 136 7 156 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect 288 1072 352 1096))
+	(annotation_block (location)(rect 288 1072 353 1091))
 )
 (pin
 	(input)
@@ -106,7 +106,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 117 12)(pt 121 8))
 	)
 	(text "VCC" (rect 136 7 156 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect 1344 992 1408 1096))
+	(annotation_block (location)(rect 1344 992 1409 1144))
 )
 (pin
 	(input)
@@ -123,7 +123,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 117 12)(pt 121 8))
 	)
 	(text "VCC" (rect 136 7 156 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect 424 664 488 688))
+	(annotation_block (location)(rect 424 664 481 683))
 )
 (pin
 	(input)
@@ -140,7 +140,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect 152 384 216 408))
+	(annotation_block (location)(rect 656 200 714 219))
 )
 (pin
 	(input)
@@ -157,7 +157,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 117 12)(pt 121 8))
 	)
 	(text "VCC" (rect 136 7 156 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect 296 1144 352 1232))
+	(annotation_block (location)(rect 296 1144 361 1220))
 )
 (pin
 	(input)
@@ -174,7 +174,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect 200 1088 264 1248))
+	(annotation_block (location)(rect 200 1088 264 1240))
 )
 (pin
 	(input)
@@ -191,7 +191,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect -1160 1504 -1104 1528))
+	(annotation_block (location)(rect -1160 1504 -1097 1523))
 )
 (pin
 	(input)
@@ -208,7 +208,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect 296 1264 352 1288))
+	(annotation_block (location)(rect 296 1264 346 1283))
 )
 (pin
 	(input)
@@ -225,7 +225,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect -1160 1528 -1104 1552))
+	(annotation_block (location)(rect -1160 1528 -1108 1547))
 )
 (pin
 	(input)
@@ -242,7 +242,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect -208 -168 -144 -144))
+	(annotation_block (location)(rect -208 -168 -143 -149))
 )
 (pin
 	(input)
@@ -259,13 +259,13 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect -1168 1552 -1104 1576))
+	(annotation_block (location)(rect -1168 1552 -1105 1571))
 )
 (pin
 	(input)
 	(rect -904 -96 -736 -80)
 	(text "INPUT" (rect 125 0 153 10)(font "Arial" (font_size 6)))
-	(text "lvds1in[11..0]" (rect 5 0 73 12)(font "Arial" ))
+	(text "lvds1in[11..0]" (rect 5 0 72 12)(font "Arial" ))
 	(pt 168 8)
 	(drawing
 		(line (pt 84 12)(pt 109 12))
@@ -276,13 +276,13 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect -1136 440 -1072 720))
+	(annotation_block (location)(rect -992 -96 -928 136))
 )
 (pin
 	(input)
 	(rect -904 184 -736 200)
 	(text "INPUT" (rect 125 0 153 10)(font "Arial" (font_size 6)))
-	(text "lvds2in[11..0]" (rect 5 0 73 12)(font "Arial" ))
+	(text "lvds2in[11..0]" (rect 5 0 72 12)(font "Arial" ))
 	(pt 168 8)
 	(drawing
 		(line (pt 84 12)(pt 109 12))
@@ -293,13 +293,13 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect -1064 544 -1000 824))
+	(annotation_block (location)(rect -992 176 -927 404))
 )
 (pin
 	(input)
 	(rect -904 464 -736 480)
 	(text "INPUT" (rect 125 0 153 10)(font "Arial" (font_size 6)))
-	(text "lvds3in[11..0]" (rect 5 0 73 12)(font "Arial" ))
+	(text "lvds3in[11..0]" (rect 5 0 72 12)(font "Arial" ))
 	(pt 168 8)
 	(drawing
 		(line (pt 84 12)(pt 109 12))
@@ -310,13 +310,13 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect -992 648 -928 928))
+	(annotation_block (location)(rect -992 448 -928 680))
 )
 (pin
 	(input)
 	(rect -904 744 -736 760)
 	(text "INPUT" (rect 125 0 153 10)(font "Arial" (font_size 6)))
-	(text "lvds4in[11..0]" (rect 5 0 73 12)(font "Arial" ))
+	(text "lvds4in[11..0]" (rect 5 0 72 12)(font "Arial" ))
 	(pt 168 8)
 	(drawing
 		(line (pt 84 12)(pt 109 12))
@@ -327,13 +327,13 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect -920 752 -856 1032))
+	(annotation_block (location)(rect -992 712 -927 940))
 )
 (pin
 	(input)
 	(rect -840 792 -672 808)
 	(text "INPUT" (rect 125 0 153 10)(font "Arial" (font_size 6)))
-	(text "lvds4in[12]" (rect 5 0 59 17)(font "Intel Clear" ))
+	(text "lvds4in[12]" (rect 5 0 58 17)(font "Intel Clear" ))
 	(pt 168 8)
 	(drawing
 		(line (pt 84 12)(pt 109 12))
@@ -344,12 +344,13 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
+	(annotation_block (location)(rect -912 808 -847 827))
 )
 (pin
 	(input)
 	(rect -840 512 -672 528)
 	(text "INPUT" (rect 125 0 153 10)(font "Arial" (font_size 6)))
-	(text "lvds3in[12]" (rect 5 0 59 17)(font "Intel Clear" ))
+	(text "lvds3in[12]" (rect 5 0 58 17)(font "Intel Clear" ))
 	(pt 168 8)
 	(drawing
 		(line (pt 84 12)(pt 109 12))
@@ -360,12 +361,13 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
+	(annotation_block (location)(rect -896 528 -847 547))
 )
 (pin
 	(input)
 	(rect -840 232 -672 248)
 	(text "INPUT" (rect 125 0 153 10)(font "Arial" (font_size 6)))
-	(text "lvds2in[12]" (rect 5 0 59 17)(font "Intel Clear" ))
+	(text "lvds2in[12]" (rect 5 0 58 17)(font "Intel Clear" ))
 	(pt 168 8)
 	(drawing
 		(line (pt 84 12)(pt 109 12))
@@ -376,12 +378,13 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
+	(annotation_block (location)(rect -912 248 -848 267))
 )
 (pin
 	(input)
 	(rect -840 -48 -672 -32)
 	(text "INPUT" (rect 125 0 153 10)(font "Arial" (font_size 6)))
-	(text "lvds1in[12]" (rect 5 0 60 12)(font "Arial" ))
+	(text "lvds1in[12]" (rect 5 0 59 12)(font "Arial" ))
 	(pt 168 8)
 	(drawing
 		(line (pt 84 12)(pt 109 12))
@@ -392,6 +395,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 109 12)(pt 113 8))
 	)
 	(text "VCC" (rect 128 7 148 17)(font "Arial" (font_size 6)))
+	(annotation_block (location)(rect -904 -32 -847 -13))
 )
 (pin
 	(output)
@@ -408,7 +412,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect 1144 720 1200 744))
+	(annotation_block (location)(rect 1144 720 1195 739))
 )
 (pin
 	(output)
@@ -425,7 +429,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect 1144 736 1200 760))
+	(annotation_block (location)(rect 1144 736 1201 755))
 )
 (pin
 	(output)
@@ -442,7 +446,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect 1144 752 1200 776))
+	(annotation_block (location)(rect 1144 752 1201 771))
 )
 (pin
 	(output)
@@ -459,7 +463,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect 1280 1048 1336 1192))
+	(annotation_block (location)(rect 1280 1048 1343 1200))
 )
 (pin
 	(output)
@@ -476,7 +480,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect 2280 1296 2336 1320))
+	(annotation_block (location)(rect 2280 1296 2337 1315))
 )
 (pin
 	(output)
@@ -493,7 +497,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect 2280 1320 2336 1344))
+	(annotation_block (location)(rect 2280 1320 2338 1339))
 )
 (pin
 	(output)
@@ -510,7 +514,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect 1432 400 1488 424))
+	(annotation_block (location)(rect 1432 400 1481 419))
 )
 (pin
 	(output)
@@ -527,7 +531,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect 1432 416 1488 440))
+	(annotation_block (location)(rect 1432 416 1482 435))
 )
 (pin
 	(output)
@@ -544,7 +548,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect 2040 568 2096 592))
+	(annotation_block (location)(rect 2040 568 2097 587))
 )
 (pin
 	(output)
@@ -561,7 +565,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect 1344 1152 1400 1312))
+	(annotation_block (location)(rect 1344 1152 1407 1380))
 )
 (pin
 	(output)
@@ -578,7 +582,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect 1408 1184 1464 1344))
+	(annotation_block (location)(rect 1408 1184 1472 1336))
 )
 (pin
 	(output)
@@ -595,7 +599,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect -64 1496 -8 1520))
+	(annotation_block (location)(rect -64 1496 0 1515))
 )
 (pin
 	(output)
@@ -612,7 +616,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect 1344 1392 1400 1416))
+	(annotation_block (location)(rect 1344 1392 1409 1411))
 )
 (pin
 	(output)
@@ -629,7 +633,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect -64 1520 -8 1544))
+	(annotation_block (location)(rect -64 1520 -3 1539))
 )
 (pin
 	(output)
@@ -646,7 +650,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect 1144 656 1200 696))
+	(annotation_block (location)(rect 1144 656 1200 694))
 )
 (pin
 	(output)
@@ -663,7 +667,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect -64 1568 -8 1592))
+	(annotation_block (location)(rect -64 1568 -7 1587))
 )
 (pin
 	(output)
@@ -680,7 +684,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect 2152 1920 2208 1944))
+	(annotation_block (location)(rect 2152 1920 2210 1939))
 )
 (pin
 	(output)
@@ -697,7 +701,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 82 8)(pt 78 12))
 		(line (pt 78 12)(pt 82 8))
 	)
-	(annotation_block (location)(rect -64 1544 0 1568))
+	(annotation_block (location)(rect -64 1544 -7 1563))
 )
 (pin
 	(bidir)
@@ -715,7 +719,7 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 52 8)(pt 56 12))
 	)
 	(text "VCC" (rect 4 7 24 17)(font "Arial" (font_size 6)))
-	(annotation_block (location)(rect 1144 784 1200 944))
+	(annotation_block (location)(rect 1144 784 1207 936))
 )
 (symbol
 	(rect 1696 1040 1808 1128)
@@ -2128,7 +2132,7 @@ https://fpgasoftware.intel.com/eula.
 		(pt 272 176)
 		(output)
 		(text "rx_dpa_locked[11..0]" (rect 0 0 119 14)(font "Arial" (font_size 8)))
-		(text "rx_dpa_locked[11..0]" (rect 171 165 271 179)(font "Arial" (font_size 8)))
+		(text "rx_dpa_locked[11..0]" (rect 171 165 290 179)(font "Arial" (font_size 8)))
 		(line (pt 272 176)(pt 153 176)(line_width 3))
 	)
 	(port
@@ -2221,7 +2225,7 @@ https://fpgasoftware.intel.com/eula.
 		(pt 272 176)
 		(output)
 		(text "rx_dpa_locked[11..0]" (rect 0 0 119 14)(font "Arial" (font_size 8)))
-		(text "rx_dpa_locked[11..0]" (rect 171 165 271 179)(font "Arial" (font_size 8)))
+		(text "rx_dpa_locked[11..0]" (rect 171 165 290 179)(font "Arial" (font_size 8)))
 		(line (pt 272 176)(pt 153 176)(line_width 3))
 	)
 	(port
@@ -2314,7 +2318,7 @@ https://fpgasoftware.intel.com/eula.
 		(pt 272 176)
 		(output)
 		(text "rx_dpa_locked[11..0]" (rect 0 0 119 14)(font "Arial" (font_size 8)))
-		(text "rx_dpa_locked[11..0]" (rect 171 165 271 179)(font "Arial" (font_size 8)))
+		(text "rx_dpa_locked[11..0]" (rect 171 165 290 179)(font "Arial" (font_size 8)))
 		(line (pt 272 176)(pt 153 176)(line_width 3))
 	)
 	(port
@@ -2407,7 +2411,7 @@ https://fpgasoftware.intel.com/eula.
 		(pt 272 176)
 		(output)
 		(text "rx_dpa_locked[11..0]" (rect 0 0 119 14)(font "Arial" (font_size 8)))
-		(text "rx_dpa_locked[11..0]" (rect 171 165 271 179)(font "Arial" (font_size 8)))
+		(text "rx_dpa_locked[11..0]" (rect 171 165 290 179)(font "Arial" (font_size 8)))
 		(line (pt 272 176)(pt 153 176)(line_width 3))
 	)
 	(port
@@ -2539,14 +2543,14 @@ https://fpgasoftware.intel.com/eula.
 		(pt 296 32)
 		(output)
 		(text "lvdsbitsout[559..0]" (rect 0 0 92 12)(font "Arial" ))
-		(text "lvdsbitsout[559..0]" (rect 198 27 275 39)(font "Arial" ))
+		(text "lvdsbitsout[559..0]" (rect 198 27 290 39)(font "Arial" ))
 		(line (pt 296 32)(pt 280 32)(line_width 3))
 	)
 	(port
 		(pt 296 48)
 		(output)
 		(text "samplevalue[0..39][11..0]" (rect 0 0 126 12)(font "Arial" ))
-		(text "samplevalue[0..39][11..0]" (rect 169 43 275 55)(font "Arial" ))
+		(text "samplevalue[0..39][11..0]" (rect 169 43 295 55)(font "Arial" ))
 		(line (pt 296 48)(pt 280 48)(line_width 3))
 	)
 	(drawing

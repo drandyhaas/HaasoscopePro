@@ -278,3 +278,4 @@ set_location_assignment PIN_W21 -to "lvdsout_trig_b(n)"
 set_location_assignment PIN_B18 -to "lvdsout_clk(n)"
 set_location_assignment PIN_AD19 -to "lvdsout_spare(n)"
 set_location_assignment PIN_U1 -to "lvdsin_spare(n)"
+set_global_assignment -name FLOW_ENABLE_INTERACTIVE_TIMING_ANALYZER OFF
