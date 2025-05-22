@@ -1,0 +1,62 @@
+set_global_assignment -entity "lvds10" -library "lvds10" -name IP_TOOL_NAME "QsysPrimePro"
+set_global_assignment -entity "lvds10" -library "lvds10" -name IP_TOOL_VERSION "22.4"
+set_global_assignment -entity "lvds10" -library "lvds10" -name IP_TOOL_ENV "QsysPrimePro"
+set_global_assignment -entity "lvds10" -library "lvds10" -name IP_TOOL_VENDOR_NAME "Intel Corporation"
+set_global_assignment -entity "lvds10" -library "lvds10" -name IP_TOP_LEVEL_COMPONENT_NAME "altera_lvds"
+set_global_assignment -library "lvds10" -name SOPCINFO_FILE [file join $::quartus(qip_path) "lvds10.sopcinfo"]
+set_global_assignment -entity "lvds10" -library "lvds10" -name SLD_INFO "QSYS_NAME lvds10 HAS_SOPCINFO 1 GENERATION_ID 0"
+set_global_assignment -library "lvds10" -name MISC_FILE [file join $::quartus(qip_path) "lvds10.cmp"]
+set_global_assignment -entity "lvds10" -library "lvds10" -name IP_TARGETED_DEVICE_FAMILY "Cyclone 10 GX"
+set_global_assignment -entity "lvds10" -library "lvds10" -name IP_GENERATED_DEVICE_FAMILY "{Cyclone 10 GX}"
+set_global_assignment -entity "lvds10" -library "lvds10" -name IP_QSYS_MODE "STANDALONE"
+set_global_assignment -name SYNTHESIS_ONLY_QIP ON
+set_global_assignment -library "lvds10" -name MISC_FILE [file join $::quartus(qip_path) "../lvds10.ip"]
+
+set_global_assignment -entity "lvds10_altera_lvds_core20_191_lfyhyui" -library "altera_lvds_core20_191" -name IP_COMPONENT_NAME "bHZkczEwX2FsdGVyYV9sdmRzX2NvcmUyMF8xOTFfbGZ5aHl1aQ=="
+set_global_assignment -entity "lvds10_altera_lvds_core20_191_lfyhyui" -library "altera_lvds_core20_191" -name IP_COMPONENT_DISPLAY_NAME "YWx0ZXJhX2x2ZHNfY29yZTIw"
+set_global_assignment -entity "lvds10_altera_lvds_core20_191_lfyhyui" -library "altera_lvds_core20_191" -name IP_COMPONENT_REPORT_HIERARCHY "Off"
+set_global_assignment -entity "lvds10_altera_lvds_core20_191_lfyhyui" -library "altera_lvds_core20_191" -name IP_COMPONENT_INTERNAL "On"
+set_global_assignment -entity "lvds10_altera_lvds_core20_191_lfyhyui" -library "altera_lvds_core20_191" -name IP_COMPONENT_AUTHOR "SW50ZWwgQ29ycG9yYXRpb24="
+set_global_assignment -entity "lvds10_altera_lvds_core20_191_lfyhyui" -library "altera_lvds_core20_191" -name IP_COMPONENT_VERSION "MTkuMQ=="
+set_global_assignment -entity "lvds10_altera_lvds_core20_191_lfyhyui" -library "altera_lvds_core20_191" -name IP_COMPONENT_DESCRIPTION "QWx0bHZkcyAyME5NIENvcmU="
+set_global_assignment -entity "lvds10_altera_lvds_core20_191_lfyhyui" -library "altera_lvds_core20_191" -name IP_COMPONENT_GROUP "SS9P"
+set_global_assignment -entity "lvds10_altera_lvds_2001_74isxai" -library "altera_lvds_2001" -name IP_COMPONENT_NAME "bHZkczEwX2FsdGVyYV9sdmRzXzIwMDFfNzRpc3hhaQ=="
+set_global_assignment -entity "lvds10_altera_lvds_2001_74isxai" -library "altera_lvds_2001" -name IP_COMPONENT_DISPLAY_NAME "TFZEUyBTRVJERVMgSW50ZWwgRlBHQSBJUA=="
+set_global_assignment -entity "lvds10_altera_lvds_2001_74isxai" -library "altera_lvds_2001" -name IP_COMPONENT_REPORT_HIERARCHY "Off"
+set_global_assignment -entity "lvds10_altera_lvds_2001_74isxai" -library "altera_lvds_2001" -name IP_COMPONENT_INTERNAL "Off"
+set_global_assignment -entity "lvds10_altera_lvds_2001_74isxai" -library "altera_lvds_2001" -name IP_COMPONENT_AUTHOR "SW50ZWwgQ29ycG9yYXRpb24="
+set_global_assignment -entity "lvds10_altera_lvds_2001_74isxai" -library "altera_lvds_2001" -name IP_COMPONENT_VERSION "MjAuMC4x"
+set_global_assignment -entity "lvds10_altera_lvds_2001_74isxai" -library "altera_lvds_2001" -name IP_COMPONENT_DESCRIPTION "SW50ZWwgRlBHQSBMVkRTIFNFUkRFUw=="
+set_global_assignment -entity "lvds10_altera_lvds_2001_74isxai" -library "altera_lvds_2001" -name IP_COMPONENT_GROUP "QmFzaWMgRnVuY3Rpb25zL0kvTw=="
+set_global_assignment -entity "lvds10_altera_lvds_2001_74isxai" -library "altera_lvds_2001" -name IP_COMPONENT_DOCUMENTATION_LINK "aHR0cHM6Ly93d3cuaW50ZWwuY29tL2NvbnRlbnQvd3d3L3VzL2VuL2RvY3MvcHJvZ3JhbW1hYmxlLzY4MzUyMC9jdXJyZW50L3VzZXItZ3VpZGUtaW50ZWwtYXJyaWEtMTAtYW5kLWludGVsLmh0bWw="
+set_global_assignment -entity "lvds10_altera_lvds_2001_74isxai" -library "altera_lvds_2001" -name IP_COMPONENT_DOCUMENTATION_LINK "aHR0cHM6Ly93d3cuaW50ZWwuY29tL2NvbnRlbnQvd3d3L3VzL2VuL2RvY3MvcHJvZ3JhbW1hYmxlLzcyMTgxOS9jdXJyZW50L2x2ZHMtc2VyZGVzLWludGVsLWZwZ2EtaXAuaHRtbA=="
+set_global_assignment -entity "lvds10_altera_lvds_2001_74isxai" -library "altera_lvds_2001" -name IP_COMPONENT_DOCUMENTATION_LINK "aHR0cHM6Ly93d3cuaW50ZWwuY29tL2NvbnRlbnQvd3d3L3VzL2VuL2RvY3MvcHJvZ3JhbW1hYmxlLzY4Mzc5Mi9jdXJyZW50L2x2ZHMtc2VyZGVzLWludGVsLWZwZ2EtaXAuaHRtbA=="
+set_global_assignment -entity "lvds10_altera_lvds_2001_74isxai" -library "altera_lvds_2001" -name IP_COMPONENT_DOCUMENTATION_LINK "aHR0cHM6Ly93d3cuaW50ZWwuY29tL2NvbnRlbnQvd3d3L3VzL2VuL2RvY3MvcHJvZ3JhbW1hYmxlLzY4MzU3NS9jdXJyZW50L2x2ZHMtc2VyZGVzLWludGVsLWZwZ2EtaXAtcmVsZWFzZS1ub3Rlcy5odG1s"
+set_global_assignment -entity "lvds10" -library "lvds10" -name IP_COMPONENT_NAME "bHZkczEw"
+set_global_assignment -entity "lvds10" -library "lvds10" -name IP_COMPONENT_DISPLAY_NAME "c3lzdGVt"
+set_global_assignment -entity "lvds10" -library "lvds10" -name IP_COMPONENT_REPORT_HIERARCHY "On"
+set_global_assignment -entity "lvds10" -library "lvds10" -name IP_COMPONENT_INTERNAL "Off"
+set_global_assignment -entity "lvds10" -library "lvds10" -name IP_COMPONENT_AUTHOR "SW50ZWwgQ29ycG9yYXRpb24="
+set_global_assignment -entity "lvds10" -library "lvds10" -name IP_COMPONENT_VERSION "MS4w"
+
+set_instance_assignment -entity "lvds10_altera_lvds_core20_191_lfyhyui" -library "altera_lvds_core20_191" -name UNCONNECTED_OUTPUT_PORT_MESSAGE_LEVEL OFF
+set_instance_assignment -entity "lvds10_altera_lvds_core20_191_lfyhyui" -library "altera_lvds_core20_191" -name MESSAGE_DISABLE 10034
+set_instance_assignment -entity "lvds10_altera_lvds_core20_191_lfyhyui" -library "altera_lvds_core20_191" -name MESSAGE_DISABLE 10230
+set_instance_assignment -entity "lvds10_altera_lvds_core20_191_lfyhyui" -library "altera_lvds_core20_191" -name GLOBAL_SIGNAL "PERIPHERY CLOCK" -to "altera_lvds_core20:arch_inst|altera_lvds_core20_pll:internal_pll.pll_inst|outclock[2]"
+
+set_global_assignment -library "altera_lvds_core20_191" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_lvds_core20_191/synth/altera_lvds_core20.sv"]
+set_global_assignment -library "altera_lvds_core20_191" -name VERILOG_FILE [file join $::quartus(qip_path) "altera_lvds_core20_191/synth/altera_lvds_core20_pll.v"]
+set_global_assignment -library "altera_lvds_core20_191" -name SYSTEMVERILOG_FILE [file join $::quartus(qip_path) "altera_lvds_core20_191/synth/lvds10_altera_lvds_core20_191_lfyhyui.sv"]
+set_instance_assignment -entity "lvds10_altera_lvds_core20_191_lfyhyui" -library "altera_lvds_core20_191" -name SDC_ENTITY_FILE [file join $::quartus(qip_path) "altera_lvds_core20_191/synth/lvds10_altera_lvds_core20_191_lfyhyui.sdc"] -no_sdc_promotion  -no_auto_inst_discovery 
+set_instance_assignment -entity "lvds10_altera_lvds_core20_191_lfyhyui" -library "altera_lvds_core20_191" -name TCL_ENTITY_FILE [file join $::quartus(qip_path) "altera_lvds_core20_191/synth/sdc_util.tcl"]
+set_global_assignment -library "altera_lvds_2001" -name VERILOG_FILE [file join $::quartus(qip_path) "altera_lvds_2001/synth/lvds10_altera_lvds_2001_74isxai.v"]
+set_global_assignment -library "lvds10" -name VERILOG_FILE [file join $::quartus(qip_path) "synth/lvds10.v"]
+
+
+set_global_assignment -entity "lvds10_altera_lvds_2001_74isxai" -library "altera_lvds_2001" -name IP_TOOL_NAME "altera_lvds"
+set_global_assignment -entity "lvds10_altera_lvds_2001_74isxai" -library "altera_lvds_2001" -name IP_TOOL_VERSION "20.0.1"
+set_global_assignment -entity "lvds10_altera_lvds_2001_74isxai" -library "altera_lvds_2001" -name IP_TOOL_ENV "QsysPrimePro"
+set_global_assignment -entity "lvds10_altera_lvds_core20_191_lfyhyui" -library "altera_lvds_core20_191" -name IP_TOOL_NAME "altera_lvds_core20"
+set_global_assignment -entity "lvds10_altera_lvds_core20_191_lfyhyui" -library "altera_lvds_core20_191" -name IP_TOOL_VERSION "19.1"
+set_global_assignment -entity "lvds10_altera_lvds_core20_191_lfyhyui" -library "altera_lvds_core20_191" -name IP_TOOL_ENV "QsysPrimePro"
+

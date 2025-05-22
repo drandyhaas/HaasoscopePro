@@ -1,0 +1,45 @@
+set_global_assignment -entity "pll10_3" -library "pll10_3" -name IP_TOOL_NAME "QsysPrimePro"
+set_global_assignment -entity "pll10_3" -library "pll10_3" -name IP_TOOL_VERSION "22.4"
+set_global_assignment -entity "pll10_3" -library "pll10_3" -name IP_TOOL_ENV "QsysPrimePro"
+set_global_assignment -entity "pll10_3" -library "pll10_3" -name IP_TOOL_VENDOR_NAME "Intel Corporation"
+set_global_assignment -entity "pll10_3" -library "pll10_3" -name IP_TOP_LEVEL_COMPONENT_NAME "altera_iopll"
+set_global_assignment -library "pll10_3" -name SOPCINFO_FILE [file join $::quartus(qip_path) "pll10_3.sopcinfo"]
+set_global_assignment -entity "pll10_3" -library "pll10_3" -name SLD_INFO "QSYS_NAME pll10_3 HAS_SOPCINFO 1 GENERATION_ID 0"
+set_global_assignment -library "pll10_3" -name MISC_FILE [file join $::quartus(qip_path) "pll10_3.cmp"]
+set_global_assignment -entity "pll10_3" -library "pll10_3" -name IP_TARGETED_DEVICE_FAMILY "Cyclone 10 GX"
+set_global_assignment -entity "pll10_3" -library "pll10_3" -name IP_TARGETED_PART_TRAIT "DEVICE_SPEEDGRADE::6"
+set_global_assignment -entity "pll10_3" -library "pll10_3" -name IP_TARGETED_PART_TRAIT "part.DEVICE_IOBANK_REVISION::"
+set_global_assignment -entity "pll10_3" -library "pll10_3" -name IP_GENERATED_DEVICE_FAMILY "{Cyclone 10 GX}"
+set_global_assignment -entity "pll10_3" -library "pll10_3" -name IP_QSYS_MODE "STANDALONE"
+set_global_assignment -name SYNTHESIS_ONLY_QIP ON
+set_global_assignment -library "pll10_3" -name MISC_FILE [file join $::quartus(qip_path) "../pll10_3.ip"]
+
+set_global_assignment -entity "pll10_3_altera_iopll_1931_z3imepa" -library "altera_iopll_1931" -name IP_COMPONENT_NAME "cGxsMTBfM19hbHRlcmFfaW9wbGxfMTkzMV96M2ltZXBh"
+set_global_assignment -entity "pll10_3_altera_iopll_1931_z3imepa" -library "altera_iopll_1931" -name IP_COMPONENT_DISPLAY_NAME "SU9QTEwgSW50ZWwgRlBHQSBJUA=="
+set_global_assignment -entity "pll10_3_altera_iopll_1931_z3imepa" -library "altera_iopll_1931" -name IP_COMPONENT_REPORT_HIERARCHY "Off"
+set_global_assignment -entity "pll10_3_altera_iopll_1931_z3imepa" -library "altera_iopll_1931" -name IP_COMPONENT_INTERNAL "Off"
+set_global_assignment -entity "pll10_3_altera_iopll_1931_z3imepa" -library "altera_iopll_1931" -name IP_COMPONENT_AUTHOR "SW50ZWwgQ29ycG9yYXRpb24="
+set_global_assignment -entity "pll10_3_altera_iopll_1931_z3imepa" -library "altera_iopll_1931" -name IP_COMPONENT_VERSION "MTkuMy4x"
+set_global_assignment -entity "pll10_3_altera_iopll_1931_z3imepa" -library "altera_iopll_1931" -name IP_COMPONENT_DESCRIPTION "SW50ZWwgRlBHQSBQaGFzZS1Mb2NrZWQgTG9vcCAoSU9QTEwgSW50ZWwgRlBHQSBJUCk="
+set_global_assignment -entity "pll10_3_altera_iopll_1931_z3imepa" -library "altera_iopll_1931" -name IP_COMPONENT_GROUP "QmFzaWMgRnVuY3Rpb25zL0Nsb2NrczsgUExMcyBhbmQgUmVzZXRzL1BMTA=="
+set_global_assignment -entity "pll10_3_altera_iopll_1931_z3imepa" -library "altera_iopll_1931" -name IP_COMPONENT_DOCUMENTATION_LINK "aHR0cHM6Ly93d3cuaW50ZWwuY29tL2NvbnRlbnQvd3d3L3VzL2VuL2RvY3MvcHJvZ3JhbW1hYmxlLzY4MzI4NS8="
+set_global_assignment -entity "pll10_3_altera_iopll_1931_z3imepa" -library "altera_iopll_1931" -name IP_COMPONENT_DOCUMENTATION_LINK "aHR0cHM6Ly93d3cuaW50ZWwuY29tL2NvbnRlbnQvd3d3L3VzL2VuL2RvY3MvcHJvZ3JhbW1hYmxlLzY4MzI4NS8="
+set_global_assignment -entity "pll10_3_altera_iopll_1931_z3imepa" -library "altera_iopll_1931" -name IP_COMPONENT_DOCUMENTATION_LINK "aHR0cHM6Ly93d3cuaW50ZWwuY29tL2NvbnRlbnQvd3d3L3VzL2VuL2RvY3MvcHJvZ3JhbW1hYmxlLzY4MzE5NS8="
+set_global_assignment -entity "pll10_3_altera_iopll_1931_z3imepa" -library "altera_iopll_1931" -name IP_COMPONENT_DOCUMENTATION_LINK "aHR0cHM6Ly93d3cuaW50ZWwuY29tL2NvbnRlbnQvd3d3L3VzL2VuL2RvY3MvcHJvZ3JhbW1hYmxlLzY4Mzc2MS8="
+set_global_assignment -entity "pll10_3_altera_iopll_1931_z3imepa" -library "altera_iopll_1931" -name IP_COMPONENT_DOCUMENTATION_LINK "aHR0cHM6Ly93d3cuaW50ZWwuY29tL2NvbnRlbnQvd3d3L3VzL2VuL2RvY3MvcHJvZ3JhbW1hYmxlLzY4MzE2Ni8="
+set_global_assignment -entity "pll10_3" -library "pll10_3" -name IP_COMPONENT_NAME "cGxsMTBfMw=="
+set_global_assignment -entity "pll10_3" -library "pll10_3" -name IP_COMPONENT_DISPLAY_NAME "c3lzdGVt"
+set_global_assignment -entity "pll10_3" -library "pll10_3" -name IP_COMPONENT_REPORT_HIERARCHY "On"
+set_global_assignment -entity "pll10_3" -library "pll10_3" -name IP_COMPONENT_INTERNAL "Off"
+set_global_assignment -entity "pll10_3" -library "pll10_3" -name IP_COMPONENT_AUTHOR "SW50ZWwgQ29ycG9yYXRpb24="
+set_global_assignment -entity "pll10_3" -library "pll10_3" -name IP_COMPONENT_VERSION "MS4w"
+
+
+set_global_assignment -library "altera_iopll_1931" -name VERILOG_FILE [file join $::quartus(qip_path) "altera_iopll_1931/synth/pll10_3_altera_iopll_1931_z3imepa.v"]
+set_global_assignment -library "pll10_3" -name VERILOG_FILE [file join $::quartus(qip_path) "synth/pll10_3.v"]
+
+
+set_global_assignment -entity "pll10_3_altera_iopll_1931_z3imepa" -library "altera_iopll_1931" -name IP_TOOL_NAME "altera_iopll"
+set_global_assignment -entity "pll10_3_altera_iopll_1931_z3imepa" -library "altera_iopll_1931" -name IP_TOOL_VERSION "19.3.1"
+set_global_assignment -entity "pll10_3_altera_iopll_1931_z3imepa" -library "altera_iopll_1931" -name IP_TOOL_ENV "QsysPrimePro"
+

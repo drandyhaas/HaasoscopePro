@@ -1,0 +1,40 @@
+set_global_assignment -entity "clkctrl10" -library "clkctrl10" -name IP_TOOL_NAME "QsysPrimePro"
+set_global_assignment -entity "clkctrl10" -library "clkctrl10" -name IP_TOOL_VERSION "22.4"
+set_global_assignment -entity "clkctrl10" -library "clkctrl10" -name IP_TOOL_ENV "QsysPrimePro"
+set_global_assignment -entity "clkctrl10" -library "clkctrl10" -name IP_TOOL_VENDOR_NAME "Intel Corporation"
+set_global_assignment -entity "clkctrl10" -library "clkctrl10" -name IP_TOP_LEVEL_COMPONENT_NAME "altclkctrl"
+set_global_assignment -library "clkctrl10" -name SOPCINFO_FILE [file join $::quartus(qip_path) "clkctrl10.sopcinfo"]
+set_global_assignment -entity "clkctrl10" -library "clkctrl10" -name SLD_INFO "QSYS_NAME clkctrl10 HAS_SOPCINFO 1 GENERATION_ID 0"
+set_global_assignment -library "clkctrl10" -name MISC_FILE [file join $::quartus(qip_path) "clkctrl10.cmp"]
+set_global_assignment -entity "clkctrl10" -library "clkctrl10" -name IP_TARGETED_DEVICE_FAMILY "Cyclone 10 GX"
+set_global_assignment -entity "clkctrl10" -library "clkctrl10" -name IP_GENERATED_DEVICE_FAMILY "{Cyclone 10 GX}"
+set_global_assignment -entity "clkctrl10" -library "clkctrl10" -name IP_QSYS_MODE "STANDALONE"
+set_global_assignment -name SYNTHESIS_ONLY_QIP ON
+set_global_assignment -library "clkctrl10" -name MISC_FILE [file join $::quartus(qip_path) "../clkctrl10.ip"]
+
+set_global_assignment -entity "clkctrl10_altclkctrl_2000_flawdga" -library "altclkctrl_2000" -name IP_COMPONENT_NAME "Y2xrY3RybDEwX2FsdGNsa2N0cmxfMjAwMF9mbGF3ZGdh"
+set_global_assignment -entity "clkctrl10_altclkctrl_2000_flawdga" -library "altclkctrl_2000" -name IP_COMPONENT_DISPLAY_NAME "QUxUQ0xLQ1RSTCBJbnRlbCBGUEdBIElQ"
+set_global_assignment -entity "clkctrl10_altclkctrl_2000_flawdga" -library "altclkctrl_2000" -name IP_COMPONENT_REPORT_HIERARCHY "Off"
+set_global_assignment -entity "clkctrl10_altclkctrl_2000_flawdga" -library "altclkctrl_2000" -name IP_COMPONENT_INTERNAL "Off"
+set_global_assignment -entity "clkctrl10_altclkctrl_2000_flawdga" -library "altclkctrl_2000" -name IP_COMPONENT_AUTHOR "SW50ZWwgQ29ycG9yYXRpb24="
+set_global_assignment -entity "clkctrl10_altclkctrl_2000_flawdga" -library "altclkctrl_2000" -name IP_COMPONENT_VERSION "MjAuMC4w"
+set_global_assignment -entity "clkctrl10_altclkctrl_2000_flawdga" -library "altclkctrl_2000" -name IP_COMPONENT_GROUP "QmFzaWMgRnVuY3Rpb25zL0Nsb2NrczsgUExMcyBhbmQgUmVzZXRz"
+set_global_assignment -entity "clkctrl10_altclkctrl_2000_flawdga" -library "altclkctrl_2000" -name IP_COMPONENT_DOCUMENTATION_LINK "aHR0cDovL3d3dy5hbHRlcmEuY29tL2xpdGVyYXR1cmUvdWcvdWdfYWx0Y2xvY2sucGRm"
+set_global_assignment -entity "clkctrl10_altclkctrl_2000_flawdga" -library "altclkctrl_2000" -name IP_COMPONENT_DOCUMENTATION_LINK "aHR0cHM6Ly93d3cuYWx0ZXJhLmNvbS9jb250ZW50L2RhbS9hbHRlcmEtd3d3L2dsb2JhbC9lbl9VUy9wZGZzL2xpdGVyYXR1cmUvdWcvdWdfYWx0Y2xvY2sucGRm"
+set_global_assignment -entity "clkctrl10_altclkctrl_2000_flawdga" -library "altclkctrl_2000" -name IP_COMPONENT_DOCUMENTATION_LINK "aHR0cHM6Ly9kb2N1bWVudGF0aW9uLmFsdGVyYS5jb20vIy9saW5rL2hjbzE0MjE2OTgwNDIwODcvaGNvMTQyMTY5Nzc0MDUwOQ=="
+set_global_assignment -entity "clkctrl10" -library "clkctrl10" -name IP_COMPONENT_NAME "Y2xrY3RybDEw"
+set_global_assignment -entity "clkctrl10" -library "clkctrl10" -name IP_COMPONENT_DISPLAY_NAME "c3lzdGVt"
+set_global_assignment -entity "clkctrl10" -library "clkctrl10" -name IP_COMPONENT_REPORT_HIERARCHY "On"
+set_global_assignment -entity "clkctrl10" -library "clkctrl10" -name IP_COMPONENT_INTERNAL "Off"
+set_global_assignment -entity "clkctrl10" -library "clkctrl10" -name IP_COMPONENT_AUTHOR "SW50ZWwgQ29ycG9yYXRpb24="
+set_global_assignment -entity "clkctrl10" -library "clkctrl10" -name IP_COMPONENT_VERSION "MS4w"
+
+
+set_global_assignment -library "altclkctrl_2000" -name VERILOG_FILE [file join $::quartus(qip_path) "altclkctrl_2000/synth/clkctrl10_altclkctrl_2000_flawdga.v"]
+set_global_assignment -library "clkctrl10" -name VERILOG_FILE [file join $::quartus(qip_path) "synth/clkctrl10.v"]
+
+
+set_global_assignment -entity "clkctrl10_altclkctrl_2000_flawdga" -library "altclkctrl_2000" -name IP_TOOL_NAME "altclkctrl"
+set_global_assignment -entity "clkctrl10_altclkctrl_2000_flawdga" -library "altclkctrl_2000" -name IP_TOOL_VERSION "20.0.0"
+set_global_assignment -entity "clkctrl10_altclkctrl_2000_flawdga" -library "altclkctrl_2000" -name IP_TOOL_ENV "QsysPrimePro"
+

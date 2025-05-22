@@ -1,0 +1,71 @@
+/*
+WARNING: Do NOT edit the input and output ports in this file in a text
+editor if you plan to continue editing the block that represents it in
+the Block Editor! File corruption is VERY likely to occur.
+*/
+/*
+Copyright (C) 2022  Intel Corporation. All rights reserved.
+Your use of Intel Corporation's design tools, logic functions 
+and other software and tools, and any partner logic 
+functions, and any output files from any of the foregoing 
+(including device programming or simulation files), and any 
+associated documentation or information are expressly subject 
+to the terms and conditions of the Intel Program License 
+Subscription Agreement, the Intel Quartus Prime License Agreement,
+the Intel FPGA IP License Agreement, or other applicable license
+agreement, including, without limitation, that your use is for
+the sole purpose of programming logic devices manufactured by
+Intel and sold by Intel or its authorized distributors.  Please
+refer to the applicable agreement for further details, at
+https://fpgasoftware.intel.com/eula.
+*/
+(header "symbol" (version "1.1"))
+(symbol
+	(rect 0 0 152 168)
+	(text "clkctrl10" (rect 49 0 79 12)(font "Arial" (font_size 11)))
+	(text "inst" (rect 8 152 20 164)(font "Arial" ))
+	(port
+		(pt 0 72)
+		(input)
+		(text "inclk" (rect 0 0 16 12)(font "Arial" (font_size 8)))
+		(text "inclk" (rect 4 65 34 76)(font "Arial" (font_size 8)))
+	)
+	(port
+		(pt 0 120)
+		(input)
+		(text "ena" (rect 0 0 14 12)(font "Arial" (font_size 8)))
+		(text "ena" (rect 4 115 22 126)(font "Arial" (font_size 8)))
+	)
+	(port
+		(pt 152 72)
+		(output)
+		(text "outclk" (rect 0 0 22 12)(font "Arial" (font_size 8)))
+		(text "outclk" (rect 123 65 159 76)(font "Arial" (font_size 8)))
+	)
+	(drawing
+		(text "inclk" (rect 9 46 48 105)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "clk" (rect 39 71 96 152)(font "Arial" (color 0 0 0)))
+		(text "ena" (rect 14 96 46 205)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "export" (rect 39 121 114 252)(font "Arial" (color 0 0 0)))
+		(text "outclk" (rect 103 46 242 105)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "clk" (rect 87 71 192 152)(font "Arial" (color 0 0 0)))
+		(text " clkctrl10 " (rect 115 151 296 312)(font "Arial" ))
+		(line (pt 34 34)(pt 102 34)(line_width 1))
+		(line (pt 102 34)(pt 102 151)(line_width 1))
+		(line (pt 34 151)(pt 102 151)(line_width 1))
+		(line (pt 34 34)(pt 34 151)(line_width 1))
+		(line (pt 0 76)(pt 34 76)(line_width 1))
+		(line (pt 35 55)(pt 35 80)(line_width 1))
+		(line (pt 36 55)(pt 36 80)(line_width 1))
+		(line (pt 0 126)(pt 34 126)(line_width 1))
+		(line (pt 35 105)(pt 35 130)(line_width 1))
+		(line (pt 36 105)(pt 36 130)(line_width 1))
+		(line (pt 153 76)(pt 102 76)(line_width 1))
+		(line (pt 101 55)(pt 101 80)(line_width 1))
+		(line (pt 100 55)(pt 100 80)(line_width 1))
+		(line (pt 0 0)(pt 153 0)(line_width 1))
+		(line (pt 153 0)(pt 153 168)(line_width 1))
+		(line (pt 0 168)(pt 153 168)(line_width 1))
+		(line (pt 0 0)(pt 0 168)(line_width 1))
+	)
+)

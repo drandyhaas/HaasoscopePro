@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pinplan
+ variation_name="iopll_0"
+ megafunction_name="ALTERA_IOPLL"
+ intended_family="Cyclone 10 GX"
+ specifies="all_ports">
+ <global>
+  <pin name="refclk" direction="input" scope="external" />
+  <pin name="locked" direction="output" scope="external" />
+  <pin name="rst" direction="input" scope="external" />
+  <pin name="scanclk" direction="input" scope="external" />
+  <pin name="phase_en" direction="input" scope="external" />
+  <pin name="updn" direction="input" scope="external" />
+  <pin name="cntsel[4..0]" direction="input" scope="external" />
+  <pin name="phase_done" direction="output" scope="external" />
+  <pin name="num_phase_shifts[2..0]" direction="input" scope="external" />
+  <pin name="refclk1" direction="input" scope="external" />
+  <pin name="extswitch" direction="input" scope="external" />
+  <pin name="activeclk" direction="output" scope="external" />
+  <pin name="clkbad[1..0]" direction="output" scope="external" />
+  <pin name="outclk_0" direction="output" scope="external" />
+  <pin name="outclk_1" direction="output" scope="external" />
+  <pin name="outclk_2" direction="output" scope="external" />
+  <pin name="outclk_3" direction="output" scope="external" />
+ </global>
+</pinplan>

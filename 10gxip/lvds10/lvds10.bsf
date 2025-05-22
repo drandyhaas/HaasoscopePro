@@ -1,0 +1,115 @@
+/*
+WARNING: Do NOT edit the input and output ports in this file in a text
+editor if you plan to continue editing the block that represents it in
+the Block Editor! File corruption is VERY likely to occur.
+*/
+/*
+Copyright (C) 2022  Intel Corporation. All rights reserved.
+Your use of Intel Corporation's design tools, logic functions 
+and other software and tools, and any partner logic 
+functions, and any output files from any of the foregoing 
+(including device programming or simulation files), and any 
+associated documentation or information are expressly subject 
+to the terms and conditions of the Intel Program License 
+Subscription Agreement, the Intel Quartus Prime License Agreement,
+the Intel FPGA IP License Agreement, or other applicable license
+agreement, including, without limitation, that your use is for
+the sole purpose of programming logic devices manufactured by
+Intel and sold by Intel or its authorized distributors.  Please
+refer to the applicable agreement for further details, at
+https://fpgasoftware.intel.com/eula.
+*/
+(header "symbol" (version "1.1"))
+(symbol
+	(rect 0 0 272 264)
+	(text "lvds10" (rect 116 0 140 12)(font "Arial" (font_size 11)))
+	(text "inst" (rect 8 248 20 260)(font "Arial" ))
+	(port
+		(pt 0 72)
+		(input)
+		(text "rx_in[13..0]" (rect 0 0 43 12)(font "Arial" (font_size 8)))
+		(text "rx_in[13..0]" (rect 4 65 76 76)(font "Arial" (font_size 8)))
+	)
+	(port
+		(pt 0 120)
+		(input)
+		(text "inclock" (rect 0 0 25 12)(font "Arial" (font_size 8)))
+		(text "inclock" (rect 4 115 46 126)(font "Arial" (font_size 8)))
+	)
+	(port
+		(pt 0 176)
+		(input)
+		(text "pll_areset" (rect 0 0 37 12)(font "Arial" (font_size 8)))
+		(text "pll_areset" (rect 4 165 64 176)(font "Arial" (font_size 8)))
+		(line (pt 0 176)(pt 68 176)(line_width 1))
+	)
+	(port
+		(pt 272 72)
+		(output)
+		(text "rx_out[139..0]" (rect 0 0 54 12)(font "Arial" (font_size 8)))
+		(text "rx_out[139..0]" (rect 204 65 288 76)(font "Arial" (font_size 8)))
+	)
+	(port
+		(pt 272 120)
+		(output)
+		(text "rx_coreclock" (rect 0 0 51 12)(font "Arial" (font_size 8)))
+		(text "rx_coreclock" (rect 206 115 278 126)(font "Arial" (font_size 8)))
+	)
+	(port
+		(pt 272 176)
+		(output)
+		(text "rx_dpa_locked[13..0]" (rect 0 0 82 12)(font "Arial" (font_size 8)))
+		(text "rx_dpa_locked[13..0]" (rect 169 165 289 176)(font "Arial" (font_size 8)))
+		(line (pt 272 176)(pt 153 176)(line_width 3))
+	)
+	(port
+		(pt 272 224)
+		(output)
+		(text "pll_locked" (rect 0 0 37 12)(font "Arial" (font_size 8)))
+		(text "pll_locked" (rect 222 215 282 226)(font "Arial" (font_size 8)))
+	)
+	(drawing
+		(text "rx_in" (rect 40 46 110 105)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "export" (rect 73 71 182 152)(font "Arial" (color 0 0 0)))
+		(text "rx_out" (rect 154 46 344 105)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "export" (rect 123 71 282 152)(font "Arial" (color 0 0 0)))
+		(text "rx_coreclock" (rect 154 96 380 205)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "export" (rect 123 121 282 252)(font "Arial" (color 0 0 0)))
+		(text "inclock" (rect 30 96 102 205)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "export" (rect 73 121 182 252)(font "Arial" (color 0 0 0)))
+		(text "pll_areset" (rect 11 146 82 305)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "export" (rect 73 171 182 352)(font "Arial" (color 0 0 0)))
+		(text "rx_dpa_locked" (rect 154 146 386 305)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "export" (rect 123 171 282 352)(font "Arial" (color 0 0 0)))
+		(text "pll_locked" (rect 154 196 368 405)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "export" (rect 123 221 282 452)(font "Arial" (color 0 0 0)))
+		(text " lvds10 " (rect 242 251 532 512)(font "Arial" ))
+		(line (pt 68 34)(pt 153 34)(line_width 1))
+		(line (pt 153 34)(pt 153 251)(line_width 1))
+		(line (pt 68 251)(pt 153 251)(line_width 1))
+		(line (pt 68 34)(pt 68 251)(line_width 1))
+		(line (pt 0 76)(pt 68 76)(line_width 3))
+		(line (pt 69 55)(pt 69 80)(line_width 1))
+		(line (pt 70 55)(pt 70 80)(line_width 1))
+		(line (pt 272 76)(pt 153 76)(line_width 3))
+		(line (pt 152 55)(pt 152 80)(line_width 1))
+		(line (pt 151 55)(pt 151 80)(line_width 1))
+		(line (pt 272 126)(pt 153 126)(line_width 1))
+		(line (pt 152 105)(pt 152 130)(line_width 1))
+		(line (pt 151 105)(pt 151 130)(line_width 1))
+		(line (pt 0 126)(pt 68 126)(line_width 1))
+		(line (pt 69 105)(pt 69 130)(line_width 1))
+		(line (pt 70 105)(pt 70 130)(line_width 1))
+		(line (pt 69 155)(pt 69 180)(line_width 1))
+		(line (pt 70 155)(pt 70 180)(line_width 1))
+		(line (pt 152 155)(pt 152 180)(line_width 1))
+		(line (pt 151 155)(pt 151 180)(line_width 1))
+		(line (pt 272 226)(pt 153 226)(line_width 1))
+		(line (pt 152 205)(pt 152 230)(line_width 1))
+		(line (pt 151 205)(pt 151 230)(line_width 1))
+		(line (pt 0 0)(pt 272 0)(line_width 1))
+		(line (pt 272 0)(pt 272 268)(line_width 1))
+		(line (pt 0 268)(pt 272 268)(line_width 1))
+		(line (pt 0 0)(pt 0 268)(line_width 1))
+	)
+)

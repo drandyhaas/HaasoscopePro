@@ -279,8 +279,8 @@ https://fpgasoftware.intel.com/eula.
 	(port
 		(pt 368 192)
 		(output)
-		(text "phasecounterselect[2..0]" (rect 0 0 95 12)(font "Arial" ))
-		(text "phasecounterselect[2..0]" (rect 252 187 347 199)(font "Arial" ))
+		(text "phasecounterselect[4..0]" (rect 0 0 95 12)(font "Arial" ))
+		(text "phasecounterselect[4..0]" (rect 252 187 347 199)(font "Arial" ))
 		(line (pt 368 192)(pt 352 192)(line_width 3))
 	)
 	(port
@@ -534,6 +534,13 @@ https://fpgasoftware.intel.com/eula.
 		(text "downsample[4..0]" (rect 0 0 69 12)(font "Arial" ))
 		(text "downsample[4..0]" (rect 278 763 347 775)(font "Arial" ))
 		(line (pt 368 768)(pt 352 768)(line_width 3))
+	)
+	(port
+		(pt 368 784)
+		(output)
+		(text "num_phase_shifts[2..0]" (rect 0 0 69 12)(font "Arial" ))
+		(text "num_phase_shifts[2..0]" (rect 258 783 347 795)(font "Arial" ))
+		(line (pt 368 784)(pt 352 784)(line_width 3))
 	)
 	(drawing
 		(rectangle (rect 16 16 352 800)(line_width 1))

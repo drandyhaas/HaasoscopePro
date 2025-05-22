@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deploy
+ date="2025.05.22.12:03:22"
+ outputDirectory="C:/gitwork/master/HaasoscopePro/10gxip/clkctrl10/">
+ <perimeter>
+  <parameter
+     name="AUTO_GENERATION_ID"
+     type="Integer"
+     defaultValue="0"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_UNIQUE_ID"
+     type="String"
+     defaultValue=""
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_FAMILY"
+     type="String"
+     defaultValue="Cyclone 10 GX"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE"
+     type="String"
+     defaultValue="10CX105YF780E6G"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_SPEEDGRADE"
+     type="String"
+     defaultValue="6"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_INCLK_CLOCK_RATE"
+     type="Long"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_INCLK_CLOCK_DOMAIN"
+     type="Integer"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_INCLK_RESET_DOMAIN"
+     type="Integer"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <interface name="inclk" kind="clock" start="0">
+   <property name="clockRate" value="0" />
+   <property name="externallyDriven" value="false" />
+   <property name="ptfSchematicName" value="" />
+   <port name="inclk" direction="input" role="clk" width="1" />
+  </interface>
+  <interface name="ena" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <property name="prSafe" value="false" />
+   <port name="ena" direction="input" role="export" width="1" />
+  </interface>
+  <interface name="outclk" kind="clock" start="1">
+   <property name="associatedDirectClock" value="" />
+   <property name="clockRate" value="0" />
+   <property name="clockRateKnown" value="false" />
+   <property name="externallyDriven" value="false" />
+   <property name="ptfSchematicName" value="" />
+   <port name="outclk" direction="output" role="clk" width="1" />
+  </interface>
+ </perimeter>
+ <entity kind="clkctrl10" version="1.0" name="clkctrl10">
+  <parameter name="AUTO_INCLK_RESET_DOMAIN" value="-1" />
+  <parameter name="AUTO_INCLK_CLOCK_DOMAIN" value="-1" />
+  <parameter name="AUTO_GENERATION_ID" value="0" />
+  <parameter name="AUTO_DEVICE" value="10CX105YF780E6G" />
+  <parameter name="AUTO_DEVICE_FAMILY" value="Cyclone 10 GX" />
+  <parameter name="AUTO_INCLK_CLOCK_RATE" value="-1" />
+  <parameter name="AUTO_UNIQUE_ID" value="" />
+  <parameter name="AUTO_DEVICE_SPEEDGRADE" value="6" />
+  <generatedFiles>
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\clkctrl10\synth\clkctrl10.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\clkctrl10\synth\clkctrl10.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file path="C:/gitwork/master/HaasoscopePro/10gxip/clkctrl10.ip" />
+  </sourceFiles>
+  <childSourceFiles>
+   <file
+       path="E:/intelfpga_pro/22.4/ip/altera/megafunctions/altclkctrl/altclkctrl_hw.tcl" />
+  </childSourceFiles>
+  <messages>
+   <message level="Info" culprit="clkctrl10">"Generating: clkctrl10"</message>
+   <message level="Info" culprit="clkctrl10">"Generating: clkctrl10_altclkctrl_2000_flawdga"</message>
+   <message level="Info" culprit="altclkctrl_0">Generating top-level entity clkctrl10_altclkctrl_2000_flawdga.</message>
+   <message level="Debug" culprit="altclkctrl_0">Current quartus bindir: E:/intelfpga_pro/22.4/quartus/bin64/.</message>
+  </messages>
+ </entity>
+ <entity
+   kind="altclkctrl"
+   version="20.0.0"
+   name="clkctrl10_altclkctrl_2000_flawdga">
+  <parameter name="NUMBER_OF_CLOCKS" value="1" />
+  <parameter name="USE_GLITCH_FREE_SWITCH_OVER_IMPLEMENTATION" value="false" />
+  <parameter name="GUI_USE_ENA" value="true" />
+  <parameter name="DEVICE_FAMILY" value="Cyclone 10 GX" />
+  <parameter name="ENA_REGISTER_MODE" value="1" />
+  <parameter name="CLOCK_TYPE" value="1" />
+  <generatedFiles>
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\clkctrl10\altclkctrl_2000\synth\clkctrl10_altclkctrl_2000_flawdga.v"
+       attributes="" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\clkctrl10\altclkctrl_2000\synth\clkctrl10_altclkctrl_2000_flawdga.v"
+       attributes="" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file
+       path="E:/intelfpga_pro/22.4/ip/altera/megafunctions/altclkctrl/altclkctrl_hw.tcl" />
+  </sourceFiles>
+  <childSourceFiles/>
+  <instantiator instantiator="clkctrl10" as="altclkctrl_0" />
+  <messages>
+   <message level="Info" culprit="clkctrl10">"Generating: clkctrl10_altclkctrl_2000_flawdga"</message>
+   <message level="Info" culprit="altclkctrl_0">Generating top-level entity clkctrl10_altclkctrl_2000_flawdga.</message>
+   <message level="Debug" culprit="altclkctrl_0">Current quartus bindir: E:/intelfpga_pro/22.4/quartus/bin64/.</message>
+  </messages>
+ </entity>
+</deploy>

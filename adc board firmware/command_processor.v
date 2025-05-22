@@ -4,14 +4,14 @@ module command_processor (
    input  wire        clk, // the main 50 MHz clock
    
    // to talk to data I/O FT232H USB2
-   output wire        i_tready, // AXI-stream slave
+   output reg        i_tready, // AXI-stream slave
    input  wire        i_tvalid, // ...
    input  wire [ 7:0] i_tdata,
    input  wire        o_tready, // AXI-stream master
-   output wire        o_tvalid, // ...
-   output wire [31:0] o_tdata,
-   output wire [ 3:0] o_tkeep,
-   output wire        o_tlast,
+   output reg        o_tvalid, // ...
+   output reg [31:0] o_tdata,
+   output reg [ 3:0] o_tkeep,
+   output reg        o_tlast,
 
    output reg pllreset, // to reset pll's
 
@@ -26,25 +26,25 @@ module command_processor (
    input wire  [3:0] lockinfo, // clock info
 
    // reading from RAM
-   output reg  [9:0]    ram_rd_address=0,
+   output reg  [9:0]    ram_rd_address,
    input wire  [559:0]  lvdsbitsin, // input bits from fifo
 
    // to adjust pll phases
-   output reg  [2:0] phasecounterselect, // Dynamic phase shift counter Select. 000:all 001:M 010:C0 011:C1 100:C2 101:C3 110:C4. Registered in the rising edge of scanclk.
-   output reg        phaseupdown=1, // Dynamic phase shift direction; 1:UP, 0:DOWN. Registered in the PLL on the rising edge of scanclk.
+   output reg  [4:0] phasecounterselect, // Dynamic phase shift counter Select. 000:all 001:M 010:C0 011:C1 100:C2 101:C3 110:C4. Registered in the rising edge of scanclk.
+   output reg        phaseupdown, // Dynamic phase shift direction; 1:UP, 0:DOWN. Registered in the PLL on the rising edge of scanclk.
    output reg  [3:0] phasestep,
-   output reg        scanclk=0,
+   output reg        scanclk,
 
-   output reg  [2:0] spimisossel=0, //which spimiso to listen to
+   output reg  [2:0] spimisossel, //which spimiso to listen to
    output reg [11:0] debugout, 
    input wire  [3:0] overrange,  //ORA0,A1,B0,B1
-   output reg  [1:0] spi_mode=0,
+   output reg  [1:0] spi_mode,
    input wire  [7:0] boardin,
-   output wire [7:0] boardout=0,
-   output reg        spireset_L=1'b1,
-   output reg        clkswitch=0, // to switch between external clock and internal oscillator
+   output reg  [7:0] boardout,
+   output reg        spireset_L,
+   output reg        clkswitch, // to switch between external clock and internal oscillator
    input wire        lvdsin_spare,
-   output reg        lvdsout_spare=0,
+   output reg        lvdsout_spare,
    input wire        clk50, // needed while doing pllreset
    output reg        clk_over_4, // clock output for flash and RGB LEDs
 
@@ -61,7 +61,7 @@ module command_processor (
    input [7:0]       flash_dataout,
    
    // to turn control LVDS clk off
-   output reg clkout_ena=1,
+   output reg clkout_ena,
    
    // to RGB LEDs
    output reg [23:0] neo_color[2],
@@ -93,7 +93,10 @@ module command_processor (
    input [8:0]    triggerphase,
    input [31:0]   eventtime,
    input [15:0]    phase_diff,
-   input [15:0]    phase_diff_b
+   input [15:0]    phase_diff_b,
+	
+	// new for 10 GX
+	output reg  [2:0] num_phase_shifts
 );
 
 integer version = 26; // firmware version
@@ -186,6 +189,7 @@ always @ (posedge clk) begin
    INIT : begin
       spireset_L <= 1'b1;
       pllreset2 <= 1'b0;
+		num_phase_shifts <= 3'd1;
       rx_counter <= 0;
       length <= 0;
       spistate <= 0;
@@ -354,7 +358,7 @@ always @ (posedge clk) begin
       end
 
       6 : begin // for clock phase adjustment
-         phasecounterselect <= rx_data[2][2:0];// 000:all 001:M 010:C0 011:C1 100:C2 101:C3 110:C4.
+         phasecounterselect <= rx_data[2][4:0];// 000:all 001:M 010:C0 011:C1 100:C2 101:C3 110:C4.
          phaseupdown <= rx_data[3][0]; // up or down
          scanclk <= 1'b0; // start low
          phasestep[rx_data[1]] <= 1'b1; // assert - the index here selects which pll to adjust

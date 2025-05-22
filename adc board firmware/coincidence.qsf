@@ -36,18 +36,16 @@
 # -------------------------------------------------------------------------- #
 
 
-set_global_assignment -name FAMILY "Cyclone IV E"
-set_global_assignment -name DEVICE EP4CE30F23C6
+set_global_assignment -name FAMILY "Cyclone 10 GX"
+set_global_assignment -name DEVICE 10CX105YF780E6G
 set_global_assignment -name TOP_LEVEL_ENTITY coincidence
 set_global_assignment -name ORIGINAL_QUARTUS_VERSION "13.0 SP1"
 set_global_assignment -name PROJECT_CREATION_TIME_DATE "08:20:30  NOVEMBER 06, 2018"
-set_global_assignment -name LAST_QUARTUS_VERSION "23.1std.1 Lite Edition"
+set_global_assignment -name LAST_QUARTUS_VERSION "22.4.0 Pro Edition"
 set_global_assignment -name PROJECT_OUTPUT_DIRECTORY output_files
 set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
-set_global_assignment -name MAX_CORE_JUNCTION_TEMP 85
+set_global_assignment -name MAX_CORE_JUNCTION_TEMP 100
 set_global_assignment -name ERROR_CHECK_FREQUENCY_DIVISOR 1
-set_global_assignment -name STRATIX_DEVICE_IO_STANDARD "2.5 V"
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to clk50
 set_global_assignment -name USE_CONFIGURATION_DEVICE OFF
 set_global_assignment -name CRC_ERROR_OPEN_DRAIN OFF
 set_global_assignment -name FORCE_CONFIGURATION_VCCIO ON
@@ -56,13 +54,11 @@ set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -fall
 set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -rise
 set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -fall
 set_global_assignment -name CYCLONEIII_CONFIGURATION_DEVICE EPCS16
-set_location_assignment PIN_B11 -to clk50
 set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
 set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
-set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2005
+set_global_assignment -name VERILOG_INPUT_VERSION SYSTEMVERILOG_2012
 set_global_assignment -name VERILOG_SHOW_LMF_MAPPING_MESSAGES OFF
 set_global_assignment -name OPTIMIZATION_MODE BALANCED
-set_global_assignment -name DEVICE_FILTER_SPEED_GRADE FASTEST
 set_global_assignment -name ENABLE_OCT_DONE OFF
 set_global_assignment -name ENABLE_CONFIGURATION_PINS OFF
 set_global_assignment -name ENABLE_NCE_PIN OFF
@@ -77,322 +73,26 @@ set_global_assignment -name ON_CHIP_BITSTREAM_DECOMPRESSION OFF
 set_global_assignment -name GENERATE_RBF_FILE ON
 set_global_assignment -name GENERATE_SVF_FILE ON
 
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ftdi_wr_n
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ftdi_txe_n
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ftdi_rxf_n
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ftdi_rd_n
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ftdi_oe_n
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ftdi_data[7]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ftdi_data[6]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ftdi_data[5]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ftdi_data[4]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ftdi_data[3]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ftdi_data[2]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ftdi_data[1]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ftdi_data[0]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to ftdi_clk
-set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top
-set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top
-set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to reset
-set_instance_assignment -name IO_STANDARD LVDS -to lvds1in[10]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds1in[9]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds1in[11]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds1in[13]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds1in[12]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds1in[0]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds1in[1]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds1in[2]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds1in[3]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds1in[4]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds1in[5]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds1in[6]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds1in[7]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds1in[8]
+# Obsolete assignment in <Version 22.4> "set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top"
+# Obsolete assignment in <Version 22.4> "set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top"
+# Obsolete assignment in <Version 22.4> "set_global_assignment -name PARTITION_COLOR 16764057 -section_id Top"
 set_global_assignment -name TIMING_ANALYZER_MULTICORNER_ANALYSIS ON
 set_global_assignment -name NUM_PARALLEL_PROCESSORS 4
 set_global_assignment -name SYNCHRONIZER_IDENTIFICATION AUTO
-set_global_assignment -name DEVICE_FILTER_PACKAGE FBGA
-set_location_assignment PIN_B3 -to ftdi_wr_n
-set_location_assignment PIN_B4 -to ftdi_txe_n
-set_location_assignment PIN_B7 -to ftdi_rxf_n
-set_location_assignment PIN_B8 -to ftdi_rd_n
-set_location_assignment PIN_A3 -to ftdi_oe_n
-set_location_assignment PIN_A11 -to ftdi_clk
-set_location_assignment PIN_C3 -to ftdi_data[7]
-set_location_assignment PIN_C4 -to ftdi_data[6]
-set_location_assignment PIN_C6 -to ftdi_data[5]
-set_location_assignment PIN_C7 -to ftdi_data[4]
-set_location_assignment PIN_C8 -to ftdi_data[3]
-set_location_assignment PIN_D7 -to ftdi_data[2]
-set_location_assignment PIN_A9 -to ftdi_data[1]
-set_location_assignment PIN_G10 -to ftdi_data[0]
-set_location_assignment PIN_D10 -to reset
-set_location_assignment PIN_T10 -to lvds1in[13]
-set_location_assignment PIN_T11 -to "lvds1in[13](n)"
-set_location_assignment PIN_T8 -to lvds1in[12]
-set_location_assignment PIN_T9 -to "lvds1in[12](n)"
-set_location_assignment PIN_U2 -to lvds1in[11]
-set_location_assignment PIN_U1 -to "lvds1in[11](n)"
-set_location_assignment PIN_R2 -to lvds1in[10]
-set_location_assignment PIN_R1 -to "lvds1in[10](n)"
-set_location_assignment PIN_W13 -to lvds4in[13]
-set_location_assignment PIN_AA13 -to lvds4in[12]
-set_location_assignment PIN_W21 -to lvds4in[6]
-set_location_assignment PIN_Y21 -to lvds4in[5]
-set_location_assignment PIN_V21 -to lvds4in[4]
-set_location_assignment PIN_U21 -to lvds4in[3]
-set_location_assignment PIN_R21 -to lvds4in[2]
-set_location_assignment PIN_P21 -to lvds4in[1]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds2in[13]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds2in[12]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds2in[11]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds2in[10]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds2in[9]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds2in[8]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds2in[7]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds2in[6]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds2in[5]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds2in[4]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds2in[3]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds2in[2]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds2in[1]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds2in[0]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds3in[13]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds3in[12]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds3in[11]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds3in[10]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds3in[9]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds3in[8]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds3in[7]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds3in[6]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds3in[5]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds3in[4]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds3in[3]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds3in[2]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds3in[1]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds3in[0]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds4in[13]
-set_location_assignment PIN_Y13 -to "lvds4in[13](n)"
-set_instance_assignment -name IO_STANDARD LVDS -to lvds4in[12]
-set_location_assignment PIN_AB13 -to "lvds4in[12](n)"
-set_instance_assignment -name IO_STANDARD LVDS -to lvds4in[11]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds4in[10]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds4in[9]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds4in[8]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds4in[7]
-set_instance_assignment -name IO_STANDARD LVDS -to lvds4in[6]
-set_location_assignment PIN_W22 -to "lvds4in[6](n)"
-set_instance_assignment -name IO_STANDARD LVDS -to lvds4in[5]
-set_location_assignment PIN_Y22 -to "lvds4in[5](n)"
-set_instance_assignment -name IO_STANDARD LVDS -to lvds4in[4]
-set_location_assignment PIN_V22 -to "lvds4in[4](n)"
-set_instance_assignment -name IO_STANDARD LVDS -to lvds4in[3]
-set_location_assignment PIN_U22 -to "lvds4in[3](n)"
-set_instance_assignment -name IO_STANDARD LVDS -to lvds4in[2]
-set_location_assignment PIN_R22 -to "lvds4in[2](n)"
-set_instance_assignment -name IO_STANDARD LVDS -to lvds4in[1]
-set_location_assignment PIN_P22 -to "lvds4in[1](n)"
-set_instance_assignment -name IO_STANDARD LVDS -to lvds4in[0]
-set_location_assignment PIN_N2 -to lvds1in[8]
-set_location_assignment PIN_N1 -to "lvds1in[8](n)"
-set_location_assignment PIN_M4 -to lvds1in[7]
-set_location_assignment PIN_M3 -to "lvds1in[7](n)"
-set_location_assignment PIN_M2 -to lvds1in[6]
-set_location_assignment PIN_M1 -to "lvds1in[6](n)"
-set_location_assignment PIN_U7 -to lvds1in[5]
-set_location_assignment PIN_U8 -to "lvds1in[5](n)"
-set_location_assignment PIN_V6 -to lvds1in[4]
-set_location_assignment PIN_V5 -to "lvds1in[4](n)"
-set_location_assignment PIN_R7 -to lvds1in[3]
-set_location_assignment PIN_T7 -to "lvds1in[3](n)"
-set_location_assignment PIN_N7 -to lvds1in[2]
-set_location_assignment PIN_P7 -to "lvds1in[2](n)"
-set_location_assignment PIN_L6 -to lvds1in[1]
-set_location_assignment PIN_M6 -to "lvds1in[1](n)"
-set_location_assignment PIN_P4 -to lvds1in[0]
-set_location_assignment PIN_P3 -to "lvds1in[0](n)"
-set_location_assignment PIN_T12 -to lvds2in[13]
-set_location_assignment PIN_T13 -to "lvds2in[13](n)"
-set_location_assignment PIN_T14 -to lvds2in[12]
-set_location_assignment PIN_T15 -to "lvds2in[12](n)"
-set_location_assignment PIN_W17 -to lvds2in[11]
-set_location_assignment PIN_Y17 -to "lvds2in[11](n)"
-set_location_assignment PIN_U19 -to lvds2in[10]
-set_location_assignment PIN_U20 -to "lvds2in[10](n)"
-set_location_assignment PIN_R19 -to lvds2in[9]
-set_location_assignment PIN_R18 -to "lvds2in[9](n)"
-set_location_assignment PIN_N18 -to lvds2in[8]
-set_location_assignment PIN_N17 -to "lvds2in[8](n)"
-set_location_assignment PIN_K18 -to lvds2in[5]
-set_location_assignment PIN_K17 -to "lvds2in[5](n)"
-set_location_assignment PIN_M21 -to lvds2in[4]
-set_location_assignment PIN_M22 -to "lvds2in[4](n)"
-set_location_assignment PIN_L21 -to lvds2in[3]
-set_location_assignment PIN_L22 -to "lvds2in[3](n)"
-set_location_assignment PIN_K21 -to lvds2in[2]
-set_location_assignment PIN_K22 -to "lvds2in[2](n)"
-set_location_assignment PIN_J21 -to lvds2in[1]
-set_location_assignment PIN_J22 -to "lvds2in[1](n)"
-set_location_assignment PIN_H21 -to lvds2in[0]
-set_location_assignment PIN_H22 -to "lvds2in[0](n)"
-set_location_assignment PIN_AA10 -to lvds3in[13]
-set_location_assignment PIN_AB10 -to "lvds3in[13](n)"
-set_location_assignment PIN_AA9 -to lvds3in[12]
-set_location_assignment PIN_AB9 -to "lvds3in[12](n)"
-set_location_assignment PIN_AA5 -to lvds3in[8]
-set_location_assignment PIN_AB5 -to "lvds3in[8](n)"
-set_location_assignment PIN_Y2 -to lvds3in[7]
-set_location_assignment PIN_Y1 -to "lvds3in[7](n)"
-set_location_assignment PIN_U16 -to lvds3in[6]
-set_location_assignment PIN_U17 -to "lvds3in[6](n)"
-set_location_assignment PIN_U15 -to lvds3in[5]
-set_location_assignment PIN_V15 -to "lvds3in[5](n)"
-set_location_assignment PIN_V14 -to lvds3in[4]
-set_location_assignment PIN_U14 -to "lvds3in[4](n)"
-set_location_assignment PIN_W10 -to lvds3in[3]
-set_location_assignment PIN_Y10 -to "lvds3in[3](n)"
-set_location_assignment PIN_M8 -to lvds3in[2]
-set_location_assignment PIN_N8 -to "lvds3in[2](n)"
-set_location_assignment PIN_W2 -to lvds3in[1]
-set_location_assignment PIN_W1 -to "lvds3in[1](n)"
-set_location_assignment PIN_V2 -to lvds3in[0]
-set_location_assignment PIN_V1 -to "lvds3in[0](n)"
-set_location_assignment PIN_N21 -to lvds4in[0]
-set_location_assignment PIN_N22 -to "lvds4in[0](n)"
-set_location_assignment PIN_A12 -to clk_ext
-set_location_assignment PIN_E6 -to clkout2
-set_location_assignment PIN_A13 -to debugout[0]
-set_location_assignment PIN_B1 -to overrange[3]
-set_location_assignment PIN_B2 -to overrange[2]
-set_location_assignment PIN_C1 -to overrange[1]
-set_location_assignment PIN_C2 -to overrange[0]
-set_location_assignment PIN_A14 -to debugout[1]
-set_location_assignment PIN_A15 -to debugout[2]
-set_location_assignment PIN_A16 -to debugout[3]
-set_location_assignment PIN_A17 -to debugout[4]
-set_location_assignment PIN_A18 -to debugout[5]
-set_location_assignment PIN_A19 -to debugout[6]
-set_location_assignment PIN_A20 -to debugout[7]
-set_location_assignment PIN_B13 -to debugout[8]
-set_location_assignment PIN_B14 -to debugout[9]
-set_location_assignment PIN_B16 -to debugout[11]
-set_location_assignment PIN_B17 -to boardout[0]
-set_location_assignment PIN_B18 -to boardout[1]
-set_location_assignment PIN_B19 -to boardout[2]
-set_location_assignment PIN_B20 -to boardout[3]
-set_location_assignment PIN_F13 -to boardout[4]
-set_location_assignment PIN_F14 -to boardout[5]
-set_location_assignment PIN_C13 -to boardout[6]
-set_location_assignment PIN_C15 -to boardout[7]
-set_location_assignment PIN_C17 -to boardin[0]
-set_location_assignment PIN_D13 -to boardin[1]
-set_location_assignment PIN_D15 -to boardin[2]
-set_location_assignment PIN_D17 -to boardin[3]
-set_location_assignment PIN_E15 -to boardin[5]
-set_location_assignment PIN_E12 -to boardin[6]
-set_location_assignment PIN_E14 -to boardin[7]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spiclk
-set_location_assignment PIN_E10 -to spiclk
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spics[0]
-set_location_assignment PIN_F8 -to spics[0]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spimosi
-set_location_assignment PIN_F7 -to spimosi
-set_location_assignment PIN_G7 -to spics[1]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spics[1]
-set_location_assignment PIN_G11 -to spics[3]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spics[3]
-set_location_assignment PIN_G8 -to spics[2]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spics[2]
-set_location_assignment PIN_G9 -to spics[4]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spics[4]
-set_location_assignment PIN_A4 -to spics[5]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spics[7]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spics[6]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spics[5]
-set_location_assignment PIN_F10 -to spimisos[0]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spimisos[0]
-set_location_assignment PIN_A10 -to spimisos[1]
-set_location_assignment PIN_B9 -to spimisos[2]
-set_location_assignment PIN_B10 -to spimisos[3]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spimisos[1]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spimisos[2]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spimisos[3]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spimisos[4]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spimisos[5]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spimisos[6]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to spimisos[7]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to clkout2
-set_location_assignment PIN_AA20 -to lvds4in[7]
-set_location_assignment PIN_AB20 -to "lvds4in[7](n)"
-set_location_assignment PIN_AA17 -to lvds4in[8]
-set_location_assignment PIN_AB17 -to "lvds4in[8](n)"
-set_location_assignment PIN_W7 -to lvds3in[9]
-set_location_assignment PIN_Y7 -to "lvds3in[9](n)"
-set_location_assignment PIN_AA16 -to lvds4in[9]
-set_location_assignment PIN_AB16 -to "lvds4in[9](n)"
 set_global_assignment -name CYCLONEII_OPTIMIZATION_TECHNIQUE BALANCED
 set_global_assignment -name POWER_DEFAULT_INPUT_IO_TOGGLE_RATE 12.5%
 set_global_assignment -name POWER_USE_INPUT_FILES OFF
 set_global_assignment -name EDA_SIMULATION_TOOL "<None>"
-set_location_assignment PIN_E5 -to clkout
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to clkout
 set_global_assignment -name ALLOW_REGISTER_RETIMING ON
-set_location_assignment PIN_P2 -to lvds1in[9]
-set_location_assignment PIN_P1 -to "lvds1in[9](n)"
-set_location_assignment PIN_A5 -to led[0]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to led[0]
-set_location_assignment PIN_A6 -to led[1]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to led[1]
-set_location_assignment PIN_A7 -to led[2]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to led[2]
-set_location_assignment PIN_A8 -to led[3]
-set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to led[3]
-set_location_assignment PIN_E9 -to spimisos[6]
-set_location_assignment PIN_C10 -to spics[6]
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsin_clk
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsin_trig
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsout_clk
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsout_trig
-set_location_assignment PIN_G21 -to lvdsin_clk
-set_location_assignment PIN_G22 -to "lvdsin_clk(n)"
-set_location_assignment PIN_D21 -to lvdsin_trig
-set_location_assignment PIN_D22 -to "lvdsin_trig(n)"
-set_location_assignment PIN_G4 -to lvdsout_trig
-set_location_assignment PIN_G3 -to "lvdsout_trig(n)"
-set_location_assignment PIN_J2 -to lvdsout_clk
-set_location_assignment PIN_J1 -to "lvdsout_clk(n)"
-set_location_assignment PIN_M19 -to lvds2in[6]
-set_location_assignment PIN_M20 -to "lvds2in[6](n)"
-set_location_assignment PIN_N19 -to lvds2in[7]
-set_location_assignment PIN_N20 -to "lvds2in[7](n)"
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsin_spare
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsin_trig_b
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsout_spare
-set_instance_assignment -name IO_STANDARD LVDS -to lvdsout_trig_b
-set_location_assignment PIN_E21 -to lvdsin_spare
-set_location_assignment PIN_E22 -to "lvdsin_spare(n)"
-set_location_assignment PIN_F2 -to lvdsout_spare
-set_location_assignment PIN_F1 -to "lvdsout_spare(n)"
-set_location_assignment PIN_H2 -to lvdsin_trig_b
-set_location_assignment PIN_H1 -to "lvdsin_trig_b(n)"
-set_location_assignment PIN_F21 -to lvdsout_trig_b
-set_location_assignment PIN_F22 -to "lvdsout_trig_b(n)"
-set_location_assignment PIN_AA15 -to lvds4in[10]
-set_location_assignment PIN_AB15 -to "lvds4in[10](n)"
-set_location_assignment PIN_AA14 -to lvds4in[11]
-set_location_assignment PIN_AB14 -to "lvds4in[11](n)"
-set_location_assignment PIN_AA7 -to lvds3in[10]
-set_location_assignment PIN_AB7 -to "lvds3in[10](n)"
-set_location_assignment PIN_AA8 -to lvds3in[11]
-set_location_assignment PIN_AB8 -to "lvds3in[11](n)"
-set_location_assignment PIN_K2 -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_DCLK"
 set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_DCLK"
-set_location_assignment PIN_K1 -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_DATA0"
 set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_DATA0"
-set_location_assignment PIN_E2 -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_SCE"
 set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_SCE"
-set_global_assignment -name SMART_RECOMPILE ON
+# Invalid assignment in <Version 22.4> "set_global_assignment -name SMART_RECOMPILE ON"
+# Obsolete assignment in <Version 22.4> "set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top"
+set_global_assignment -name DEVICE_FILTER_PACKAGE FBGA
+set_global_assignment -name DEVICE_FILTER_PIN_COUNT 780
+set_global_assignment -name DEVICE_FILTER_SPEED_GRADE 6
+set_global_assignment -name BOARD default
 set_global_assignment -name BDF_FILE coincidence.bdf
 set_global_assignment -name SDC_FILE coincidence.sdc
 set_global_assignment -name VERILOG_FILE command_processor.v
@@ -402,14 +102,6 @@ set_global_assignment -name VERILOG_FILE phase_detector.v
 set_global_assignment -name CDF_FILE Chain1.cdf
 set_global_assignment -name CDF_FILE Chain2.cdf
 set_global_assignment -name CDF_FILE Chain2compressed.cdf
-set_global_assignment -name QSYS_FILE asmi.qsys
-set_global_assignment -name QSYS_FILE clkctrl.qsys
-set_global_assignment -name QIP_FILE fifo1.qip
-set_global_assignment -name QIP_FILE lvds1.qip
-set_global_assignment -name QIP_FILE pll1.qip
-set_global_assignment -name QIP_FILE pll2.qip
-set_global_assignment -name QIP_FILE pll3.qip
-set_global_assignment -name QIP_FILE rambuffer.qip
 set_global_assignment -name VERILOG_FILE neo_driver.v
 set_global_assignment -name VERILOG_FILE SPI_Master.v
 set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/fpga_ft232h_example/fpga_top_ft232h_tx_mass.v
@@ -426,6 +118,11 @@ set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/ftdi_245fifo/axi_stream
 set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/ftdi_245fifo/axi_stream_packing.v
 set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/ftdi_245fifo/axi_stream_downsizing.v
 set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/ftdi_245fifo/axi_stream_assert.v
-set_location_assignment PIN_E16 -to exttrigin
-set_location_assignment PIN_B15 -to auxout
-set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top
+set_global_assignment -name IP_FILE ../10gxip/rambuffer10.ip
+set_global_assignment -name IP_FILE ../10gxip/lvds10.ip
+set_global_assignment -name IP_FILE ../10gxip/pll10_3.ip
+set_global_assignment -name IP_FILE ../10gxip/pll10_2.ip
+set_global_assignment -name IP_FILE ../10gxip/pll10_1.ip
+set_global_assignment -name IP_FILE ../10gxip/clkctrl10.ip
+set_global_assignment -name VHDL_INPUT_VERSION VHDL_2019
+set_global_assignment -name POWER_APPLY_THERMAL_MARGIN ADDITIONAL

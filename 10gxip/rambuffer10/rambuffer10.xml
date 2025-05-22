@@ -1,0 +1,245 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deploy
+ date="2025.05.22.10:50:27"
+ outputDirectory="C:/gitwork/master/HaasoscopePro/10gxip/rambuffer10/">
+ <perimeter>
+  <parameter
+     name="AUTO_GENERATION_ID"
+     type="Integer"
+     defaultValue="0"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_UNIQUE_ID"
+     type="String"
+     defaultValue=""
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_FAMILY"
+     type="String"
+     defaultValue="Cyclone 10 GX"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE"
+     type="String"
+     defaultValue="10CX105YF780E6G"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_SPEEDGRADE"
+     type="String"
+     defaultValue="6"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_WRCLOCK_CLOCK_RATE"
+     type="Long"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_WRCLOCK_CLOCK_DOMAIN"
+     type="Integer"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_WRCLOCK_RESET_DOMAIN"
+     type="Integer"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_RDCLOCK_CLOCK_RATE"
+     type="Long"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_RDCLOCK_CLOCK_DOMAIN"
+     type="Integer"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_RDCLOCK_RESET_DOMAIN"
+     type="Integer"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <interface name="data" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <property name="prSafe" value="false" />
+   <port name="data" direction="input" role="datain" width="560" />
+  </interface>
+  <interface name="q" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <property name="prSafe" value="false" />
+   <port name="q" direction="output" role="dataout" width="560" />
+  </interface>
+  <interface name="wraddress" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <property name="prSafe" value="false" />
+   <port name="wraddress" direction="input" role="wraddress" width="10" />
+  </interface>
+  <interface name="rdaddress" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <property name="prSafe" value="false" />
+   <port name="rdaddress" direction="input" role="rdaddress" width="10" />
+  </interface>
+  <interface name="wren" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <property name="prSafe" value="false" />
+   <port name="wren" direction="input" role="wren" width="1" />
+  </interface>
+  <interface name="wrclock" kind="clock" start="0">
+   <property name="clockRate" value="0" />
+   <property name="externallyDriven" value="false" />
+   <property name="ptfSchematicName" value="" />
+   <port name="wrclock" direction="input" role="clk" width="1" />
+  </interface>
+  <interface name="rdclock" kind="clock" start="0">
+   <property name="clockRate" value="0" />
+   <property name="externallyDriven" value="false" />
+   <property name="ptfSchematicName" value="" />
+   <port name="rdclock" direction="input" role="clk" width="1" />
+  </interface>
+ </perimeter>
+ <entity kind="rambuffer10" version="1.0" name="rambuffer10">
+  <parameter name="AUTO_RDCLOCK_CLOCK_DOMAIN" value="-1" />
+  <parameter name="AUTO_GENERATION_ID" value="0" />
+  <parameter name="AUTO_DEVICE" value="10CX105YF780E6G" />
+  <parameter name="AUTO_WRCLOCK_CLOCK_DOMAIN" value="-1" />
+  <parameter name="AUTO_WRCLOCK_RESET_DOMAIN" value="-1" />
+  <parameter name="AUTO_DEVICE_FAMILY" value="Cyclone 10 GX" />
+  <parameter name="AUTO_RDCLOCK_CLOCK_RATE" value="-1" />
+  <parameter name="AUTO_UNIQUE_ID" value="" />
+  <parameter name="AUTO_RDCLOCK_RESET_DOMAIN" value="-1" />
+  <parameter name="AUTO_DEVICE_SPEEDGRADE" value="6" />
+  <parameter name="AUTO_WRCLOCK_CLOCK_RATE" value="-1" />
+  <generatedFiles>
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\rambuffer10\synth\rambuffer10.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\rambuffer10\synth\rambuffer10.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file path="C:/gitwork/master/HaasoscopePro/10gxip/rambuffer10.ip" />
+  </sourceFiles>
+  <childSourceFiles>
+   <file
+       path="E:/intelfpga_pro/22.4/ip/altera/megafunctions/ram_2port/ram_2_port_hw.tcl" />
+  </childSourceFiles>
+  <messages>
+   <message level="Info" culprit="rambuffer10">"Generating: rambuffer10"</message>
+   <message level="Info" culprit="rambuffer10">"Generating: rambuffer10_ram_2port_2021_24ycm2i"</message>
+  </messages>
+ </entity>
+ <entity
+   kind="ram_2port"
+   version="20.2.1"
+   name="rambuffer10_ram_2port_2021_24ycm2i">
+  <parameter name="GUI_CLKEN_ADDRESS_STALL_A" value="false" />
+  <parameter name="GUI_RDEN_DOUBLE" value="false" />
+  <parameter name="GUI_NBE_A" value="true" />
+  <parameter name="GUI_NUMWORDS_B" value="1024" />
+  <parameter name="GUI_ECC_TRIPLE" value="false" />
+  <parameter name="GUI_MIF_FILENAME" value="" />
+  <parameter name="GUI_NUMWORDS_A" value="1024" />
+  <parameter name="GUI_RAM_BLOCK_TYPE" value="Auto" />
+  <parameter name="GUI_MEMSIZE_WORDS" value="1024" />
+  <parameter name="GUI_CONSTRAINED_DONT_CARE" value="true" />
+  <parameter name="GUI_BLANK_MEMORY" value="0" />
+  <parameter name="GUI_CLKEN_OUTPUT_REG_A" value="false" />
+  <parameter name="GUI_CLKEN_OUTPUT_REG_B" value="false" />
+  <parameter name="GUI_RDW_B_MODE" value="New Data" />
+  <parameter name="GUI_BYTE_ENABLE_B" value="false" />
+  <parameter name="GUI_BYTE_ENABLE_A" value="false" />
+  <parameter name="GUI_BYTE_ENABLE_WIDTH" value="8" />
+  <parameter name="GUI_MODE" value="0" />
+  <parameter name="GUI_CLKEN_READ_OUTPUT_REG" value="false" />
+  <parameter name="GUI_RESOURCE_USAGE" value="28 M20K" />
+  <parameter name="GUI_SCLR_READ_OUTPUT_QB" value="false" />
+  <parameter name="GUI_SCLR_READ_OUTPUT_QA" value="false" />
+  <parameter name="GUI_QA_WIDTH" value="560" />
+  <parameter name="GUI_NBE_B" value="true" />
+  <parameter name="GUI_ECCENCBYPASS" value="false" />
+  <parameter name="GUI_BYTE_WIDTH_B" value="70" />
+  <parameter name="GUI_FORCE_TO_ZERO" value="false" />
+  <parameter name="GUI_BYTE_WIDTH_A" value="70" />
+  <parameter name="GUI_ECC_PIPELINE" value="false" />
+  <parameter name="GUI_OPTIMIZATION_OPTION" value="0" />
+  <parameter name="GUI_WRITE_INPUT_PORTS" value="true" />
+  <parameter name="GUI_LC_IMPLEMENTION_OPTIONS" value="0" />
+  <parameter name="GUI_ECC_DOUBLE" value="false" />
+  <parameter name="GUI_RDADDRESS_WIDTH" value="10" />
+  <parameter name="GUI_ACLR_READ_INPUT_RDADDRESS" value="false" />
+  <parameter name="GUI_MEM_IN_BITS" value="0" />
+  <parameter name="GUI_CLKEN_READ_INPUT_REG" value="false" />
+  <parameter name="GUI_DIFFERENT_CLKENS" value="false" />
+  <parameter name="GUI_QB_WIDTH" value="560" />
+  <parameter name="GUI_FILE_REFERENCE" value="0" />
+  <parameter name="GUI_TBENCH" value="false" />
+  <parameter name="GUI_Q_PORT_MODE" value="2" />
+  <parameter name="GUI_DATA_WIDTH" value="560" />
+  <parameter name="GUI_CLKEN_INPUT_REG_A" value="false" />
+  <parameter name="GUI_CLKEN_ADDRESS_STALL_B" value="false" />
+  <parameter name="GUI_CLOCK_TYPE" value="1" />
+  <parameter name="GUI_CLKEN_INPUT_REG_B" value="false" />
+  <parameter name="DEVICE_FAMILY" value="Cyclone 10 GX" />
+  <parameter name="GUI_INIT_SIM_TO_X" value="false" />
+  <parameter name="GUI_CLKEN_WRADDRESSSTALL" value="false" />
+  <parameter name="GUI_INIT_FILE_LAYOUT" value="PORT_B" />
+  <parameter name="GUI_Q_WIDTH" value="560" />
+  <parameter name="GUI_DATAA_WIDTH" value="560" />
+  <parameter name="GUI_CLKEN_WRITE_INPUT_REG" value="false" />
+  <parameter name="GUI_READ_OUTPUT_QB" value="true" />
+  <parameter name="GUI_MEMSIZE_BITS" value="256" />
+  <parameter name="GUI_READ_OUTPUT_QA" value="true" />
+  <parameter name="GUI_WIDTH_ECCSTATUS" value="2" />
+  <parameter name="GUI_TDP_EMULATE" value="false" />
+  <parameter name="GUI_RDEN_SINGLE" value="false" />
+  <parameter name="GUI_PR" value="false" />
+  <parameter name="GUI_READ_INPUT_RDADDRESS" value="true" />
+  <parameter name="GUI_RDW_A_MODE" value="New Data" />
+  <parameter name="GUI_WRADDRESS_WIDTH" value="10" />
+  <parameter name="GUI_CLKEN_RDADDRESSSTALL" value="false" />
+  <parameter name="GUI_MAX_DEPTH" value="Auto" />
+  <parameter name="GUI_ACLR_READ_OUTPUT_QA" value="false" />
+  <parameter name="GUI_ACLR_READ_OUTPUT_QB" value="false" />
+  <parameter name="GUI_COHERENT_READ" value="false" />
+  <parameter name="GUI_VAR_WIDTH" value="false" />
+  <parameter name="GUI_MODULE_NAME" value="altera_syncram" />
+  <parameter name="GUI_WIDTH_ECCENCPARITY" value="8" />
+  <generatedFiles>
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\rambuffer10\ram_2port_2021\synth\rambuffer10_ram_2port_2021_24ycm2i.v"
+       attributes="" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\rambuffer10\ram_2port_2021\synth\rambuffer10_ram_2port_2021_24ycm2i.v"
+       attributes="" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file
+       path="E:/intelfpga_pro/22.4/ip/altera/megafunctions/ram_2port/ram_2_port_hw.tcl" />
+  </sourceFiles>
+  <childSourceFiles/>
+  <instantiator instantiator="rambuffer10" as="ram_2port_0" />
+  <messages>
+   <message level="Info" culprit="rambuffer10">"Generating: rambuffer10_ram_2port_2021_24ycm2i"</message>
+  </messages>
+ </entity>
+</deploy>

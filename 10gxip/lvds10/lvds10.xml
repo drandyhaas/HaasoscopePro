@@ -1,0 +1,973 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deploy
+ date="2025.05.22.11:11:22"
+ outputDirectory="C:/gitwork/master/HaasoscopePro/10gxip/lvds10/">
+ <perimeter>
+  <parameter
+     name="AUTO_GENERATION_ID"
+     type="Integer"
+     defaultValue="0"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_UNIQUE_ID"
+     type="String"
+     defaultValue=""
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_FAMILY"
+     type="String"
+     defaultValue="Cyclone 10 GX"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE"
+     type="String"
+     defaultValue="10CX105YF780E6G"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_SPEEDGRADE"
+     type="String"
+     defaultValue="6"
+     onHdl="0"
+     affectsHdl="1" />
+  <interface name="rx_in" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <property name="prSafe" value="false" />
+   <port name="rx_in" direction="input" role="export" width="14" />
+  </interface>
+  <interface name="rx_out" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <property name="prSafe" value="false" />
+   <port name="rx_out" direction="output" role="export" width="140" />
+  </interface>
+  <interface name="rx_coreclock" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <property name="prSafe" value="false" />
+   <port name="rx_coreclock" direction="output" role="export" width="1" />
+  </interface>
+  <interface name="inclock" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <property name="prSafe" value="false" />
+   <port name="inclock" direction="input" role="export" width="1" />
+  </interface>
+  <interface name="pll_areset" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <property name="prSafe" value="false" />
+   <port name="pll_areset" direction="input" role="export" width="1" />
+  </interface>
+  <interface name="rx_dpa_locked" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <property name="prSafe" value="false" />
+   <port name="rx_dpa_locked" direction="output" role="export" width="14" />
+  </interface>
+  <interface name="pll_locked" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <property name="prSafe" value="false" />
+   <port name="pll_locked" direction="output" role="export" width="1" />
+  </interface>
+ </perimeter>
+ <entity kind="lvds10" version="1.0" name="lvds10">
+  <parameter name="AUTO_GENERATION_ID" value="0" />
+  <parameter name="AUTO_DEVICE" value="10CX105YF780E6G" />
+  <parameter name="AUTO_DEVICE_FAMILY" value="Cyclone 10 GX" />
+  <parameter name="AUTO_UNIQUE_ID" value="" />
+  <parameter name="AUTO_DEVICE_SPEEDGRADE" value="6" />
+  <generatedFiles>
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\synth\lvds10.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\synth\lvds10.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file path="C:/gitwork/master/HaasoscopePro/10gxip/lvds10.ip" />
+  </sourceFiles>
+  <childSourceFiles>
+   <file
+       path="E:/intelfpga_pro/22.4/ip/altera/altera_lvds/top/altera_lvds_hw.tcl" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.components.hwtclvalidator.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-xjc.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/stax-ex.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/istack-commons-runtime.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.ipxact.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/codemodel.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/bare-bones-browser-launch-3.2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/failureaccess-1.0.1.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/xsom.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jacl1.3.2a.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/relaxng-datatype.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/FastInfoset.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-api.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/istack-commons-tools.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/miglayout-core-5.2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jcommon-1.0.24.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/docking-frames-common.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/docking-frames-core.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.intel.shared.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-jxc.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jfreechart-1.5.0.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jline-3.11.0.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/rngom.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/commons-text-1.10.0.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/javax.activation-api.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/commons-lang3-3.9.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/txw2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/dtd-parser.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/miglayout-swing-5.2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-runtime.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/guava-30.1-jre.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.privateinterfaces.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.components.tclelement.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.atlantic.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/antlr-4.7.2-complete.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.intel.shared.test.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.model.common.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopclibrary.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopc.qsymbol.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcreport.build.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/hamcrest-all-1.3.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.ipxact.module.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.hdlwriter.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcdocument.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcreport.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.cmsis.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.transforms.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.hypericonnect.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/commons-collections4-4.3.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.hdlcomponent.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.tcl.interpreter.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopc.generator.jar" />
+   <file
+       path="E:/intelfpga_pro/22.4/ip/altera/altera_lvds/altera_lvds_core20/altera_lvds_core20_hw.tcl" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.components.hwtclvalidator.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-xjc.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/stax-ex.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/istack-commons-runtime.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.ipxact.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/codemodel.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/bare-bones-browser-launch-3.2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/failureaccess-1.0.1.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/xsom.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jacl1.3.2a.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/relaxng-datatype.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/FastInfoset.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-api.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/istack-commons-tools.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/miglayout-core-5.2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jcommon-1.0.24.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/docking-frames-common.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/docking-frames-core.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.intel.shared.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-jxc.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jfreechart-1.5.0.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jline-3.11.0.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/rngom.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/commons-text-1.10.0.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/javax.activation-api.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/commons-lang3-3.9.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/txw2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/dtd-parser.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/miglayout-swing-5.2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-runtime.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/guava-30.1-jre.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.privateinterfaces.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.components.tclelement.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.atlantic.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/antlr-4.7.2-complete.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.intel.shared.test.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.model.common.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopclibrary.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopc.qsymbol.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcreport.build.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/hamcrest-all-1.3.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.ipxact.module.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.hdlwriter.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcdocument.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcreport.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.cmsis.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.transforms.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.hypericonnect.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/commons-collections4-4.3.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.hdlcomponent.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.tcl.interpreter.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopc.generator.jar" />
+  </childSourceFiles>
+  <messages>
+   <message level="Info" culprit="lvds10">"Generating: lvds10"</message>
+   <message level="Info" culprit="lvds10">"Generating: lvds10_altera_lvds_2001_74isxai"</message>
+   <message level="Info" culprit="lvds10">"Generating: lvds10_altera_lvds_core20_191_lfyhyui"</message>
+  </messages>
+ </entity>
+ <entity
+   kind="altera_lvds"
+   version="20.0.1"
+   name="lvds10_altera_lvds_2001_74isxai">
+  <parameter name="TX_OUTCLOCK_DIVISION" value="2" />
+  <parameter name="gui_actual_outclk_frequency_0" value="1250.000000" />
+  <parameter name="pll_loaden_frequency" value="125.000000 MHz" />
+  <parameter name="pll_tx_outclock_loaden_frequency" value="0 ps" />
+  <parameter name="gui_actual_outclk_frequency_7" value="100.0" />
+  <parameter name="pll_fclk_frequency" value="1250.000000 MHz" />
+  <parameter name="gui_actual_outclk_frequency_8" value="100.0" />
+  <parameter name="gui_actual_outclk_frequency_5" value="100.0" />
+  <parameter name="gui_actual_outclk_frequency_6" value="100.0" />
+  <parameter name="gui_actual_outclk_frequency_3" value="N/A" />
+  <parameter name="gui_actual_outclk_frequency_4" value="N/A" />
+  <parameter name="gui_actual_outclk_frequency_1" value="125.000000" />
+  <parameter name="gui_actual_outclk_frequency_2" value="125.000000" />
+  <parameter name="mapped_sys_info_device" value="10CX105YF780E6G" />
+  <parameter name="RX_INCLOCK_PHASE_SHIFT" value="0" />
+  <parameter name="NUM_CHANNELS" value="14" />
+  <parameter name="RX_CDR_SIMULATION_PPM_DRIFT" value="0" />
+  <parameter name="hp_actual_outclk_frequency_0" value="1250.0" />
+  <parameter name="hp_actual_outclk_frequency_1" value="125.0" />
+  <parameter name="hp_actual_outclk_frequency_2" value="125.0" />
+  <parameter name="hp_actual_outclk_frequency_3" value="1250.0" />
+  <parameter name="GENERATE_SDC_FILE" value="true" />
+  <parameter name="INCLOCK_FREQUENCY" value="400.0" />
+  <parameter name="RX_USE_BITSLIP" value="false" />
+  <parameter name="RX_BITSLIP_USE_RESET" value="false" />
+  <parameter name="RX_BITSLIP_ASSERT_MAX" value="false" />
+  <parameter name="DUPLEX_ENABLED" value="false" />
+  <parameter name="TX_OUTCLOCK_PHASE_SHIFT_ACTUAL" value="0" />
+  <parameter name="mapped_vco_frequency" value="1250.0 MHz" />
+  <parameter name="gui_enable_advanced_mode" value="0" />
+  <parameter name="RX_DPA_USE_RESET" value="false" />
+  <parameter name="DUPLEX_MODE" value="RX_Non-DPA" />
+  <parameter name="RX_DPA_LOCKED_USED" value="true" />
+  <parameter name="pll_inclock_frequency" value="400.0 MHz" />
+  <parameter name="gui_number_of_pll_output_clocks" value="0" />
+  <parameter name="TX_EXPORT_CORECLOCK" value="true" />
+  <parameter name="hp_outclk_actual_phase_shift_6" value="0.0" />
+  <parameter name="PORT_MAP_FILE_NAME" value="port_map_rx.csv" />
+  <parameter name="hp_outclk_actual_phase_shift_7" value="0.0" />
+  <parameter name="hp_outclk_actual_phase_shift_8" value="0.0" />
+  <parameter name="pll_sclk_frequency" value="125.000000 MHz" />
+  <parameter name="hp_outclk_actual_phase_shift_2" value="0.0" />
+  <parameter name="SYS_INFO_DEVICE_FAMILY" value="Cyclone 10 GX" />
+  <parameter name="J_FACTOR" value="10" />
+  <parameter name="hp_outclk_actual_phase_shift_3" value="0.0" />
+  <parameter name="hp_outclk_actual_phase_shift_4" value="0.0" />
+  <parameter name="hp_outclk_actual_phase_shift_5" value="0.0" />
+  <parameter name="mapped_sys_info_device_speedgrade" value="6" />
+  <parameter name="ENABLE_UFI_COUNTER_SIM" value="0" />
+  <parameter name="hp_outclk_actual_phase_shift_0" value="400.0" />
+  <parameter name="hp_outclk_actual_phase_shift_1" value="7200.0" />
+  <parameter name="RX_FIFO_USE_RESET" value="false" />
+  <parameter name="RX_BITSLIP_ROLLOVER" value="10" />
+  <parameter name="GUI_CLOCK_PARAM_NAMES" value="" />
+  <parameter name="hp_actual_outclk_frequency_8" value="100.0" />
+  <parameter name="hp_actual_outclk_frequency_4" value="1250.0" />
+  <parameter name="hp_actual_outclk_frequency_5" value="100.0" />
+  <parameter name="hp_actual_outclk_frequency_6" value="100.0" />
+  <parameter name="hp_actual_outclk_frequency_7" value="100.0" />
+  <parameter name="ENABLE_DIV_RECONFIG" value="false" />
+  <parameter name="DATA_RATE" value="1250.0" />
+  <parameter name="pll_tx_outclock_phase_shift" value="0 ps" />
+  <parameter name="mapped_reference_clock_frequency" value="400.0 MHz" />
+  <parameter name="SYS_INFO_UNIQUE_ID" value="lvds10_lvds_0" />
+  <parameter name="DERIVED_CPA_ENABLED" value="false" />
+  <parameter name="mapped_sys_info_device_family" value="Cyclone 10 GX" />
+  <parameter name="TX_USE_OUTCLOCK" value="true" />
+  <parameter name="gui_outclk_desired_phase_shift_5" value="0.0" />
+  <parameter name="TX_OUTCLOCK_NON_STD_PHASE_SHIFT" value="false" />
+  <parameter name="gui_outclk_desired_phase_shift_6" value="0.0" />
+  <parameter name="NUM_CHANNELS_TX" value="1" />
+  <parameter name="gui_outclk_desired_phase_shift_7" value="0.0" />
+  <parameter name="gui_outclk_desired_phase_shift_8" value="0.0" />
+  <parameter name="gui_outclk_desired_phase_shift_1" value="7200.0" />
+  <parameter name="gui_outclk_desired_phase_shift_2" value="0.0" />
+  <parameter name="PLL_SPEED_GRADE" value="6" />
+  <parameter name="gui_outclk_desired_phase_shift_3" value="0.0" />
+  <parameter name="ENABLE_CPA_RECONFIG" value="false" />
+  <parameter name="gui_outclk_desired_phase_shift_4" value="0.0" />
+  <parameter name="gui_outclk_desired_phase_shift_0" value="400.0" />
+  <parameter name="REAL_MODE" value="RX_DPA-FIFO" />
+  <parameter name="pll_fclk_phase_shift" value="400 ps" />
+  <parameter name="pll_tx_outclock_loaden_phase_shift" value="0 ps" />
+  <parameter name="pll_tx_outclock_fclk_phase_shift" value="0 ps" />
+  <parameter name="MODE" value="RX_DPA-FIFO" />
+  <parameter name="SYS_INFO_DEVICE_DIE_REVISIONS" value="" />
+  <parameter name="TX_OUTCLOCK_PHASE_SHIFT" value="0" />
+  <parameter name="GUI_CLOCK_PARAM_VALUES" value="" />
+  <parameter name="PLL_EXPORT_LOCK" value="true" />
+  <parameter name="CPA_ENABLED_SHADOW" value="false" />
+  <parameter name="USE_CLOCK_PIN" value="false" />
+  <parameter name="TX_REGISTER_CLOCK" value="tx_coreclock" />
+  <parameter name="PLL_CORECLOCK_RESOURCE" value="Auto" />
+  <parameter name="RX_RCCS_VAL" value="0.0" />
+  <parameter name="mapped_external_pll_mode" value="false" />
+  <parameter name="SYS_INFO_DEVICE" value="10CX105YF780E6G" />
+  <parameter name="SYS_INFO_DEVICE_SPEEDGRADE" value="6" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_2" value="0" />
+  <parameter name="gui_desired_outclk_duty_cycle_3" value="0.0" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_1" value="7200" />
+  <parameter name="gui_desired_outclk_duty_cycle_2" value="50.0" />
+  <parameter name="gui_compensation_mode" value="direct" />
+  <parameter name="gui_desired_outclk_duty_cycle_1" value="10.0" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_4" value="N/A" />
+  <parameter name="gui_desired_outclk_duty_cycle_0" value="50.0" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_3" value="N/A" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_6" value="0.0" />
+  <parameter name="gui_desired_outclk_duty_cycle_7" value="50.0" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_5" value="0.0" />
+  <parameter name="gui_desired_outclk_duty_cycle_6" value="50.0" />
+  <parameter name="gui_desired_outclk_duty_cycle_5" value="50.0" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_8" value="0.0" />
+  <parameter name="gui_desired_outclk_duty_cycle_4" value="0.0" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_7" value="0.0" />
+  <parameter name="USE_EXTERNAL_PLL" value="false" />
+  <parameter name="pll_tx_outclock_frequency" value="0 MHz" />
+  <parameter name="gui_desired_outclk_duty_cycle_8" value="50.0" />
+  <parameter name="pll_loaden_duty_cycle" value="10" />
+  <parameter name="pll_vco_frequency" value="1250.000000 MHz" />
+  <parameter name="gui_actual_outclk_duty_cycle_1" value="10" />
+  <parameter name="gui_actual_outclk_duty_cycle_0" value="50" />
+  <parameter name="gui_actual_outclk_duty_cycle_3" value="N/A" />
+  <parameter name="gui_actual_outclk_duty_cycle_2" value="50" />
+  <parameter name="gui_outclk_phase_shift_unit_0" value="0" />
+  <parameter name="gui_outclk_phase_shift_unit_2" value="0" />
+  <parameter name="gui_outclk_phase_shift_unit_1" value="0" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_3" value="N/A" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_2" value="0.0" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_0" value="400" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_1" value="324.0" />
+  <parameter name="CPA_ENABLED" value="false" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_0" value="180.0" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_7" value="0.0" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_6" value="0.0" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_5" value="0.0" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_4" value="N/A" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_8" value="0.0" />
+  <parameter name="hp_actual_outclk_duty_cycle_2" value="50.0" />
+  <parameter name="gui_actual_outclk_duty_cycle_5" value="50.0" />
+  <parameter name="hp_actual_outclk_duty_cycle_1" value="10.0" />
+  <parameter name="gui_actual_outclk_duty_cycle_4" value="N/A" />
+  <parameter name="hp_actual_outclk_duty_cycle_4" value="50.0" />
+  <parameter name="gui_actual_outclk_duty_cycle_7" value="50.0" />
+  <parameter name="hp_actual_outclk_duty_cycle_3" value="50.0" />
+  <parameter name="gui_actual_outclk_duty_cycle_6" value="50.0" />
+  <parameter name="pll_loaden_phase_shift" value="7200 ps" />
+  <parameter name="hp_actual_outclk_duty_cycle_6" value="50.0" />
+  <parameter name="RX_DPA_ALIGN_TO_RISING_EDGE_ONLY" value="false" />
+  <parameter name="hp_actual_outclk_duty_cycle_5" value="50.0" />
+  <parameter name="gui_actual_outclk_duty_cycle_8" value="50.0" />
+  <parameter name="hp_actual_outclk_duty_cycle_8" value="50.0" />
+  <parameter name="hp_actual_outclk_duty_cycle_7" value="50.0" />
+  <parameter name="RX_DPA_USE_HOLD" value="false" />
+  <parameter name="hp_actual_outclk_duty_cycle_0" value="50.0" />
+  <parameter name="REFCLK_FROM_CORE" value="false" />
+  <parameter name="gui_desired_outclk_frequency_0" value="1250.0" />
+  <parameter name="ENABLE_MIGRATABLE_PORT_MAPPINGS" value="false" />
+  <parameter name="pll_sclk_phase_shift" value="0 ps" />
+  <parameter name="gui_desired_outclk_frequency_3" value="0.0" />
+  <parameter name="gui_desired_outclk_frequency_4" value="0.0" />
+  <parameter name="ACTUAL_INCLOCK_FREQUENCY" value="400.0" />
+  <parameter name="gui_desired_outclk_frequency_1" value="125.0" />
+  <parameter name="gui_desired_outclk_frequency_2" value="125.0" />
+  <parameter name="gui_desired_outclk_frequency_7" value="100.0" />
+  <parameter name="gui_outclk_phase_shift_unit_8" value="0" />
+  <parameter name="gui_outclk_phase_shift_unit_7" value="0" />
+  <parameter name="gui_desired_outclk_frequency_8" value="100.0" />
+  <parameter name="gui_desired_outclk_frequency_5" value="100.0" />
+  <parameter name="gui_desired_outclk_frequency_6" value="100.0" />
+  <parameter name="pll_tx_outclock_fclk_frequency" value="0 ps" />
+  <parameter name="gui_outclk_phase_shift_unit_4" value="0" />
+  <parameter name="gui_outclk_phase_shift_unit_3" value="0" />
+  <parameter name="RX_DPA_LOSE_LOCK_ON_ONE_CHANGE" value="false" />
+  <parameter name="PLL_USE_RESET" value="true" />
+  <parameter name="gui_outclk_phase_shift_unit_6" value="0" />
+  <parameter name="gui_outclk_phase_shift_unit_5" value="0" />
+  <parameter name="pll_dprio_clk_frequency" value="31.250000 MHz" />
+  <parameter name="RX_INCLOCK_PHASE_SHIFT_ACTUAL" value="0" />
+  <generatedFiles>
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_2001\synth\lvds10_altera_lvds_2001_74isxai.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_2001\synth\lvds10_altera_lvds_2001_74isxai.v"
+       attributes="CONTAINS_INLINE_CONFIGURATION" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file
+       path="E:/intelfpga_pro/22.4/ip/altera/altera_lvds/top/altera_lvds_hw.tcl" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.components.hwtclvalidator.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-xjc.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/stax-ex.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/istack-commons-runtime.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.ipxact.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/codemodel.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/bare-bones-browser-launch-3.2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/failureaccess-1.0.1.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/xsom.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jacl1.3.2a.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/relaxng-datatype.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/FastInfoset.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-api.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/istack-commons-tools.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/miglayout-core-5.2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jcommon-1.0.24.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/docking-frames-common.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/docking-frames-core.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.intel.shared.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-jxc.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jfreechart-1.5.0.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jline-3.11.0.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/rngom.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/commons-text-1.10.0.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/javax.activation-api.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/commons-lang3-3.9.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/txw2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/dtd-parser.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/miglayout-swing-5.2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-runtime.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/guava-30.1-jre.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.privateinterfaces.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.components.tclelement.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.atlantic.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/antlr-4.7.2-complete.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.intel.shared.test.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.model.common.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopclibrary.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopc.qsymbol.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcreport.build.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/hamcrest-all-1.3.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.ipxact.module.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.hdlwriter.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcdocument.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcreport.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.cmsis.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.transforms.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.hypericonnect.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/commons-collections4-4.3.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.hdlcomponent.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.tcl.interpreter.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopc.generator.jar" />
+  </sourceFiles>
+  <childSourceFiles>
+   <file
+       path="E:/intelfpga_pro/22.4/ip/altera/altera_lvds/altera_lvds_core20/altera_lvds_core20_hw.tcl" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.components.hwtclvalidator.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-xjc.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/stax-ex.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/istack-commons-runtime.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.ipxact.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/codemodel.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/bare-bones-browser-launch-3.2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/failureaccess-1.0.1.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/xsom.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jacl1.3.2a.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/relaxng-datatype.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/FastInfoset.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-api.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/istack-commons-tools.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/miglayout-core-5.2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jcommon-1.0.24.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/docking-frames-common.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/docking-frames-core.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.intel.shared.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-jxc.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jfreechart-1.5.0.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jline-3.11.0.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/rngom.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/commons-text-1.10.0.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/javax.activation-api.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/commons-lang3-3.9.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/txw2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/dtd-parser.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/miglayout-swing-5.2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-runtime.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/guava-30.1-jre.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.privateinterfaces.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.components.tclelement.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.atlantic.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/antlr-4.7.2-complete.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.intel.shared.test.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.model.common.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopclibrary.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopc.qsymbol.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcreport.build.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/hamcrest-all-1.3.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.ipxact.module.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.hdlwriter.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcdocument.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcreport.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.cmsis.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.transforms.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.hypericonnect.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/commons-collections4-4.3.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.hdlcomponent.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.tcl.interpreter.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopc.generator.jar" />
+  </childSourceFiles>
+  <instantiator instantiator="lvds10" as="lvds_0" />
+  <messages>
+   <message level="Info" culprit="lvds10">"Generating: lvds10_altera_lvds_2001_74isxai"</message>
+   <message level="Info" culprit="lvds10">"Generating: lvds10_altera_lvds_core20_191_lfyhyui"</message>
+  </messages>
+ </entity>
+ <entity
+   kind="altera_lvds_core20"
+   version="19.1"
+   name="lvds10_altera_lvds_core20_191_lfyhyui">
+  <parameter name="pll_loaden_frequency" value="125.000000 MHz" />
+  <parameter name="pll_tx_outclock_loaden_frequency" value="0 ps" />
+  <parameter name="pll_output_phase_shift_2" value="0 ps" />
+  <parameter name="pll_fclk_frequency" value="1250.000000 MHz" />
+  <parameter name="pll_output_phase_shift_3" value="0 ps" />
+  <parameter name="pll_ripplecap_setting" value="" />
+  <parameter name="pll_output_phase_shift_0" value="400 ps" />
+  <parameter name="pll_output_phase_shift_1" value="7200 ps" />
+  <parameter name="pll_output_phase_shift_6" value="0 ps" />
+  <parameter name="pll_output_phase_shift_7" value="0 ps" />
+  <parameter name="pll_output_phase_shift_4" value="0 ps" />
+  <parameter name="pll_output_phase_shift_5" value="0 ps" />
+  <parameter name="pll_fbclk_mux_2" value="pll_fbclk_mux_2_m_cnt" />
+  <parameter name="pll_fbclk_mux_1" value="pll_fbclk_mux_1_glb" />
+  <parameter name="n_cnt_bypass_en" value="false" />
+  <parameter name="pll_output_phase_shift_8" value="0 ps" />
+  <parameter name="RX_INCLOCK_PHASE_SHIFT" value="0" />
+  <parameter name="RX_USE_BITSLIP" value="false" />
+  <parameter name="RX_BITSLIP_USE_RESET" value="false" />
+  <parameter name="ALIGN_TO_RISING_EDGE_ONLY" value="false" />
+  <parameter name="mapped_vco_frequency" value="1250.0 MHz" />
+  <parameter name="gui_enable_advanced_mode" value="0" />
+  <parameter name="m_cnt_odd_div_duty_en" value="true" />
+  <parameter name="DUPLEX_MODE" value="RX_Non-DPA" />
+  <parameter name="c_cnt_prst6" value="1" />
+  <parameter name="c_cnt_prst5" value="1" />
+  <parameter name="c_cnt_prst8" value="1" />
+  <parameter name="c_cnt_prst7" value="1" />
+  <parameter name="pll_inclock_frequency" value="400.0 MHz" />
+  <parameter name="TX_EXPORT_CORECLOCK" value="true" />
+  <parameter name="hp_outclk_actual_phase_shift_6" value="0.0" />
+  <parameter name="hp_outclk_actual_phase_shift_7" value="0.0" />
+  <parameter name="hp_outclk_actual_phase_shift_8" value="0.0" />
+  <parameter name="hp_outclk_actual_phase_shift_2" value="0.0" />
+  <parameter name="pll_output_clock_frequency_1" value="125.0 MHz" />
+  <parameter name="hp_outclk_actual_phase_shift_3" value="0.0" />
+  <parameter name="pll_output_clock_frequency_2" value="125.0 MHz" />
+  <parameter name="hp_outclk_actual_phase_shift_4" value="0.0" />
+  <parameter name="hp_outclk_actual_phase_shift_5" value="0.0" />
+  <parameter name="pll_output_clock_frequency_0" value="1250.0 MHz" />
+  <parameter name="mapped_sys_info_device_speedgrade" value="6" />
+  <parameter name="TX_OUTCLOCK_BYPASS_SERIALIZER" value="false" />
+  <parameter name="ENABLE_UFI_COUNTER_SIM" value="0" />
+  <parameter name="hp_outclk_actual_phase_shift_0" value="400.0" />
+  <parameter name="hp_outclk_actual_phase_shift_1" value="7200.0" />
+  <parameter name="RX_BITSLIP_ROLLOVER" value="10" />
+  <parameter name="GUI_CLOCK_PARAM_NAMES" value="" />
+  <parameter name="pll_output_clock_frequency_7" value="0.0 MHz" />
+  <parameter name="pll_output_clock_frequency_8" value="0.0 MHz" />
+  <parameter name="pll_output_clock_frequency_5" value="0.0 MHz" />
+  <parameter name="pll_output_clock_frequency_6" value="0.0 MHz" />
+  <parameter name="SILICON_REV" value="20nm5" />
+  <parameter name="pll_output_clock_frequency_3" value="0.0 MHz" />
+  <parameter name="pll_output_clock_frequency_4" value="0.0 MHz" />
+  <parameter name="ENABLE_DIV_RECONFIG" value="false" />
+  <parameter name="pll_input_clock_frequency" value="400.0 MHz" />
+  <parameter name="DATA_RATE" value="1250.0" />
+  <parameter name="SYS_INFO_UNIQUE_ID" value="lvds10_lvds_0" />
+  <parameter name="ENABLE_CPA_RECONFIG" value="false" />
+  <parameter name="LOOPBACK_MODE" value="0" />
+  <parameter name="REAL_MODE" value="RX_DPA-FIFO" />
+  <parameter name="pll_tx_outclock_fclk_phase_shift" value="0 ps" />
+  <parameter name="CPA_ENABLED_SHADOW" value="false" />
+  <parameter name="SERDES_DPA_MODE" value="dpa_mode_fifo" />
+  <parameter name="pll_m_cnt_in_src" value="c_m_cnt_in_src_ph_mux_clk" />
+  <parameter name="PLL_CORECLOCK_RESOURCE" value="Auto" />
+  <parameter name="RX_RCCS_VAL" value="0.0" />
+  <parameter name="gui_compensation_mode" value="direct" />
+  <parameter name="pll_vco_clock_frequency" value="1250.0 MHz" />
+  <parameter name="pll_tx_outclock_frequency" value="0 MHz" />
+  <parameter name="pll_loaden_duty_cycle" value="10" />
+  <parameter name="pll_vco_frequency" value="1250.000000 MHz" />
+  <parameter name="c_cnt_prst0" value="1" />
+  <parameter name="c_cnt_hi_div0" value="256" />
+  <parameter name="gui_actual_outclk_duty_cycle_1" value="10" />
+  <parameter name="c_cnt_hi_div1" value="1" />
+  <parameter name="c_cnt_prst2" value="1" />
+  <parameter name="gui_actual_outclk_duty_cycle_0" value="50" />
+  <parameter name="c_cnt_prst1" value="10" />
+  <parameter name="c_cnt_hi_div2" value="5" />
+  <parameter name="gui_actual_outclk_duty_cycle_3" value="N/A" />
+  <parameter name="c_cnt_hi_div3" value="256" />
+  <parameter name="c_cnt_prst4" value="1" />
+  <parameter name="gui_actual_outclk_duty_cycle_2" value="50" />
+  <parameter name="c_cnt_prst3" value="1" />
+  <parameter name="c_cnt_hi_div4" value="256" />
+  <parameter name="pll_clk_out_en_0" value="true" />
+  <parameter name="pll_clk_out_en_1" value="true" />
+  <parameter name="pll_clk_out_en_2" value="true" />
+  <parameter name="EXTERNAL_PLL" value="false" />
+  <parameter name="pll_clk_out_en_3" value="false" />
+  <parameter name="pll_clk_out_en_4" value="false" />
+  <parameter name="pll_clk_out_en_5" value="false" />
+  <parameter name="pll_clk_out_en_6" value="false" />
+  <parameter name="pll_clk_out_en_7" value="false" />
+  <parameter name="CPA_ENABLED" value="false" />
+  <parameter name="m_cnt_hi_div" value="13" />
+  <parameter name="pll_clk_out_en_8" value="false" />
+  <parameter name="n_cnt_lo_div" value="4" />
+  <parameter name="gui_actual_outclk_duty_cycle_5" value="50.0" />
+  <parameter name="c_cnt_hi_div5" value="256" />
+  <parameter name="gui_actual_outclk_duty_cycle_4" value="N/A" />
+  <parameter name="c_cnt_hi_div6" value="256" />
+  <parameter name="gui_actual_outclk_duty_cycle_7" value="50.0" />
+  <parameter name="c_cnt_hi_div7" value="256" />
+  <parameter name="gui_actual_outclk_duty_cycle_6" value="50.0" />
+  <parameter name="n_cnt_odd_div_duty_en" value="false" />
+  <parameter name="c_cnt_hi_div8" value="256" />
+  <parameter name="pll_loaden_phase_shift" value="7200 ps" />
+  <parameter name="RX_DPA_ALIGN_TO_RISING_EDGE_ONLY" value="false" />
+  <parameter name="gui_actual_outclk_duty_cycle_8" value="50.0" />
+  <parameter name="RX_DPA_USE_HOLD" value="false" />
+  <parameter name="c_cnt_ph_mux_prst8" value="0" />
+  <parameter name="c_cnt_ph_mux_prst7" value="0" />
+  <parameter name="pll_sclk_phase_shift" value="0 ps" />
+  <parameter name="c_cnt_ph_mux_prst0" value="4" />
+  <parameter name="c_cnt_ph_mux_prst2" value="0" />
+  <parameter name="c_cnt_ph_mux_prst1" value="0" />
+  <parameter name="pll_tx_outclock_fclk_frequency" value="0 ps" />
+  <parameter name="c_cnt_ph_mux_prst4" value="0" />
+  <parameter name="c_cnt_ph_mux_prst3" value="0" />
+  <parameter name="RX_DPA_LOSE_LOCK_ON_ONE_CHANGE" value="false" />
+  <parameter name="PLL_USE_RESET" value="true" />
+  <parameter name="c_cnt_ph_mux_prst6" value="0" />
+  <parameter name="c_cnt_ph_mux_prst5" value="0" />
+  <parameter name="RX_INCLOCK_PHASE_SHIFT_ACTUAL" value="0" />
+  <parameter name="TX_OUTCLOCK_DIVISION" value="2" />
+  <parameter name="gui_actual_outclk_frequency_0" value="1250.000000" />
+  <parameter name="gui_actual_outclk_frequency_7" value="100.0" />
+  <parameter name="gui_actual_outclk_frequency_8" value="100.0" />
+  <parameter name="gui_actual_outclk_frequency_5" value="100.0" />
+  <parameter name="gui_actual_outclk_frequency_6" value="100.0" />
+  <parameter name="gui_actual_outclk_frequency_3" value="N/A" />
+  <parameter name="gui_actual_outclk_frequency_4" value="N/A" />
+  <parameter name="gui_actual_outclk_frequency_1" value="125.000000" />
+  <parameter name="gui_actual_outclk_frequency_2" value="125.000000" />
+  <parameter name="LOSE_LOCK_ON_ONE_CHANGE" value="false" />
+  <parameter name="mapped_sys_info_device" value="10CX105YF780E6G" />
+  <parameter name="NUM_CHANNELS" value="14" />
+  <parameter name="RX_CDR_SIMULATION_PPM_DRIFT" value="0" />
+  <parameter name="hp_actual_outclk_frequency_0" value="1250.0" />
+  <parameter name="hp_actual_outclk_frequency_1" value="125.0" />
+  <parameter name="m_cnt_lo_div" value="12" />
+  <parameter name="hp_actual_outclk_frequency_2" value="125.0" />
+  <parameter name="hp_actual_outclk_frequency_3" value="1250.0" />
+  <parameter name="GENERATE_SDC_FILE" value="true" />
+  <parameter name="INCLOCK_FREQUENCY" value="400.0" />
+  <parameter name="c_cnt_odd_div_duty_en0" value="false" />
+  <parameter name="c_cnt_odd_div_duty_en1" value="false" />
+  <parameter name="RX_BITSLIP_ASSERT_MAX" value="false" />
+  <parameter name="DUPLEX_ENABLED" value="false" />
+  <parameter name="TX_OUTCLOCK_PHASE_SHIFT_ACTUAL" value="0" />
+  <parameter name="RX_DPA_USE_RESET" value="false" />
+  <parameter name="TX_OUTCLOCK_DIV_WORD" value="0" />
+  <parameter name="c_cnt_odd_div_duty_en2" value="false" />
+  <parameter name="c_cnt_odd_div_duty_en3" value="false" />
+  <parameter name="c_cnt_odd_div_duty_en4" value="false" />
+  <parameter name="c_cnt_odd_div_duty_en5" value="false" />
+  <parameter name="c_cnt_odd_div_duty_en6" value="false" />
+  <parameter name="RX_DPA_LOCKED_USED" value="true" />
+  <parameter name="VCO_FREQUENCY" value="1250" />
+  <parameter name="c_cnt_odd_div_duty_en7" value="false" />
+  <parameter name="c_cnt_odd_div_duty_en8" value="false" />
+  <parameter name="gui_number_of_pll_output_clocks" value="0" />
+  <parameter name="PORT_MAP_FILE_NAME" value="port_map_rx.csv" />
+  <parameter name="pll_sclk_frequency" value="125.000000 MHz" />
+  <parameter name="pll_cp_setting" value="pll_cp_setting28" />
+  <parameter name="SYS_INFO_DEVICE_FAMILY" value="Cyclone 10 GX" />
+  <parameter name="J_FACTOR" value="10" />
+  <parameter name="c_cnt_lo_div7" value="256" />
+  <parameter name="c_cnt_lo_div8" value="256" />
+  <parameter name="c_cnt_lo_div5" value="256" />
+  <parameter name="RX_FIFO_USE_RESET" value="false" />
+  <parameter name="c_cnt_lo_div6" value="256" />
+  <parameter name="c_cnt_lo_div3" value="256" />
+  <parameter name="c_cnt_lo_div4" value="256" />
+  <parameter name="c_cnt_lo_div1" value="9" />
+  <parameter name="c_cnt_lo_div2" value="5" />
+  <parameter name="VCO_DIV_EXPONENT" value="0" />
+  <parameter name="c_cnt_lo_div0" value="256" />
+  <parameter name="hp_actual_outclk_frequency_8" value="100.0" />
+  <parameter name="hp_actual_outclk_frequency_4" value="1250.0" />
+  <parameter name="hp_actual_outclk_frequency_5" value="100.0" />
+  <parameter name="hp_actual_outclk_frequency_6" value="100.0" />
+  <parameter name="hp_actual_outclk_frequency_7" value="100.0" />
+  <parameter name="pll_tx_outclock_phase_shift" value="0 ps" />
+  <parameter name="mapped_reference_clock_frequency" value="400.0 MHz" />
+  <parameter name="USE_DIV_RECONFIG" value="false" />
+  <parameter name="DERIVED_CPA_ENABLED" value="false" />
+  <parameter name="TX_OUTCLOCK_USE_FALLING_CLOCK_EDGE" value="false" />
+  <parameter name="mapped_sys_info_device_family" value="Cyclone 10 GX" />
+  <parameter name="TX_USE_OUTCLOCK" value="true" />
+  <parameter name="gui_outclk_desired_phase_shift_5" value="0.0" />
+  <parameter name="TX_OUTCLOCK_NON_STD_PHASE_SHIFT" value="false" />
+  <parameter name="gui_outclk_desired_phase_shift_6" value="0.0" />
+  <parameter name="NUM_CHANNELS_TX" value="1" />
+  <parameter name="gui_outclk_desired_phase_shift_7" value="0.0" />
+  <parameter name="gui_outclk_desired_phase_shift_8" value="0.0" />
+  <parameter name="gui_outclk_desired_phase_shift_1" value="7200.0" />
+  <parameter name="gui_outclk_desired_phase_shift_2" value="0.0" />
+  <parameter name="PLL_SPEED_GRADE" value="6" />
+  <parameter name="gui_outclk_desired_phase_shift_3" value="0.0" />
+  <parameter name="gui_outclk_desired_phase_shift_4" value="0.0" />
+  <parameter name="gui_outclk_desired_phase_shift_0" value="400.0" />
+  <parameter name="pll_fclk_phase_shift" value="400 ps" />
+  <parameter name="pll_tx_outclock_loaden_phase_shift" value="0 ps" />
+  <parameter name="MODE" value="RX_DPA-FIFO" />
+  <parameter name="SYS_INFO_DEVICE_DIE_REVISIONS" value="" />
+  <parameter name="TX_OUTCLOCK_PHASE_SHIFT" value="0" />
+  <parameter name="GUI_CLOCK_PARAM_VALUES" value="" />
+  <parameter name="PLL_EXPORT_LOCK" value="true" />
+  <parameter name="USE_BITSLIP" value="false" />
+  <parameter name="USE_CLOCK_PIN" value="false" />
+  <parameter name="TX_REGISTER_CLOCK" value="tx_coreclock" />
+  <parameter name="mapped_external_pll_mode" value="false" />
+  <parameter name="SYS_INFO_DEVICE" value="10CX105YF780E6G" />
+  <parameter name="SYS_INFO_DEVICE_SPEEDGRADE" value="6" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_2" value="0" />
+  <parameter name="gui_desired_outclk_duty_cycle_3" value="0.0" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_1" value="7200" />
+  <parameter name="gui_desired_outclk_duty_cycle_2" value="50.0" />
+  <parameter name="gui_desired_outclk_duty_cycle_1" value="10.0" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_4" value="N/A" />
+  <parameter name="gui_desired_outclk_duty_cycle_0" value="50.0" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_3" value="N/A" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_6" value="0.0" />
+  <parameter name="gui_desired_outclk_duty_cycle_7" value="50.0" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_5" value="0.0" />
+  <parameter name="gui_desired_outclk_duty_cycle_6" value="50.0" />
+  <parameter name="gui_desired_outclk_duty_cycle_5" value="50.0" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_8" value="0.0" />
+  <parameter name="gui_desired_outclk_duty_cycle_4" value="0.0" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_7" value="0.0" />
+  <parameter name="TX_OUTCLOCK_ENABLED" value="false" />
+  <parameter name="USE_EXTERNAL_PLL" value="false" />
+  <parameter name="gui_desired_outclk_duty_cycle_8" value="50.0" />
+  <parameter name="n_cnt_hi_div" value="4" />
+  <parameter name="m_cnt_bypass_en" value="false" />
+  <parameter name="gui_outclk_phase_shift_unit_0" value="0" />
+  <parameter name="gui_outclk_phase_shift_unit_2" value="0" />
+  <parameter name="gui_outclk_phase_shift_unit_1" value="0" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_3" value="N/A" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_2" value="0.0" />
+  <parameter name="gui_outclk_actual_phase_shift_ps_0" value="400" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_1" value="324.0" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_0" value="180.0" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_7" value="0.0" />
+  <parameter name="pll_output_duty_cycle_6" value="50" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_6" value="0.0" />
+  <parameter name="pll_output_duty_cycle_5" value="50" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_5" value="0.0" />
+  <parameter name="pll_output_duty_cycle_4" value="50" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_4" value="N/A" />
+  <parameter name="pll_bw_ctrl" value="pll_bw_res_setting4" />
+  <parameter name="pll_output_duty_cycle_3" value="50" />
+  <parameter name="pll_output_duty_cycle_8" value="50" />
+  <parameter name="gui_outclk_actual_phase_shift_deg_8" value="0.0" />
+  <parameter name="pll_output_duty_cycle_7" value="50" />
+  <parameter name="hp_actual_outclk_duty_cycle_2" value="50.0" />
+  <parameter name="hp_actual_outclk_duty_cycle_1" value="10.0" />
+  <parameter name="hp_actual_outclk_duty_cycle_4" value="50.0" />
+  <parameter name="hp_actual_outclk_duty_cycle_3" value="50.0" />
+  <parameter name="hp_actual_outclk_duty_cycle_6" value="50.0" />
+  <parameter name="hp_actual_outclk_duty_cycle_5" value="50.0" />
+  <parameter name="hp_actual_outclk_duty_cycle_8" value="50.0" />
+  <parameter name="hp_actual_outclk_duty_cycle_7" value="50.0" />
+  <parameter name="hp_actual_outclk_duty_cycle_0" value="50.0" />
+  <parameter name="REFCLK_FROM_CORE" value="false" />
+  <parameter name="gui_desired_outclk_frequency_0" value="1250.0" />
+  <parameter name="ENABLE_MIGRATABLE_PORT_MAPPINGS" value="false" />
+  <parameter name="gui_desired_outclk_frequency_3" value="0.0" />
+  <parameter name="pll_output_duty_cycle_2" value="50" />
+  <parameter name="gui_desired_outclk_frequency_4" value="0.0" />
+  <parameter name="pll_output_duty_cycle_1" value="10" />
+  <parameter name="ACTUAL_INCLOCK_FREQUENCY" value="400.0" />
+  <parameter name="gui_desired_outclk_frequency_1" value="125.0" />
+  <parameter name="pll_output_duty_cycle_0" value="50" />
+  <parameter name="gui_desired_outclk_frequency_2" value="125.0" />
+  <parameter name="gui_desired_outclk_frequency_7" value="100.0" />
+  <parameter name="gui_outclk_phase_shift_unit_8" value="0" />
+  <parameter name="c_cnt_bypass_en6" value="true" />
+  <parameter name="gui_outclk_phase_shift_unit_7" value="0" />
+  <parameter name="gui_desired_outclk_frequency_8" value="100.0" />
+  <parameter name="c_cnt_bypass_en7" value="true" />
+  <parameter name="gui_desired_outclk_frequency_5" value="100.0" />
+  <parameter name="c_cnt_bypass_en8" value="true" />
+  <parameter name="gui_desired_outclk_frequency_6" value="100.0" />
+  <parameter name="gui_outclk_phase_shift_unit_4" value="0" />
+  <parameter name="gui_outclk_phase_shift_unit_3" value="0" />
+  <parameter name="gui_outclk_phase_shift_unit_6" value="0" />
+  <parameter name="gui_outclk_phase_shift_unit_5" value="0" />
+  <parameter name="pll_dprio_clk_frequency" value="31.250000 MHz" />
+  <parameter name="c_cnt_bypass_en0" value="true" />
+  <parameter name="c_cnt_bypass_en1" value="false" />
+  <parameter name="pll_bw_sel" value="high" />
+  <parameter name="c_cnt_bypass_en2" value="false" />
+  <parameter name="c_cnt_bypass_en3" value="true" />
+  <parameter name="c_cnt_bypass_en4" value="true" />
+  <parameter name="c_cnt_bypass_en5" value="true" />
+  <generatedFiles>
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\altera_lvds_core20.sv"
+       attributes="" />
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\altera_lvds_core20_pll.v"
+       attributes="" />
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\lvds10_altera_lvds_core20_191_lfyhyui.sv"
+       attributes="" />
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\lvds10_altera_lvds_core20_191_lfyhyui.sdc"
+       attributes="NO_AUTO_INSTANCE_DISCOVERY NO_SDC_PROMOTION" />
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\sdc_util.tcl"
+       attributes="NO_AUTO_INSTANCE_DISCOVERY NO_SDC_PROMOTION" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\altera_lvds_core20.sv"
+       attributes="" />
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\altera_lvds_core20_pll.v"
+       attributes="" />
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\lvds10_altera_lvds_core20_191_lfyhyui.sv"
+       attributes="" />
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\lvds10_altera_lvds_core20_191_lfyhyui.sdc"
+       attributes="NO_AUTO_INSTANCE_DISCOVERY NO_SDC_PROMOTION" />
+   <file
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\sdc_util.tcl"
+       attributes="NO_AUTO_INSTANCE_DISCOVERY NO_SDC_PROMOTION" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file
+       path="E:/intelfpga_pro/22.4/ip/altera/altera_lvds/altera_lvds_core20/altera_lvds_core20_hw.tcl" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.components.hwtclvalidator.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-xjc.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/stax-ex.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/istack-commons-runtime.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.ipxact.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/codemodel.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/bare-bones-browser-launch-3.2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/failureaccess-1.0.1.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/xsom.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jacl1.3.2a.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/relaxng-datatype.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/FastInfoset.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-api.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/istack-commons-tools.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/miglayout-core-5.2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jcommon-1.0.24.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/docking-frames-common.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/docking-frames-core.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.intel.shared.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-jxc.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jfreechart-1.5.0.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jline-3.11.0.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/rngom.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/commons-text-1.10.0.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/javax.activation-api.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/commons-lang3-3.9.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/txw2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/dtd-parser.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/miglayout-swing-5.2.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/jaxb-runtime.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/guava-30.1-jre.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.privateinterfaces.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.components.tclelement.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.atlantic.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/antlr-4.7.2-complete.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.intel.shared.test.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.model.common.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopclibrary.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopc.qsymbol.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcreport.build.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/hamcrest-all-1.3.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.ipxact.module.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.hdlwriter.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcdocument.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcreport.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.cmsis.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopcmodel.transforms.jar" />
+   <file
+       path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.qsys.hypericonnect.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/commons-collections4-4.3.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.hdlcomponent.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.tcl.interpreter.jar" />
+   <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopc.generator.jar" />
+  </sourceFiles>
+  <childSourceFiles/>
+  <instantiator instantiator="lvds10_altera_lvds_2001_74isxai" as="core" />
+  <messages>
+   <message level="Info" culprit="lvds10">"Generating: lvds10_altera_lvds_core20_191_lfyhyui"</message>
+  </messages>
+ </entity>
+</deploy>

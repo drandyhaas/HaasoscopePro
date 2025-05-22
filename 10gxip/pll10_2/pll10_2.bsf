@@ -1,0 +1,82 @@
+/*
+WARNING: Do NOT edit the input and output ports in this file in a text
+editor if you plan to continue editing the block that represents it in
+the Block Editor! File corruption is VERY likely to occur.
+*/
+/*
+Copyright (C) 2022  Intel Corporation. All rights reserved.
+Your use of Intel Corporation's design tools, logic functions 
+and other software and tools, and any partner logic 
+functions, and any output files from any of the foregoing 
+(including device programming or simulation files), and any 
+associated documentation or information are expressly subject 
+to the terms and conditions of the Intel Program License 
+Subscription Agreement, the Intel Quartus Prime License Agreement,
+the Intel FPGA IP License Agreement, or other applicable license
+agreement, including, without limitation, that your use is for
+the sole purpose of programming logic devices manufactured by
+Intel and sold by Intel or its authorized distributors.  Please
+refer to the applicable agreement for further details, at
+https://fpgasoftware.intel.com/eula.
+*/
+(header "symbol" (version "1.1"))
+(symbol
+	(rect 0 0 168 168)
+	(text "pll10_2" (rect 63 0 88 12)(font "Arial" (font_size 11)))
+	(text "inst" (rect 8 152 20 164)(font "Arial" ))
+	(port
+		(pt 0 72)
+		(input)
+		(text "refclk" (rect 0 0 22 12)(font "Arial" (font_size 8)))
+		(text "refclk" (rect 4 65 40 76)(font "Arial" (font_size 8)))
+	)
+	(port
+		(pt 0 120)
+		(input)
+		(text "rst" (rect 0 0 10 12)(font "Arial" (font_size 8)))
+		(text "rst" (rect 4 115 22 126)(font "Arial" (font_size 8)))
+	)
+	(port
+		(pt 168 72)
+		(output)
+		(text "locked" (rect 0 0 24 12)(font "Arial" (font_size 8)))
+		(text "locked" (rect 137 65 173 76)(font "Arial" (font_size 8)))
+	)
+	(port
+		(pt 168 120)
+		(output)
+		(text "outclk_0" (rect 0 0 33 12)(font "Arial" (font_size 8)))
+		(text "outclk_0" (rect 127 115 175 126)(font "Arial" (font_size 8)))
+	)
+	(drawing
+		(text "refclk" (rect 19 46 74 105)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "clk" (rect 56 71 130 152)(font "Arial" (color 0 0 0)))
+		(text "locked" (rect 120 46 276 105)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "export" (rect 89 71 214 152)(font "Arial" (color 0 0 0)))
+		(text "reset" (rect 22 96 74 205)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "reset" (rect 56 121 142 252)(font "Arial" (color 0 0 0)))
+		(text "outclk0" (rect 120 96 282 205)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "clk" (rect 104 121 226 252)(font "Arial" (color 0 0 0)))
+		(text " pll10_2 " (rect 138 151 330 312)(font "Arial" ))
+		(line (pt 51 34)(pt 119 34)(line_width 1))
+		(line (pt 119 34)(pt 119 151)(line_width 1))
+		(line (pt 51 151)(pt 119 151)(line_width 1))
+		(line (pt 51 34)(pt 51 151)(line_width 1))
+		(line (pt 0 76)(pt 51 76)(line_width 1))
+		(line (pt 52 55)(pt 52 80)(line_width 1))
+		(line (pt 53 55)(pt 53 80)(line_width 1))
+		(line (pt 170 76)(pt 119 76)(line_width 1))
+		(line (pt 118 55)(pt 118 80)(line_width 1))
+		(line (pt 117 55)(pt 117 80)(line_width 1))
+		(line (pt 0 126)(pt 51 126)(line_width 1))
+		(line (pt 52 105)(pt 52 130)(line_width 1))
+		(line (pt 53 105)(pt 53 130)(line_width 1))
+		(line (pt 170 126)(pt 119 126)(line_width 1))
+		(line (pt 118 105)(pt 118 130)(line_width 1))
+		(line (pt 117 105)(pt 117 130)(line_width 1))
+		(line (pt 0 0)(pt 170 0)(line_width 1))
+		(line (pt 170 0)(pt 170 168)(line_width 1))
+		(line (pt 0 168)(pt 170 168)(line_width 1))
+		(line (pt 0 0)(pt 0 168)(line_width 1))
+	)
+)

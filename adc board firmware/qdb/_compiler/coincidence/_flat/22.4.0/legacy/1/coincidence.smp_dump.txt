@@ -1,0 +1,33 @@
+
+State Machine - Summary
+
+State Machine - inst1|state
+Name state.TX_DATA4 state.TX_DATA3 state.TX_DATA2 state.PLLCLOCK state.TX_DATA_CONST state.TX_DATA1 state.PROCESS state.BOOTUP state.RX state.INIT 
+state.INIT 0 0 0 0 0 0 0 0 0 0 
+state.RX 0 0 0 0 0 0 0 0 1 1 
+state.BOOTUP 0 0 0 0 0 0 0 1 0 1 
+state.PROCESS 0 0 0 0 0 0 1 0 0 1 
+state.TX_DATA1 0 0 0 0 0 1 0 0 0 1 
+state.TX_DATA_CONST 0 0 0 0 1 0 0 0 0 1 
+state.PLLCLOCK 0 0 0 1 0 0 0 0 0 1 
+state.TX_DATA2 0 0 1 0 0 0 0 0 0 1 
+state.TX_DATA3 0 1 0 0 0 0 0 0 0 1 
+state.TX_DATA4 1 0 0 0 0 0 0 0 0 1 
+
+State Machine - inst1|flashstate
+Name flashstate.0011 flashstate.0010 flashstate.0001 flashstate.0000 
+flashstate.0000 0 0 0 0 
+flashstate.0001 0 0 1 1 
+flashstate.0010 0 1 0 1 
+flashstate.0011 1 0 0 1 
+
+State Machine - inst20|iopll_0|altera_iopll_i|dps_pulse_gen_iopll_inst|state
+Name state.IDLE state.WAIT state.PULSE 
+state.IDLE 0 0 0 
+state.PULSE 1 0 1 
+state.WAIT 1 1 0 
+
+State Machine - inst1|pllresetstate
+Name pllresetstate.01 
+pllresetstate.00 0 
+pllresetstate.01 1 

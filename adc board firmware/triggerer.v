@@ -6,9 +6,9 @@ module triggerer(
    output reg [9:0]  ram_wr_address=0,
    input signed [11:0] samplevalue[40],
    input wire lvdsin_trig,
-   output reg lvdsout_trig=0,
+   output reg lvdsout_trig,
    input wire lvdsin_trig_b,
-   output reg lvdsout_trig_b=0,
+   output reg lvdsout_trig_b,
    input exttrigin,
    output auxout,
    output reg led, // controls LED2

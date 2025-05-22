@@ -1,0 +1,9 @@
+	component pll10_3 is
+		port (
+			refclk   : in  std_logic := 'X'; -- clk
+			locked   : out std_logic;        -- export
+			rst      : in  std_logic := 'X'; -- reset
+			outclk_0 : out std_logic         -- clk
+		);
+	end component pll10_3;
+
