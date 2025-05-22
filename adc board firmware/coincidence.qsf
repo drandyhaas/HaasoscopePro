@@ -404,7 +404,6 @@ set_global_assignment -name CDF_FILE Chain2.cdf
 set_global_assignment -name CDF_FILE Chain2compressed.cdf
 set_global_assignment -name QSYS_FILE asmi.qsys
 set_global_assignment -name QSYS_FILE clkctrl.qsys
-set_global_assignment -name QIP_FILE fifo1.qip
 set_global_assignment -name QIP_FILE lvds1.qip
 set_global_assignment -name QIP_FILE pll1.qip
 set_global_assignment -name QIP_FILE pll2.qip
