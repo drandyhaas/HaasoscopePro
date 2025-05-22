@@ -27,8 +27,8 @@ https://fpgasoftware.intel.com/eula.
 	(port
 		(pt 0 72)
 		(input)
-		(text "rx_in[13..0]" (rect 0 0 43 12)(font "Arial" (font_size 8)))
-		(text "rx_in[13..0]" (rect 4 65 76 76)(font "Arial" (font_size 8)))
+		(text "rx_in[11..0]" (rect 0 0 42 12)(font "Arial" (font_size 8)))
+		(text "rx_in[11..0]" (rect 4 65 76 76)(font "Arial" (font_size 8)))
 	)
 	(port
 		(pt 0 120)
@@ -46,8 +46,8 @@ https://fpgasoftware.intel.com/eula.
 	(port
 		(pt 272 72)
 		(output)
-		(text "rx_out[139..0]" (rect 0 0 54 12)(font "Arial" (font_size 8)))
-		(text "rx_out[139..0]" (rect 204 65 288 76)(font "Arial" (font_size 8)))
+		(text "rx_out[119..0]" (rect 0 0 53 12)(font "Arial" (font_size 8)))
+		(text "rx_out[119..0]" (rect 206 65 290 76)(font "Arial" (font_size 8)))
 	)
 	(port
 		(pt 272 120)
@@ -58,8 +58,8 @@ https://fpgasoftware.intel.com/eula.
 	(port
 		(pt 272 176)
 		(output)
-		(text "rx_dpa_locked[13..0]" (rect 0 0 82 12)(font "Arial" (font_size 8)))
-		(text "rx_dpa_locked[13..0]" (rect 169 165 289 176)(font "Arial" (font_size 8)))
+		(text "rx_dpa_locked[11..0]" (rect 0 0 81 12)(font "Arial" (font_size 8)))
+		(text "rx_dpa_locked[11..0]" (rect 171 165 291 176)(font "Arial" (font_size 8)))
 		(line (pt 272 176)(pt 153 176)(line_width 3))
 	)
 	(port

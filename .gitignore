@@ -11,3 +11,5 @@
 .idea
 software/dist/*.zip
 /adc board firmware/qdb/_compiler/coincidence/_flat/22.4.0/legacy/1/coincidence.quiproj.13836.rdr.flock
+/adc board firmware/qdb/
+/adc board firmware/tmp-clearbox/

@@ -1,4 +1,4 @@
- -- Copyright (C) 2024  Intel Corporation. All rights reserved.
+ -- Copyright (C) 2022  Intel Corporation. All rights reserved.
  -- Your use of Intel Corporation's design tools, logic functions 
  -- and other software and tools, and any partner logic 
  -- functions, and any output files from any of the foregoing 
@@ -24,17 +24,17 @@
  ---------------------------------------------------------------------------------
  -- NC            : No Connect. This pin has no internal connection to the device.
  -- DNU           : Do Not Use. This pin MUST NOT be connected.
- -- VCCINT        : Dedicated power pin, which MUST be connected to VCC  (1.2V).
- -- VCCIO         : Dedicated power pin, which MUST be connected to VCC
+ -- VCCPGM        : Dedicated power pin for configuration, which MUST be connected to 1.2V, 1.5V or 1,8V depending on the requirements of the configuration device.
+ -- VCCIO         : Dedicated power pin, which MUST be connected to specific voltage
  --                 of its bank.
- --                  Bank 1:       2.5V
- --                  Bank 2:       2.5V
- --                  Bank 3:       2.5V
- --                  Bank 4:       2.5V
- --                  Bank 5:       2.5V
- --                  Bank 6:       2.5V
- --                  Bank 7:       2.5V
- --                  Bank 8:       3.3V
+ --                  Bank 2L:       1.8V
+ --                  Bank 2K:       1.8V
+ --                  Bank 2J:       1.8V
+ --                  Bank 2A:       1.8V
+ --                  Bank 3B:  1.8V
+ --                  Bank 3A:  1.8V
+ -- RREF          : External reference resistor for the transceiver, MUST be connected to
+ --                 GND via a 2k Ohm resistor.
  -- GND           : Dedicated ground pin. Dedicated GND pins MUST be connected to GND.
  --                  It can also be used to report unused dedicated pins. The connection
  --                  on the board for unused dedicated pins depends on whether this will
@@ -49,13 +49,18 @@
  --                  This pin should be connected to GND. It may also be connected  to a
  --                  valid signal  on the board  (low, high, or toggling)  if that signal
  --                  is required for a different revision of the design.
- -- GND*          : Unused  I/O  pin. Connect each pin marked GND* directly to GND
- --                  or leave it unconnected.
+ -- GND*          : Unused  I/O  pin.   For transceiver I/O banks, connect each pin marked GND*
+ --                  either individually through a 10k Ohm resistor to GND or tie all pins
+ --                  together and connect through a single 10k Ohm resistor to GND.
  -- RESERVED      : Unused I/O pin, which MUST be left unconnected.
  -- RESERVED_INPUT    : Pin is tri-stated and should be connected to the board.
  -- RESERVED_INPUT_WITH_WEAK_PULLUP    : Pin is tri-stated with internal weak pull-up resistor.
  -- RESERVED_INPUT_WITH_BUS_HOLD       : Pin is tri-stated with bus-hold circuitry.
  -- RESERVED_OUTPUT_DRIVEN_HIGH        : Pin is output driven high.
+ -- GXB_GND*:       Unused GXB Receiver or dedicated reference clock pin. This pin
+ --                 must be connected to GXB_GND through a 10k Ohm resistor.
+ -- GXB_NC        : Unused GXB Transmitter or dedicated clock output pin. This pin
+ --                 must not be connected.
  ---------------------------------------------------------------------------------
 
 
@@ -64,492 +69,788 @@
  -- Pin directions (input, output or bidir) are based on device operating in user mode.
  ---------------------------------------------------------------------------------
 
-Quartus Prime Version 23.1std.1 Build 993 05/14/2024 SC Lite Edition
-CHIP  "coincidence"  ASSIGNED TO AN: EP4CE30F23C6
+Quartus Prime Version 22.4.0 Build 94 12/07/2022 SC Pro Edition
+CHIP  "coincidence"  ASSIGNED TO AN: 10CX105YF780E6G
 
 Pin Name/Usage               : Location  : Dir.   : I/O Standard      : Voltage : I/O Bank  : User Assignment
 -------------------------------------------------------------------------------------------------------------
-GND                          : A1        : gnd    :                   :         :           :                
-VCCIO8                       : A2        : power  :                   : 3.3V    : 8         :                
-ftdi_oe_n                    : A3        : output : 3.3-V LVTTL       :         : 8         : Y              
-spics[5]                     : A4        : output : 3.3-V LVTTL       :         : 8         : Y              
-led[0]                       : A5        : output : 3.3-V LVTTL       :         : 8         : Y              
-led[1]                       : A6        : output : 3.3-V LVTTL       :         : 8         : Y              
-led[2]                       : A7        : output : 3.3-V LVTTL       :         : 8         : Y              
-led[3]                       : A8        : output : 3.3-V LVTTL       :         : 8         : Y              
-ftdi_data[1]                 : A9        : bidir  : 3.3-V LVTTL       :         : 8         : Y              
-spimisos[1]                  : A10       : input  : 3.3-V LVTTL       :         : 8         : Y              
-ftdi_clk                     : A11       : input  : 3.3-V LVTTL       :         : 8         : Y              
-clk_ext                      : A12       : input  : 2.5 V             :         : 7         : Y              
-debugout[0]                  : A13       : output : 2.5 V             :         : 7         : Y              
-debugout[1]                  : A14       : output : 2.5 V             :         : 7         : Y              
-debugout[2]                  : A15       : output : 2.5 V             :         : 7         : Y              
-debugout[3]                  : A16       : output : 2.5 V             :         : 7         : Y              
-debugout[4]                  : A17       : output : 2.5 V             :         : 7         : Y              
-debugout[5]                  : A18       : output : 2.5 V             :         : 7         : Y              
-debugout[6]                  : A19       : output : 2.5 V             :         : 7         : Y              
-debugout[7]                  : A20       : output : 2.5 V             :         : 7         : Y              
-VCCIO7                       : A21       : power  :                   : 2.5V    : 7         :                
-GND                          : A22       : gnd    :                   :         :           :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : AA1       :        :                   :         : 2         :                
-GND                          : AA2       : gnd    :                   :         :           :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : AA3       :        :                   :         : 3         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : AA4       :        :                   :         : 3         :                
-lvds3in[8]                   : AA5       : input  : LVDS              :         : 3         : Y              
-VCCIO3                       : AA6       : power  :                   : 2.5V    : 3         :                
-lvds3in[10]                  : AA7       : input  : LVDS              :         : 3         : Y              
-lvds3in[11]                  : AA8       : input  : LVDS              :         : 3         : Y              
-lvds3in[12]                  : AA9       : input  : LVDS              :         : 3         : Y              
-lvds3in[13]                  : AA10      : input  : LVDS              :         : 3         : Y              
-GND+                         : AA11      :        :                   :         : 3         :                
-GND+                         : AA12      :        :                   :         : 4         :                
-lvds4in[12]                  : AA13      : input  : LVDS              :         : 4         : Y              
-lvds4in[11]                  : AA14      : input  : LVDS              :         : 4         : Y              
-lvds4in[10]                  : AA15      : input  : LVDS              :         : 4         : Y              
-lvds4in[9]                   : AA16      : input  : LVDS              :         : 4         : Y              
-lvds4in[8]                   : AA17      : input  : LVDS              :         : 4         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : AA18      :        :                   :         : 4         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : AA19      :        :                   :         : 4         :                
-lvds4in[7]                   : AA20      : input  : LVDS              :         : 4         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : AA21      :        :                   :         : 5         :                
-GND                          : AA22      : gnd    :                   :         :           :                
-GND                          : AB1       : gnd    :                   :         :           :                
-VCCIO3                       : AB2       : power  :                   : 2.5V    : 3         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : AB3       :        :                   :         : 3         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : AB4       :        :                   :         : 3         :                
-lvds3in[8](n)                : AB5       : input  : LVDS              :         : 3         : Y              
-GND                          : AB6       : gnd    :                   :         :           :                
-lvds3in[10](n)               : AB7       : input  : LVDS              :         : 3         : Y              
-lvds3in[11](n)               : AB8       : input  : LVDS              :         : 3         : Y              
-lvds3in[12](n)               : AB9       : input  : LVDS              :         : 3         : Y              
-lvds3in[13](n)               : AB10      : input  : LVDS              :         : 3         : Y              
-GND+                         : AB11      :        :                   :         : 3         :                
-GND+                         : AB12      :        :                   :         : 4         :                
-lvds4in[12](n)               : AB13      : input  : LVDS              :         : 4         : Y              
-lvds4in[11](n)               : AB14      : input  : LVDS              :         : 4         : Y              
-lvds4in[10](n)               : AB15      : input  : LVDS              :         : 4         : Y              
-lvds4in[9](n)                : AB16      : input  : LVDS              :         : 4         : Y              
-lvds4in[8](n)                : AB17      : input  : LVDS              :         : 4         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : AB18      :        :                   :         : 4         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : AB19      :        :                   :         : 4         :                
-lvds4in[7](n)                : AB20      : input  : LVDS              :         : 4         : Y              
-VCCIO4                       : AB21      : power  :                   : 2.5V    : 4         :                
+NC                           : A2        :        :                   :         :           :                
+NC                           : A3        :        :                   :         :           :                
+NC                           : A4        :        :                   :         :           :                
+GND                          : A5        : gnd    :                   :         :           :                
+NC                           : A6        :        :                   :         :           :                
+NC                           : A7        :        :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : A8        :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : A9        :        :                   : 1.8V    : 2K        :                
+GND                          : A10       : gnd    :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : A11       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : A12       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : A13       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : A14       :        :                   : 1.8V    : 2K        :                
+GND                          : A15       : gnd    :                   :         :           :                
+ftdi_data[4]                 : A16       : bidir  : 1.8 V             : 1.8V    : 2K        : Y              
+ftdi_data[6]                 : A17       : bidir  : 1.8 V             : 1.8V    : 2K        : Y              
+ftdi_data[5]                 : A18       : bidir  : 1.8 V             : 1.8V    : 2K        : Y              
+ftdi_data[0]                 : A19       : bidir  : 1.8 V             : 1.8V    : 2K        : Y              
+GND                          : A20       : gnd    :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : A21       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : A22       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : A23       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : A24       :        :                   : 1.8V    : 2K        :                
+GND                          : A25       : gnd    :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : A26       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : A27       :        :                   : 1.8V    : 2K        :                
+lvds1in[2](n)                : AA1       : input  : LVDS              : 1.8V    : 3A        : N              
+lvds1in[9]                   : AA2       : input  : LVDS              : 1.8V    : 3A        : Y              
+debugout[4]                  : AA3       : output : 1.8 V             : 1.8V    : 3A        : Y              
+led[2]                       : AA4       : output : 1.8 V             : 1.8V    : 3A        : Y              
+VCCIO3A                      : AA5       : power  :                   : 1.8V    : 3A        :                
+lvds1in[12]                  : AA6       : input  : LVDS              : 1.8V    : 3A        : Y              
+lvds1in[12](n)               : AA7       : input  : LVDS              : 1.8V    : 3A        : N              
+lvds1in[5](n)                : AA8       : input  : LVDS              : 1.8V    : 3A        : N              
+lvds1in[5]                   : AA9       : input  : LVDS              : 1.8V    : 3A        : Y              
+GND                          : AA10      : gnd    :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : AA11      :        :                   : 1.8V    : 2A        :                
+spimisos[6]                  : AA12      : input  : 1.8 V             : 1.8V    : 2A        : Y              
+RESERVED_INPUT_WITH_WEAK_PULLUP : AA13      :        :                   : 1.8V    : 2A        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : AA14      :        :                   : 1.8V    : 2A        :                
+VCCIO2A                      : AA15      : power  :                   : 1.8V    : 2A        :                
+lvds4in[7](n)                : AA16      : input  : LVDS              : 1.8V    : 2A        : N              
+boardin[1]                   : AA17      : input  : 1.8 V             : 1.8V    : 2J        : Y              
+lvds2in[12]                  : AA18      : input  : LVDS              : 1.8V    : 2J        : Y              
+lvds2in[12](n)               : AA19      : input  : LVDS              : 1.8V    : 2J        : N              
+VCCIO2J                      : AA20      : power  :                   : 1.8V    : 2J        :                
+lvdsout_trig                 : AA21      : output : LVDS              : 1.8V    : 2J        : Y              
+lvds2in[8](n)                : AA22      : input  : LVDS              : 1.8V    : 2J        : N              
+lvds2in[8]                   : AA23      : input  : LVDS              : 1.8V    : 2J        : Y              
+GND                          : AA24      : gnd    :                   :         :           :                
+GND                          : AA25      : gnd    :                   :         :           :                
+GND                          : AA26      : gnd    :                   :         :           :                
+GXB_NC                       : AA27      :        :                   : 0V      : 1C        :                
+GXB_NC                       : AA28      :        :                   : 0V      : 1C        :                
+lvds1in[2]                   : AB1       : input  : LVDS              : 1.8V    : 3A        : Y              
+GND                          : AB2       : gnd    :                   :         :           :                
+lvds1in[9](n)                : AB3       : input  : LVDS              : 1.8V    : 3A        : N              
+auxout                       : AB4       : output : 1.8 V             : 1.8V    : 3A        : Y              
+lvds1in[7](n)                : AB5       : input  : LVDS              : 1.8V    : 3A        : N              
+lvds1in[7]                   : AB6       : input  : LVDS              : 1.8V    : 3A        : Y              
+GND                          : AB7       : gnd    :                   :         :           :                
+MSEL2                        : AB8       : input  :                   : 0V      : CSS       :                
+nCE                          : AB9       :        :                   : 0V      : CSS       :                
+GND                          : AB10      :        :                   : 0V      : CSS       :                
+spimisos[0]                  : AB11      : input  : 1.8 V             : 1.8V    : 2A        : Y              
+VCCIO2A                      : AB12      : power  :                   : 1.8V    : 2A        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : AB13      :        :                   : 1.8V    : 2A        :                
+spimisos[5]                  : AB14      : input  : 1.8 V             : 1.8V    : 2A        : Y              
+lvds4in[0](n)                : AB15      : input  : LVDS              : 1.8V    : 2A        : N              
+lvds4in[7]                   : AB16      : input  : LVDS              : 1.8V    : 2A        : Y              
+GND                          : AB17      : gnd    :                   :         :           :                
+ftdi_rxf_n                   : AB18      : input  : 1.8 V             : 1.8V    : 2J        : Y              
+boardin[4]                   : AB19      : input  : 1.8 V             : 1.8V    : 2J        : Y              
+lvds2in[11](n)               : AB20      : input  : LVDS              : 1.8V    : 2J        : N              
+boardin[0]                   : AB21      : input  : 1.8 V             : 1.8V    : 2J        : Y              
 GND                          : AB22      : gnd    :                   :         :           :                
-overrange[3]                 : B1        : input  : 2.5 V             :         : 1         : Y              
-overrange[2]                 : B2        : input  : 2.5 V             :         : 1         : Y              
-ftdi_wr_n                    : B3        : output : 3.3-V LVTTL       :         : 8         : Y              
-ftdi_txe_n                   : B4        : input  : 3.3-V LVTTL       :         : 8         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : B5        :        :                   :         : 8         :                
-spics[7]                     : B6        : output : 3.3-V LVTTL       :         : 8         : N              
-ftdi_rxf_n                   : B7        : input  : 3.3-V LVTTL       :         : 8         : Y              
-ftdi_rd_n                    : B8        : output : 3.3-V LVTTL       :         : 8         : Y              
-spimisos[2]                  : B9        : input  : 3.3-V LVTTL       :         : 8         : Y              
-spimisos[3]                  : B10       : input  : 3.3-V LVTTL       :         : 8         : Y              
-clk50                        : B11       : input  : 3.3-V LVTTL       :         : 8         : Y              
-GND+                         : B12       :        :                   :         : 7         :                
-debugout[8]                  : B13       : output : 2.5 V             :         : 7         : Y              
-debugout[9]                  : B14       : output : 2.5 V             :         : 7         : Y              
-auxout                       : B15       : output : 2.5 V             :         : 7         : Y              
-debugout[11]                 : B16       : output : 2.5 V             :         : 7         : Y              
-boardout[0]                  : B17       : output : 2.5 V             :         : 7         : Y              
-boardout[1]                  : B18       : output : 2.5 V             :         : 7         : Y              
-boardout[2]                  : B19       : output : 2.5 V             :         : 7         : Y              
-boardout[3]                  : B20       : output : 2.5 V             :         : 7         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : B21       :        :                   :         : 6         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : B22       :        :                   :         : 6         :                
-overrange[1]                 : C1        : input  : 2.5 V             :         : 1         : Y              
-overrange[0]                 : C2        : input  : 2.5 V             :         : 1         : Y              
-ftdi_data[7]                 : C3        : bidir  : 3.3-V LVTTL       :         : 8         : Y              
-ftdi_data[6]                 : C4        : bidir  : 3.3-V LVTTL       :         : 8         : Y              
-GND                          : C5        : gnd    :                   :         :           :                
-ftdi_data[5]                 : C6        : bidir  : 3.3-V LVTTL       :         : 8         : Y              
-ftdi_data[4]                 : C7        : bidir  : 3.3-V LVTTL       :         : 8         : Y              
-ftdi_data[3]                 : C8        : bidir  : 3.3-V LVTTL       :         : 8         : Y              
+overrange[2]                 : AB23      : input  : 1.8 V             : 1.8V    : 2J        : Y              
+GND                          : AB24      : gnd    :                   :         :           :                
+GXB_GND*                     : AB25      :        :                   : 0V      : 1C        :                
+GXB_GND*                     : AB26      :        :                   : 0V      : 1C        :                
+GND                          : AB27      : gnd    :                   :         :           :                
+GND                          : AB28      : gnd    :                   :         :           :                
+debugout[11]                 : AC1       : output : 1.8 V             : 1.8V    : 3A        : Y              
+debugout[3]                  : AC2       : output : 1.8 V             : 1.8V    : 3A        : Y              
+lvds1in[3](n)                : AC3       : input  : LVDS              : 1.8V    : 3A        : N              
+GND                          : AC4       : gnd    :                   :         :           :                
+spiclk                       : AC5       : output : 1.8 V             : 1.8V    : 3A        : Y              
+debugout[6]                  : AC6       : output : 1.8 V             : 1.8V    : 3A        : Y              
+debugout[0]                  : AC7       : output : 1.8 V             : 1.8V    : 3A        : Y              
+nCONFIG                      : AC8       : input  :                   : 0V      : CSS       :                
+GND                          : AC9       : gnd    :                   :         :           :                
+TDI                          : AC10      : input  :                   : 0V      : CSS       :                
+lvds4in[5](n)                : AC11      : input  : LVDS              : 1.8V    : 2A        : N              
+lvds4in[5]                   : AC12      : input  : LVDS              : 1.8V    : 2A        : Y              
+boardin[2]                   : AC13      : input  : 1.8 V             : 1.8V    : 2A        : Y              
+VCCIO2A                      : AC14      : power  :                   : 1.8V    : 2A        :                
+lvds4in[0]                   : AC15      : input  : LVDS              : 1.8V    : 2A        : Y              
+lvds4in[11]                  : AC16      : input  : LVDS              : 1.8V    : 2A        : Y              
+lvds4in[11](n)               : AC17      : input  : LVDS              : 1.8V    : 2A        : N              
+lvds4in[6](n)                : AC18      : input  : LVDS              : 1.8V    : 2A        : N              
+VCCIO2J                      : AC19      : power  :                   : 1.8V    : 2J        :                
+lvds2in[11]                  : AC20      : input  : LVDS              : 1.8V    : 2J        : Y              
+overrange[0]                 : AC21      : input  : 1.8 V             : 1.8V    : 2J        : Y              
+lvds2in[9](n)                : AC22      : input  : LVDS              : 1.8V    : 2J        : N              
+boardin[6]                   : AC23      : input  : 1.8 V             : 1.8V    : 2J        : Y              
+GND                          : AC24      : gnd    :                   :         :           :                
+GND                          : AC25      : gnd    :                   :         :           :                
+GND                          : AC26      : gnd    :                   :         :           :                
+GXB_NC                       : AC27      :        :                   : 0V      : 1C        :                
+GXB_NC                       : AC28      :        :                   : 0V      : 1C        :                
+GND                          : AD1       : gnd    :                   :         :           :                
+spimosi                      : AD2       : output : 1.8 V             : 1.8V    : 3A        : Y              
+lvds1in[3]                   : AD3       : input  : LVDS              : 1.8V    : 3A        : Y              
+lvds1in[4](n)                : AD4       : input  : LVDS              : 1.8V    : 3A        : N              
+NC                           : AD5       :        :                   :         :           :                
+GND                          : AD6       : gnd    :                   :         :           :                
+MSEL1                        : AD7       : input  :                   : 0V      : CSS       :                
+nIO_PULLUP                   : AD8       : input  :                   : 0V      : CSS       :                
+DCLK                         : AD9       : bidir  :                   : 0V      : CSS       :                
+GND                          : AD10      :        :                   : 0V      : CSS       :                
+GND                          : AD11      : gnd    :                   :         :           :                
+lvds4in[1](n)                : AD12      : input  : LVDS              : 1.8V    : 2A        : N              
+lvds4in[8]                   : AD13      : input  : LVDS              : 1.8V    : 2A        : Y              
+lvds4in[8](n)                : AD14      : input  : LVDS              : 1.8V    : 2A        : N              
+spimisos[3]                  : AD15      : input  : 1.8 V             : 1.8V    : 2A        : Y              
+GND                          : AD16      : gnd    :                   :         :           :                
+lvds4in[2](n)                : AD17      : input  : LVDS              : 1.8V    : 2A        : N              
+lvds4in[6]                   : AD18      : input  : LVDS              : 1.8V    : 2A        : Y              
+lvdsout_spare(n)             : AD19      : output : LVDS              : 1.8V    : 2A        : Y              
+lvdsout_spare                : AD20      : output : LVDS              : 1.8V    : 2A        : Y              
+GND                          : AD21      : gnd    :                   :         :           :                
+lvds2in[9]                   : AD22      : input  : LVDS              : 1.8V    : 2J        : Y              
+lvds2in[7](n)                : AD23      : input  : LVDS              : 1.8V    : 2J        : N              
+GND                          : AD24      : gnd    :                   :         :           :                
+GXB_GND*                     : AD25      :        :                   : 0V      : 1C        :                
+GXB_GND*                     : AD26      :        :                   : 0V      : 1C        :                
+GND                          : AD27      : gnd    :                   :         :           :                
+GND                          : AD28      : gnd    :                   :         :           :                
+lvds1in[11]                  : AE1       : input  : LVDS              : 1.8V    : 3A        : Y              
+debugout[2]                  : AE2       : output : 1.8 V             : 1.8V    : 3A        : Y              
+GND                          : AE3       : gnd    :                   :         :           :                
+lvds1in[4]                   : AE4       : input  : LVDS              : 1.8V    : 3A        : Y              
+NC                           : AE5       :        :                   :         :           :                
+ftdi_clk                     : AE6       : input  : 1.8 V             : 1.8V    : 3A        : Y              
+MSEL0                        : AE7       : input  :                   : 0V      : CSS       :                
+GND                          : AE8       : gnd    :                   :         :           :                
+AS_DATA0, ASDO               : AE9       :        :                   : 0V      : CSS       :                
+lvds4in[9](n)                : AE10      : input  : LVDS              : 1.8V    : 2A        : N              
+lvds4in[9]                   : AE11      : input  : LVDS              : 1.8V    : 2A        : Y              
+lvds4in[1]                   : AE12      : input  : LVDS              : 1.8V    : 2A        : Y              
+GND                          : AE13      : gnd    :                   :         :           :                
+boardin[7]                   : AE14      : input  : 1.8 V             : 1.8V    : 2A        : Y              
+spimisos[4]                  : AE15      : input  : 1.8 V             : 1.8V    : 2A        : Y              
+spimisos[2]                  : AE16      : input  : 1.8 V             : 1.8V    : 2A        : Y              
+lvds4in[2]                   : AE17      : input  : LVDS              : 1.8V    : 2A        : Y              
+GND                          : AE18      : gnd    :                   :         :           :                
+lvds4in[10]                  : AE19      : input  : LVDS              : 1.8V    : 2A        : Y              
+lvds4in[10](n)               : AE20      : input  : LVDS              : 1.8V    : 2A        : N              
+boardin[5]                   : AE21      : input  : 1.8 V             : 1.8V    : 2J        : Y              
+boardout[6]                  : AE22      : output : 1.8 V             : 1.8V    : 2J        : Y              
+lvds2in[7]                   : AE23      : input  : LVDS              : 1.8V    : 2J        : Y              
+GND                          : AE24      : gnd    :                   :         :           :                
+GND                          : AE25      : gnd    :                   :         :           :                
+GND                          : AE26      : gnd    :                   :         :           :                
+GXB_NC                       : AE27      :        :                   : 0V      : 1C        :                
+GXB_NC                       : AE28      :        :                   : 0V      : 1C        :                
+lvds1in[8](n)                : AF1       : input  : LVDS              : 1.8V    : 3A        : N              
+lvds1in[11](n)               : AF2       : input  : LVDS              : 1.8V    : 3A        : N              
+led[0]                       : AF3       : output : 1.8 V             : 1.8V    : 3A        : Y              
+NC                           : AF4       :        :                   :         :           :                
+GND                          : AF5       : gnd    :                   :         :           :                
+debugout[7]                  : AF6       : output : 1.8 V             : 1.8V    : 3A        : Y              
+nSTATUS                      : AF7       :        :                   : 0V      : CSS       :                
+TRST                         : AF8       : input  :                   : 0V      : CSS       :                
+nCSO2                        : AF9       :        :                   : 0V      : CSS       :                
+GND                          : AF10      : gnd    :                   :         :           :                
+lvdsin_trig(n)               : AF11      : input  : LVDS              : 1.8V    : 2A        : Y              
+lvdsin_trig                  : AF12      : input  : LVDS              : 1.8V    : 2A        : Y              
+ftdi_data[3]                 : AF13      : bidir  : 1.8 V             : 1.8V    : 2A        : Y              
+spimisos[1]                  : AF14      : input  : 1.8 V             : 1.8V    : 2A        : Y              
+GND                          : AF15      : gnd    :                   :         :           :                
+exttrigin                    : AF16      : input  : 1.8 V             : 1.8V    : 2A        : Y              
+lvds4in[4]                   : AF17      : input  : LVDS              : 1.8V    : 2A        : Y              
+lvds4in[4](n)                : AF18      : input  : LVDS              : 1.8V    : 2A        : N              
+lvds4in[3](n)                : AF19      : input  : LVDS              : 1.8V    : 2A        : N              
+GND                          : AF20      : gnd    :                   :         :           :                
+debugout[10]                 : AF21      : output : 1.8 V             : 1.8V    : 2J        : Y              
+spics[2]                     : AF22      : output : 1.8 V             : 1.8V    : 2J        : Y              
+lvds2in[2](n)                : AF23      : input  : LVDS              : 1.8V    : 2J        : N              
+GND                          : AF24      : gnd    :                   :         :           :                
+GXB_GND*                     : AF25      :        :                   : 0V      : 1C        :                
+GXB_GND*                     : AF26      :        :                   : 0V      : 1C        :                
+GND                          : AF27      : gnd    :                   :         :           :                
+GND                          : AF28      : gnd    :                   :         :           :                
+lvds1in[8]                   : AG1       : input  : LVDS              : 1.8V    : 3A        : Y              
+GND                          : AG2       : gnd    :                   :         :           :                
+debugout[1]                  : AG3       : output : 1.8 V             : 1.8V    : 3A        : Y              
+NC                           : AG4       :        :                   :         :           :                
+AS_DATA2                     : AG5       :        :                   : 0V      : CSS       :                
+AS_DATA1                     : AG6       :        :                   : 0V      : CSS       :                
+GND                          : AG7       : gnd    :                   :         :           :                
+CONF_DONE                    : AG8       : bidir  :                   : 0V      : CSS       :                
+lvds2in[10](n)               : AG9       : input  : LVDS              : 1.8V    : 2J        : N              
+lvds2in[10]                  : AG10      : input  : LVDS              : 1.8V    : 2J        : Y              
+overrange[3]                 : AG11      : input  : 1.8 V             : 1.8V    : 2J        : Y              
+GND                          : AG12      : gnd    :                   :         :           :                
+lvds2in[4](n)                : AG13      : input  : LVDS              : 1.8V    : 2J        : N              
+lvds4in[12]                  : AG14      : input  : LVDS              : 1.8V    : 2A        : Y              
+lvds4in[12](n)               : AG15      : input  : LVDS              : 1.8V    : 2A        : N              
+spimisos[7]                  : AG16      : input  : 1.8 V             : 1.8V    : 2A        : Y              
+GND                          : AG17      : gnd    :                   :         :           :                
+lvds4in[3]                   : AG18      : input  : LVDS              : 1.8V    : 2A        : Y              
+lvds2in[5]                   : AG19      : input  : LVDS              : 1.8V    : 2J        : Y              
+lvds2in[5](n)                : AG20      : input  : LVDS              : 1.8V    : 2J        : N              
+lvds2in[1](n)                : AG21      : input  : LVDS              : 1.8V    : 2J        : N              
+GND                          : AG22      : gnd    :                   :         :           :                
+lvds2in[2]                   : AG23      : input  : LVDS              : 1.8V    : 2J        : Y              
+GND                          : AG24      : gnd    :                   :         :           :                
+GND                          : AG25      : gnd    :                   :         :           :                
+GND                          : AG26      : gnd    :                   :         :           :                
+GXB_NC                       : AG27      :        :                   : 0V      : 1C        :                
+GXB_NC                       : AG28      :        :                   : 0V      : 1C        :                
+debugout[5]                  : AH2       : output : 1.8 V             : 1.8V    : 3A        : Y              
+led[3]                       : AH3       : output : 1.8 V             : 1.8V    : 3A        : Y              
+GND                          : AH4       : gnd    :                   :         :           :                
+AS_DATA3                     : AH5       :        :                   : 0V      : CSS       :                
+TMS                          : AH6       : input  :                   : 0V      : CSS       :                
+nCSO1                        : AH7       :        :                   : 0V      : CSS       :                
+nCSO0                        : AH8       :        :                   : 0V      : CSS       :                
+GND                          : AH9       : gnd    :                   :         :           :                
+lvds2in[3](n)                : AH10      : input  : LVDS              : 1.8V    : 2J        : N              
+lvds2in[3]                   : AH11      : input  : LVDS              : 1.8V    : 2J        : Y              
+reset                        : AH12      : input  : 1.8 V             : 1.8V    : 2J        : Y              
+lvds2in[4]                   : AH13      : input  : LVDS              : 1.8V    : 2J        : Y              
+GND                          : AH14      : gnd    :                   :         :           :                
+lvds2in[0](n)                : AH15      : input  : LVDS              : 1.8V    : 2J        : N              
+lvds2in[0]                   : AH16      : input  : LVDS              : 1.8V    : 2J        : Y              
+lvds2in[6](n)                : AH17      : input  : LVDS              : 1.8V    : 2J        : N              
+lvds2in[6]                   : AH18      : input  : LVDS              : 1.8V    : 2J        : Y              
+GND                          : AH19      : gnd    :                   :         :           :                
+clk_ext                      : AH20      : input  : 1.8 V             : 1.8V    : 2J        : Y              
+ftdi_txe_n                   : AH21      : input  : 1.8 V             : 1.8V    : 2J        : Y              
+lvds2in[1]                   : AH22      : input  : LVDS              : 1.8V    : 2J        : Y              
+DNU                          : AH23      :        :                   :         :           :                
+DNU                          : AH24      :        :                   :         :           :                
+RREF                         : AH25      :        :                   :         :           :                
+GND                          : AH26      : gnd    :                   :         :           :                
+GND                          : AH27      : gnd    :                   :         :           :                
+NC                           : B1        :        :                   :         :           :                
+GND                          : B2        : gnd    :                   :         :           :                
+NC                           : B3        :        :                   :         :           :                
+NC                           : B4        :        :                   :         :           :                
+NC                           : B5        :        :                   :         :           :                
+NC                           : B6        :        :                   :         :           :                
+GND                          : B7        : gnd    :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : B8        :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : B9        :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : B10       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : B11       :        :                   : 1.8V    : 2K        :                
+VCCIO2K                      : B12       : power  :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : B13       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : B14       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : B15       :        :                   : 1.8V    : 2K        :                
+ftdi_data[1]                 : B16       : bidir  : 1.8 V             : 1.8V    : 2K        : Y              
+GND                          : B17       : gnd    :                   :         :           :                
+lvdsout_clk(n)               : B18       : output : LVDS              : 1.8V    : 2K        : Y              
+lvdsout_clk                  : B19       : output : LVDS              : 1.8V    : 2K        : Y              
+RESERVED_INPUT_WITH_WEAK_PULLUP : B20       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : B21       :        :                   : 1.8V    : 2K        :                
+GND                          : B22       : gnd    :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : B23       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : B24       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : B25       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : B26       :        :                   : 1.8V    : 2K        :                
+GND                          : B27       : gnd    :                   :         :           :                
+GND                          : B28       : gnd    :                   :         :           :                
+NC                           : C1        :        :                   :         :           :                
+NC                           : C2        :        :                   :         :           :                
+NC                           : C3        :        :                   :         :           :                
+GND                          : C4        : gnd    :                   :         :           :                
+NC                           : C5        :        :                   :         :           :                
+NC                           : C6        :        :                   :         :           :                
+NC                           : C7        :        :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : C8        :        :                   : 1.8V    : 2K        :                
 GND                          : C9        : gnd    :                   :         :           :                
-spics[6]                     : C10       : output : 3.3-V LVTTL       :         : 8         : Y              
-GND                          : C11       : gnd    :                   :         :           :                
-GND                          : C12       : gnd    :                   :         :           :                
-boardout[6]                  : C13       : output : 2.5 V             :         : 7         : Y              
-GND                          : C14       : gnd    :                   :         :           :                
-boardout[7]                  : C15       : output : 2.5 V             :         : 7         : Y              
-GND                          : C16       : gnd    :                   :         :           :                
-boardin[0]                   : C17       : input  : 2.5 V             :         : 7         : Y              
-GND                          : C18       : gnd    :                   :         :           :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : C19       :        :                   :         : 7         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : C20       :        :                   :         : 6         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : C21       :        :                   :         : 6         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : C22       :        :                   :         : 6         :                
-asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_SDO : D1        : output : 2.5 V             :         : 1         : N              
-RESERVED_INPUT_WITH_WEAK_PULLUP : D2        :        :                   :         : 1         :                
-GND                          : D3        : gnd    :                   :         :           :                
-VCCIO1                       : D4        : power  :                   : 2.5V    : 1         :                
-VCCIO8                       : D5        : power  :                   : 3.3V    : 8         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : D6        :        :                   :         : 8         :                
-ftdi_data[2]                 : D7        : bidir  : 3.3-V LVTTL       :         : 8         : Y              
-GND                          : D8        : gnd    :                   :         :           :                
-VCCIO8                       : D9        : power  :                   : 3.3V    : 8         :                
-reset                        : D10       : input  : 3.3-V LVTTL       :         : 8         : Y              
-VCCIO8                       : D11       : power  :                   : 3.3V    : 8         :                
-VCCIO7                       : D12       : power  :                   : 2.5V    : 7         :                
-boardin[1]                   : D13       : input  : 2.5 V             :         : 7         : Y              
-VCCIO7                       : D14       : power  :                   : 2.5V    : 7         :                
-boardin[2]                   : D15       : input  : 2.5 V             :         : 7         : Y              
-VCCIO7                       : D16       : power  :                   : 2.5V    : 7         :                
-boardin[3]                   : D17       : input  : 2.5 V             :         : 7         : Y              
-VCCIO7                       : D18       : power  :                   : 2.5V    : 7         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : D19       :        :                   :         : 7         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : D20       :        :                   :         : 6         :                
-lvdsin_trig                  : D21       : input  : LVDS              :         : 6         : Y              
-lvdsin_trig(n)               : D22       : input  : LVDS              :         : 6         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : E1        :        :                   :         : 1         :                
-asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_SCE : E2        : output : 2.5 V             :         : 1         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : E3        :        :                   :         : 1         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : E4        :        :                   :         : 1         :                
-clkout                       : E5        : output : 3.3-V LVTTL       :         : 8         : Y              
-clkout2                      : E6        : output : 3.3-V LVTTL       :         : 8         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : E7        :        :                   :         : 8         :                
-VCCIO8                       : E8        : power  :                   : 3.3V    : 8         :                
-spimisos[6]                  : E9        : input  : 3.3-V LVTTL       :         : 8         : Y              
-spiclk                       : E10       : output : 3.3-V LVTTL       :         : 8         : Y              
-boardin[4]                   : E11       : input  : 2.5 V             :         : 7         : N              
-boardin[6]                   : E12       : input  : 2.5 V             :         : 7         : Y              
-debugout[10]                 : E13       : output : 2.5 V             :         : 7         : N              
-boardin[7]                   : E14       : input  : 2.5 V             :         : 7         : Y              
-boardin[5]                   : E15       : input  : 2.5 V             :         : 7         : Y              
-exttrigin                    : E16       : input  : 2.5 V             :         : 7         : Y              
-VCCD_PLL2                    : E17       : power  :                   : 1.2V    :           :                
-GNDA2                        : E18       : gnd    :                   :         :           :                
-VCCIO6                       : E19       : power  :                   : 2.5V    : 6         :                
-GND                          : E20       : gnd    :                   :         :           :                
-lvdsin_spare                 : E21       : input  : LVDS              :         : 6         : Y              
-lvdsin_spare(n)              : E22       : input  : LVDS              :         : 6         : Y              
-lvdsout_spare(n)             : F1        : output : LVDS              :         : 1         : Y              
-lvdsout_spare                : F2        : output : LVDS              :         : 1         : Y              
-GND                          : F3        : gnd    :                   :         :           :                
-VCCIO1                       : F4        : power  :                   : 2.5V    : 1         :                
-GNDA3                        : F5        : gnd    :                   :         :           :                
-VCCD_PLL3                    : F6        : power  :                   : 1.2V    :           :                
-spimosi                      : F7        : output : 3.3-V LVTTL       :         : 8         : Y              
-spics[0]                     : F8        : output : 3.3-V LVTTL       :         : 8         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : F9        :        :                   :         : 8         :                
-spimisos[0]                  : F10       : input  : 3.3-V LVTTL       :         : 8         : Y              
-spimisos[5]                  : F11       : input  : 3.3-V LVTTL       :         : 7         : N              
-GND                          : F12       : gnd    :                   :         :           :                
-boardout[4]                  : F13       : output : 2.5 V             :         : 7         : Y              
-boardout[5]                  : F14       : output : 2.5 V             :         : 7         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : F15       :        :                   :         : 7         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : F16       :        :                   :         : 7         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : F17       :        :                   :         : 6         :                
-VCCA2                        : F18       : power  :                   : 2.5V    :           :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : F19       :        :                   :         : 6         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : F20       :        :                   :         : 6         :                
-lvdsout_trig_b               : F21       : output : LVDS              :         : 6         : Y              
-lvdsout_trig_b(n)            : F22       : output : LVDS              :         : 6         : Y              
-GND+                         : G1        :        :                   :         : 1         :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : C10       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : C11       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : C12       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : C13       :        :                   : 1.8V    : 2K        :                
+VCCIO2K                      : C14       : power  :                   : 1.8V    : 2K        :                
+ftdi_data[2]                 : C15       : bidir  : 1.8 V             : 1.8V    : 2K        : Y              
+RESERVED_INPUT_WITH_WEAK_PULLUP : C16       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : C17       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : C18       :        :                   : 1.8V    : 2L        :                
+GND                          : C19       : gnd    :                   :         :           :                
+ftdi_data[7]                 : C20       : bidir  : 1.8 V             : 1.8V    : 2K        : Y              
+RESERVED_INPUT_WITH_WEAK_PULLUP : C21       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : C22       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : C23       :        :                   : 1.8V    : 2L        :                
+GND                          : C24       : gnd    :                   :         :           :                
+GND                          : C25       : gnd    :                   :         :           :                
+GND                          : C26       : gnd    :                   :         :           :                
+GND                          : C27       : gnd    :                   :         :           :                
+RREF                         : C28       :        :                   :         :           :                
+GND                          : D1        : gnd    :                   :         :           :                
+NC                           : D2        :        :                   :         :           :                
+NC                           : D3        :        :                   :         :           :                
+NC                           : D4        :        :                   :         :           :                
+NC                           : D5        :        :                   :         :           :                
+GND                          : D6        : gnd    :                   :         :           :                
+NC                           : D7        :        :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : D8        :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : D9        :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : D10       :        :                   : 1.8V    : 2K        :                
+GND                          : D11       : gnd    :                   :         :           :                
+NC                           : D12       :        :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : D13       :        :                   : 1.8V    : 2K        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : D14       :        :                   : 1.8V    : 2K        :                
+lvdsin_clk                   : D15       : input  : LVDS              : 1.8V    : 2K        : Y              
+GND                          : D16       : gnd    :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : D17       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : D18       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : D19       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : D20       :        :                   : 1.8V    : 2L        :                
+GND                          : D21       : gnd    :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : D22       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : D23       :        :                   : 1.8V    : 2L        :                
+GND                          : D24       : gnd    :                   :         :           :                
+GXB_GND*                     : D25       :        :                   : 0V      : 1D        :                
+GXB_GND*                     : D26       :        :                   : 0V      : 1D        :                
+GND                          : D27       : gnd    :                   :         :           :                
+GND                          : D28       : gnd    :                   :         :           :                
+NC                           : E1        :        :                   :         :           :                
+NC                           : E2        :        :                   :         :           :                
+GND                          : E3        : gnd    :                   :         :           :                
+NC                           : E4        :        :                   :         :           :                
+NC                           : E5        :        :                   :         :           :                
+NC                           : E6        :        :                   :         :           :                
+NC                           : E7        :        :                   :         :           :                
+GND                          : E8        : gnd    :                   :         :           :                
+VREFB2KN0                    : E9        : power  :                   : GND     : 2K        :                
+VSIGP_0                      : E10       :        :                   :         :           :                
+VSIGN_0                      : E11       :        :                   :         :           :                
+NC                           : E12       :        :                   :         :           :                
+GND                          : E13       : gnd    :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : E14       :        :                   : 1.8V    : 2K        :                
+lvdsin_clk(n)                : E15       : input  : LVDS              : 1.8V    : 2K        : Y              
+RESERVED_INPUT_WITH_WEAK_PULLUP : E16       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : E17       :        :                   : 1.8V    : 2L        :                
+VCCIO2L                      : E18       : power  :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : E19       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : E20       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : E21       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : E22       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : E23       :        :                   : 1.8V    : 2L        :                
+GND                          : E24       : gnd    :                   :         :           :                
+GND                          : E25       : gnd    :                   :         :           :                
+GND                          : E26       : gnd    :                   :         :           :                
+GXB_NC                       : E27       :        :                   : 0V      : 1D        :                
+GXB_NC                       : E28       :        :                   : 0V      : 1D        :                
+NC                           : F1        :        :                   :         :           :                
+NC                           : F2        :        :                   :         :           :                
+NC                           : F3        :        :                   :         :           :                
+NC                           : F4        :        :                   :         :           :                
+GND                          : F5        : gnd    :                   :         :           :                
+NC                           : F6        :        :                   :         :           :                
+NC                           : F7        :        :                   :         :           :                
+NC                           : F8        :        :                   :         :           :                
+NC                           : F9        :        :                   :         :           :                
+GND                          : F10       : gnd    :                   :         :           :                
+VSIGP_1                      : F11       :        :                   :         :           :                
+NC                           : F12       :        :                   :         :           :                
+NC                           : F13       :        :                   :         :           :                
+NC                           : F14       :        :                   :         :           :                
+VCCIO2K                      : F15       : power  :                   : 1.8V    : 2K        :                
+NC                           : F16       :        :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : F17       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : F18       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : F19       :        :                   : 1.8V    : 2L        :                
+GND                          : F20       : gnd    :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : F21       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : F22       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : F23       :        :                   : 1.8V    : 2L        :                
+GND                          : F24       : gnd    :                   :         :           :                
+GXB_GND*                     : F25       :        :                   : 0V      : 1D        :                
+GXB_GND*                     : F26       :        :                   : 0V      : 1D        :                
+GND                          : F27       : gnd    :                   :         :           :                
+GND                          : F28       : gnd    :                   :         :           :                
+boardout[5]                  : G1        : output : 1.8 V             : 1.8V    : 3B        : Y              
 GND                          : G2        : gnd    :                   :         :           :                
-lvdsout_trig(n)              : G3        : output : LVDS              :         : 1         : Y              
-lvdsout_trig                 : G4        : output : LVDS              :         : 1         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : G5        :        :                   :         : 1         :                
-VCCA3                        : G6        : power  :                   : 2.5V    :           :                
-spics[1]                     : G7        : output : 3.3-V LVTTL       :         : 8         : Y              
-spics[2]                     : G8        : output : 3.3-V LVTTL       :         : 8         : Y              
-spics[4]                     : G9        : output : 3.3-V LVTTL       :         : 8         : Y              
-ftdi_data[0]                 : G10       : bidir  : 3.3-V LVTTL       :         : 8         : Y              
-spics[3]                     : G11       : output : 3.3-V LVTTL       :         : 8         : Y              
-VCCINT                       : G12       : power  :                   : 1.2V    :           :                
-spimisos[4]                  : G13       : input  : 3.3-V LVTTL       :         : 7         : N              
-spimisos[7]                  : G14       : input  : 3.3-V LVTTL       :         : 7         : N              
-RESERVED_INPUT_WITH_WEAK_PULLUP : G15       :        :                   :         : 7         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : G16       :        :                   :         : 7         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : G17       :        :                   :         : 6         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : G18       :        :                   :         : 6         :                
-VCCIO6                       : G19       : power  :                   : 2.5V    : 6         :                
-GND                          : G20       : gnd    :                   :         :           :                
-lvdsin_clk                   : G21       : input  : LVDS              :         : 6         : Y              
-lvdsin_clk(n)                : G22       : input  : LVDS              :         : 6         : Y              
-lvdsin_trig_b(n)             : H1        : input  : LVDS              :         : 1         : Y              
-lvdsin_trig_b                : H2        : input  : LVDS              :         : 1         : Y              
-GND                          : H3        : gnd    :                   :         :           :                
-VCCIO1                       : H4        : power  :                   : 2.5V    : 1         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : H5        :        :                   :         : 1         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : H6        :        :                   :         : 1         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : H7        :        :                   :         : 1         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : H8        :        :                   :         : 1         :                
-VCCINT                       : H9        : power  :                   : 1.2V    :           :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : H10       :        :                   :         : 8         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : H11       :        :                   :         : 8         :                
-GND                          : H12       : gnd    :                   :         :           :                
+NC                           : G3        :        :                   :         :           :                
+NC                           : G4        :        :                   :         :           :                
+NC                           : G5        :        :                   :         :           :                
+NC                           : G6        :        :                   :         :           :                
+NC                           : G7        :        :                   :         :           :                
+NC                           : G8        :        :                   :         :           :                
+NC                           : G9        :        :                   :         :           :                
+ADCGND                       : G10       : gnd    :                   :         :           :                
+VSIGN_1                      : G11       :        :                   :         :           :                
+GND                          : G12       : gnd    :                   :         :           :                
+NC                           : G13       :        :                   :         :           :                
+NC                           : G14       :        :                   :         :           :                
+NC                           : G15       :        :                   :         :           :                
+NC                           : G16       :        :                   :         :           :                
+GND                          : G17       : gnd    :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : G18       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : G19       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : G20       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : G21       :        :                   : 1.8V    : 2L        :                
+GND                          : G22       : gnd    :                   :         :           :                
+clk50                        : G23       : input  : 1.8 V             : 1.8V    : 2L        : Y              
+GND                          : G24       : gnd    :                   :         :           :                
+GND                          : G25       : gnd    :                   :         :           :                
+GND                          : G26       : gnd    :                   :         :           :                
+GXB_NC                       : G27       :        :                   : 0V      : 1D        :                
+GXB_NC                       : G28       :        :                   : 0V      : 1D        :                
+ftdi_oe_n                    : H1        : output : 1.8 V             : 1.8V    : 3B        : Y              
+boardout[3]                  : H2        : output : 1.8 V             : 1.8V    : 3B        : Y              
+NC                           : H3        :        :                   :         :           :                
+GND                          : H4        : gnd    :                   :         :           :                
+NC                           : H5        :        :                   :         :           :                
+NC                           : H6        :        :                   :         :           :                
+NC                           : H7        :        :                   :         :           :                
+NC                           : H8        :        :                   :         :           :                
+NC                           : H9        :        :                   :         :           :                
+TEMPDIODEn                   : H10       :        :                   :         :           :                
+TEMPDIODEp                   : H11       :        :                   :         :           :                
+NC                           : H12       :        :                   :         :           :                
 GND                          : H13       : gnd    :                   :         :           :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : H14       :        :                   :         : 7         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : H15       :        :                   :         : 7         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : H16       :        :                   :         : 6         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : H17       :        :                   :         : 6         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : H18       :        :                   :         : 6         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : H19       :        :                   :         : 6         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : H20       :        :                   :         : 6         :                
-lvds2in[0]                   : H21       : input  : LVDS              :         : 6         : Y              
-lvds2in[0](n)                : H22       : input  : LVDS              :         : 6         : Y              
-lvdsout_clk(n)               : J1        : output : LVDS              :         : 1         : Y              
-lvdsout_clk                  : J2        : output : LVDS              :         : 1         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : J3        :        :                   :         : 1         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : J4        :        :                   :         : 1         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : J5        :        :                   :         : 1         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : J6        :        :                   :         : 1         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : J7        :        :                   :         : 1         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : J8        :        :                   :         : 1         :                
-GND                          : J9        : gnd    :                   :         :           :                
-VCCINT                       : J10       : power  :                   : 1.2V    :           :                
-VCCINT                       : J11       : power  :                   : 1.2V    :           :                
-VCCINT                       : J12       : power  :                   : 1.2V    :           :                
-VCCINT                       : J13       : power  :                   : 1.2V    :           :                
-VCCINT                       : J14       : power  :                   : 1.2V    :           :                
-GND                          : J15       : gnd    :                   :         :           :                
-VCCINT                       : J16       : power  :                   : 1.2V    :           :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : J17       :        :                   :         : 6         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : J18       :        :                   :         : 6         :                
-GND                          : J19       : gnd    :                   :         :           :                
-VCCIO6                       : J20       : power  :                   : 2.5V    : 6         :                
-lvds2in[1]                   : J21       : input  : LVDS              :         : 6         : Y              
-lvds2in[1](n)                : J22       : input  : LVDS              :         : 6         : Y              
-asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_DATA0 : K1        : input  : 2.5 V             :         : 1         : Y              
-asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_DCLK : K2        : output : 2.5 V             :         : 1         : Y              
+GND                          : H14       : gnd    :                   :         :           :                
+NC                           : H15       :        :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : H16       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : H17       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : H18       :        :                   : 1.8V    : 2L        :                
+VCCIO2L                      : H19       : power  :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : H20       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : H21       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : H22       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : H23       :        :                   : 1.8V    : 2L        :                
+GND                          : H24       : gnd    :                   :         :           :                
+GXB_GND*                     : H25       :        :                   : 0V      : 1D        :                
+GXB_GND*                     : H26       :        :                   : 0V      : 1D        :                
+GND                          : H27       : gnd    :                   :         :           :                
+GND                          : H28       : gnd    :                   :         :           :                
+GND                          : J1        : gnd    :                   :         :           :                
+lvds3in[1](n)                : J2        : input  : LVDS              : 1.8V    : 3B        : N              
+boardout[4]                  : J3        : output : 1.8 V             : 1.8V    : 3B        : Y              
+NC                           : J4        :        :                   :         :           :                
+NC                           : J5        :        :                   :         :           :                
+GND                          : J6        : gnd    :                   :         :           :                
+NC                           : J7        :        :                   :         :           :                
+NC                           : J8        :        :                   :         :           :                
+NC                           : J9        :        :                   :         :           :                
+VREFN_ADC                    : J10       :        :                   :         :           :                
+GND                          : J11       : gnd    :                   :         :           :                
+NC                           : J12       :        :                   :         :           :                
+GND                          : J13       : gnd    :                   :         :           :                
+GND                          : J14       : gnd    :                   :         :           :                
+NC                           : J15       :        :                   :         :           :                
+GND                          : J16       : gnd    :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : J17       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : J18       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : J19       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : J20       :        :                   : 1.8V    : 2L        :                
+GND                          : J21       : gnd    :                   :         :           :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : J22       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : J23       :        :                   : 1.8V    : 2L        :                
+GND                          : J24       : gnd    :                   :         :           :                
+GND                          : J25       : gnd    :                   :         :           :                
+GND                          : J26       : gnd    :                   :         :           :                
+GXB_NC                       : J27       :        :                   : 0V      : 1D        :                
+GXB_NC                       : J28       :        :                   : 0V      : 1D        :                
+boardout[7]                  : K1        : output : 1.8 V             : 1.8V    : 3B        : Y              
+lvds3in[1]                   : K2        : input  : LVDS              : 1.8V    : 3B        : Y              
 GND                          : K3        : gnd    :                   :         :           :                
-VCCIO1                       : K4        : power  :                   : 2.5V    : 1         :                
-nCONFIG                      : K5        :        :                   :         : 1         :                
-nSTATUS                      : K6        :        :                   :         : 1         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : K7        :        :                   :         : 1         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : K8        :        :                   :         : 1         :                
-VCCINT                       : K9        : power  :                   : 1.2V    :           :                
-GND                          : K10       : gnd    :                   :         :           :                
-GND                          : K11       : gnd    :                   :         :           :                
-GND                          : K12       : gnd    :                   :         :           :                
+lvds3in[11]                  : K4        : input  : LVDS              : 1.8V    : 3B        : Y              
+NC                           : K5        :        :                   :         :           :                
+NC                           : K6        :        :                   :         :           :                
+NC                           : K7        :        :                   :         :           :                
+NC                           : K8        :        :                   :         :           :                
+NC                           : K9        :        :                   :         :           :                
+VREFP_ADC                    : K10       :        :                   :         :           :                
+NC                           : K11       :        :                   :         :           :                
+NC                           : K12       :        :                   :         :           :                
 GND                          : K13       : gnd    :                   :         :           :                
-VCCINT                       : K14       : power  :                   : 1.2V    :           :                
-VCCINT                       : K15       : power  :                   : 1.2V    :           :                
-GND                          : K16       : gnd    :                   :         :           :                
-lvds2in[5](n)                : K17       : input  : LVDS              :         : 6         : Y              
-lvds2in[5]                   : K18       : input  : LVDS              :         : 6         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : K19       :        :                   :         : 6         :                
-MSEL3                        : K20       :        :                   :         : 6         :                
-lvds2in[2]                   : K21       : input  : LVDS              :         : 6         : Y              
-lvds2in[2](n)                : K22       : input  : LVDS              :         : 6         : Y              
-TMS                          : L1        : input  :                   :         : 1         :                
-TCK                          : L2        : input  :                   :         : 1         :                
-nCE                          : L3        :        :                   :         : 1         :                
-TDO                          : L4        : output :                   :         : 1         :                
-TDI                          : L5        : input  :                   :         : 1         :                
-lvds1in[1]                   : L6        : input  : LVDS              :         : 2         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : L7        :        :                   :         : 2         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : L8        :        :                   :         : 1         :                
-VCCINT                       : L9        : power  :                   : 1.2V    :           :                
+GND                          : K14       : gnd    :                   :         :           :                
+NC                           : K15       :        :                   :         :           :                
+VREFB2LN0                    : K16       : power  :                   : GND     : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : K17       :        :                   : 1.8V    : 2L        :                
+VCCIO2L                      : K18       : power  :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : K19       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : K20       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : K21       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : K22       :        :                   : 1.8V    : 2L        :                
+RESERVED_INPUT_WITH_WEAK_PULLUP : K23       :        :                   : 1.8V    : 2L        :                
+GND                          : K24       : gnd    :                   :         :           :                
+GXB_GND*                     : K25       :        :                   : 0V      : 1D        :                
+GXB_GND*                     : K26       :        :                   : 0V      : 1D        :                
+GND                          : K27       : gnd    :                   :         :           :                
+GND                          : K28       : gnd    :                   :         :           :                
+clkout                       : L1        : output : 1.8 V             : 1.8V    : 3B        : Y              
+lvds3in[12]                  : L2        : input  : LVDS              : 1.8V    : 3B        : Y              
+lvds3in[12](n)               : L3        : input  : LVDS              : 1.8V    : 3B        : N              
+lvds3in[11](n)               : L4        : input  : LVDS              : 1.8V    : 3B        : N              
+NC                           : L5        :        :                   :         :           :                
+NC                           : L6        :        :                   :         :           :                
+NC                           : L7        :        :                   :         :           :                
+NC                           : L8        :        :                   :         :           :                
+NC                           : L9        :        :                   :         :           :                
 GND                          : L10       : gnd    :                   :         :           :                
-GND                          : L11       : gnd    :                   :         :           :                
-GND                          : L12       : gnd    :                   :         :           :                
+VCC                          : L11       : power  :                   : 0.9V    :           :                
+VCC                          : L12       : power  :                   : 0.9V    :           :                
 GND                          : L13       : gnd    :                   :         :           :                
-VCCINT                       : L14       : power  :                   : 1.2V    :           :                
+GND                          : L14       : gnd    :                   :         :           :                
 GND                          : L15       : gnd    :                   :         :           :                
-VCCINT                       : L16       : power  :                   : 1.2V    :           :                
-MSEL2                        : L17       :        :                   :         : 6         :                
-MSEL1                        : L18       :        :                   :         : 6         :                
-VCCIO6                       : L19       : power  :                   : 2.5V    : 6         :                
+VCC                          : L16       : power  :                   : 0.9V    :           :                
+VCC                          : L17       : power  :                   : 0.9V    :           :                
+VCC                          : L18       : power  :                   : 0.9V    :           :                
+VCC                          : L19       : power  :                   : 0.9V    :           :                
 GND                          : L20       : gnd    :                   :         :           :                
-lvds2in[3]                   : L21       : input  : LVDS              :         : 6         : Y              
-lvds2in[3](n)                : L22       : input  : LVDS              :         : 6         : Y              
-lvds1in[6](n)                : M1        : input  : LVDS              :         : 2         : Y              
-lvds1in[6]                   : M2        : input  : LVDS              :         : 2         : Y              
-lvds1in[7](n)                : M3        : input  : LVDS              :         : 2         : Y              
-lvds1in[7]                   : M4        : input  : LVDS              :         : 2         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : M5        :        :                   :         : 2         :                
-lvds1in[1](n)                : M6        : input  : LVDS              :         : 2         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : M7        :        :                   :         : 2         :                
-lvds3in[2]                   : M8        : input  : LVDS              :         : 2         : Y              
-VCCINT                       : M9        : power  :                   : 1.2V    :           :                
-GND                          : M10       : gnd    :                   :         :           :                
-GND                          : M11       : gnd    :                   :         :           :                
+GND                          : L21       : gnd    :                   :         :           :                
+GND                          : L22       : gnd    :                   :         :           :                
+GND                          : L23       : gnd    :                   :         :           :                
+GND                          : L24       : gnd    :                   :         :           :                
+GND                          : L25       : gnd    :                   :         :           :                
+GND                          : L26       : gnd    :                   :         :           :                
+GXB_NC                       : L27       :        :                   : 0V      : 1D        :                
+GXB_NC                       : L28       :        :                   : 0V      : 1D        :                
+lvds3in[2](n)                : M1        : input  : LVDS              : 1.8V    : 3B        : N              
+GND                          : M2        : gnd    :                   :         :           :                
+lvdsin_trig_b                : M3        : input  : LVDS              : 1.8V    : 3B        : Y              
+lvdsin_trig_b(n)             : M4        : input  : LVDS              : 1.8V    : 3B        : Y              
+NC                           : M5        :        :                   :         :           :                
+NC                           : M6        :        :                   :         :           :                
+NC                           : M7        :        :                   :         :           :                
+NC                           : M8        :        :                   :         :           :                
+NC                           : M9        :        :                   :         :           :                
+VCC                          : M10       : power  :                   : 0.9V    :           :                
+VCC                          : M11       : power  :                   : 0.9V    :           :                
 GND                          : M12       : gnd    :                   :         :           :                
 GND                          : M13       : gnd    :                   :         :           :                
-VCCINT                       : M14       : power  :                   : 1.2V    :           :                
-VCCINT                       : M15       : power  :                   : 1.2V    :           :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : M16       :        :                   :         : 5         :                
-MSEL0                        : M17       :        :                   :         : 6         :                
-CONF_DONE                    : M18       :        :                   :         : 6         :                
-lvds2in[6]                   : M19       : input  : LVDS              :         : 5         : Y              
-lvds2in[6](n)                : M20       : input  : LVDS              :         : 5         : Y              
-lvds2in[4]                   : M21       : input  : LVDS              :         : 5         : Y              
-lvds2in[4](n)                : M22       : input  : LVDS              :         : 5         : Y              
-lvds1in[8](n)                : N1        : input  : LVDS              :         : 2         : Y              
-lvds1in[8]                   : N2        : input  : LVDS              :         : 2         : Y              
-GND                          : N3        : gnd    :                   :         :           :                
-VCCIO2                       : N4        : power  :                   : 2.5V    : 2         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : N5        :        :                   :         : 2         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : N6        :        :                   :         : 2         :                
-lvds1in[2]                   : N7        : input  : LVDS              :         : 2         : Y              
-lvds3in[2](n)                : N8        : input  : LVDS              :         : 2         : Y              
-VCCINT                       : N9        : power  :                   : 1.2V    :           :                
-GND                          : N10       : gnd    :                   :         :           :                
-GND                          : N11       : gnd    :                   :         :           :                
-GND                          : N12       : gnd    :                   :         :           :                
-GND                          : N13       : gnd    :                   :         :           :                
-VCCINT                       : N14       : power  :                   : 1.2V    :           :                
-GND                          : N15       : gnd    :                   :         :           :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : N16       :        :                   :         : 5         :                
-lvds2in[8](n)                : N17       : input  : LVDS              :         : 5         : Y              
-lvds2in[8]                   : N18       : input  : LVDS              :         : 5         : Y              
-lvds2in[7]                   : N19       : input  : LVDS              :         : 5         : Y              
-lvds2in[7](n)                : N20       : input  : LVDS              :         : 5         : Y              
-lvds4in[0]                   : N21       : input  : LVDS              :         : 5         : Y              
-lvds4in[0](n)                : N22       : input  : LVDS              :         : 5         : Y              
-lvds1in[9](n)                : P1        : input  : LVDS              :         : 2         : Y              
-lvds1in[9]                   : P2        : input  : LVDS              :         : 2         : Y              
-lvds1in[0](n)                : P3        : input  : LVDS              :         : 2         : Y              
-lvds1in[0]                   : P4        : input  : LVDS              :         : 2         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : P5        :        :                   :         : 2         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : P6        :        :                   :         : 2         :                
-lvds1in[2](n)                : P7        : input  : LVDS              :         : 2         : Y              
-GND                          : P8        : gnd    :                   :         :           :                
-VCCINT                       : P9        : power  :                   : 1.2V    :           :                
-VCCINT                       : P10       : power  :                   : 1.2V    :           :                
-VCCINT                       : P11       : power  :                   : 1.2V    :           :                
-VCCINT                       : P12       : power  :                   : 1.2V    :           :                
-VCCINT                       : P13       : power  :                   : 1.2V    :           :                
-VCCINT                       : P14       : power  :                   : 1.2V    :           :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : P15       :        :                   :         : 5         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : P16       :        :                   :         : 5         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : P17       :        :                   :         : 5         :                
-VCCIO5                       : P18       : power  :                   : 2.5V    : 5         :                
-GND                          : P19       : gnd    :                   :         :           :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : P20       :        :                   :         : 5         :                
-lvds4in[1]                   : P21       : input  : LVDS              :         : 5         : Y              
-lvds4in[1](n)                : P22       : input  : LVDS              :         : 5         : Y              
-lvds1in[10](n)               : R1        : input  : LVDS              :         : 2         : Y              
-lvds1in[10]                  : R2        : input  : LVDS              :         : 2         : Y              
+VCCPT                        : M14       : power  :                   : 1.8V    :           :                
+VCC                          : M15       : power  :                   : 0.9V    :           :                
+VCC                          : M16       : power  :                   : 0.9V    :           :                
+GND                          : M17       : gnd    :                   :         :           :                
+VCCPT                        : M18       : power  :                   : 1.8V    :           :                
+VCC                          : M19       : power  :                   : 0.9V    :           :                
+VCC                          : M20       : power  :                   : 0.9V    :           :                
+GND                          : M21       : gnd    :                   :         :           :                
+VCCH_GXBL                    : M22       : power  :                   : 1.8V    :           :                
+VCCT_GXBL1D                  : M23       : gnd    :                   : GND     :           :                
+VCCT_GXBL1D                  : M24       : gnd    :                   : GND     :           :                
+GXB_GND*                     : M25       :        :                   : 0V      : 1D        :                
+GXB_GND*                     : M26       :        :                   : 0V      : 1D        :                
+GND                          : M27       : gnd    :                   :         :           :                
+GND                          : M28       : gnd    :                   :         :           :                
+lvds3in[2]                   : N1        : input  : LVDS              : 1.8V    : 3B        : Y              
+lvds3in[4]                   : N2        : input  : LVDS              : 1.8V    : 3B        : Y              
+lvds3in[4](n)                : N3        : input  : LVDS              : 1.8V    : 3B        : N              
+GND                          : N4        : gnd    :                   :         :           :                
+NC                           : N5        :        :                   :         :           :                
+NC                           : N6        :        :                   :         :           :                
+NC                           : N7        :        :                   :         :           :                
+NC                           : N8        :        :                   :         :           :                
+GND                          : N9        : gnd    :                   :         :           :                
+VCC                          : N10       : power  :                   : 0.9V    :           :                
+VCCP                         : N11       : power  :                   : 0.9V    :           :                
+VCC                          : N12       : power  :                   : 0.9V    :           :                
+VCC                          : N13       : power  :                   : 0.9V    :           :                
+GND                          : N14       : gnd    :                   :         :           :                
+VCC                          : N15       : power  :                   : 0.9V    :           :                
+VCC                          : N16       : power  :                   : 0.9V    :           :                
+VCCP                         : N17       : power  :                   : 0.9V    :           :                
+VCC                          : N18       : power  :                   : 0.9V    :           :                
+GND                          : N19       : gnd    :                   :         :           :                
+VCC                          : N20       : power  :                   : 0.9V    :           :                
+GND                          : N21       : gnd    :                   :         :           :                
+GND                          : N22       : gnd    :                   :         :           :                
+GXB_GND*                     : N23       :        :                   : 0V      : 1D        :                
+GXB_GND*                     : N24       :        :                   : 0V      : 1D        :                
+GND                          : N25       : gnd    :                   :         :           :                
+GND                          : N26       : gnd    :                   :         :           :                
+GXB_NC                       : N27       :        :                   : 0V      : 1D        :                
+GXB_NC                       : N28       :        :                   : 0V      : 1D        :                
+GND                          : P1        : gnd    :                   :         :           :                
+spics[4]                     : P2        : output : 1.8 V             : 1.8V    : 3B        : Y              
+lvds3in[10]                  : P3        : input  : LVDS              : 1.8V    : 3B        : Y              
+lvds3in[10](n)               : P4        : input  : LVDS              : 1.8V    : 3B        : N              
+NC                           : P5        :        :                   :         :           :                
+NC                           : P6        :        :                   :         :           :                
+NC                           : P7        :        :                   :         :           :                
+NC                           : P8        :        :                   :         :           :                
+NC                           : P9        :        :                   :         :           :                
+VCC                          : P10       : power  :                   : 0.9V    :           :                
+GND                          : P11       : gnd    :                   :         :           :                
+VCC                          : P12       : power  :                   : 0.9V    :           :                
+VCCA_PLL                     : P13       : power  :                   : 1.8V    :           :                
+VCC                          : P14       : power  :                   : 0.9V    :           :                
+VCCA_PLL                     : P15       : power  :                   : 1.8V    :           :                
+GND                          : P16       : gnd    :                   :         :           :                
+VCC                          : P17       : power  :                   : 0.9V    :           :                
+VCC                          : P18       : power  :                   : 0.9V    :           :                
+VCC                          : P19       : power  :                   : 0.9V    :           :                
+VCC                          : P20       : power  :                   : 0.9V    :           :                
+GND                          : P21       : gnd    :                   :         :           :                
+GND                          : P22       : gnd    :                   :         :           :                
+VCCR_GXBL1D                  : P23       : power  :                   : 0.95V   :           :                
+VCCR_GXBL1D                  : P24       : power  :                   : 0.95V   :           :                
+GXB_GND*                     : P25       :        :                   : 0V      : 1D        :                
+GXB_GND*                     : P26       :        :                   : 0V      : 1D        :                
+GND                          : P27       : gnd    :                   :         :           :                
+GND                          : P28       : gnd    :                   :         :           :                
+boardout[2]                  : R1        : output : 1.8 V             : 1.8V    : 3B        : Y              
+clkout2                      : R2        : output : 1.8 V             : 1.8V    : 3B        : Y              
 GND                          : R3        : gnd    :                   :         :           :                
-VCCIO2                       : R4        : power  :                   : 2.5V    : 2         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : R5        :        :                   :         : 2         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : R6        :        :                   :         : 2         :                
-lvds1in[3]                   : R7        : input  : LVDS              :         : 2         : Y              
-VCCINT                       : R8        : power  :                   : 1.2V    :           :                
-GND                          : R9        : gnd    :                   :         :           :                
-VCCINT                       : R10       : power  :                   : 1.2V    :           :                
-GND                          : R11       : gnd    :                   :         :           :                
-VCCINT                       : R12       : power  :                   : 1.2V    :           :                
+led[1]                       : R4        : output : 1.8 V             : 1.8V    : 3B        : Y              
+boardout[0]                  : R5        : output : 1.8 V             : 1.8V    : 3B        : Y              
+NC                           : R6        :        :                   :         :           :                
+NC                           : R7        :        :                   :         :           :                
+GND                          : R8        : gnd    :                   :         :           :                
+NC                           : R9        :        :                   :         :           :                
+VCC                          : R10       : power  :                   : 0.9V    :           :                
+VCC                          : R11       : power  :                   : 0.9V    :           :                
+VCCERAM                      : R12       : power  :                   : 0.9V    :           :                
 GND                          : R13       : gnd    :                   :         :           :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : R14       :        :                   :         : 4         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : R15       :        :                   :         : 4         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : R16       :        :                   :         : 4         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : R17       :        :                   :         : 5         :                
-lvds2in[9](n)                : R18       : input  : LVDS              :         : 5         : Y              
-lvds2in[9]                   : R19       : input  : LVDS              :         : 5         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : R20       :        :                   :         : 5         :                
-lvds4in[2]                   : R21       : input  : LVDS              :         : 5         : Y              
-lvds4in[2](n)                : R22       : input  : LVDS              :         : 5         : Y              
-GND+                         : T1        :        :                   :         : 2         :                
-GND+                         : T2        :        :                   :         : 2         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : T3        :        :                   :         : 2         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : T4        :        :                   :         : 2         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : T5        :        :                   :         : 2         :                
-VCCA1                        : T6        : power  :                   : 2.5V    :           :                
-lvds1in[3](n)                : T7        : input  : LVDS              :         : 2         : Y              
-lvds1in[12]                  : T8        : input  : LVDS              :         : 3         : Y              
-lvds1in[12](n)               : T9        : input  : LVDS              :         : 3         : Y              
-lvds1in[13]                  : T10       : input  : LVDS              :         : 3         : Y              
-lvds1in[13](n)               : T11       : input  : LVDS              :         : 3         : Y              
-lvds2in[13]                  : T12       : input  : LVDS              :         : 4         : Y              
-lvds2in[13](n)               : T13       : input  : LVDS              :         : 4         : Y              
-lvds2in[12]                  : T14       : input  : LVDS              :         : 4         : Y              
-lvds2in[12](n)               : T15       : input  : LVDS              :         : 4         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : T16       :        :                   :         : 4         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : T17       :        :                   :         : 5         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : T18       :        :                   :         : 5         :                
-VCCIO5                       : T19       : power  :                   : 2.5V    : 5         :                
+VCC                          : R14       : power  :                   : 0.9V    :           :                
+VCC                          : R15       : power  :                   : 0.9V    :           :                
+VCC                          : R16       : power  :                   : 0.9V    :           :                
+VCCERAM                      : R17       : power  :                   : 0.9V    :           :                
+GND                          : R18       : gnd    :                   :         :           :                
+VCC                          : R19       : power  :                   : 0.9V    :           :                
+VCC                          : R20       : power  :                   : 0.9V    :           :                
+GND                          : R21       : gnd    :                   :         :           :                
+GND                          : R22       : gnd    :                   :         :           :                
+GXB_GND*                     : R23       :        :                   : 0V      : 1D        :                
+GXB_GND*                     : R24       :        :                   : 0V      : 1D        :                
+GND                          : R25       : gnd    :                   :         :           :                
+GND                          : R26       : gnd    :                   :         :           :                
+GXB_NC                       : R27       :        :                   : 0V      : 1D        :                
+GXB_NC                       : R28       :        :                   : 0V      : 1D        :                
+boardout[1]                  : T1        : output : 1.8 V             : 1.8V    : 3B        : Y              
+lvds3in[9]                   : T2        : input  : LVDS              : 1.8V    : 3B        : Y              
+lvds3in[9](n)                : T3        : input  : LVDS              : 1.8V    : 3B        : N              
+lvds3in[5]                   : T4        : input  : LVDS              : 1.8V    : 3B        : Y              
+VCCIO3B                      : T5        : power  :                   : 1.8V    : 3B        :                
+lvds3in[0]                   : T6        : input  : LVDS              : 1.8V    : 3B        : Y              
+lvds3in[0](n)                : T7        : input  : LVDS              : 1.8V    : 3B        : N              
+lvds3in[7]                   : T8        : input  : LVDS              : 1.8V    : 3B        : Y              
+lvds3in[7](n)                : T9        : input  : LVDS              : 1.8V    : 3B        : N              
+GND                          : T10       : gnd    :                   :         :           :                
+VCC                          : T11       : power  :                   : 0.9V    :           :                
+GNDSENSE                     : T12       :        :                   :         :           :                
+VCCLSENSE                    : T13       :        :                   :         :           :                
+VCC                          : T14       : power  :                   : 0.9V    :           :                
+GND                          : T15       : gnd    :                   :         :           :                
+VCC                          : T16       : power  :                   : 0.9V    :           :                
+VCC                          : T17       : power  :                   : 0.9V    :           :                
+VCC                          : T18       : power  :                   : 0.9V    :           :                
+VCC                          : T19       : power  :                   : 0.9V    :           :                
 GND                          : T20       : gnd    :                   :         :           :                
-GND+                         : T21       :        :                   :         : 5         :                
-GND+                         : T22       :        :                   :         : 5         :                
-lvds1in[11](n)               : U1        : input  : LVDS              :         : 2         : Y              
-lvds1in[11]                  : U2        : input  : LVDS              :         : 2         : Y              
-GND                          : U3        : gnd    :                   :         :           :                
-VCCIO2                       : U4        : power  :                   : 2.5V    : 2         :                
-GNDA1                        : U5        : gnd    :                   :         :           :                
-VCCD_PLL1                    : U6        : power  :                   : 1.2V    :           :                
-lvds1in[5]                   : U7        : input  : LVDS              :         : 3         : Y              
-lvds1in[5](n)                : U8        : input  : LVDS              :         : 3         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : U9        :        :                   :         : 3         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : U10       :        :                   :         : 3         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : U11       :        :                   :         : 3         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : U12       :        :                   :         : 4         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : U13       :        :                   :         : 4         :                
-lvds3in[4](n)                : U14       : input  : LVDS              :         : 4         : Y              
-lvds3in[5]                   : U15       : input  : LVDS              :         : 4         : Y              
-lvds3in[6]                   : U16       : input  : LVDS              :         : 4         : Y              
-lvds3in[6](n)                : U17       : input  : LVDS              :         : 4         : Y              
-VCCA4                        : U18       : power  :                   : 2.5V    :           :                
-lvds2in[10]                  : U19       : input  : LVDS              :         : 5         : Y              
-lvds2in[10](n)               : U20       : input  : LVDS              :         : 5         : Y              
-lvds4in[3]                   : U21       : input  : LVDS              :         : 5         : Y              
-lvds4in[3](n)                : U22       : input  : LVDS              :         : 5         : Y              
-lvds3in[0](n)                : V1        : input  : LVDS              :         : 2         : Y              
-lvds3in[0]                   : V2        : input  : LVDS              :         : 2         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : V3        :        :                   :         : 2         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : V4        :        :                   :         : 2         :                
-lvds1in[4](n)                : V5        : input  : LVDS              :         : 3         : Y              
-lvds1in[4]                   : V6        : input  : LVDS              :         : 3         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : V7        :        :                   :         : 3         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : V8        :        :                   :         : 3         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : V9        :        :                   :         : 3         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : V10       :        :                   :         : 3         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : V11       :        :                   :         : 3         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : V12       :        :                   :         : 4         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : V13       :        :                   :         : 4         :                
-lvds3in[4]                   : V14       : input  : LVDS              :         : 4         : Y              
-lvds3in[5](n)                : V15       : input  : LVDS              :         : 4         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : V16       :        :                   :         : 4         :                
-VCCD_PLL4                    : V17       : power  :                   : 1.2V    :           :                
-GNDA4                        : V18       : gnd    :                   :         :           :                
-VCCIO5                       : V19       : power  :                   : 2.5V    : 5         :                
-GND                          : V20       : gnd    :                   :         :           :                
-lvds4in[4]                   : V21       : input  : LVDS              :         : 5         : Y              
-lvds4in[4](n)                : V22       : input  : LVDS              :         : 5         : Y              
-lvds3in[1](n)                : W1        : input  : LVDS              :         : 2         : Y              
-lvds3in[1]                   : W2        : input  : LVDS              :         : 2         : Y              
-GND                          : W3        : gnd    :                   :         :           :                
-VCCIO2                       : W4        : power  :                   : 2.5V    : 2         :                
-VCCIO3                       : W5        : power  :                   : 2.5V    : 3         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : W6        :        :                   :         : 3         :                
-lvds3in[9]                   : W7        : input  : LVDS              :         : 3         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : W8        :        :                   :         : 3         :                
-VCCIO3                       : W9        : power  :                   : 2.5V    : 3         :                
-lvds3in[3]                   : W10       : input  : LVDS              :         : 3         : Y              
-VCCIO3                       : W11       : power  :                   : 2.5V    : 3         :                
-VCCIO4                       : W12       : power  :                   : 2.5V    : 4         :                
-lvds4in[13]                  : W13       : input  : LVDS              :         : 4         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : W14       :        :                   :         : 4         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : W15       :        :                   :         : 4         :                
-VCCIO4                       : W16       : power  :                   : 2.5V    : 4         :                
-lvds2in[11]                  : W17       : input  : LVDS              :         : 4         : Y              
-VCCIO4                       : W18       : power  :                   : 2.5V    : 4         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : W19       :        :                   :         : 5         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : W20       :        :                   :         : 5         :                
-lvds4in[6]                   : W21       : input  : LVDS              :         : 5         : Y              
-lvds4in[6](n)                : W22       : input  : LVDS              :         : 5         : Y              
-lvds3in[7](n)                : Y1        : input  : LVDS              :         : 2         : Y              
-lvds3in[7]                   : Y2        : input  : LVDS              :         : 2         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : Y3        :        :                   :         : 3         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : Y4        :        :                   :         : 3         :                
-GND                          : Y5        : gnd    :                   :         :           :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : Y6        :        :                   :         : 3         :                
-lvds3in[9](n)                : Y7        : input  : LVDS              :         : 3         : Y              
-RESERVED_INPUT_WITH_WEAK_PULLUP : Y8        :        :                   :         : 3         :                
-GND                          : Y9        : gnd    :                   :         :           :                
-lvds3in[3](n)                : Y10       : input  : LVDS              :         : 3         : Y              
-GND                          : Y11       : gnd    :                   :         :           :                
-GND                          : Y12       : gnd    :                   :         :           :                
-lvds4in[13](n)               : Y13       : input  : LVDS              :         : 4         : Y              
-VCCIO4                       : Y14       : power  :                   : 2.5V    : 4         :                
-GND                          : Y15       : gnd    :                   :         :           :                
-GND                          : Y16       : gnd    :                   :         :           :                
-lvds2in[11](n)               : Y17       : input  : LVDS              :         : 4         : Y              
-GND                          : Y18       : gnd    :                   :         :           :                
-VCCIO5                       : Y19       : power  :                   : 2.5V    : 5         :                
-GND                          : Y20       : gnd    :                   :         :           :                
-lvds4in[5]                   : Y21       : input  : LVDS              :         : 5         : Y              
-lvds4in[5](n)                : Y22       : input  : LVDS              :         : 5         : Y              
+GND                          : T21       : gnd    :                   :         :           :                
+VCCH_GXBL                    : T22       : power  :                   : 1.8V    :           :                
+VCCT_GXBL1C                  : T23       : gnd    :                   : GND     :           :                
+VCCT_GXBL1C                  : T24       : gnd    :                   : GND     :           :                
+GXB_GND*                     : T25       :        :                   : 0V      : 1C        :                
+GXB_GND*                     : T26       :        :                   : 0V      : 1C        :                
+GND                          : T27       : gnd    :                   :         :           :                
+GND                          : T28       : gnd    :                   :         :           :                
+lvdsin_spare(n)              : U1        : input  : LVDS              : 1.8V    : 3B        : Y              
+GND                          : U2        : gnd    :                   :         :           :                
+spics[5]                     : U3        : output : 1.8 V             : 1.8V    : 3B        : Y              
+spics[0]                     : U4        : output : 1.8 V             : 1.8V    : 3B        : Y              
+lvds3in[5](n)                : U5        : input  : LVDS              : 1.8V    : 3B        : N              
+spics[6]                     : U6        : output : 1.8 V             : 1.8V    : 3B        : Y              
+VCCIO3B                      : U7        : power  :                   : 1.8V    : 3B        :                
+lvds3in[8]                   : U8        : input  : LVDS              : 1.8V    : 3B        : Y              
+VREFB3BN0                    : U9        : power  :                   : GND     : 3B        :                
+VCC                          : U10       : power  :                   : 0.9V    :           :                
+VCCP                         : U11       : power  :                   : 0.9V    :           :                
+GND                          : U12       : gnd    :                   :         :           :                
+VCCP                         : U13       : power  :                   : 0.9V    :           :                
+VCC                          : U14       : power  :                   : 0.9V    :           :                
+VCC                          : U15       : power  :                   : 0.9V    :           :                
+VCCP                         : U16       : power  :                   : 0.9V    :           :                
+GND                          : U17       : gnd    :                   :         :           :                
+VCC                          : U18       : power  :                   : 0.9V    :           :                
+VCC                          : U19       : power  :                   : 0.9V    :           :                
+VCC                          : U20       : power  :                   : 0.9V    :           :                
+GND                          : U21       : gnd    :                   :         :           :                
+GND                          : U22       : gnd    :                   :         :           :                
+GXB_GND*                     : U23       :        :                   : 0V      : 1C        :                
+GXB_GND*                     : U24       :        :                   : 0V      : 1C        :                
+GND                          : U25       : gnd    :                   :         :           :                
+GND                          : U26       : gnd    :                   :         :           :                
+GXB_NC                       : U27       :        :                   : 0V      : 1C        :                
+GXB_NC                       : U28       :        :                   : 0V      : 1C        :                
+lvdsin_spare                 : V1        : input  : LVDS              : 1.8V    : 3B        : Y              
+spics[7]                     : V2        : output : 1.8 V             : 1.8V    : 3B        : Y              
+lvds3in[6](n)                : V3        : input  : LVDS              : 1.8V    : 3B        : N              
+VCCIO3B                      : V4        : power  :                   : 1.8V    : 3B        :                
+lvds3in[3]                   : V5        : input  : LVDS              : 1.8V    : 3B        : Y              
+lvds3in[3](n)                : V6        : input  : LVDS              : 1.8V    : 3B        : N              
+spics[1]                     : V7        : output : 1.8 V             : 1.8V    : 3B        : Y              
+lvds3in[8](n)                : V8        : input  : LVDS              : 1.8V    : 3B        : N              
+GND                          : V9        : gnd    :                   :         :           :                
+VCC                          : V10       : power  :                   : 0.9V    :           :                
+VCC                          : V11       : power  :                   : 0.9V    :           :                
+VCCPT                        : V12       : power  :                   : 1.8V    :           :                
+VCC                          : V13       : power  :                   : 0.9V    :           :                
+GND                          : V14       : gnd    :                   :         :           :                
+VCC                          : V15       : power  :                   : 0.9V    :           :                
+VCC                          : V16       : power  :                   : 0.9V    :           :                
+VCC                          : V17       : power  :                   : 0.9V    :           :                
+VCCPT                        : V18       : power  :                   : 1.8V    :           :                
+GND                          : V19       : gnd    :                   :         :           :                
+VCC                          : V20       : power  :                   : 0.9V    :           :                
+GND                          : V21       : gnd    :                   :         :           :                
+GND                          : V22       : gnd    :                   :         :           :                
+VCCR_GXBL1C                  : V23       : power  :                   : 0.95V   :           :                
+VCCR_GXBL1C                  : V24       : power  :                   : 0.95V   :           :                
+GXB_GND*                     : V25       :        :                   : 0V      : 1C        :                
+GXB_GND*                     : V26       :        :                   : 0V      : 1C        :                
+GND                          : V27       : gnd    :                   :         :           :                
+GND                          : V28       : gnd    :                   :         :           :                
+GND                          : W1        : gnd    :                   :         :           :                
+spics[3]                     : W2        : output : 1.8 V             : 1.8V    : 3B        : Y              
+lvds3in[6]                   : W3        : input  : LVDS              : 1.8V    : 3B        : Y              
+lvds1in[0]                   : W4        : input  : LVDS              : 1.8V    : 3A        : Y              
+lvds1in[1]                   : W5        : input  : LVDS              : 1.8V    : 3A        : Y              
+VCCIO3A                      : W6        : power  :                   : 1.8V    : 3A        :                
+lvds1in[10](n)               : W7        : input  : LVDS              : 1.8V    : 3A        : N              
+lvds1in[10]                  : W8        : input  : LVDS              : 1.8V    : 3A        : Y              
+VREFB3AN0                    : W9        : power  :                   : GND     : 3A        :                
+TDO                          : W10       : output :                   : 0V      : CSS       :                
+GND                          : W11       : gnd    :                   :         :           :                
+VCC                          : W12       : power  :                   : 0.9V    :           :                
+VCCBAT                       : W13       : power  :                   : 1.8V    :           :                
+VCCPGM                       : W14       : power  :                   : 1.2V/1.5V/1.8V :           :                
+VREFB2AN0                    : W15       : power  :                   : GND     : 2A        :                
+GND                          : W16       : gnd    :                   :         :           :                
+VREFB2JN0                    : W17       : power  :                   : GND     : 2J        :                
+VCC                          : W18       : power  :                   : 0.9V    :           :                
+VCC                          : W19       : power  :                   : 0.9V    :           :                
+lvdsout_trig_b               : W20       : output : LVDS              : 1.8V    : 2J        : Y              
+lvdsout_trig_b(n)            : W21       : output : LVDS              : 1.8V    : 2J        : Y              
+GND                          : W22       : gnd    :                   :         :           :                
+GXB_GND*                     : W23       :        :                   : 0V      : 1C        :                
+GXB_GND*                     : W24       :        :                   : 0V      : 1C        :                
+GND                          : W25       : gnd    :                   :         :           :                
+GND                          : W26       : gnd    :                   :         :           :                
+GXB_NC                       : W27       :        :                   : 0V      : 1C        :                
+GXB_NC                       : W28       :        :                   : 0V      : 1C        :                
+lvds1in[6]                   : Y1        : input  : LVDS              : 1.8V    : 3A        : Y              
+lvds1in[6](n)                : Y2        : input  : LVDS              : 1.8V    : 3A        : N              
+GND                          : Y3        : gnd    :                   :         :           :                
+lvds1in[0](n)                : Y4        : input  : LVDS              : 1.8V    : 3A        : N              
+lvds1in[1](n)                : Y5        : input  : LVDS              : 1.8V    : 3A        : N              
+debugout[8]                  : Y6        : output : 1.8 V             : 1.8V    : 3A        : Y              
+debugout[9]                  : Y7        : output : 1.8 V             : 1.8V    : 3A        : Y              
+VCCIO3A                      : Y8        : power  :                   : 1.8V    : 3A        :                
+TCK                          : Y9        : input  :                   : 0V      : CSS       :                
+DNU                          : Y10       :        :                   :         :           :                
+DNU                          : Y11       :        :                   :         :           :                
+DNU                          : Y12       :        :                   :         :           :                
+GND                          : Y13       : gnd    :                   :         :           :                
+VCCPGM                       : Y14       : power  :                   : 1.2V/1.5V/1.8V :           :                
+~ALTERA_CLKUSR~ / RESERVED_INPUT : Y15       : input  : 1.8 V             : 1.8V    : 2A        : N              
+ftdi_wr_n                    : Y16       : output : 1.8 V             : 1.8V    : 2A        : Y              
+ftdi_rd_n                    : Y17       : output : 1.8 V             : 1.8V    : 2J        : Y              
+VCCIO2J                      : Y18       : power  :                   : 1.8V    : 2J        :                
+overrange[1]                 : Y19       : input  : 1.8 V             : 1.8V    : 2J        : Y              
+boardin[3]                   : Y20       : input  : 1.8 V             : 1.8V    : 2J        : Y              
+lvdsout_trig(n)              : Y21       : output : LVDS              : 1.8V    : 2J        : Y              
+GND                          : Y22       : gnd    :                   :         :           :                
+GND                          : Y23       : gnd    :                   :         :           :                
+GND                          : Y24       : gnd    :                   :         :           :                
+GXB_GND*                     : Y25       :        :                   : 0V      : 1C        :                
+GXB_GND*                     : Y26       :        :                   : 0V      : 1C        :                
+GND                          : Y27       : gnd    :                   :         :           :                
+GND                          : Y28       : gnd    :                   :         :           :                

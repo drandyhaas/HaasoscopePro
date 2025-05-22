@@ -5,12 +5,12 @@
  intended_family="Cyclone 10 GX"
  specifies="all_ports">
  <global>
-  <pin name="rx_in[13..0]" direction="input" scope="external" />
-  <pin name="rx_out[139..0]" direction="output" scope="external" />
+  <pin name="rx_in[11..0]" direction="input" scope="external" />
+  <pin name="rx_out[119..0]" direction="output" scope="external" />
   <pin name="rx_coreclock" direction="output" scope="external" />
   <pin name="inclock" direction="input" scope="external" />
   <pin name="pll_areset" direction="input" scope="external" />
-  <pin name="rx_dpa_locked[13..0]" direction="output" scope="external" />
+  <pin name="rx_dpa_locked[11..0]" direction="output" scope="external" />
   <pin name="pll_locked" direction="output" scope="external" />
  </global>
 </pinplan>

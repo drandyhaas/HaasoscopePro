@@ -373,7 +373,7 @@ https://fpgasoftware.intel.com/eula.-->
           <ipxact:vectors>
             <ipxact:vector>
               <ipxact:left>0</ipxact:left>
-              <ipxact:right>13</ipxact:right>
+              <ipxact:right>11</ipxact:right>
             </ipxact:vector>
           </ipxact:vectors>
           <ipxact:wireTypeDefs>
@@ -391,7 +391,7 @@ https://fpgasoftware.intel.com/eula.-->
           <ipxact:vectors>
             <ipxact:vector>
               <ipxact:left>0</ipxact:left>
-              <ipxact:right>139</ipxact:right>
+              <ipxact:right>119</ipxact:right>
             </ipxact:vector>
           </ipxact:vectors>
           <ipxact:wireTypeDefs>
@@ -445,7 +445,7 @@ https://fpgasoftware.intel.com/eula.-->
           <ipxact:vectors>
             <ipxact:vector>
               <ipxact:left>0</ipxact:left>
-              <ipxact:right>13</ipxact:right>
+              <ipxact:right>11</ipxact:right>
             </ipxact:vector>
           </ipxact:vectors>
           <ipxact:wireTypeDefs>
@@ -527,7 +527,7 @@ https://fpgasoftware.intel.com/eula.-->
         <ipxact:parameter parameterId="NUM_CHANNELS" type="int">
           <ipxact:name>NUM_CHANNELS</ipxact:name>
           <ipxact:displayName>Number of channels</ipxact:displayName>
-          <ipxact:value>14</ipxact:value>
+          <ipxact:value>12</ipxact:value>
         </ipxact:parameter>
         <ipxact:parameter parameterId="NUM_CHANNELS_TX" type="int">
           <ipxact:name>NUM_CHANNELS_TX</ipxact:name>
@@ -547,7 +547,7 @@ https://fpgasoftware.intel.com/eula.-->
         <ipxact:parameter parameterId="INCLOCK_FREQUENCY" type="real">
           <ipxact:name>INCLOCK_FREQUENCY</ipxact:name>
           <ipxact:displayName>Desired inclock frequency</ipxact:displayName>
-          <ipxact:value>400.0</ipxact:value>
+          <ipxact:value>625.0</ipxact:value>
         </ipxact:parameter>
         <ipxact:parameter parameterId="REFCLK_FROM_CORE" type="bit">
           <ipxact:name>REFCLK_FROM_CORE</ipxact:name>

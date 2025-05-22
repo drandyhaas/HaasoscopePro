@@ -49,10 +49,10 @@ set_global_assignment -name ERROR_CHECK_FREQUENCY_DIVISOR 1
 set_global_assignment -name USE_CONFIGURATION_DEVICE OFF
 set_global_assignment -name CRC_ERROR_OPEN_DRAIN OFF
 set_global_assignment -name FORCE_CONFIGURATION_VCCIO ON
-set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -rise
-set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -fall
-set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -rise
-set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -fall
+#set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -rise
+#set_global_assignment -name OUTPUT_IO_TIMING_NEAR_END_VMEAS "HALF VCCIO" -fall
+#set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -rise
+#set_global_assignment -name OUTPUT_IO_TIMING_FAR_END_VMEAS "HALF SIGNAL SWING" -fall
 set_global_assignment -name CYCLONEIII_CONFIGURATION_DEVICE EPCS16
 set_global_assignment -name POWER_PRESET_COOLING_SOLUTION "23 MM HEAT SINK WITH 200 LFPM AIRFLOW"
 set_global_assignment -name POWER_BOARD_THERMAL_MODEL "NONE (CONSERVATIVE)"
@@ -70,8 +70,8 @@ set_global_assignment -name RESERVE_FLASH_NCE_AFTER_CONFIGURATION "USE AS REGULA
 set_global_assignment -name RESERVE_DCLK_AFTER_CONFIGURATION "USE AS REGULAR IO"
 
 set_global_assignment -name ON_CHIP_BITSTREAM_DECOMPRESSION OFF
-set_global_assignment -name GENERATE_RBF_FILE ON
-set_global_assignment -name GENERATE_SVF_FILE ON
+#set_global_assignment -name GENERATE_RBF_FILE ON
+#set_global_assignment -name GENERATE_SVF_FILE ON
 
 # Obsolete assignment in <Version 22.4> "set_global_assignment -name PARTITION_NETLIST_TYPE SOURCE -section_id Top"
 # Obsolete assignment in <Version 22.4> "set_global_assignment -name PARTITION_FITTER_PRESERVATION_LEVEL PLACEMENT_AND_ROUTING -section_id Top"
@@ -126,3 +126,155 @@ set_global_assignment -name IP_FILE ../10gxip/pll10_1.ip
 set_global_assignment -name IP_FILE ../10gxip/clkctrl10.ip
 set_global_assignment -name VHDL_INPUT_VERSION VHDL_2019
 set_global_assignment -name POWER_APPLY_THERMAL_MARGIN ADDITIONAL
+set_location_assignment PIN_AB4 -to auxout
+set_location_assignment PIN_AB21 -to boardin[0]
+set_location_assignment PIN_AA17 -to boardin[1]
+set_location_assignment PIN_AC13 -to boardin[2]
+set_location_assignment PIN_Y20 -to boardin[3]
+set_location_assignment PIN_AB19 -to boardin[4]
+set_location_assignment PIN_AE21 -to boardin[5]
+set_location_assignment PIN_AC23 -to boardin[6]
+set_location_assignment PIN_AE14 -to boardin[7]
+set_location_assignment PIN_R5 -to boardout[0]
+set_location_assignment PIN_T1 -to boardout[1]
+set_location_assignment PIN_R1 -to boardout[2]
+set_location_assignment PIN_H2 -to boardout[3]
+set_location_assignment PIN_J3 -to boardout[4]
+set_location_assignment PIN_G1 -to boardout[5]
+set_location_assignment PIN_AE22 -to boardout[6]
+set_location_assignment PIN_K1 -to boardout[7]
+set_location_assignment PIN_G23 -to clk50
+set_location_assignment PIN_AH20 -to clk_ext
+set_location_assignment PIN_L1 -to clkout
+set_location_assignment PIN_R2 -to clkout2
+set_location_assignment PIN_AC7 -to debugout[0]
+set_location_assignment PIN_AG3 -to debugout[1]
+set_location_assignment PIN_AE2 -to debugout[2]
+set_location_assignment PIN_AC2 -to debugout[3]
+set_location_assignment PIN_AA3 -to debugout[4]
+set_location_assignment PIN_AH2 -to debugout[5]
+set_location_assignment PIN_AC6 -to debugout[6]
+set_location_assignment PIN_AF6 -to debugout[7]
+set_location_assignment PIN_Y6 -to debugout[8]
+set_location_assignment PIN_Y7 -to debugout[9]
+set_location_assignment PIN_AF21 -to debugout[10]
+set_location_assignment PIN_AC1 -to debugout[11]
+set_location_assignment PIN_AF16 -to exttrigin
+set_location_assignment PIN_AE6 -to ftdi_clk
+set_location_assignment PIN_A19 -to ftdi_data[0]
+set_location_assignment PIN_B16 -to ftdi_data[1]
+set_location_assignment PIN_C15 -to ftdi_data[2]
+set_location_assignment PIN_AF13 -to ftdi_data[3]
+set_location_assignment PIN_A16 -to ftdi_data[4]
+set_location_assignment PIN_A18 -to ftdi_data[5]
+set_location_assignment PIN_A17 -to ftdi_data[6]
+set_location_assignment PIN_C20 -to ftdi_data[7]
+set_location_assignment PIN_H1 -to ftdi_oe_n
+set_location_assignment PIN_Y17 -to ftdi_rd_n
+set_location_assignment PIN_AB18 -to ftdi_rxf_n
+set_location_assignment PIN_AH21 -to ftdi_txe_n
+set_location_assignment PIN_Y16 -to ftdi_wr_n
+set_location_assignment PIN_AF3 -to led[0]
+set_location_assignment PIN_R4 -to led[1]
+set_location_assignment PIN_AA4 -to led[2]
+set_location_assignment PIN_AH3 -to led[3]
+set_location_assignment PIN_W4 -to lvds1in[0]
+set_location_assignment PIN_W5 -to lvds1in[1]
+set_location_assignment PIN_AB1 -to lvds1in[2]
+set_location_assignment PIN_AD3 -to lvds1in[3]
+set_location_assignment PIN_AE4 -to lvds1in[4]
+set_location_assignment PIN_AA9 -to lvds1in[5]
+set_location_assignment PIN_Y1 -to lvds1in[6]
+set_location_assignment PIN_AB6 -to lvds1in[7]
+set_location_assignment PIN_AG1 -to lvds1in[8]
+set_location_assignment PIN_AA2 -to lvds1in[9]
+set_location_assignment PIN_W8 -to lvds1in[10]
+set_location_assignment PIN_AE1 -to lvds1in[11]
+set_location_assignment PIN_AA6 -to lvds1in[12]
+set_location_assignment PIN_AH16 -to lvds2in[0]
+set_location_assignment PIN_AH22 -to lvds2in[1]
+set_location_assignment PIN_AG23 -to lvds2in[2]
+set_location_assignment PIN_AH11 -to lvds2in[3]
+set_location_assignment PIN_AH13 -to lvds2in[4]
+set_location_assignment PIN_AG19 -to lvds2in[5]
+set_location_assignment PIN_AH18 -to lvds2in[6]
+set_location_assignment PIN_AE23 -to lvds2in[7]
+set_location_assignment PIN_AA23 -to lvds2in[8]
+set_location_assignment PIN_AD22 -to lvds2in[9]
+set_location_assignment PIN_AG10 -to lvds2in[10]
+set_location_assignment PIN_AC20 -to lvds2in[11]
+set_location_assignment PIN_AA18 -to lvds2in[12]
+set_location_assignment PIN_T6 -to lvds3in[0]
+set_location_assignment PIN_K2 -to lvds3in[1]
+set_location_assignment PIN_N1 -to lvds3in[2]
+set_location_assignment PIN_V5 -to lvds3in[3]
+set_location_assignment PIN_N2 -to lvds3in[4]
+set_location_assignment PIN_T4 -to lvds3in[5]
+set_location_assignment PIN_W3 -to lvds3in[6]
+set_location_assignment PIN_T8 -to lvds3in[7]
+set_location_assignment PIN_U8 -to lvds3in[8]
+set_location_assignment PIN_T2 -to lvds3in[9]
+set_location_assignment PIN_P3 -to lvds3in[10]
+set_location_assignment PIN_K4 -to lvds3in[11]
+set_location_assignment PIN_L2 -to lvds3in[12]
+set_location_assignment PIN_AC15 -to lvds4in[0]
+set_location_assignment PIN_AE12 -to lvds4in[1]
+set_location_assignment PIN_AE17 -to lvds4in[2]
+set_location_assignment PIN_AG18 -to lvds4in[3]
+set_location_assignment PIN_AF17 -to lvds4in[4]
+set_location_assignment PIN_AC12 -to lvds4in[5]
+set_location_assignment PIN_AD18 -to lvds4in[6]
+set_location_assignment PIN_AB16 -to lvds4in[7]
+set_location_assignment PIN_AD13 -to lvds4in[8]
+set_location_assignment PIN_AE11 -to lvds4in[9]
+set_location_assignment PIN_AE19 -to lvds4in[10]
+set_location_assignment PIN_AC16 -to lvds4in[11]
+set_location_assignment PIN_AG14 -to lvds4in[12]
+set_location_assignment PIN_D15 -to lvdsin_clk
+set_location_assignment PIN_V1 -to lvdsin_spare
+set_location_assignment PIN_AF12 -to lvdsin_trig
+set_location_assignment PIN_M3 -to lvdsin_trig_b
+set_location_assignment PIN_B19 -to lvdsout_clk
+set_location_assignment PIN_AD20 -to lvdsout_spare
+set_location_assignment PIN_AA21 -to lvdsout_trig
+set_location_assignment PIN_W20 -to lvdsout_trig_b
+set_location_assignment PIN_AC21 -to overrange[0]
+set_location_assignment PIN_Y19 -to overrange[1]
+set_location_assignment PIN_AB23 -to overrange[2]
+set_location_assignment PIN_AG11 -to overrange[3]
+set_location_assignment PIN_AH12 -to reset
+set_location_assignment PIN_AC5 -to spiclk
+set_location_assignment PIN_U4 -to spics[0]
+set_location_assignment PIN_V7 -to spics[1]
+set_location_assignment PIN_AF22 -to spics[2]
+set_location_assignment PIN_W2 -to spics[3]
+set_location_assignment PIN_P2 -to spics[4]
+set_location_assignment PIN_U3 -to spics[5]
+set_location_assignment PIN_U6 -to spics[6]
+set_location_assignment PIN_V2 -to spics[7]
+set_location_assignment PIN_AB11 -to spimisos[0]
+set_location_assignment PIN_AF14 -to spimisos[1]
+set_location_assignment PIN_AE16 -to spimisos[2]
+set_location_assignment PIN_AD15 -to spimisos[3]
+set_location_assignment PIN_AE15 -to spimisos[4]
+set_location_assignment PIN_AB14 -to spimisos[5]
+set_location_assignment PIN_AA12 -to spimisos[6]
+set_location_assignment PIN_AG16 -to spimisos[7]
+set_location_assignment PIN_AD2 -to spimosi
+set_instance_assignment -name IO_STANDARD LVDS -to lvdsin_clk -entity coincidence
+set_instance_assignment -name IO_STANDARD LVDS -to lvdsin_spare -entity coincidence
+set_instance_assignment -name IO_STANDARD LVDS -to lvdsin_trig -entity coincidence
+set_instance_assignment -name IO_STANDARD LVDS -to lvdsin_trig_b -entity coincidence
+set_instance_assignment -name IO_STANDARD LVDS -to lvdsout_clk -entity coincidence
+set_instance_assignment -name IO_STANDARD LVDS -to lvdsout_spare -entity coincidence
+set_instance_assignment -name IO_STANDARD LVDS -to lvdsout_trig -entity coincidence
+set_instance_assignment -name IO_STANDARD LVDS -to lvdsout_trig_b -entity coincidence
+set_instance_assignment -name IO_STANDARD "1.8 V" -to spimisos[0] -entity coincidence
+set_location_assignment PIN_AF11 -to "lvdsin_trig(n)"
+set_location_assignment PIN_M4 -to "lvdsin_trig_b(n)"
+set_location_assignment PIN_E15 -to "lvdsin_clk(n)"
+set_location_assignment PIN_Y21 -to "lvdsout_trig(n)"
+set_location_assignment PIN_W21 -to "lvdsout_trig_b(n)"
+set_location_assignment PIN_B18 -to "lvdsout_clk(n)"
+set_location_assignment PIN_AD19 -to "lvdsout_spare(n)"
+set_location_assignment PIN_U1 -to "lvdsin_spare(n)"

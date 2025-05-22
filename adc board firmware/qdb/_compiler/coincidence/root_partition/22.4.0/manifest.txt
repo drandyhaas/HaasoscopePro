@@ -1,1 +1,6 @@
-22 serialization::archive 19 0 0 1 0 0 0 11 partitioned 0 0 6 folder 1 1 
+22 serialization::archive 19 0 0 6 0 0 0 5 final 0 0 6 folder 1 1 
+ 11 partitioned 6 folder 1 1 
+ 6 placed 6 folder 1 1 
+ 7 planned 6 folder 1 1 
+ 6 routed 6 folder 1 1 
+ 11 synthesized 6 folder 1 1 

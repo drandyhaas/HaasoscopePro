@@ -4,22 +4,22 @@
 
 `timescale 1 ps / 1 ps
 module lvds10 (
-		input  wire [13:0]  rx_in,         //         rx_in.export
-		output wire [139:0] rx_out,        //        rx_out.export
+		input  wire [11:0]  rx_in,         //         rx_in.export
+		output wire [119:0] rx_out,        //        rx_out.export
 		output wire         rx_coreclock,  //  rx_coreclock.export
 		input  wire         inclock,       //       inclock.export
 		input  wire         pll_areset,    //    pll_areset.export
-		output wire [13:0]  rx_dpa_locked, // rx_dpa_locked.export
+		output wire [11:0]  rx_dpa_locked, // rx_dpa_locked.export
 		output wire         pll_locked     //    pll_locked.export
 	);
 
-	lvds10_altera_lvds_2001_74isxai lvds_0 (
-		.rx_in         (rx_in),         //   input,   width = 14,         rx_in.export
-		.rx_out        (rx_out),        //  output,  width = 140,        rx_out.export
+	lvds10_altera_lvds_2001_tdpee7q lvds_0 (
+		.rx_in         (rx_in),         //   input,   width = 12,         rx_in.export
+		.rx_out        (rx_out),        //  output,  width = 120,        rx_out.export
 		.rx_coreclock  (rx_coreclock),  //  output,    width = 1,  rx_coreclock.export
 		.inclock       (inclock),       //   input,    width = 1,       inclock.export
 		.pll_areset    (pll_areset),    //   input,    width = 1,    pll_areset.export
-		.rx_dpa_locked (rx_dpa_locked), //  output,   width = 14, rx_dpa_locked.export
+		.rx_dpa_locked (rx_dpa_locked), //  output,   width = 12, rx_dpa_locked.export
 		.pll_locked    (pll_locked)     //  output,    width = 1,    pll_locked.export
 	);
 

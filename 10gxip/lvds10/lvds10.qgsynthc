@@ -18,7 +18,7 @@
         <parameters>
           <parameter>
             <name>ACTUAL_INCLOCK_FREQUENCY</name>
-            <value>400.0</value>
+            <value>625.0</value>
           </parameter>
           <parameter>
             <name>CPA_ENABLED</name>
@@ -74,7 +74,7 @@
           </parameter>
           <parameter>
             <name>INCLOCK_FREQUENCY</name>
-            <value>400.0</value>
+            <value>625.0</value>
           </parameter>
           <parameter>
             <name>J_FACTOR</name>
@@ -86,7 +86,7 @@
           </parameter>
           <parameter>
             <name>NUM_CHANNELS</name>
-            <value>14</value>
+            <value>12</value>
           </parameter>
           <parameter>
             <name>NUM_CHANNELS_TX</name>
@@ -646,7 +646,7 @@
           </parameter>
           <parameter>
             <name>mapped_reference_clock_frequency</name>
-            <value>400.0 MHz</value>
+            <value>625.0 MHz</value>
           </parameter>
           <parameter>
             <name>mapped_sys_info_device</name>
@@ -678,7 +678,7 @@
           </parameter>
           <parameter>
             <name>pll_inclock_frequency</name>
-            <value>400.0 MHz</value>
+            <value>625.0 MHz</value>
           </parameter>
           <parameter>
             <name>pll_loaden_duty_cycle</name>
@@ -733,7 +733,7 @@
         <className>altera_lvds</className>
         <version>20.0.1</version>
         <name>lvds_0</name>
-        <uniqueName>lvds10_altera_lvds_2001_74isxai</uniqueName>
+        <uniqueName>lvds10_altera_lvds_2001_tdpee7q</uniqueName>
         <nonce>0</nonce>
         <incidentConnections></incidentConnections>
         <path>lvds10.lvds_0</path>
@@ -745,7 +745,7 @@
             <parameters>
               <parameter>
                 <name>ACTUAL_INCLOCK_FREQUENCY</name>
-                <value>400.0</value>
+                <value>625.0</value>
               </parameter>
               <parameter>
                 <name>ALIGN_TO_RISING_EDGE_ONLY</name>
@@ -809,7 +809,7 @@
               </parameter>
               <parameter>
                 <name>INCLOCK_FREQUENCY</name>
-                <value>400.0</value>
+                <value>625.0</value>
               </parameter>
               <parameter>
                 <name>J_FACTOR</name>
@@ -829,7 +829,7 @@
               </parameter>
               <parameter>
                 <name>NUM_CHANNELS</name>
-                <value>14</value>
+                <value>12</value>
               </parameter>
               <parameter>
                 <name>NUM_CHANNELS_TX</name>
@@ -1645,15 +1645,15 @@
               </parameter>
               <parameter>
                 <name>m_cnt_hi_div</name>
-                <value>13</value>
+                <value>2</value>
               </parameter>
               <parameter>
                 <name>m_cnt_lo_div</name>
-                <value>12</value>
+                <value>2</value>
               </parameter>
               <parameter>
                 <name>m_cnt_odd_div_duty_en</name>
-                <value>true</value>
+                <value>false</value>
               </parameter>
               <parameter>
                 <name>mapped_external_pll_mode</name>
@@ -1661,7 +1661,7 @@
               </parameter>
               <parameter>
                 <name>mapped_reference_clock_frequency</name>
-                <value>400.0 MHz</value>
+                <value>625.0 MHz</value>
               </parameter>
               <parameter>
                 <name>mapped_sys_info_device</name>
@@ -1685,11 +1685,11 @@
               </parameter>
               <parameter>
                 <name>n_cnt_hi_div</name>
-                <value>4</value>
+                <value>1</value>
               </parameter>
               <parameter>
                 <name>n_cnt_lo_div</name>
-                <value>4</value>
+                <value>1</value>
               </parameter>
               <parameter>
                 <name>n_cnt_odd_div_duty_en</name>
@@ -1697,7 +1697,7 @@
               </parameter>
               <parameter>
                 <name>pll_bw_ctrl</name>
-                <value>pll_bw_res_setting4</value>
+                <value>pll_bw_res_setting2</value>
               </parameter>
               <parameter>
                 <name>pll_bw_sel</name>
@@ -1741,7 +1741,7 @@
               </parameter>
               <parameter>
                 <name>pll_cp_setting</name>
-                <value>pll_cp_setting28</value>
+                <value>pll_cp_setting15</value>
               </parameter>
               <parameter>
                 <name>pll_dprio_clk_frequency</name>
@@ -1765,11 +1765,11 @@
               </parameter>
               <parameter>
                 <name>pll_inclock_frequency</name>
-                <value>400.0 MHz</value>
+                <value>625.0 MHz</value>
               </parameter>
               <parameter>
                 <name>pll_input_clock_frequency</name>
-                <value>400.0 MHz</value>
+                <value>625.0 MHz</value>
               </parameter>
               <parameter>
                 <name>pll_loaden_duty_cycle</name>
@@ -1944,7 +1944,7 @@
             <className>altera_lvds_core20</className>
             <version>19.1</version>
             <name>core</name>
-            <uniqueName>lvds10_altera_lvds_core20_191_lfyhyui</uniqueName>
+            <uniqueName>lvds10_altera_lvds_core20_191_mi3lsjy</uniqueName>
             <nonce>0</nonce>
             <incidentConnections></incidentConnections>
             <path>lvds10.lvds_0.core</path>

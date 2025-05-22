@@ -21,7 +21,7 @@ flashstate.0001 0 0 1 1
 flashstate.0010 0 1 0 1 
 flashstate.0011 1 0 0 1 
 
-State Machine - inst20|iopll_0|altera_iopll_i|dps_pulse_gen_iopll_inst|state
+State Machine - pllmain|iopll_0|altera_iopll_i|dps_pulse_gen_iopll_inst|state
 Name state.IDLE state.WAIT state.PULSE 
 state.IDLE 0 0 0 
 state.PULSE 1 0 1 

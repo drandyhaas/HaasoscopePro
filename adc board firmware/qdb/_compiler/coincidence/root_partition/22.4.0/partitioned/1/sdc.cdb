@@ -1,4 +1,4 @@
-22 serialization::archive 19 0 0 0 0 5 0 2 C: 7 gitwork 6 master 13 HaasoscopePro 18 adc board firmware 0 0 2 0 0 0 9 0 2 C: 7 gitwork 6 master 13 HaasoscopePro 6 10gxip 6 lvds10 22 altera_lvds_core20_191 5 synth 41 lvds10_altera_lvds_core20_191_lfyhyui.sdc 14908 
+22 serialization::archive 19 0 0 0 0 5 0 2 C: 7 gitwork 6 master 13 HaasoscopePro 18 adc board firmware 0 0 2 0 0 0 9 0 2 C: 7 gitwork 6 master 13 HaasoscopePro 6 10gxip 6 lvds10 22 altera_lvds_core20_191 5 synth 41 lvds10_altera_lvds_core20_191_mi3lsjy.sdc 14903 
 
 #####################################################################
 #
@@ -41,7 +41,7 @@ if { $::TimeQuestInfo(nameofexecutable) == "quartus_map" } {
 # refclk.  If you see an critical warning, modify to match your design.
 ##########################################################################################
 
-set libname lvds10_altera_lvds_core20_191_lfyhyui 
+set libname lvds10_altera_lvds_core20_191_mi3lsjy 
 set corename altera_lvds_core20 
 
 set catch_exception [catch { 
@@ -76,24 +76,24 @@ set OC_P2C_SU 0.0
 set OC_P2C_H  0.0
 set use_external_pll 0
 set j_factor 10 
-set ref_clock_period_ns 2.5 
+set ref_clock_period_ns 1.6 
 set slow_clock_period_ns 8.0 
 set fast_clock_period_ns 0.8 
-set sclk_multiply_by 25 
-set sclk_divide_by 80 
+set sclk_multiply_by 4 
+set sclk_divide_by 20 
 set sclk_phase 0.0 
-set fclk_multiply_by 25 
-set fclk_divide_by 8 
+set fclk_multiply_by 4 
+set fclk_divide_by 2 
 set fclk_phase 180 
-set loaden_multiply_by 25 
-set loaden_divide_by 80 
+set loaden_multiply_by 4 
+set loaden_divide_by 20 
 set loaden_phase 324.0 
 set loaden_duty 10.0 
-set tx_outclock_fclk_multiply_by 25 
-set tx_outclock_fclk_divide_by 80 
+set tx_outclock_fclk_multiply_by 4 
+set tx_outclock_fclk_divide_by 20 
 set tx_outclock_fclk_phase 0 
-set tx_outclock_loaden_multiply_by 25 
-set tx_outclock_loaden_divide_by 8 
+set tx_outclock_loaden_multiply_by 4 
+set tx_outclock_loaden_divide_by 2 
 set tx_outclock_loaden_phase 0.0 
 set tx_outclock_loaden_duty 10.0 
 

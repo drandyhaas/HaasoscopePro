@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <EnsembleReport name="lvds10" kind="lvds10" version="1.0" fabric="QSYS">
  <!-- Format version 22.4 94 (Future versions may contain additional information.) -->
- <!-- 2025.05.22.11:11:22 -->
+ <!-- 2025.05.22.13:54:01 -->
  <!-- A collection of modules and connections -->
  <parameter name="AUTO_GENERATION_ID">
   <type>java.lang.Integer</type>
@@ -69,7 +69,7 @@
    name="lvds_0"
    kind="altera_lvds"
    version="20.0.1"
-   entity="lvds10_altera_lvds_2001_74isxai"
+   entity="lvds10_altera_lvds_2001_tdpee7q"
    library="altera_lvds_2001"
    path="lvds_0"
    hpath="lvds_0"
@@ -155,7 +155,7 @@ the requested settings for a module instance. -->
   </parameter>
   <parameter name="NUM_CHANNELS">
    <type>int</type>
-   <value>14</value>
+   <value>12</value>
    <derived>false</derived>
    <enabled>true</enabled>
    <visible>true</visible>
@@ -187,7 +187,7 @@ the requested settings for a module instance. -->
   </parameter>
   <parameter name="INCLOCK_FREQUENCY">
    <type>double</type>
-   <value>400.0</value>
+   <value>625.0</value>
    <derived>false</derived>
    <enabled>true</enabled>
    <visible>true</visible>
@@ -227,7 +227,7 @@ the requested settings for a module instance. -->
   </parameter>
   <parameter name="ACTUAL_INCLOCK_FREQUENCY">
    <type>double</type>
-   <value>400.0</value>
+   <value>625.0</value>
    <derived>true</derived>
    <enabled>true</enabled>
    <visible>true</visible>
@@ -603,7 +603,7 @@ the requested settings for a module instance. -->
   </parameter>
   <parameter name="pll_inclock_frequency">
    <type>java.lang.String</type>
-   <value>400.0 MHz</value>
+   <value>625.0 MHz</value>
    <derived>true</derived>
    <enabled>true</enabled>
    <visible>false</visible>
@@ -667,7 +667,7 @@ the requested settings for a module instance. -->
   </parameter>
   <parameter name="mapped_reference_clock_frequency">
    <type>java.lang.String</type>
-   <value>400.0 MHz</value>
+   <value>625.0 MHz</value>
    <derived>true</derived>
    <enabled>true</enabled>
    <visible>false</visible>
@@ -1574,7 +1574,7 @@ parameters are a RESULT of the module parameters. -->
    <port>
     <name>rx_in</name>
     <direction>Input</direction>
-    <width>14</width>
+    <width>12</width>
     <role>export</role>
    </port>
   </interface>
@@ -1631,7 +1631,7 @@ parameters are a RESULT of the module parameters. -->
    <port>
     <name>rx_out</name>
     <direction>Output</direction>
-    <width>140</width>
+    <width>120</width>
     <role>export</role>
    </port>
   </interface>
@@ -1859,7 +1859,7 @@ parameters are a RESULT of the module parameters. -->
    <port>
     <name>rx_dpa_locked</name>
     <direction>Output</direction>
-    <width>14</width>
+    <width>12</width>
     <role>export</role>
    </port>
   </interface>

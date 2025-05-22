@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <deploy
- date="2025.05.22.11:11:22"
+ date="2025.05.22.13:54:01"
  outputDirectory="C:/gitwork/master/HaasoscopePro/10gxip/lvds10/">
  <perimeter>
   <parameter
@@ -37,13 +37,13 @@
    <property name="associatedClock" value="" />
    <property name="associatedReset" value="" />
    <property name="prSafe" value="false" />
-   <port name="rx_in" direction="input" role="export" width="14" />
+   <port name="rx_in" direction="input" role="export" width="12" />
   </interface>
   <interface name="rx_out" kind="conduit" start="0">
    <property name="associatedClock" value="" />
    <property name="associatedReset" value="" />
    <property name="prSafe" value="false" />
-   <port name="rx_out" direction="output" role="export" width="140" />
+   <port name="rx_out" direction="output" role="export" width="120" />
   </interface>
   <interface name="rx_coreclock" kind="conduit" start="0">
    <property name="associatedClock" value="" />
@@ -67,7 +67,7 @@
    <property name="associatedClock" value="" />
    <property name="associatedReset" value="" />
    <property name="prSafe" value="false" />
-   <port name="rx_dpa_locked" direction="output" role="export" width="14" />
+   <port name="rx_dpa_locked" direction="output" role="export" width="12" />
   </interface>
   <interface name="pll_locked" kind="conduit" start="0">
    <property name="associatedClock" value="" />
@@ -227,14 +227,14 @@
   </childSourceFiles>
   <messages>
    <message level="Info" culprit="lvds10">"Generating: lvds10"</message>
-   <message level="Info" culprit="lvds10">"Generating: lvds10_altera_lvds_2001_74isxai"</message>
-   <message level="Info" culprit="lvds10">"Generating: lvds10_altera_lvds_core20_191_lfyhyui"</message>
+   <message level="Info" culprit="lvds10">"Generating: lvds10_altera_lvds_2001_tdpee7q"</message>
+   <message level="Info" culprit="lvds10">"Generating: lvds10_altera_lvds_core20_191_mi3lsjy"</message>
   </messages>
  </entity>
  <entity
    kind="altera_lvds"
    version="20.0.1"
-   name="lvds10_altera_lvds_2001_74isxai">
+   name="lvds10_altera_lvds_2001_tdpee7q">
   <parameter name="TX_OUTCLOCK_DIVISION" value="2" />
   <parameter name="gui_actual_outclk_frequency_0" value="1250.000000" />
   <parameter name="pll_loaden_frequency" value="125.000000 MHz" />
@@ -250,14 +250,14 @@
   <parameter name="gui_actual_outclk_frequency_2" value="125.000000" />
   <parameter name="mapped_sys_info_device" value="10CX105YF780E6G" />
   <parameter name="RX_INCLOCK_PHASE_SHIFT" value="0" />
-  <parameter name="NUM_CHANNELS" value="14" />
+  <parameter name="NUM_CHANNELS" value="12" />
   <parameter name="RX_CDR_SIMULATION_PPM_DRIFT" value="0" />
   <parameter name="hp_actual_outclk_frequency_0" value="1250.0" />
   <parameter name="hp_actual_outclk_frequency_1" value="125.0" />
   <parameter name="hp_actual_outclk_frequency_2" value="125.0" />
   <parameter name="hp_actual_outclk_frequency_3" value="1250.0" />
   <parameter name="GENERATE_SDC_FILE" value="true" />
-  <parameter name="INCLOCK_FREQUENCY" value="400.0" />
+  <parameter name="INCLOCK_FREQUENCY" value="625.0" />
   <parameter name="RX_USE_BITSLIP" value="false" />
   <parameter name="RX_BITSLIP_USE_RESET" value="false" />
   <parameter name="RX_BITSLIP_ASSERT_MAX" value="false" />
@@ -268,7 +268,7 @@
   <parameter name="RX_DPA_USE_RESET" value="false" />
   <parameter name="DUPLEX_MODE" value="RX_Non-DPA" />
   <parameter name="RX_DPA_LOCKED_USED" value="true" />
-  <parameter name="pll_inclock_frequency" value="400.0 MHz" />
+  <parameter name="pll_inclock_frequency" value="625.0 MHz" />
   <parameter name="gui_number_of_pll_output_clocks" value="0" />
   <parameter name="TX_EXPORT_CORECLOCK" value="true" />
   <parameter name="hp_outclk_actual_phase_shift_6" value="0.0" />
@@ -297,7 +297,7 @@
   <parameter name="ENABLE_DIV_RECONFIG" value="false" />
   <parameter name="DATA_RATE" value="1250.0" />
   <parameter name="pll_tx_outclock_phase_shift" value="0 ps" />
-  <parameter name="mapped_reference_clock_frequency" value="400.0 MHz" />
+  <parameter name="mapped_reference_clock_frequency" value="625.0 MHz" />
   <parameter name="SYS_INFO_UNIQUE_ID" value="lvds10_lvds_0" />
   <parameter name="DERIVED_CPA_ENABLED" value="false" />
   <parameter name="mapped_sys_info_device_family" value="Cyclone 10 GX" />
@@ -395,7 +395,7 @@
   <parameter name="pll_sclk_phase_shift" value="0 ps" />
   <parameter name="gui_desired_outclk_frequency_3" value="0.0" />
   <parameter name="gui_desired_outclk_frequency_4" value="0.0" />
-  <parameter name="ACTUAL_INCLOCK_FREQUENCY" value="400.0" />
+  <parameter name="ACTUAL_INCLOCK_FREQUENCY" value="625.0" />
   <parameter name="gui_desired_outclk_frequency_1" value="125.0" />
   <parameter name="gui_desired_outclk_frequency_2" value="125.0" />
   <parameter name="gui_desired_outclk_frequency_7" value="100.0" />
@@ -415,12 +415,12 @@
   <parameter name="RX_INCLOCK_PHASE_SHIFT_ACTUAL" value="0" />
   <generatedFiles>
    <file
-       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_2001\synth\lvds10_altera_lvds_2001_74isxai.v"
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_2001\synth\lvds10_altera_lvds_2001_tdpee7q.v"
        attributes="CONTAINS_INLINE_CONFIGURATION" />
   </generatedFiles>
   <childGeneratedFiles>
    <file
-       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_2001\synth\lvds10_altera_lvds_2001_74isxai.v"
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_2001\synth\lvds10_altera_lvds_2001_tdpee7q.v"
        attributes="CONTAINS_INLINE_CONFIGURATION" />
   </childGeneratedFiles>
   <sourceFiles>
@@ -557,14 +557,14 @@
   </childSourceFiles>
   <instantiator instantiator="lvds10" as="lvds_0" />
   <messages>
-   <message level="Info" culprit="lvds10">"Generating: lvds10_altera_lvds_2001_74isxai"</message>
-   <message level="Info" culprit="lvds10">"Generating: lvds10_altera_lvds_core20_191_lfyhyui"</message>
+   <message level="Info" culprit="lvds10">"Generating: lvds10_altera_lvds_2001_tdpee7q"</message>
+   <message level="Info" culprit="lvds10">"Generating: lvds10_altera_lvds_core20_191_mi3lsjy"</message>
   </messages>
  </entity>
  <entity
    kind="altera_lvds_core20"
    version="19.1"
-   name="lvds10_altera_lvds_core20_191_lfyhyui">
+   name="lvds10_altera_lvds_core20_191_mi3lsjy">
   <parameter name="pll_loaden_frequency" value="125.000000 MHz" />
   <parameter name="pll_tx_outclock_loaden_frequency" value="0 ps" />
   <parameter name="pll_output_phase_shift_2" value="0 ps" />
@@ -587,13 +587,13 @@
   <parameter name="ALIGN_TO_RISING_EDGE_ONLY" value="false" />
   <parameter name="mapped_vco_frequency" value="1250.0 MHz" />
   <parameter name="gui_enable_advanced_mode" value="0" />
-  <parameter name="m_cnt_odd_div_duty_en" value="true" />
+  <parameter name="m_cnt_odd_div_duty_en" value="false" />
   <parameter name="DUPLEX_MODE" value="RX_Non-DPA" />
   <parameter name="c_cnt_prst6" value="1" />
   <parameter name="c_cnt_prst5" value="1" />
   <parameter name="c_cnt_prst8" value="1" />
   <parameter name="c_cnt_prst7" value="1" />
-  <parameter name="pll_inclock_frequency" value="400.0 MHz" />
+  <parameter name="pll_inclock_frequency" value="625.0 MHz" />
   <parameter name="TX_EXPORT_CORECLOCK" value="true" />
   <parameter name="hp_outclk_actual_phase_shift_6" value="0.0" />
   <parameter name="hp_outclk_actual_phase_shift_7" value="0.0" />
@@ -620,7 +620,7 @@
   <parameter name="pll_output_clock_frequency_3" value="0.0 MHz" />
   <parameter name="pll_output_clock_frequency_4" value="0.0 MHz" />
   <parameter name="ENABLE_DIV_RECONFIG" value="false" />
-  <parameter name="pll_input_clock_frequency" value="400.0 MHz" />
+  <parameter name="pll_input_clock_frequency" value="625.0 MHz" />
   <parameter name="DATA_RATE" value="1250.0" />
   <parameter name="SYS_INFO_UNIQUE_ID" value="lvds10_lvds_0" />
   <parameter name="ENABLE_CPA_RECONFIG" value="false" />
@@ -661,9 +661,9 @@
   <parameter name="pll_clk_out_en_6" value="false" />
   <parameter name="pll_clk_out_en_7" value="false" />
   <parameter name="CPA_ENABLED" value="false" />
-  <parameter name="m_cnt_hi_div" value="13" />
+  <parameter name="m_cnt_hi_div" value="2" />
   <parameter name="pll_clk_out_en_8" value="false" />
-  <parameter name="n_cnt_lo_div" value="4" />
+  <parameter name="n_cnt_lo_div" value="1" />
   <parameter name="gui_actual_outclk_duty_cycle_5" value="50.0" />
   <parameter name="c_cnt_hi_div5" value="256" />
   <parameter name="gui_actual_outclk_duty_cycle_4" value="N/A" />
@@ -703,15 +703,15 @@
   <parameter name="gui_actual_outclk_frequency_2" value="125.000000" />
   <parameter name="LOSE_LOCK_ON_ONE_CHANGE" value="false" />
   <parameter name="mapped_sys_info_device" value="10CX105YF780E6G" />
-  <parameter name="NUM_CHANNELS" value="14" />
+  <parameter name="NUM_CHANNELS" value="12" />
   <parameter name="RX_CDR_SIMULATION_PPM_DRIFT" value="0" />
   <parameter name="hp_actual_outclk_frequency_0" value="1250.0" />
   <parameter name="hp_actual_outclk_frequency_1" value="125.0" />
-  <parameter name="m_cnt_lo_div" value="12" />
+  <parameter name="m_cnt_lo_div" value="2" />
   <parameter name="hp_actual_outclk_frequency_2" value="125.0" />
   <parameter name="hp_actual_outclk_frequency_3" value="1250.0" />
   <parameter name="GENERATE_SDC_FILE" value="true" />
-  <parameter name="INCLOCK_FREQUENCY" value="400.0" />
+  <parameter name="INCLOCK_FREQUENCY" value="625.0" />
   <parameter name="c_cnt_odd_div_duty_en0" value="false" />
   <parameter name="c_cnt_odd_div_duty_en1" value="false" />
   <parameter name="RX_BITSLIP_ASSERT_MAX" value="false" />
@@ -731,7 +731,7 @@
   <parameter name="gui_number_of_pll_output_clocks" value="0" />
   <parameter name="PORT_MAP_FILE_NAME" value="port_map_rx.csv" />
   <parameter name="pll_sclk_frequency" value="125.000000 MHz" />
-  <parameter name="pll_cp_setting" value="pll_cp_setting28" />
+  <parameter name="pll_cp_setting" value="pll_cp_setting15" />
   <parameter name="SYS_INFO_DEVICE_FAMILY" value="Cyclone 10 GX" />
   <parameter name="J_FACTOR" value="10" />
   <parameter name="c_cnt_lo_div7" value="256" />
@@ -751,7 +751,7 @@
   <parameter name="hp_actual_outclk_frequency_6" value="100.0" />
   <parameter name="hp_actual_outclk_frequency_7" value="100.0" />
   <parameter name="pll_tx_outclock_phase_shift" value="0 ps" />
-  <parameter name="mapped_reference_clock_frequency" value="400.0 MHz" />
+  <parameter name="mapped_reference_clock_frequency" value="625.0 MHz" />
   <parameter name="USE_DIV_RECONFIG" value="false" />
   <parameter name="DERIVED_CPA_ENABLED" value="false" />
   <parameter name="TX_OUTCLOCK_USE_FALLING_CLOCK_EDGE" value="false" />
@@ -801,7 +801,7 @@
   <parameter name="TX_OUTCLOCK_ENABLED" value="false" />
   <parameter name="USE_EXTERNAL_PLL" value="false" />
   <parameter name="gui_desired_outclk_duty_cycle_8" value="50.0" />
-  <parameter name="n_cnt_hi_div" value="4" />
+  <parameter name="n_cnt_hi_div" value="1" />
   <parameter name="m_cnt_bypass_en" value="false" />
   <parameter name="gui_outclk_phase_shift_unit_0" value="0" />
   <parameter name="gui_outclk_phase_shift_unit_2" value="0" />
@@ -818,7 +818,7 @@
   <parameter name="gui_outclk_actual_phase_shift_deg_5" value="0.0" />
   <parameter name="pll_output_duty_cycle_4" value="50" />
   <parameter name="gui_outclk_actual_phase_shift_deg_4" value="N/A" />
-  <parameter name="pll_bw_ctrl" value="pll_bw_res_setting4" />
+  <parameter name="pll_bw_ctrl" value="pll_bw_res_setting2" />
   <parameter name="pll_output_duty_cycle_3" value="50" />
   <parameter name="pll_output_duty_cycle_8" value="50" />
   <parameter name="gui_outclk_actual_phase_shift_deg_8" value="0.0" />
@@ -839,7 +839,7 @@
   <parameter name="pll_output_duty_cycle_2" value="50" />
   <parameter name="gui_desired_outclk_frequency_4" value="0.0" />
   <parameter name="pll_output_duty_cycle_1" value="10" />
-  <parameter name="ACTUAL_INCLOCK_FREQUENCY" value="400.0" />
+  <parameter name="ACTUAL_INCLOCK_FREQUENCY" value="625.0" />
   <parameter name="gui_desired_outclk_frequency_1" value="125.0" />
   <parameter name="pll_output_duty_cycle_0" value="50" />
   <parameter name="gui_desired_outclk_frequency_2" value="125.0" />
@@ -872,10 +872,10 @@
        path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\altera_lvds_core20_pll.v"
        attributes="" />
    <file
-       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\lvds10_altera_lvds_core20_191_lfyhyui.sv"
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\lvds10_altera_lvds_core20_191_mi3lsjy.sv"
        attributes="" />
    <file
-       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\lvds10_altera_lvds_core20_191_lfyhyui.sdc"
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\lvds10_altera_lvds_core20_191_mi3lsjy.sdc"
        attributes="NO_AUTO_INSTANCE_DISCOVERY NO_SDC_PROMOTION" />
    <file
        path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\sdc_util.tcl"
@@ -889,10 +889,10 @@
        path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\altera_lvds_core20_pll.v"
        attributes="" />
    <file
-       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\lvds10_altera_lvds_core20_191_lfyhyui.sv"
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\lvds10_altera_lvds_core20_191_mi3lsjy.sv"
        attributes="" />
    <file
-       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\lvds10_altera_lvds_core20_191_lfyhyui.sdc"
+       path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\lvds10_altera_lvds_core20_191_mi3lsjy.sdc"
        attributes="NO_AUTO_INSTANCE_DISCOVERY NO_SDC_PROMOTION" />
    <file
        path="C:\gitwork\master\HaasoscopePro\10gxip\lvds10\altera_lvds_core20_191\synth\sdc_util.tcl"
@@ -965,9 +965,9 @@
    <file path="E:/intelFPGA_pro/22.4/qsys/lib/com.altera.sopc.generator.jar" />
   </sourceFiles>
   <childSourceFiles/>
-  <instantiator instantiator="lvds10_altera_lvds_2001_74isxai" as="core" />
+  <instantiator instantiator="lvds10_altera_lvds_2001_tdpee7q" as="core" />
   <messages>
-   <message level="Info" culprit="lvds10">"Generating: lvds10_altera_lvds_core20_191_lfyhyui"</message>
+   <message level="Info" culprit="lvds10">"Generating: lvds10_altera_lvds_core20_191_mi3lsjy"</message>
   </messages>
  </entity>
 </deploy>

@@ -25,7 +25,7 @@ derive_pll_clocks
 derive_clock_uncertainty -add
 
 ## Declare that these clocks are asynchronous
-set_clock_groups -asynchronous -group {clk50 oscpll* clk_ext extpll* pllmain*pll1|clk[*]} -group {lvdsin_clk pllmain*pll1|clk[*]~1} -group {ftdi_clk} -group {scanclk} -group {spireset}
+set_clock_groups -asynchronous -group {clk50 oscpll* clk_ext extpll* pllmain|*|clk*out pllmain|*|clk*out3} -group {lvdsin_clk pllmain|*|clk*out__1 pllmain|*|clk*out3__1} -group {ftdi_clk} -group {scanclk} -group {spireset}
 
 ## Ignores
 set_false_path -from [get_registers command_processor:inst1|*] -to [get_registers command_processor:inst1|*_sync*]
@@ -69,10 +69,10 @@ set_max_delay -to [get_ports led* ] 10
 set_min_delay -to [get_ports led* ] -10
 set_max_delay -from [get_ports reset ] 10
 set_min_delay -from [get_ports reset ] -10
-set_max_delay -from [get_ports asmi* ] 10
-set_min_delay -from [get_ports asmi* ] -10 
-set_max_delay -to [get_ports asmi* ] 10
-set_min_delay -to [get_ports asmi* ] -10 
+#set_max_delay -from [get_ports asmi* ] 10
+#set_min_delay -from [get_ports asmi* ] -10 
+#set_max_delay -to [get_ports asmi* ] 10
+#set_min_delay -to [get_ports asmi* ] -10 
 
 set_input_delay -clock ftdi_clk 0 [get_ports ftdi_clk ]
 set_input_delay -clock ftdi_clk 0 [get_ports ftdi_rxf_n ]
@@ -97,9 +97,9 @@ set_output_delay -clock clk50 0 [get_ports boardout* ]
 set_output_delay -clock clk50 0 [get_ports debugout* ]
 
 ## for exttrig SMA in and aux SMA out, on clklvds
-set_input_delay -clock pllmain|altpll_component|auto_generated|pll1|clk[1] -1 [get_ports exttrigin ]
-set_output_delay -clock pllmain|altpll_component|auto_generated|pll1|clk[1] -2 [get_ports auxout ]
+set_input_delay  -clock pllmain|*|clkout -1 [get_ports exttrigin ]
+set_output_delay -clock pllmain|*|clkout -2 [get_ports auxout ]
 
 ## for flash I/O
-set_input_delay -clock clk_over_4 -5 [get_ports asmi*DATA0 ]
-set_output_delay -clock clk_over_4 -5 [get_ports {asmi*DCLK asmi*SCE asmi*SDO} ]
+#set_input_delay -clock clk_over_4 -5 [get_ports asmi*DATA0 ]
+#set_output_delay -clock clk_over_4 -5 [get_ports {asmi*DCLK asmi*SCE asmi*SDO} ]

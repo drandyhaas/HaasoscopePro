@@ -9,8 +9,8 @@ Info: lvds10: "Transforming system: lvds10"
 Info: lvds10: "Naming system components in system: lvds10"
 Info: lvds10: "Processing generation queue"
 Info: lvds10: "Generating: lvds10"
-Info: lvds10: "Generating: lvds10_altera_lvds_2001_74isxai"
-Info: lvds10: "Generating: lvds10_altera_lvds_core20_191_lfyhyui"
+Info: lvds10: "Generating: lvds10_altera_lvds_2001_tdpee7q"
+Info: lvds10: "Generating: lvds10_altera_lvds_core20_191_mi3lsjy"
 Info: lvds10: Done "lvds10" with 3 modules, 7 files
 Info: Finished: Create HDL design files for synthesis
 Info: Starting: Generate IP Core Documentation

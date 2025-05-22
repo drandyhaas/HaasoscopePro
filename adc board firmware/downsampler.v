@@ -2,7 +2,7 @@
 module downsampler
 (
    input wire clklvds, // clk1, runs at LVDS bit rate (ADC clk input rate) / 2
-   input wire [139:0] lvds1bits, lvds2bits, lvds3bits, lvds4bits,// rx_in[0] drives data to rx_out[(J-1)..0], rx_in[1] drives data to the next J number of bits on rx_out
+   input wire [119:0] lvds1bits, lvds2bits, lvds3bits, lvds4bits,// rx_in[0] drives data to rx_out[(J-1)..0], rx_in[1] drives data to the next J number of bits on rx_out
    output reg [559:0] lvdsbitsout, //output bits to fifo
    
    input integer     downsamplecounter,
@@ -66,10 +66,10 @@ always @ (posedge clklvds) begin
          samplevalue[30+i] <= (samplevaluereg[30+i]== -12'd2048) ? 12'd2047: -samplevaluereg[30+i];
       end
 
-      sampleclkstr[i]    <= {lvds1bits[130+i],lvds1bits[120+i]};
-      sampleclkstr[10+i] <= {lvds2bits[130+i],lvds2bits[120+i]};
-      sampleclkstr[20+i] <= {lvds3bits[130+i],lvds3bits[120+i]};
-      sampleclkstr[30+i] <= {lvds4bits[130+i],lvds4bits[120+i]};
+      sampleclkstr[i]    <= 0;//{lvds1bits[130+i],lvds1bits[120+i]};
+      sampleclkstr[10+i] <= 0;//{lvds2bits[130+i],lvds2bits[120+i]};
+      sampleclkstr[20+i] <= 0;//{lvds3bits[130+i],lvds3bits[120+i]};
+      sampleclkstr[30+i] <= 0;//{lvds4bits[130+i],lvds4bits[120+i]};
    end
 
    for (i=0;i<40;i=i+1) begin
