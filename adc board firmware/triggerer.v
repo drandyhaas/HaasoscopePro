@@ -2,8 +2,8 @@
 module triggerer(
    input clklvds,
    input rstn,
-   output reg        ram_wr=0,
-   output reg [9:0]  ram_wr_address=0,
+   output reg        ram_wr,
+   output reg [9:0]  ram_wr_address,
    input signed [11:0] samplevalue[40],
    input wire lvdsin_trig,
    output reg lvdsout_trig,
