@@ -46,7 +46,7 @@ class MainWindow(TemplateBaseClass):
 
     expect_samples = 100
     expect_samples_extra = 5 # enough to cover downsample shifting and toff shifting
-    samplerate = 5.0 # 4.0 # 3.2  # freq in GHz
+    samplerate = 6.4 # 5.0 # 4.0 # 3.2  # freq in GHz
     nsunits = 1
     num_board = len(usbs)
     num_chan_per_board = 2
