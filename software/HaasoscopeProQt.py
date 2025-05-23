@@ -46,7 +46,7 @@ class MainWindow(TemplateBaseClass):
 
     expect_samples = 100
     expect_samples_extra = 5 # enough to cover downsample shifting and toff shifting
-    samplerate = 3.2  # freq in GHz
+    samplerate = 4.0 # 3.2  # freq in GHz
     nsunits = 1
     num_board = len(usbs)
     num_chan_per_board = 2
@@ -74,7 +74,7 @@ class MainWindow(TemplateBaseClass):
     themuxoutV = True
     phasecs = []
     for ph in range(len(usbs)): phasecs.append([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
-    phaseoffset = 0 # how many positive phase steps to take from middle of good range
+    phaseoffset = 1 # how many positive phase steps to take from middle of good range
     doexttrig = [0] * num_board
     doextsmatrig = [0] * num_board
     paused = True # will unpause with dostartstop at startup
