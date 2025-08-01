@@ -1,9 +1,11 @@
+import os.path
 import numpy as np
 import sys, time, warnings
 import pyqtgraph as pg
 import PyQt5
 from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
 from PyQt5.QtGui import QPalette, QColor
+from PyQt5.QtWidgets import QApplication, QMessageBox, QWidget, QPushButton
 from scipy.optimize import curve_fit
 from scipy.signal import resample
 import struct
@@ -1161,6 +1163,20 @@ class MainWindow(TemplateBaseClass):
             auxoutselector(usbs[board],val)
 
     def update_firmware(self):
+        print("thinking about updating firmware on board",self.activeboard)
+        if not os.path.exists("../adc board firmware/output_files/coincidence_auto.rpd"):
+            print("../adc board firmware/output_files/coincidence_auto.rpd was not found!")
+            return
+        msg_box = QMessageBox()
+        msg_box.setWindowTitle("Confirmation")
+        msg_box.setText("Do you really want to update the firmware with ../adc board firmware/output_files/coincidence_auto.rpd?")
+        msg_box.setIcon(QMessageBox.Question)
+        msg_box.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        msg_box.setDefaultButton(QMessageBox.Cancel)  # Set default focused button
+        reply = msg_box.exec_()
+        if reply == QMessageBox.Cancel:
+            print("update canceled!")
+            return
         print("updating firmware on board",self.activeboard)
         starttime = time.time()
         for bo in range(self.num_board): clkout_ena(usbs[bo],0)
