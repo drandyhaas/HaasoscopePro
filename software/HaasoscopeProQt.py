@@ -226,7 +226,7 @@ class MainWindow(TemplateBaseClass):
         self.selectchannel()
 
     def selectchannel(self):
-        if self.activeboard%2==0:
+        if self.activeboard%2==0 and not self.dotwochannel:
             self.ui.oversampCheck.setEnabled(True)
             if self.dooversample: self.ui.interleavedCheck.setEnabled(True)
         else:
