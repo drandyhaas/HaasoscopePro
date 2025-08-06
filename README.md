@@ -45,7 +45,8 @@
 ### To remake exe for quick start
 <code>pip3 install pyinstaller</code> # install dependency once
 <br><code>python3 -m PyInstaller HaasoscopeProQt.py</code>
-<br>Rename dist/HaasoscopeProQt dist/(OS)_HaasoscopeProQt
+<br>Copy *.ui to dist/HaasoscopeProQt
+<br>Rename dist/HaasoscopeProQt to dist/(OS)_HaasoscopeProQt
 
 ### Repository structure
 
