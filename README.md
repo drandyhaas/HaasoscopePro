@@ -14,6 +14,10 @@
 
 #### Firmware overview: [firmware schematic.pdf](adc%20board%20firmware/schematic.pdf)
 
+### Video tutorials
+
+See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiKQQmUUNoTf2oo_m5qS00k) !
+
 ### Quick start (Windows/Mac/Linux)
 
 1) Download code and unzip it: https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/main.zip
