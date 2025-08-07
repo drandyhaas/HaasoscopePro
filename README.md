@@ -19,7 +19,7 @@
 1) Download code and unzip it: https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/main.zip
 2) Rename directory HaasoscopePro-main to HaasoscopePro (for consistency with git below)
 3) Install [FTDI D2xx driver](https://ftdichip.com/drivers/d2xx-drivers/) 
-<br>for Windows: install by running the setup exe at <code>HaasoscopePro/software/ftdi_setup.zip</code>
+<br>for Windows: install by running the setup exe at <code>HaasoscopePro/software/ftdi_setup.exe</code>
 <br>for Mac: <code>sudo mkdir -p /usr/local/lib; sudo cp HaasoscopePro/software/libftd2xx.dylib /usr/local/lib/</code> 
 <br>for Linux: <code>sudo cp HaasoscopePro/software/libftd2xx.so /usr/lib/</code>
 4) Plug Haasoscope Pro into your computer via USB
