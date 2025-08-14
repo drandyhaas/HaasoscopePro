@@ -36,7 +36,8 @@ module triggerer(
    input reg [3:0]   auxoutselector,
    input reg [7:0]   channeltype,
    input reg [7:0]   downsamplemerging,
-   input reg [4:0]   downsample
+   input reg [4:0]   downsample,
+   input reg [1:0]   firstlast
 );
 
 //exttrigin is boardin[4], SMA in on back panel
@@ -63,6 +64,7 @@ reg [19:0]  sample_triggered3 = 0;
 reg [19:0]  sample_triggered4 = 0;
 reg [9:0]   sample_triggered_max_val1 = 0, sample_triggered_max_val2 = 0;
 reg         st1zero, st2zero, st3zero, st4zero; // for sample_triggered
+integer     eventtimecounter = 0;
 
 // synced inputs from other clocks
 reg signed [11:0] lowerthresh_sync = 0;
@@ -81,7 +83,7 @@ reg         triggerlive_sync = 0;
 reg         didreadout_sync = 0;
 reg         exttrigin_sync = 0, exttrigin_sync_last = 0, exttrig_rising = 0;
 reg         lvdsin_trig_sync = 0, lvdsin_trig_b_sync = 0;
-integer     eventtimecounter = 0;
+reg [1:0]   firstlast_sync = 0;
 
 // this drives the trigger
 integer i;
@@ -106,6 +108,7 @@ always @ (posedge clklvds) begin
    eventtimecounter       <= eventtimecounter + 1;
    lvdsin_trig_sync       <= lvdsin_trig;
    lvdsin_trig_b_sync     <= lvdsin_trig_b;
+   firstlast_sync         <= firstlast;
 
    if (acqstate==251 || acqstate==0) begin
       // not writing, while waiting to be read out or in initial state where trigger might be disabled
@@ -282,7 +285,7 @@ always @ (posedge clklvds) begin
    5 : begin // external trigger from another board (3, or 30 for extra echos)
       if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
       else begin
-         if (lvdsin_trig_sync) begin
+         if (lvdsin_trig_sync && !firstlast_sync[0]) begin // don't pay attention if we're the first board
             ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
             lvdsout_trig <= 1'b1; // tell the others forwards
             sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
@@ -290,7 +293,7 @@ always @ (posedge clklvds) begin
             if (current_active_trigger_type==30) lvdsout_trig_b <= 1; // echo back, if we're supposed to, for measuring time offset
             acqstate <= 8'd250;
          end
-         if (lvdsin_trig_b_sync) begin
+         if (lvdsin_trig_b_sync && !firstlast_sync[1]) begin // don't pay attention if we're the last board
             ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
             lvdsout_trig_b <= 1'b1; // tell the others backwards
             sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger

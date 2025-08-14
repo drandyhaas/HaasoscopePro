@@ -21,9 +21,9 @@ https://fpgasoftware.intel.com/eula.
 */
 (header "symbol" (version "1.1"))
 (symbol
-	(rect 16 16 384 384)
+	(rect 16 16 384 416)
 	(text "triggerer" (rect 5 0 38 12)(font "Arial" ))
-	(text "inst" (rect 8 352 20 364)(font "Arial" ))
+	(text "inst" (rect 8 384 20 396)(font "Arial" ))
 	(port
 		(pt 0 32)
 		(input)
@@ -165,6 +165,13 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 0 336)(pt 16 336)(line_width 3))
 	)
 	(port
+		(pt 0 352)
+		(input)
+		(text "firstlast[1..0]" (rect 0 0 47 12)(font "Arial" ))
+		(text "firstlast[1..0]" (rect 21 347 68 359)(font "Arial" ))
+		(line (pt 0 352)(pt 16 352)(line_width 3))
+	)
+	(port
 		(pt 368 32)
 		(output)
 		(text "ram_wr" (rect 0 0 31 12)(font "Arial" ))
@@ -263,6 +270,6 @@ https://fpgasoftware.intel.com/eula.
 		(line (pt 368 240)(pt 352 240)(line_width 3))
 	)
 	(drawing
-		(rectangle (rect 16 16 352 352)(line_width 1))
+		(rectangle (rect 16 16 352 384)(line_width 1))
 	)
 )

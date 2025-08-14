@@ -83,6 +83,7 @@ module command_processor (
    output reg [7:0]  downsamplemerging,
    output reg        highres,
    output reg [4:0]  downsample,
+   output reg [1:0]  firstlast,
    
    // synced inputs from triggerer
    input [7:0]    acqstate,
@@ -261,6 +262,10 @@ always @ (posedge clk) begin
          11: o_tdata <= eventtime_sync;
          12: o_tdata <= {16'd0,phase_diff_sync};
          13: o_tdata <= {16'd0,phase_diff_b_sync};
+         14: begin
+            firstlast <= rx_data[2][1:0];
+            o_tdata <= {30'd0,firstlast};
+         end
          endcase
          `SEND_STD_USB_RESPONSE
       end
