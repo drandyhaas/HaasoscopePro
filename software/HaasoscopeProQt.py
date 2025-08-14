@@ -23,6 +23,7 @@ for b in range(len(usbs)):
     version(usbs[b])
 time.sleep(.1) # wait for clocks to lock
 usbs = orderusbs(usbs)
+tellfirstandlast(usbs)
 
 # Define fft window class from template
 FFTWindowTemplate, FFTTemplateBaseClass = loadUiType("HaasoscopeProFFT.ui")
@@ -137,6 +138,14 @@ class MainWindow(TemplateBaseClass):
     doresamp = 0
     triggerautocalibration = [False] * num_board
     extraphasefortad = [0] * num_board
+    doexttrigecho = [False] * num_board
+    oldeventcounterdiff = -9999
+    doeventcounter = False
+    oldeventtime = -9999
+    doeventtime = False
+    lvdstrigdelay = [0] * num_board
+    lastlvdstrigdelay = [0] * num_board
+    noextboard = -1
 
     def __init__(self):
         TemplateBaseClass.__init__(self)
@@ -248,9 +257,9 @@ class MainWindow(TemplateBaseClass):
         self.activexychannel = self.activeboard*self.num_chan_per_board + self.selectedchannel
         p = self.ui.chanColor.palette()
         col = QColor("red")
-        if self.activexychannel==1: col = QColor("green")
-        if self.activexychannel==2: col = QColor("blue")
-        if self.activexychannel==3: col = QColor("magenta")
+        if self.activexychannel%4==1: col = QColor("green")
+        if self.activexychannel%4==2: col = QColor("blue")
+        if self.activexychannel%4==3: col = QColor("magenta")
         if self.activexychannel>=4: print("Not ready for >2 boards yet!")
         p.setColor(QPalette.Base, col)  # Set background color of box
         self.ui.chanColor.setPalette(p)
@@ -389,6 +398,8 @@ class MainWindow(TemplateBaseClass):
         self.changegain()
 
     def setoversamp(self):
+        assert self.activeboard%2==0
+        assert self.num_board>1
         self.dooversample = self.ui.oversampCheck.checkState() == QtCore.Qt.Checked # will be True for oversampling, False otherwise
         setsplit(usbs[self.activeboard],self.dooversample)
         setsplit(usbs[self.activeboard+1], False)
@@ -405,9 +416,11 @@ class MainWindow(TemplateBaseClass):
         self.doleds()
 
     def interleave(self):
+        assert self.activeboard%2==0
+        assert self.num_board>1
         self.dointerleaved = self.ui.interleavedCheck.checkState() == QtCore.Qt.Checked
         c = (self.activeboard+1) * self.num_chan_per_board
-        if self.dointerleaved:
+        if self.dointerleaved: # TODO: update for >2 boards
             self.lines[c].setVisible(False)
             self.ui.boardBox.setMaximum(int(self.num_board/2)-1)
         else:
@@ -821,7 +834,7 @@ class MainWindow(TemplateBaseClass):
                 else:
                     self.lines[li].setData(self.xydata[li][0], self.xydata[li][1])
             else:
-                if li%4 == 0:
+                if li%4 == 0: #TODO: update for >2 boards
                     self.xydatainterleaved[int(li/2)][1][0::2] = self.xydata[li][1]
                     self.xydatainterleaved[int(li/2)][1][1::2] = self.xydata[li+self.num_chan_per_board][1]
                     if self.doresamp:
@@ -847,34 +860,42 @@ class MainWindow(TemplateBaseClass):
                 self.ui.fftCheck.setChecked(QtCore.Qt.Unchecked)
         app.processEvents()
 
+    # gets event data for all boards
     def getevent(self):
         if self.paused:
             time.sleep(.1)
         else:
             rx_len = 0
+            debugread = False
             try:
                 readyevent = [0]*self.num_board
-                #print("\ngetevent")
+                if debugread: print("\ngetevent")
                 noextboards=[]
+                self.noextboard = -1
                 for board in range(self.num_board): # go through the ext trig boards first to make sure the ext triggers are active before the non-ext trig boards fire
                     if not self.doexttrig[board]:
                         noextboards.append(board)
+                        if self.noextboard == -1: self.noextboard = board # use the first noextboard as the trigger reference - TODO: is this best?
                         continue
                     readyevent[board] = self.getchannels(board)
                     if readyevent[board]:
-                        #print("board",board,"ready")
+                        if debugread: print("board",board,"ready")
                         self.getpredata(board) # gets info needed for trigger time adjustments
-                    #else: print("board",board,"not ready")
+                    else:
+                        if debugread: print("board",board,"not ready")
+                #assert self.noextboard > -1 # we should have found at least one board that is not doing ext triggered
                 for board in noextboards:
                     readyevent[board] = self.getchannels(board)
                     if readyevent[board]:
-                        #print("noext board", board, "ready")
+                        if debugread: print("noext board", board, "ready")
                         self.getpredata(board) # gets info needed for trigger time adjustments
-                    #else: print("noext board", board, "not ready")
-                #if not any(readyevent): print("none ready")
+                    else:
+                        if debugread: print("noext board", board, "not ready")
+                if not any(readyevent):
+                    if debugread: print("none ready")
                 for board in range(self.num_board):
                     if not readyevent[board]:
-                        #print("board",board,"data not ready?")
+                        if debugread: print("board",board,"data not ready?")
                         continue
                     data = self.getdata(usbs[board])
                     rx_len = rx_len + len(data)
@@ -899,7 +920,7 @@ class MainWindow(TemplateBaseClass):
                                              round(self.lastrate * self.lastsize / 1e6, 3), "MB/s")
                 self.oldnevents = self.nevents
 
-    doexttrigecho = [False] * num_board
+    # sets trigger on a board, and sees whether an event is ready to be read out (and then if so calculates sample_triggered)
     def getchannels(self, board):
         tt = self.triggertype
         if self.doexttrig[board] > 0:
@@ -928,12 +949,7 @@ class MainWindow(TemplateBaseClass):
         else:
             return 0
 
-    oldeventcounterdiff=-9999
-    doeventcounter = False
-    oldeventtime=-9999
-    doeventtime = False
-    lvdstrigdelay = [0] * num_board
-    lastlvdstrigdelay = [0] * num_board
+    # gets some pre info from a board that has data ready to be read out
     def getpredata(self, board):
         if self.doeventcounter:
             usbs[board].send(bytes([2, 3, 100, 100, 100, 100, 100, 100]))  # get eventcounter
@@ -965,7 +981,10 @@ class MainWindow(TemplateBaseClass):
         if not self.doexttrig[board] and any(self.doexttrigecho):
             echoboard=-1
             for theb in range(self.num_board): # find the board index we're echoing from
-                if self.doexttrigecho[theb]: echoboard=theb
+                if self.doexttrigecho[theb]:
+                    assert echoboard==-1 # there should only be one echoing board
+                    echoboard=theb
+            assert echoboard != board
             if echoboard>board:
                 usbs[board].send(bytes([2, 12, 100, 100, 100, 100, 100, 100]))  # get ext trig echo forwards delay
                 res = usbs[board].recv(4)
@@ -1006,9 +1025,8 @@ class MainWindow(TemplateBaseClass):
     def drawchannels(self, data, board):
         if self.dofast: return
         if self.doexttrig[board]:
-            if board % 2 == 1: boardtouse = board-1
-            else: boardtouse = board+1
-            self.sample_triggered[board] = self.sample_triggered[boardtouse] # take from the other board when interleaving using ext trig
+            boardtouse = self.noextboard
+            self.sample_triggered[board] = self.sample_triggered[boardtouse] # take from the other board when using ext trig
             self.triggerphase[board] = self.triggerphase[boardtouse]
         sample_triggered_touse = self.sample_triggered[board]
         if (self.triggerphase[board]%4) != (self.triggerphase[board]>>2)%4:
@@ -1027,7 +1045,7 @@ class MainWindow(TemplateBaseClass):
         if self.dodirect:
             npunpackedsamples = np.array(unpackedsamples, dtype='float')
             npunpackedsamples *= self.yscale
-            if self.dooversample and board % 2 == 0:
+            if self.dooversample and board % 2 == 0: #TODO: update for >2 boards
                 npunpackedsamples += self.extrigboardmeancorrection
                 npunpackedsamples *= self.extrigboardstdcorrection
         downsampleoffset = 2 * (sample_triggered_touse + (self.downsamplemergingcounter[board]-1)%self.downsamplemerging * 10) // self.downsamplemerging
@@ -1137,8 +1155,8 @@ class MainWindow(TemplateBaseClass):
         if not self.dointerleaved:
             targety = self.xydata[self.activexychannel]
         else:
-            targety = self.xydatainterleaved[int(self.activeboard/2)]
-        p0 = [max(targety[1]), self.vline - 10, 20, min(targety[1])]  # this is an initial guess
+            targety = self.xydatainterleaved[int(self.activeboard/2)] #TODO: update for >2 boards
+        p0 = [max(targety[1]), self.vline - 10, 20, min(targety[1])] #initial guess
         fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
         xc = targety[0][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]  # only fit in range
         yc = targety[1][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]
@@ -1456,13 +1474,10 @@ class MainWindow(TemplateBaseClass):
             for boardchan in range( self.num_chan_per_board ):
                 print("chan=",chan, " board=",board, "boardchan=",boardchan)
                 c = (0, 0, 0)
-                if chan == 0: c = QColor("red")
-                if chan == 1: c = QColor("green")
-                if chan == 2: c = QColor("blue")
-                if chan == 3: c = QColor("magenta")
-                if chan>3:
-                    print("Not ready for more channels yet!")
-                    sys.exit(3)
+                if chan%4 == 0: c = QColor("red")
+                if chan%4 == 1: c = QColor("green")
+                if chan%4 == 2: c = QColor("blue")
+                if chan%4 == 3: c = QColor("magenta")
                 pen = pg.mkPen(color=c)  # add linewidth=1.0, alpha=.9
                 line = self.ui.plot.plot(pen=pen, name=self.chtext + str(chan))
                 line.curve.setClickable(True)
