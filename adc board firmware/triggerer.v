@@ -37,7 +37,7 @@ module triggerer(
    input reg [7:0]   channeltype,
    input reg [7:0]   downsamplemerging,
    input reg [4:0]   downsample,
-   input reg [1:0]   firstlast
+   input reg [1:0]   firstlast // 1 for first, 2 for last, 0 for neither
 );
 
 //exttrigin is boardin[4], SMA in on back panel
@@ -136,15 +136,24 @@ always @ (posedge clklvds) begin
          ram_wr <= 1'b0;
       end
    end
-
-   // rolling trigger; TODO: this whole if block is to be deleted
+   
+   if (lvdsin_trig_sync && firstlast_sync!=2'd1) begin // don't pay attention if we're the first board
+      lvdsout_trig = 1'b1;
+   end
+   else lvdsout_trig = 1'b0;
+   if (lvdsin_trig_b_sync && firstlast_sync!=2'd2) begin // don't pay attention if we're the last board
+      lvdsout_trig_b = 1'b1;
+   end
+   else lvdsout_trig_b = 1'b0;
+   
+   // rolling trigger
    if (dorolling_sync && acqstate>0 && acqstate<249) begin
       if (rollingtriggercounter==8000000) begin // ~10 Hz
          sample_triggered <= 0;
          downsamplemergingcounter_triggered <= downsamplemergingcounter;
          ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-         lvdsout_trig <= 1'b1; // tell the others
-         lvdsout_trig_b <= 1'b1;
+         lvdsout_trig = 1'b1; // tell the others
+         lvdsout_trig_b = 1'b1;
          acqstate <= 8'd250; // trigger
       end
       else rollingtriggercounter <= rollingtriggercounter + 1;
@@ -162,8 +171,6 @@ always @ (posedge clklvds) begin
       sample_triggered_max_val2 <= 0;
       triggerphase <= -9'd1;
       downsamplemergingcounter_triggered <= -8'd1;
-      lvdsout_trig <= 0;
-      lvdsout_trig_b <= 0;
       exttrig_rising <= 0;
       downsamplecounter <= 1;
       downsamplemergingcounter <= 1;
@@ -274,8 +281,8 @@ always @ (posedge clklvds) begin
             if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) tot_counter <= tot_counter + 8'd1;
             if (tot_counter>=triggerToT_sync && (triggerToT_sync==0 || downsamplemergingcounter==downsamplemergingcounter_triggered) ) begin
                ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-               lvdsout_trig <= 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
-               lvdsout_trig_b <= 1'b1; // and backwards
+               lvdsout_trig = 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
+               lvdsout_trig_b = 1'b1; // and backwards
                acqstate <= 8'd250;
             end
          end
@@ -285,20 +292,18 @@ always @ (posedge clklvds) begin
    5 : begin // external trigger from another board (3, or 30 for extra echos)
       if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
       else begin
-         if (lvdsin_trig_sync && !firstlast_sync[0]) begin // don't pay attention if we're the first board
+         if (lvdsin_trig_sync && firstlast_sync!=2'd1) begin // don't pay attention if we're the first board
             ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-            lvdsout_trig <= 1'b1; // tell the others forwards
             sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
             downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
-            if (current_active_trigger_type==30) lvdsout_trig_b <= 1; // echo back, if we're supposed to, for measuring time offset
+            if (current_active_trigger_type==30) lvdsout_trig_b = 1; // echo back, if we're supposed to, for measuring time offset
             acqstate <= 8'd250;
          end
-         if (lvdsin_trig_b_sync && !firstlast_sync[1]) begin // don't pay attention if we're the last board
+         if (lvdsin_trig_b_sync && firstlast_sync!=2'd2) begin // don't pay attention if we're the last board
             ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-            lvdsout_trig_b <= 1'b1; // tell the others backwards
             sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
             downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
-            if (current_active_trigger_type==30) lvdsout_trig <= 1; // echo back, if we're supposed to, for measuring time offset
+            if (current_active_trigger_type==30) lvdsout_trig = 1; // echo back, if we're supposed to, for measuring time offset
             acqstate <= 8'd250;
          end
       end
@@ -306,8 +311,8 @@ always @ (posedge clklvds) begin
 
    6: begin // force waveform capture (4)         
       ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-      lvdsout_trig <= 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
-      lvdsout_trig_b <= 1'b1; // and backwards
+      lvdsout_trig = 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
+      lvdsout_trig_b = 1'b1; // and backwards
       downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
       acqstate <= 8'd250;
    end
@@ -320,8 +325,8 @@ always @ (posedge clklvds) begin
          else tot_counter<=0; // if exttrigin goes low, reset counter
          if (exttrig_rising && tot_counter>=triggerToT_sync) begin
             ram_address_triggered <= ram_wr_address - triggerToT_sync + 10'd3; // remember where the trigger happened, + trigger delay
-            lvdsout_trig <= 1'b1; // tell the others forwards
-            lvdsout_trig_b <= 1'b1; // tell the others backwards
+            lvdsout_trig = 1'b1; // tell the others forwards
+            lvdsout_trig_b = 1'b1; // tell the others backwards
             sample_triggered <= 0; // we didn't measure the trigger edge - going to be some jitter unfortunately
             downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
             acqstate <= 8'd250;
@@ -346,6 +351,8 @@ always @ (posedge clklvds) begin
       if (triggerphase == -9'd1) begin // just once
          triggerphase = 0;
          eventtime <= eventtimecounter; // remember the time the trigger occurred
+         lvdsout_trig = 1'b1; // tell the others forwards still
+         lvdsout_trig_b = 1'b1; // tell the others backwards still
          
          // see whether the sample_triggered's have a 0 in the first 10 bits
          st1zero=0;
@@ -411,17 +418,11 @@ always @ (posedge clklvds) begin
          else if (triggerphase[5:4]==2'd2) sample_triggered[19:10] <= sample_triggered3[19:10];
          else if (triggerphase[5:4]==2'd3) sample_triggered[19:10] <= sample_triggered4[19:10];
       end
-      else begin // NOT the first time in this state, to give time for the trigger to be high and registered by other boards
-         lvdsout_trig <= 0; // stop telling the others forwards
-         lvdsout_trig_b <= 0; // and backwards
-      end
       
    end
 
    251 : begin // ready to be read out, not writing into RAM
       auxtrigout<=0; // send to back panel, trigger out done
-      lvdsout_trig <= 0;
-      lvdsout_trig_b <= 0;
       triggercounter <= 0;
       if (didreadout_sync) acqstate <= 8'd0;
    end
