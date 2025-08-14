@@ -979,6 +979,7 @@ class MainWindow(TemplateBaseClass):
         self.triggerphase[board]=res[1]
 
         if not self.doexttrig[board] and any(self.doexttrigecho):
+            assert self.doexttrigecho.count(True)==1
             echoboard=-1
             for theb in range(self.num_board): # find the board index we're echoing from
                 if self.doexttrigecho[theb]:
@@ -1355,6 +1356,10 @@ class MainWindow(TemplateBaseClass):
         for board in range(1,self.num_board):
             self.ui.boardBox.setValue(board)
             self.exttrig(True)
+            cu = clockused(usbs[board], board, False)
+            if cu==0: switchclock(usbs[board],board)
+            cu = clockused(usbs[board], board, False)
+            assert cu==1
         self.ui.boardBox.setValue(0)
 
     def init(self):
