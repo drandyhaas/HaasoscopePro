@@ -87,3 +87,16 @@ def orderusbs(usbs):
         newusbcons.append(usbs[newusbs[u]])
     return newusbcons
 
+def tellfirstandlast(usbs):
+    for usb in usbs:
+        if usb==usbs[0]:
+            firstlast = 1
+            print("firstlast==1")
+        elif usb==usbs[-1]:
+            firstlast = 2
+            print("firstlast==2")
+        else:
+            firstlast = 0
+            print("firstlast==0")
+        usb.send(bytes([2, 14, firstlast, 0, 99, 99, 99, 99]))  # tell it if it's first or last or neither
+        usb.recv(4)
