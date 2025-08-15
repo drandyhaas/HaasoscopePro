@@ -789,8 +789,8 @@ class MainWindow(TemplateBaseClass):
             for c in range(self.num_chan_per_board * self.num_board):
                 self.xydata[c][0] = np.array([range(0, 4 * 10 * self.expect_samples)]) * (
                             1 * self.downsamplefactor / self.nsunits / self.samplerate)
-                if self.dointerleaved[int(c/2)]:
-                    self.xydatainterleaved[c][0] = np.array([range(0, 2 * 4 * 10 * self.expect_samples)]) * (
+                if self.dointerleaved[c//2]:
+                    self.xydatainterleaved[c//2][0] = np.array([range(0, 2 * 4 * 10 * self.expect_samples)]) * (
                             0.5 * self.downsamplefactor / self.nsunits / self.samplerate)
         self.ui.plot.setRange(xRange=(self.min_x, self.max_x), padding=0.00)
         self.ui.plot.setRange(yRange=(self.min_y, self.max_y), padding=0.01)
