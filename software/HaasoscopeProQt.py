@@ -1211,7 +1211,7 @@ class MainWindow(TemplateBaseClass):
         for bo in range(self.num_board): clkout_ena(usbs[bo],self.num_board>1)
         print("took",round(time.time()-starttime,3),"seconds")
 
-    def autocalibration(self, resamp=2, dofiner=False, oldtoff=0, finewidth=4):
+    def autocalibration(self, resamp=2, dofiner=False, oldtoff=0, finewidth=16):
         if not resamp: # called from GUI, defaults aren't filled
             resamp=2
             dofiner=False
