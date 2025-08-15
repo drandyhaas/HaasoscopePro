@@ -65,6 +65,7 @@ reg [19:0]  sample_triggered4 = 0;
 reg [9:0]   sample_triggered_max_val1 = 0, sample_triggered_max_val2 = 0;
 reg         st1zero, st2zero, st3zero, st4zero; // for sample_triggered
 integer     eventtimecounter = 0;
+reg [1:0]   forwardsbackwardsexttrig = 0;
 
 // synced inputs from other clocks
 reg signed [11:0] lowerthresh_sync = 0;
@@ -170,6 +171,7 @@ always @ (posedge clklvds) begin
       sample_triggered_max_val1 <= 0;
       sample_triggered_max_val2 <= 0;
       triggerphase <= -9'd1;
+      forwardsbackwardsexttrig <= 2'b11; // tell state 250 to fire forwards and backwards for one extra clock tick after trigger
       downsamplemergingcounter_triggered <= -8'd1;
       exttrig_rising <= 0;
       downsamplecounter <= 1;
@@ -297,6 +299,7 @@ always @ (posedge clklvds) begin
             sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
             downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
             if (current_active_trigger_type==30) lvdsout_trig_b = 1; // echo back, if we're supposed to, for measuring time offset
+            forwardsbackwardsexttrig <= 2'b01; // tell next state to only fire forwards still
             acqstate <= 8'd250;
          end
          if (lvdsin_trig_b_sync && firstlast_sync!=2'd2) begin // don't pay attention if we're the last board
@@ -304,6 +307,7 @@ always @ (posedge clklvds) begin
             sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
             downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
             if (current_active_trigger_type==30) lvdsout_trig = 1; // echo back, if we're supposed to, for measuring time offset
+            forwardsbackwardsexttrig <= 2'b10; // tell next state to only fire backwards still
             acqstate <= 8'd250;
          end
       end
@@ -351,8 +355,9 @@ always @ (posedge clklvds) begin
       if (triggerphase == -9'd1) begin // just once
          triggerphase = 0;
          eventtime <= eventtimecounter; // remember the time the trigger occurred
-         lvdsout_trig = 1'b1; // tell the others forwards still
-         lvdsout_trig_b = 1'b1; // tell the others backwards still
+         
+         if (forwardsbackwardsexttrig[0]) lvdsout_trig = 1'b1; // tell the others forwards still
+         if (forwardsbackwardsexttrig[1]) lvdsout_trig_b = 1'b1; // tell the others backwards still
          
          // see whether the sample_triggered's have a 0 in the first 10 bits
          st1zero=0;
