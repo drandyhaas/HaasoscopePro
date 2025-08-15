@@ -1157,8 +1157,8 @@ class MainWindow(TemplateBaseClass):
 
     def auxout(self):
         val = self.ui.Auxout_comboBox.currentIndex()
-        for board in range(self.num_board):
-            auxoutselector(usbs[board],val)
+        #for board in range(self.num_board): auxoutselector(usbs[board],val)
+        auxoutselector(usbs[self.activeboard], val)
 
     def update_firmware(self):
         print("thinking about updating firmware on board",self.activeboard)
