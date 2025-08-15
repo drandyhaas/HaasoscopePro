@@ -535,6 +535,13 @@ https://fpgasoftware.intel.com/eula.
 		(text "downsample[4..0]" (rect 278 763 347 775)(font "Arial" ))
 		(line (pt 368 768)(pt 352 768)(line_width 3))
 	)
+	(port
+		(pt 368 784)
+		(output)
+		(text "firstlast[1..0]" (rect 0 0 47 12)(font "Arial" ))
+		(text "firstlast[1..0]" (rect 300 779 347 791)(font "Arial" ))
+		(line (pt 368 784)(pt 352 784)(line_width 3))
+	)
 	(drawing
 		(rectangle (rect 16 16 352 800)(line_width 1))
 	)

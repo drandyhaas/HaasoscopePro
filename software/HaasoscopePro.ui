@@ -1087,6 +1087,9 @@
         </property>
        </widget>
        <widget class="QCheckBox" name="persistCheck">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="geometry">
          <rect>
           <x>10</x>
@@ -1098,10 +1101,15 @@
         <property name="font">
          <font>
           <family>Arial</family>
+          <italic>false</italic>
+          <strikeout>false</strikeout>
          </font>
         </property>
         <property name="text">
-         <string>Persist (old draw)</string>
+         <string>Persist</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
         </property>
        </widget>
        <widget class="QLabel" name="label_11">
@@ -1921,6 +1929,9 @@
    </property>
   </widget>
   <action name="actionRecord">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Record to file</string>
    </property>

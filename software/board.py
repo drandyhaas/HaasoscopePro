@@ -188,13 +188,19 @@ def fit_rise(x, top, left, leftplus, bot):  # a function for fitting to find ris
 
 def clockswitch(usb, board, quiet):
     usb.send(bytes([7, 0, 0, 0, 99, 99, 99, 99]))
+    usb.recv(4)
+    return clockused(usb, board, quiet)
+
+def clockused(usb, board, quiet):
+    usb.send(bytes([2, 5, 0, 0, 99, 99, 99, 99]))
     clockinfo = usb.recv(4)
-    if quiet: return
-    print("Clockinfo for board", board, binprint(clockinfo[1]), binprint(clockinfo[0]))
+    if not quiet: print("Clockinfo for board", board, binprint(clockinfo[1]), binprint(clockinfo[0]))
     if getbit(clockinfo[1], 1) and not getbit(clockinfo[1], 3):
-        print("Board", board, "locked to ext board")
+        if not quiet: print("Board", board, "locked to ext board")
+        return 1
     else:
-        print("Board", board, "locked to internal clock")
+        if not quiet: print("Board", board, "locked to internal clock")
+        return 0
 
 def switchclock(usb, board):
     clockswitch(usb, board, True)
@@ -248,7 +254,7 @@ def cleanup(usb):
     spimode(usb, 0)
     spicommand(usb, "DEVICE_CONFIG", 0x00, 0x02, 0x03, False)  # power down
     setfan(usb,0)
-    send_leds(usb, 50,50,50,50,50,50)
+    send_leds(usb, 50,35,50,50,35,50)
     return 1
 
 def getoverrange(usb):

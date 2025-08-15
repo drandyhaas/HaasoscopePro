@@ -83,6 +83,7 @@ module command_processor (
    output reg [7:0]  downsamplemerging,
    output reg        highres,
    output reg [4:0]  downsample,
+   output reg [1:0]  firstlast,
    
    // synced inputs from triggerer
    input [7:0]    acqstate,
@@ -96,7 +97,7 @@ module command_processor (
    input [15:0]    phase_diff_b
 );
 
-integer version = 26; // firmware version
+integer version = 27; // firmware version
 
 // these first 10 debugout's go to LEDs on the board
 assign debugout[0] = clkswitch;
@@ -152,8 +153,8 @@ reg [7:0]   downsamplemergingcounter_triggered_sync = 0;
 reg [8:0]   triggerphase_sync = 0;
 integer     eventtime_sync = 0;
 reg [7:0]   boardin_sync = 0;
-reg [15:0]   phase_diff_sync = 0;
-reg [15:0]   phase_diff_b_sync = 0;
+reg [15:0]   phase_diff_sync = 0, phase_diff_sync1 = 0;
+reg [15:0]   phase_diff_b_sync = 0, phase_diff_b_sync1 = 0;
 
 // Sequence of register writes that triggers sending 4 bytes usb response.
 `define SEND_STD_USB_RESPONSE \
@@ -171,8 +172,10 @@ always @ (posedge clk) begin
    downsamplemergingcounter_triggered_sync <= downsamplemergingcounter_triggered;
    triggerphase_sync <= triggerphase;
    eventtime_sync <= eventtime;
-   phase_diff_sync <= phase_diff;
-   phase_diff_b_sync <= phase_diff_b;
+   phase_diff_sync1 <= phase_diff;
+   phase_diff_b_sync1 <= phase_diff_b;
+   phase_diff_sync <= phase_diff_sync1;
+   phase_diff_b_sync <= phase_diff_b_sync1;
    boardin_sync <= boardin;
    for (i=0;i<4;i=i+1) if (overrange[i]) overrange_counter[i] <= overrange_counter[i] + 1;
       
@@ -261,6 +264,10 @@ always @ (posedge clk) begin
          11: o_tdata <= eventtime_sync;
          12: o_tdata <= {16'd0,phase_diff_sync};
          13: o_tdata <= {16'd0,phase_diff_b_sync};
+         14: begin
+            firstlast <= rx_data[2][1:0];
+            o_tdata <= {30'd0,firstlast};
+         end
          endcase
          `SEND_STD_USB_RESPONSE
       end

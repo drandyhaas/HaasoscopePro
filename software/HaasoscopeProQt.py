@@ -13,8 +13,9 @@ from usbs import *
 from board import *
 from SCPIsocket import hspro_socket
 import threading
+import matplotlib.cm as cm
 
-usbs = connectdevices()
+usbs = connectdevices(100) # max of 100 devices
 if len(usbs)==0: sys.exit(0)
 for b in range(len(usbs)):
     if len(usbs) > 1: clkout_ena(usbs[b], 1) # turn on lvdsout_clk for boards
@@ -23,6 +24,7 @@ for b in range(len(usbs)):
     version(usbs[b])
 time.sleep(.1) # wait for clocks to lock
 usbs = orderusbs(usbs)
+tellfirstandlast(usbs)
 
 # Define fft window class from template
 FFTWindowTemplate, FFTTemplateBaseClass = loadUiType("HaasoscopeProFFT.ui")
@@ -35,9 +37,9 @@ class FFTWindow(FFTTemplateBaseClass):
         self.ui.plot.setLabel('left', 'Amplitude')
         self.ui.plot.showGrid(x=True, y=True, alpha=1.0)
         #self.ui.plot.setRange(xRange=(0.0, 1600.0))
-        self.ui.plot.setBackground('w')
+        self.ui.plot.setBackground(QColor('black'))
         c = (10, 10, 10)
-        self.fftpen = pg.mkPen(color=c)  # add linewidth=0.5, alpha=.5
+        self.fftpen = pg.mkPen(color=c) # width=2 slower
         self.fftline = self.ui.plot.plot(pen=self.fftpen, name="fft_plot")
         self.fftlastTime = time.time() - 10
         self.fftyrange = 1
@@ -61,7 +63,7 @@ class MainWindow(TemplateBaseClass):
     debugstrobe = False
     dofast = False
     dotwochannel = False
-    dointerleaved = False
+    dointerleaved = [False] * num_board
     dooverrange = False
     total_rx_len = 0
     time_start = time.time()
@@ -124,19 +126,27 @@ class MainWindow(TemplateBaseClass):
     triggerphase = [0] * num_board
     downsamplemergingcounter = [0] * num_board
     fitwidthfraction = 0.2
-    extrigboardstdcorrection = 1
-    extrigboardmeancorrection = 0
+    extrigboardstdcorrection = [1] * num_board
+    extrigboardmeancorrection = [0] * num_board
     lastrate = 0
     lastsize = 0
-    dodirect = True
     VperD = [0.16]*(num_board*2)
     plljustreset = [-10] * num_board
     plljustresetdir = [0] * num_board
     phasenbad = [[0] * 12] * num_board
-    dooversample = False
+    dooversample = [False] * num_board
     doresamp = 0
+    dopersist = False
     triggerautocalibration = [False] * num_board
     extraphasefortad = [0] * num_board
+    doexttrigecho = [False] * num_board
+    oldeventcounterdiff = -9999
+    doeventcounter = False
+    oldeventtime = -9999
+    doeventtime = False
+    lvdstrigdelay = [0] * num_board
+    lastlvdstrigdelay = [0] * num_board
+    noextboard = -1
 
     def __init__(self):
         TemplateBaseClass.__init__(self)
@@ -212,7 +222,6 @@ class MainWindow(TemplateBaseClass):
         # noinspection PyUnresolvedReferences
         self.timer2.timeout.connect(self.drawtext)
         self.ui.statusBar.showMessage("Hello!")
-        self.ui.plot.setBackground('w')
         self.show()
 
     def force_split(self):
@@ -226,9 +235,16 @@ class MainWindow(TemplateBaseClass):
         self.selectchannel()
 
     def selectchannel(self):
-        if self.activeboard%2==0 and not self.dotwochannel:
+        if self.activeboard%2==0 and not self.dotwochannel and self.num_board>1:
             self.ui.oversampCheck.setEnabled(True)
-            if self.dooversample: self.ui.interleavedCheck.setEnabled(True)
+            if self.dooversample[self.activeboard]:
+                self.ui.interleavedCheck.setEnabled(True)
+                self.ui.oversampCheck.setChecked(True)
+                self.ui.interleavedCheck.setChecked(self.dointerleaved[self.activeboard])
+            else:
+                self.ui.interleavedCheck.setEnabled(False)
+                self.ui.interleavedCheck.setChecked(False)
+                self.ui.oversampCheck.setChecked(False)
         else:
             self.ui.oversampCheck.setEnabled(False)
             self.ui.interleavedCheck.setEnabled(False)
@@ -247,11 +263,9 @@ class MainWindow(TemplateBaseClass):
         self.selectedchannel = self.ui.chanBox.value()
         self.activexychannel = self.activeboard*self.num_chan_per_board + self.selectedchannel
         p = self.ui.chanColor.palette()
-        col = QColor("red")
-        if self.activexychannel==1: col = QColor("green")
-        if self.activexychannel==2: col = QColor("blue")
-        if self.activexychannel==3: col = QColor("magenta")
-        if self.activexychannel>=4: print("Not ready for >2 boards yet!")
+        col = self.linepens[self.activexychannel].color()
+        if self.activeboard%2==1 and self.dointerleaved[self.activeboard]:
+            col = self.linepens[self.activexychannel-self.num_chan_per_board].color().darker(200)
         p.setColor(QPalette.Base, col)  # Set background color of box
         self.ui.chanColor.setPalette(p)
         if self.lines[self.activexychannel].isVisible():
@@ -277,7 +291,7 @@ class MainWindow(TemplateBaseClass):
         self.dotwochannel = self.ui.twochanCheck.checkState() == QtCore.Qt.Checked
         for bo in range(self.num_board):
             for ch in range(self.num_chan_per_board):
-                setchanatt(usbs[bo], ch, self.dotwochannel, self.dooversample)  # turn on/off antialias for two/single channel mode
+                setchanatt(usbs[bo], ch, self.dotwochannel, self.dooversample[bo])  # turn on/off antialias for two/single channel mode
         self.ui.attCheck.setChecked(self.dotwochannel)
         self.setupchannels()
         self.doleds()
@@ -298,24 +312,24 @@ class MainWindow(TemplateBaseClass):
     def changeoffset(self):
         scaling = 1000*self.VperD[self.activeboard*2+self.selectedchannel]/160 # compare to 0 dB gain
         if self.ui.acdcCheck.checkState() == QtCore.Qt.Checked: scaling *= 245/160 # offset gain is different in AC mode
-        if dooffset(usbs[self.activeboard], self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx,self.dooversample):
-            if self.dooversample and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
-                dooffset(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx,self.dooversample)
+        if dooffset(usbs[self.activeboard], self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx,self.dooversample[self.activeboard]):
+            if self.dooversample[self.activeboard] and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
+                dooffset(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx,self.dooversample[self.activeboard])
             v2 = scaling*1.5*self.ui.offsetBox.value()
-            if self.dooversample: v2 *= 2.0
+            if self.dooversample[self.activeboard]: v2 *= 2.0
             if self.ui.acdcCheck.checkState() == QtCore.Qt.Checked: v2*=(160/245) # offset gain is different in AC mode
             self.ui.Voff.setText(str(int(v2))+" mV")
 
     def changegain(self):
-        setgain(usbs[self.activeboard], self.selectedchannel, self.ui.gainBox.value(),self.dooversample)
-        if self.dooversample and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
-            setgain(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.gainBox.value(),self.dooversample)
+        setgain(usbs[self.activeboard], self.selectedchannel, self.ui.gainBox.value(),self.dooversample[self.activeboard])
+        if self.dooversample[self.activeboard] and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
+            setgain(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.gainBox.value(),self.dooversample[self.activeboard])
         db = self.ui.gainBox.value()
         v2 = 0.1605*self.tenx/pow(10, db / 20.) # 0.16 V at 0 dB gain
-        if self.dooversample: v2 *= 2.0
+        if self.dooversample[self.activeboard]: v2 *= 2.0
         oldvperd = self.VperD[self.activeboard*2+self.selectedchannel]
         self.VperD[self.activeboard*2+self.selectedchannel] = v2
-        if self.dooversample and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
+        if self.dooversample[self.activeboard] and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
             self.VperD[(self.activeboard+1)*2+self.selectedchannel] = v2
         self.ui.offsetBox.setValue(int(self.ui.offsetBox.value()*oldvperd/v2))
         v2 = round(1000*v2,0)
@@ -367,19 +381,19 @@ class MainWindow(TemplateBaseClass):
 
     def setacdc(self):
         setchanacdc(usbs[self.activeboard], self.selectedchannel,
-                    self.ui.acdcCheck.checkState() == QtCore.Qt.Checked, self.dooversample)  # will be True for AC, False for DC
+                    self.ui.acdcCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])  # will be True for AC, False for DC
         self.changeoffset() # because offset gain is different in AC mode
-        if self.dooversample and self.ui.boardBox.value() % 2 == 0:  # also adjust other board we're oversampling with
+        if self.dooversample[self.activeboard] and self.ui.boardBox.value() % 2 == 0:  # also adjust other board we're oversampling with
             setchanacdc(usbs[self.ui.boardBox.value()+1], self.selectedchannel,
-                    self.ui.acdcCheck.checkState() == QtCore.Qt.Checked, self.dooversample)
+                    self.ui.acdcCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])
 
     def setohm(self):
         setchanimpedance(usbs[self.activeboard], self.selectedchannel,
-                         self.ui.ohmCheck.checkState() == QtCore.Qt.Checked, self.dooversample)  # will be True for 1M ohm, False for 50 ohm
+                         self.ui.ohmCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])  # will be True for 1M ohm, False for 50 ohm
 
     def setatt(self):
         setchanatt(usbs[self.activeboard], self.selectedchannel,
-                   self.ui.attCheck.checkState() == QtCore.Qt.Checked, self.dooversample)  # will be True for attenuation on
+                   self.ui.attCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])  # will be True for attenuation on
 
     def settenx(self):
         if self.ui.tenxCheck.checkState() == QtCore.Qt.Checked:
@@ -389,11 +403,15 @@ class MainWindow(TemplateBaseClass):
         self.changegain()
 
     def setoversamp(self):
-        self.dooversample = self.ui.oversampCheck.checkState() == QtCore.Qt.Checked # will be True for oversampling, False otherwise
-        setsplit(usbs[self.activeboard],self.dooversample)
+        assert self.activeboard%2==0
+        assert self.num_board>1
+        self.dooversample[self.activeboard] = self.ui.oversampCheck.checkState() == QtCore.Qt.Checked # will be True for oversampling, False otherwise
+        self.dooversample[self.activeboard+1] = self.ui.oversampCheck.checkState() == QtCore.Qt.Checked # will be True for oversampling, False otherwise
+        setsplit(usbs[self.activeboard],self.dooversample[self.activeboard])
         setsplit(usbs[self.activeboard+1], False)
-        for usb in usbs: swapinputs(usb,self.dooversample)
-        if self.dooversample:
+        for bo in range(self.num_board):
+            if bo==self.activeboard or bo==self.activeboard+1: swapinputs(usbs[bo],self.dooversample[self.activeboard])
+        if self.dooversample[self.activeboard]:
             self.ui.interleavedCheck.setEnabled(True)
             self.ui.twochanCheck.setEnabled(False)
         else:
@@ -405,14 +423,17 @@ class MainWindow(TemplateBaseClass):
         self.doleds()
 
     def interleave(self):
-        self.dointerleaved = self.ui.interleavedCheck.checkState() == QtCore.Qt.Checked
+        assert self.activeboard%2==0
+        assert self.num_board>1
+        self.dointerleaved[self.activeboard] = self.ui.interleavedCheck.checkState() == QtCore.Qt.Checked
+        self.dointerleaved[self.activeboard+1] = self.ui.interleavedCheck.checkState() == QtCore.Qt.Checked
         c = (self.activeboard+1) * self.num_chan_per_board
-        if self.dointerleaved:
+        if self.dointerleaved[self.activeboard]:
             self.lines[c].setVisible(False)
-            self.ui.boardBox.setMaximum(int(self.num_board/2)-1)
+            #self.ui.boardBox.setMaximum(int(self.num_board/2)-1)
         else:
             self.lines[c].setVisible(True)
-            self.ui.boardBox.setMaximum(self.num_board-1)
+            #self.ui.boardBox.setMaximum(self.num_board-1)
         self.selectchannel()
         self.timechanged()
         self.doleds()
@@ -768,8 +789,8 @@ class MainWindow(TemplateBaseClass):
             for c in range(self.num_chan_per_board * self.num_board):
                 self.xydata[c][0] = np.array([range(0, 4 * 10 * self.expect_samples)]) * (
                             1 * self.downsamplefactor / self.nsunits / self.samplerate)
-                if self.num_board%2==0 and self.dointerleaved:
-                    self.xydatainterleaved[c][0] = np.array([range(0, 2 * 4 * 10 * self.expect_samples)]) * (
+                if self.dointerleaved[c//2]:
+                    self.xydatainterleaved[c//2][0] = np.array([range(0, 2 * 4 * 10 * self.expect_samples)]) * (
                             0.5 * self.downsamplefactor / self.nsunits / self.samplerate)
         self.ui.plot.setRange(xRange=(self.min_x, self.max_x), padding=0.00)
         self.ui.plot.setRange(yRange=(self.min_y, self.max_y), padding=0.01)
@@ -793,8 +814,8 @@ class MainWindow(TemplateBaseClass):
             # print("drawing now",self.dodrawing)
 
     def persist(self):
-        self.dodirect = not self.dodirect
-        print("do direct array drawing now",self.dodirect)
+        self.dopersist = not self.dopersist
+        print("do persist",self.dopersist)
 
     def updateplot(self):
         if hasattr(self,"hsprosock"):
@@ -814,7 +835,7 @@ class MainWindow(TemplateBaseClass):
         if not self.dodrawing: return
         # self.ui.plot.setTitle("%0.2f fps, %d events, %0.2f Hz, %0.2f MB/s"%(self.fps,self.nevents,self.lastrate,self.lastrate*self.lastsize/1e6))
         for li in range(self.nlines):
-            if not self.dointerleaved:
+            if not self.dointerleaved[int(li/2)]:
                 if self.doresamp:
                     ydatanew, xdatanew = resample(self.xydata[li][1], len(self.xydata[li][0]) * self.doresamp, t=self.xydata[li][0])
                     self.lines[li].setData(xdatanew,ydatanew)
@@ -847,34 +868,42 @@ class MainWindow(TemplateBaseClass):
                 self.ui.fftCheck.setChecked(QtCore.Qt.Unchecked)
         app.processEvents()
 
+    # gets event data for all boards
     def getevent(self):
         if self.paused:
             time.sleep(.1)
         else:
             rx_len = 0
+            debugread = False
             try:
                 readyevent = [0]*self.num_board
-                #print("\ngetevent")
+                if debugread: print("\ngetevent")
                 noextboards=[]
+                self.noextboard = -1
                 for board in range(self.num_board): # go through the ext trig boards first to make sure the ext triggers are active before the non-ext trig boards fire
                     if not self.doexttrig[board]:
                         noextboards.append(board)
                         continue
                     readyevent[board] = self.getchannels(board)
                     if readyevent[board]:
-                        #print("board",board,"ready")
+                        if debugread: print("board",board,"ready")
                         self.getpredata(board) # gets info needed for trigger time adjustments
-                    #else: print("board",board,"not ready")
+                    else:
+                        if debugread: print("board",board,"not ready")
+                #assert self.noextboard > -1 # we should have found at least one board that is not doing ext triggered
                 for board in noextboards:
                     readyevent[board] = self.getchannels(board)
                     if readyevent[board]:
-                        #print("noext board", board, "ready")
+                        if self.noextboard == -1: self.noextboard = board # use the first noextboard with data as the trigger reference
+                        if debugread: print("noext board", board, "ready")
                         self.getpredata(board) # gets info needed for trigger time adjustments
-                    #else: print("noext board", board, "not ready")
-                #if not any(readyevent): print("none ready")
+                    else:
+                        if debugread: print("noext board", board, "not ready")
+                if not any(readyevent):
+                    if debugread: print("none ready")
                 for board in range(self.num_board):
                     if not readyevent[board]:
-                        #print("board",board,"data not ready?")
+                        if debugread: print("board",board,"data not ready?")
                         continue
                     data = self.getdata(usbs[board])
                     rx_len = rx_len + len(data)
@@ -899,14 +928,14 @@ class MainWindow(TemplateBaseClass):
                                              round(self.lastrate * self.lastsize / 1e6, 3), "MB/s")
                 self.oldnevents = self.nevents
 
-    doexttrigecho = [False] * num_board
+    # sets trigger on a board, and sees whether an event is ready to be read out (and then if so calculates sample_triggered)
     def getchannels(self, board):
         tt = self.triggertype
         if self.doexttrig[board] > 0:
             if self.doexttrigecho[board]: tt = 30
             else: tt = 3
         elif self.doextsmatrig[board] > 0: tt = 5
-        usbs[board].send(bytes([1, tt, self.dotwochannel+2*self.dooversample, 99] + inttobytes(
+        usbs[board].send(bytes([1, tt, self.dotwochannel+2*self.dooversample[board], 99] + inttobytes(
             self.expect_samples + self.expect_samples_extra - self.triggerpos + 1)))  # length to take after trigger (last 4 bytes)
         triggercounter = usbs[board].recv(4)  # get the 4 bytes
         acqstate = triggercounter[0]
@@ -928,12 +957,7 @@ class MainWindow(TemplateBaseClass):
         else:
             return 0
 
-    oldeventcounterdiff=-9999
-    doeventcounter = False
-    oldeventtime=-9999
-    doeventtime = False
-    lvdstrigdelay = [0] * num_board
-    lastlvdstrigdelay = [0] * num_board
+    # gets some pre info from a board that has data ready to be read out
     def getpredata(self, board):
         if self.doeventcounter:
             usbs[board].send(bytes([2, 3, 100, 100, 100, 100, 100, 100]))  # get eventcounter
@@ -963,9 +987,13 @@ class MainWindow(TemplateBaseClass):
         self.triggerphase[board]=res[1]
 
         if not self.doexttrig[board] and any(self.doexttrigecho):
+            assert self.doexttrigecho.count(True)==1
             echoboard=-1
             for theb in range(self.num_board): # find the board index we're echoing from
-                if self.doexttrigecho[theb]: echoboard=theb
+                if self.doexttrigecho[theb]:
+                    assert echoboard==-1 # there should only be one echoing board
+                    echoboard=theb
+            assert echoboard != board
             if echoboard>board:
                 usbs[board].send(bytes([2, 12, 100, 100, 100, 100, 100, 100]))  # get ext trig echo forwards delay
                 res = usbs[board].recv(4)
@@ -1006,9 +1034,8 @@ class MainWindow(TemplateBaseClass):
     def drawchannels(self, data, board):
         if self.dofast: return
         if self.doexttrig[board]:
-            if board % 2 == 1: boardtouse = board-1
-            else: boardtouse = board+1
-            self.sample_triggered[board] = self.sample_triggered[boardtouse] # take from the other board when interleaving using ext trig
+            boardtouse = self.noextboard
+            self.sample_triggered[board] = self.sample_triggered[boardtouse] # take from the other board when using ext trig
             self.triggerphase[board] = self.triggerphase[boardtouse]
         sample_triggered_touse = self.sample_triggered[board]
         if (self.triggerphase[board]%4) != (self.triggerphase[board]>>2)%4:
@@ -1023,13 +1050,11 @@ class MainWindow(TemplateBaseClass):
         nbadclkD = 0
         nbadstr = 0
         unpackedsamples = struct.unpack('<' + 'h' * (len(data) // 2), data)
-        npunpackedsamples = None
-        if self.dodirect:
-            npunpackedsamples = np.array(unpackedsamples, dtype='float')
-            npunpackedsamples *= self.yscale
-            if self.dooversample and board % 2 == 0:
-                npunpackedsamples += self.extrigboardmeancorrection
-                npunpackedsamples *= self.extrigboardstdcorrection
+        npunpackedsamples = np.array(unpackedsamples, dtype='float')
+        npunpackedsamples *= self.yscale
+        if self.dooversample[board] and board%2==0:
+            npunpackedsamples += self.extrigboardmeancorrection[board]
+            npunpackedsamples *= self.extrigboardstdcorrection[board]
         downsampleoffset = 2 * (sample_triggered_touse + (self.downsamplemergingcounter[board]-1)%self.downsamplemerging * 10) // self.downsamplemerging
         downsampleoffset += 20*self.triggershift # account for having moved actual trigger a little earlier, so we had time to shift a bit now for things like toff
         if not self.dotwochannel: downsampleoffset *= 2
@@ -1039,79 +1064,49 @@ class MainWindow(TemplateBaseClass):
             else: downsampleoffset -= int(self.toff/self.downsamplefactor) + int(8*self.lvdstrigdelay[board]/self.downsamplefactor) %40
         datasize = self.xydata[board][1].size
         for s in range(0, self.expect_samples+self.expect_samples_extra):
-
-            if self.dodirect: #This is the new faster way of doing things
-                vals = unpackedsamples[s*self.nsubsamples+40:s*self.nsubsamples + 50]
-                if vals[9]!=-16657: print("no beef?") # -16657 is 0xbeef
-                if vals[8]!=0 or (self.lastclk!=341 and self.lastclk!=682):
-                    # only bother checking if there was a clkstr problem detected in firmware, or we need to decode
-                    # because of a previous clkstr prob and now want to update self.lastclk
-                    for n in range(0,8): # the subsample to get
-                        val = vals[n]
-                        if n < 4:
-                            if val!=341 and val!= 682: # 0101010101 or 1010101010
-                                if n == 0: nbadclkA += 1
-                                if n == 1: nbadclkB += 1
-                                if n == 2: nbadclkC += 1
-                                if n == 3: nbadclkD += 1
-                                #print("s=", s, "n=", n, "clk", val, binprint(val))
-                            self.lastclk = val
-                        elif val not in {0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512}: # 10 bits long, and just one 1
-                            nbadstr = nbadstr + 1
-                            #print("s=", s, "n=", n, "str", val, binprint(val))
-                if self.dotwochannel:
-                    samp = s*20 - downsampleoffset - triggerphase//2
-                    nsamp=20
-                    nstart=0
-                    if samp<0:
-                        nsamp = 20 + samp
-                        nstart = -samp
-                        samp = 0
-                    if samp+20 >= datasize:
-                        nsamp = datasize - samp
-                    if 0 < nsamp <= 20:
-                        self.xydata[board * self.num_chan_per_board+0][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+20+nstart:s*self.nsubsamples+20+nstart+nsamp]
-                        self.xydata[board * self.num_chan_per_board+1][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
-                else:
-                    samp = s*40 - downsampleoffset - triggerphase
-                    nsamp=40
-                    nstart=0
-                    if samp<0:
-                        nsamp = 40 + samp
-                        nstart = -samp
-                        samp = 0
-                    if samp+40 >= datasize:
-                        nsamp = datasize - samp
-                    if 0 < nsamp <= 40:
-                        self.xydata[board * self.num_chan_per_board][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
-
-            else: # This is the older slower way
-                for n in range(self.nsubsamples): # the subsample to get
-                    val = unpackedsamples[s*self.nsubsamples + n] # this will be 16x larger than the 12 bit value, since it's shifted 4 bits to the left
-                    if 40 <= n < 44:
+            vals = unpackedsamples[s*self.nsubsamples+40:s*self.nsubsamples + 50]
+            if vals[9]!=-16657: print("no beef?") # -16657 is 0xbeef
+            if vals[8]!=0 or (self.lastclk!=341 and self.lastclk!=682):
+                # only bother checking if there was a clkstr problem detected in firmware, or we need to decode
+                # because of a previous clkstr prob and now want to update self.lastclk
+                for n in range(0,8): # the subsample to get
+                    val = vals[n]
+                    if n < 4:
                         if val!=341 and val!= 682: # 0101010101 or 1010101010
-                            if n == 40: nbadclkA += 1
-                            if n == 41: nbadclkB += 1
-                            if n == 42: nbadclkC += 1
-                            if n == 43: nbadclkD += 1
+                            if n == 0: nbadclkA += 1
+                            if n == 1: nbadclkB += 1
+                            if n == 2: nbadclkC += 1
+                            if n == 3: nbadclkD += 1
                             #print("s=", s, "n=", n, "clk", val, binprint(val))
-                        else: self.lastclk = val
-                    if (44 <= n < 48) and (val not in {0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512}):
-                        # 10 bits long, and just one 1
+                        self.lastclk = val
+                    elif val not in {0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512}: # 10 bits long, and just one 1
                         nbadstr = nbadstr + 1
                         #print("s=", s, "n=", n, "str", val, binprint(val))
-                    if n < 40:
-                        val = val * self.yscale
-                        if self.dooversample and board%2==0:
-                            val += self.extrigboardmeancorrection
-                            val *= self.extrigboardstdcorrection
-                        if self.dotwochannel:
-                            samp = s*20 + n - downsampleoffset
-                            if n>=20: samp -= 20
-                            if 0 <= samp < datasize: self.xydata[board*self.num_chan_per_board + (n<20)][1][samp] = val
-                        else:
-                            samp = s*40 + n - downsampleoffset
-                            if 0 <= samp < datasize: self.xydata[board*self.num_chan_per_board][1][samp] = val
+            if self.dotwochannel:
+                samp = s*20 - downsampleoffset - triggerphase//2
+                nsamp=20
+                nstart=0
+                if samp<0:
+                    nsamp = 20 + samp
+                    nstart = -samp
+                    samp = 0
+                if samp+20 >= datasize:
+                    nsamp = datasize - samp
+                if 0 < nsamp <= 20:
+                    self.xydata[board * self.num_chan_per_board+0][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+20+nstart:s*self.nsubsamples+20+nstart+nsamp]
+                    self.xydata[board * self.num_chan_per_board+1][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
+            else:
+                samp = s*40 - downsampleoffset - triggerphase
+                nsamp=40
+                nstart=0
+                if samp<0:
+                    nsamp = 40 + samp
+                    nstart = -samp
+                    samp = 0
+                if samp+40 >= datasize:
+                    nsamp = datasize - samp
+                if 0 < nsamp <= 40:
+                    self.xydata[board * self.num_chan_per_board][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
 
         self.adjustclocks(board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr)
         if board == self.activeboard:
@@ -1134,11 +1129,11 @@ class MainWindow(TemplateBaseClass):
         thestr += "\n" + "Mean " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.mean(self.xydata[self.activexychannel][1]), 3) ) + " mV"
         thestr += "\n" + "RMS " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.std(self.xydata[self.activexychannel][1]), 3) ) + " mV"
 
-        if not self.dointerleaved:
+        if not self.dointerleaved[self.activeboard]:
             targety = self.xydata[self.activexychannel]
         else:
             targety = self.xydatainterleaved[int(self.activeboard/2)]
-        p0 = [max(targety[1]), self.vline - 10, 20, min(targety[1])]  # this is an initial guess
+        p0 = [max(targety[1]), self.vline - 10, 20, min(targety[1])] #initial guess
         fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
         xc = targety[0][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]  # only fit in range
         yc = targety[1][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]
@@ -1216,21 +1211,21 @@ class MainWindow(TemplateBaseClass):
         for bo in range(self.num_board): clkout_ena(usbs[bo],self.num_board>1)
         print("took",round(time.time()-starttime,3),"seconds")
 
-    def autocalibration(self, resamp=2, dofiner=False, oldtoff=0, finewidth=4):
+    def autocalibration(self, resamp=2, dofiner=False, oldtoff=0, finewidth=16):
         if not resamp: # called from GUI, defaults aren't filled
             resamp=2
             dofiner=False
             oldtoff=0
         print("autocalibration",resamp,dofiner,finewidth)
+        if self.activeboard%2==1:
+            print("Select the even board number first!")
+            return
         if self.tad[self.activeboard]!=0:
             for t in range(255//5):
                 if self.tad[self.activeboard]>0: self.ui.tadBox.setValue(self.tad[self.activeboard]-5)
                 self.setTAD()
                 time.sleep(.1) # be gentle
-        c1 = self.activeboard
-        if c1 >= self.num_board - 1:
-            print("Select the even channel first!")
-            return
+        c1 = self.activeboard * self.num_chan_per_board
         c = (self.activeboard + 1) * self.num_chan_per_board
         fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
         #bare_max_x = 4 * 10 * self.expect_samples * self.downsamplefactor / self.nsunits / self.samplerate
@@ -1285,23 +1280,23 @@ class MainWindow(TemplateBaseClass):
                 (self.xydata[c1][0] > self.vline - fitwidth) & (self.xydata[c1][0] < self.vline + fitwidth)]
             extrigboardmean = np.mean(yc)
             otherboardmean = np.mean(yc1)
-            self.extrigboardmeancorrection = self.extrigboardmeancorrection + extrigboardmean - otherboardmean
+            self.extrigboardmeancorrection[self.activeboard] = self.extrigboardmeancorrection[self.activeboard] + extrigboardmean - otherboardmean
             extrigboardstd = np.std(yc)
             otherboardstd = np.std(yc1)
             if otherboardstd > 0:
-                self.extrigboardstdcorrection = self.extrigboardstdcorrection * extrigboardstd / otherboardstd
+                self.extrigboardstdcorrection[self.activeboard] = self.extrigboardstdcorrection[self.activeboard] * extrigboardstd / otherboardstd
             else:
-                self.extrigboardstdcorrection = self.extrigboardstdcorrection
-            print("calculated mean and std corrections", self.extrigboardmeancorrection, self.extrigboardstdcorrection)
+                self.extrigboardstdcorrection[self.activeboard] = self.extrigboardstdcorrection[self.activeboard]
+            print("calculated mean and std corrections", self.extrigboardmeancorrection[self.activeboard], self.extrigboardstdcorrection[self.activeboard])
             self.autocalibration(64,True, oldtoff)
 
     def plot_fft(self):
-        if self.dointerleaved: y = self.xydatainterleaved[int(self.activeboard/2)][1]
+        if self.dointerleaved[self.activeboard]: y = self.xydatainterleaved[int(self.activeboard/2)][1]
         else: y = self.xydata[self.activeboard * self.num_chan_per_board + self.selectedchannel][1]  # channel signal to take fft of
         n = len(y)  # length of the signal
         k = np.arange(n)
         uspersample = self.downsamplefactor / self.samplerate / 1000.
-        if self.dointerleaved: uspersample = uspersample/2
+        if self.dointerleaved[self.activeboard]: uspersample = uspersample/2
         # t = np.arange(0,1,1.0/n) * (n*uspersample) # time vector in us
         frq = (k / uspersample)[list(range(int(n / 2)))] / n  # one side frequency range up to Nyquist
         Y = np.fft.fft(y)[list(range(int(n / 2)))] / n  # fft computing and normalization
@@ -1337,6 +1332,10 @@ class MainWindow(TemplateBaseClass):
         for board in range(1,self.num_board):
             self.ui.boardBox.setValue(board)
             self.exttrig(True)
+            cu = clockused(usbs[board], board, False)
+            if cu==0: switchclock(usbs[board],board)
+            cu = clockused(usbs[board], board, False)
+            assert cu==1
         self.ui.boardBox.setValue(0)
 
     def init(self):
@@ -1366,79 +1365,33 @@ class MainWindow(TemplateBaseClass):
         self.hsprosock_t1.join()
 
     def doleds(self):
-        if self.num_board==1:
-            for board in range(self.num_board):
-                # board==0
-                r1 = 100
+        for board in range(self.num_board):
+            col1 = self.linepens[board * self.num_chan_per_board].color()
+            r1 = col1.red()
+            g1 = col1.green()
+            b1 = col1.blue()
+            r2 = 0
+            g2 = 0
+            b2 = 0
+            if self.dotwochannel:
+                col2 = self.linepens[board * self.num_chan_per_board + 1].color()
+                r2 = col2.red()
+                g2 = col2.green()
+                b2 = col2.blue()
+            if self.dooversample[board]:
+                r2 = col1.red()
+                g2 = col1.green()
+                b2 = col1.blue()
+                r1 = 0
                 g1 = 0
                 b1 = 0
-                r2 = 0
-                g2 = 0
-                b2 = 0
-                if self.dotwochannel:
-                    r1 = 100
-                    g1 = 0
-                    b1 = 0
-                    r2 = 0
-                    g2 = 100
-                    b2 = 0
-                send_leds(usbs[board], r1, g1, b1, r2, g2, b2)
-        elif self.num_board==2:
-            for board in range(self.num_board):
-                # board==0
-                r1 = 100
-                g1 = 0
-                b1 = 0
-                r2 = 0
-                g2 = 0
-                b2 = 0
-                if board==1:
-                    r1 = 0
-                    g1 = 0
-                    b1 = 100
-                    r2 = 0
-                    g2 = 0
-                    b2 = 0
-                if self.dotwochannel:
-                    # board==0
-                    r1 = 100
-                    g1 = 0
-                    b1 = 0
-                    r2 = 0
-                    g2 = 100
-                    b2 = 0
-                    if board==1:
-                        r1 = 0
-                        g1 = 0
-                        b1 = 100
-                        r2 = 100
-                        g2 = 0
-                        b2 = 100
-                if self.dooversample:
-                    # board==0
-                    r1 = 0
-                    g1 = 0
-                    b1 = 0
-                    r2 = 100
-                    g2 = 0
-                    b2 = 0
-                    if board == 1:
-                        r1 = 0
-                        g1 = 0
-                        b1 = 0
-                        r2 = 0
-                        g2 = 0
-                        b2 = 100
-                        if self.dointerleaved:
-                            r1 = 0
-                            g1 = 0
-                            b1 = 0
-                            r2 = 20
-                            g2 = 0
-                            b2 = 0
-                send_leds(usbs[board], r1, g1, b1, r2, g2, b2)
-        else:
-            print("Don't know how to set lights for",self.num_board,"boards yet!")
+            if self.dointerleaved[board] and board%2==1:
+                col1 = self.linepens[(board-1) * self.num_chan_per_board].color()
+                dim = 10 # factor by which to dim the second led
+                r2 = col1.red()/dim
+                g2 = col1.green()/dim
+                b2 = col1.blue()/dim
+            send_leds(usbs[board], r1, g1, b1, r2, g2, b2)
 
     def setupchannels(self):
         if hasattr(self,"hsprosock"):
@@ -1452,18 +1405,14 @@ class MainWindow(TemplateBaseClass):
     def launch(self):
         self.nlines = self.num_chan_per_board * self.num_board
         chan=0
+        colors = cm.rainbow(np.linspace(1.0, 0.1, self.nlines))
         for board in range(self.num_board):
             for boardchan in range( self.num_chan_per_board ):
-                print("chan=",chan, " board=",board, "boardchan=",boardchan)
-                c = (0, 0, 0)
-                if chan == 0: c = QColor("red")
-                if chan == 1: c = QColor("green")
-                if chan == 2: c = QColor("blue")
-                if chan == 3: c = QColor("magenta")
-                if chan>3:
-                    print("Not ready for more channels yet!")
-                    sys.exit(3)
-                pen = pg.mkPen(color=c)  # add linewidth=1.0, alpha=.9
+                #print("chan=",chan, " board=",board, "boardchan=",boardchan)
+                alpha = 0.9
+                colors[chan][3] = alpha
+                c = QColor.fromRgbF(*colors[chan])
+                pen = pg.mkPen(color=c) # width=2 slows drawing down
                 line = self.ui.plot.plot(pen=pen, name=self.chtext + str(chan))
                 line.curve.setClickable(True)
                 line.curve.sigClicked.connect(self.fastadclineclick)
@@ -1482,12 +1431,12 @@ class MainWindow(TemplateBaseClass):
 
         # trigger lines
         self.vline = 0.0
-        pen = pg.mkPen(color="k", width=1.0, style=QtCore.Qt.DashLine)
+        pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
         line = self.ui.plot.plot([self.vline, self.vline], [-2.0, 2.0], pen=pen, name="trigger time vert")
         self.otherlines.append(line)
 
         self.hline = 0.0
-        pen = pg.mkPen(color="k", width=1.0, style=QtCore.Qt.DashLine)
+        pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
         line = self.ui.plot.plot([-2.0, 2.0], [self.hline, self.hline], pen=pen, name="trigger thresh horiz")
         self.otherlines.append(line)
 
@@ -1497,6 +1446,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.plot.setLabel('left', "Voltage (divisions)")
         self.ui.plot.setRange(yRange=(self.min_y, self.max_y), padding=0.01)
         self.ui.plot.getAxis("left").setTickSpacing(1,.1)
+        self.ui.plot.setBackground(QColor('black'))
         self.ui.plot.showGrid(x=True, y=True)
         for usb in usbs: self.telldownsample(usb, 0)
 
@@ -1508,7 +1458,7 @@ class MainWindow(TemplateBaseClass):
             if self.firmwareversion != ver: self.firmwareversion = "various"
         self.adfreset(board)
         setupboard(usbs[board], self.dopattern, self.dotwochannel, self.dooverrange)
-        for c in range(self.num_chan_per_board): setchanacdc(usbs[board], c, 0, self.dooversample)
+        for c in range(self.num_chan_per_board): setchanacdc(usbs[board], c, 0, self.dooversample[board])
         self.pllreset(board)
         #switchclock(usbs[board], board)
         auxoutselector(usbs[board],0)
