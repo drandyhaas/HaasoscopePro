@@ -19,7 +19,7 @@ def find_longest_zero_stretch(arr, wrap):
     start_index = -1
     current_start = -1
     for i, num in enumerate(arr):
-        if num == 0:
+        if num < 10:
             if current_length == 0:
                 current_start = i
             current_length += 1
