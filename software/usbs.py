@@ -11,7 +11,7 @@ def version(usb, quiet=True):
     if len(res)==4 and not quiet: print("Firmware version", ver)
     return ver
 
-def connectdevices():
+def connectdevices(nmax=100):
     usbs = []
     ftds = ftd2xx.listDevices()
     if ftds is not None:
@@ -19,6 +19,7 @@ def connectdevices():
         for ftdserial in ftds:
             #print("FTD serial:",ftdserial)
             if not ftdserial.startswith(b'FT'): continue
+            if len(usbs)==nmax: continue # only connect up to nmax devices
             usbdevice = UsbFt232hSync245mode('FTX232H', 'HaasoscopePro USB2', ftdserial)
             if usbdevice.good:
                 # if usbdevice.serial != b"FT9M1UIT": continue

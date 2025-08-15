@@ -13,8 +13,9 @@ from usbs import *
 from board import *
 from SCPIsocket import hspro_socket
 import threading
+import matplotlib.cm as cm
 
-usbs = connectdevices()
+usbs = connectdevices(100) # max of 100 devices
 if len(usbs)==0: sys.exit(0)
 for b in range(len(usbs)):
     if len(usbs) > 1: clkout_ena(usbs[b], 1) # turn on lvdsout_clk for boards
@@ -36,9 +37,9 @@ class FFTWindow(FFTTemplateBaseClass):
         self.ui.plot.setLabel('left', 'Amplitude')
         self.ui.plot.showGrid(x=True, y=True, alpha=1.0)
         #self.ui.plot.setRange(xRange=(0.0, 1600.0))
-        self.ui.plot.setBackground('w')
+        self.ui.plot.setBackground(QColor('black'))
         c = (10, 10, 10)
-        self.fftpen = pg.mkPen(color=c)  # add linewidth=0.5, alpha=.5
+        self.fftpen = pg.mkPen(color=c) # width=2 slower
         self.fftline = self.ui.plot.plot(pen=self.fftpen, name="fft_plot")
         self.fftlastTime = time.time() - 10
         self.fftyrange = 1
@@ -221,7 +222,6 @@ class MainWindow(TemplateBaseClass):
         # noinspection PyUnresolvedReferences
         self.timer2.timeout.connect(self.drawtext)
         self.ui.statusBar.showMessage("Hello!")
-        self.ui.plot.setBackground('w')
         self.show()
 
     def force_split(self):
@@ -256,11 +256,7 @@ class MainWindow(TemplateBaseClass):
         self.selectedchannel = self.ui.chanBox.value()
         self.activexychannel = self.activeboard*self.num_chan_per_board + self.selectedchannel
         p = self.ui.chanColor.palette()
-        col = QColor("red")
-        if self.activexychannel%4==1: col = QColor("green")
-        if self.activexychannel%4==2: col = QColor("blue")
-        if self.activexychannel%4==3: col = QColor("magenta")
-        if self.activexychannel>=4: print("Not ready for >2 boards yet!")
+        col = self.linepens[self.activexychannel].color()
         p.setColor(QPalette.Base, col)  # Set background color of box
         self.ui.chanColor.setPalette(p)
         if self.lines[self.activexychannel].isVisible():
@@ -1475,15 +1471,14 @@ class MainWindow(TemplateBaseClass):
     def launch(self):
         self.nlines = self.num_chan_per_board * self.num_board
         chan=0
+        colors = cm.rainbow(np.linspace(1.0, 0.1, self.nlines))
         for board in range(self.num_board):
             for boardchan in range( self.num_chan_per_board ):
-                print("chan=",chan, " board=",board, "boardchan=",boardchan)
-                c = (0, 0, 0)
-                if chan%4 == 0: c = QColor("red")
-                if chan%4 == 1: c = QColor("green")
-                if chan%4 == 2: c = QColor("blue")
-                if chan%4 == 3: c = QColor("magenta")
-                pen = pg.mkPen(color=c)  # add linewidth=1.0, alpha=.9
+                #print("chan=",chan, " board=",board, "boardchan=",boardchan)
+                alpha = 0.9
+                colors[chan][3] = alpha
+                c = QColor.fromRgbF(*colors[chan])
+                pen = pg.mkPen(color=c) # width=2 slows drawing down
                 line = self.ui.plot.plot(pen=pen, name=self.chtext + str(chan))
                 line.curve.setClickable(True)
                 line.curve.sigClicked.connect(self.fastadclineclick)
@@ -1502,12 +1497,12 @@ class MainWindow(TemplateBaseClass):
 
         # trigger lines
         self.vline = 0.0
-        pen = pg.mkPen(color="k", width=1.0, style=QtCore.Qt.DashLine)
+        pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
         line = self.ui.plot.plot([self.vline, self.vline], [-2.0, 2.0], pen=pen, name="trigger time vert")
         self.otherlines.append(line)
 
         self.hline = 0.0
-        pen = pg.mkPen(color="k", width=1.0, style=QtCore.Qt.DashLine)
+        pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
         line = self.ui.plot.plot([-2.0, 2.0], [self.hline, self.hline], pen=pen, name="trigger thresh horiz")
         self.otherlines.append(line)
 
@@ -1517,6 +1512,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.plot.setLabel('left', "Voltage (divisions)")
         self.ui.plot.setRange(yRange=(self.min_y, self.max_y), padding=0.01)
         self.ui.plot.getAxis("left").setTickSpacing(1,.1)
+        self.ui.plot.setBackground(QColor('black'))
         self.ui.plot.showGrid(x=True, y=True)
         for usb in usbs: self.telldownsample(usb, 0)
 
