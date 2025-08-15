@@ -1385,79 +1385,22 @@ class MainWindow(TemplateBaseClass):
         self.hsprosock_t1.join()
 
     def doleds(self):
-        if self.num_board==1:
-            for board in range(self.num_board):
-                # board==0
-                r1 = 100
-                g1 = 0
-                b1 = 0
-                r2 = 0
-                g2 = 0
-                b2 = 0
-                if self.dotwochannel:
-                    r1 = 100
-                    g1 = 0
-                    b1 = 0
-                    r2 = 0
-                    g2 = 100
-                    b2 = 0
-                send_leds(usbs[board], r1, g1, b1, r2, g2, b2)
-        elif self.num_board==2:
-            for board in range(self.num_board):
-                # board==0
-                r1 = 100
-                g1 = 0
-                b1 = 0
-                r2 = 0
-                g2 = 0
-                b2 = 0
-                if board==1:
-                    r1 = 0
-                    g1 = 0
-                    b1 = 100
-                    r2 = 0
-                    g2 = 0
-                    b2 = 0
-                if self.dotwochannel:
-                    # board==0
-                    r1 = 100
-                    g1 = 0
-                    b1 = 0
-                    r2 = 0
-                    g2 = 100
-                    b2 = 0
-                    if board==1:
-                        r1 = 0
-                        g1 = 0
-                        b1 = 100
-                        r2 = 100
-                        g2 = 0
-                        b2 = 100
-                if self.dooversample:
-                    # board==0
-                    r1 = 0
-                    g1 = 0
-                    b1 = 0
-                    r2 = 100
-                    g2 = 0
-                    b2 = 0
-                    if board == 1:
-                        r1 = 0
-                        g1 = 0
-                        b1 = 0
-                        r2 = 0
-                        g2 = 0
-                        b2 = 100
-                        if self.dointerleaved:
-                            r1 = 0
-                            g1 = 0
-                            b1 = 0
-                            r2 = 20
-                            g2 = 0
-                            b2 = 0
-                send_leds(usbs[board], r1, g1, b1, r2, g2, b2)
-        else:
-            print("Don't know how to set lights for",self.num_board,"boards yet!")
+        for board in range(self.num_board):
+            col1 = self.linepens[board * self.num_chan_per_board].color()
+            r1 = col1.red()
+            g1 = col1.green()
+            b1 = col1.blue()
+            r2 = 0
+            g2 = 0
+            b2 = 0
+            if self.dotwochannel:
+                col2 = self.linepens[board * self.num_chan_per_board + 1].color()
+                r2 = col2.red()
+                g2 = col2.green()
+                b2 = col2.blue()
+            #if self.dooversample:
+            #if self.dointerleaved:
+            send_leds(usbs[board], r1, g1, b1, r2, g2, b2)
 
     def setupchannels(self):
         if hasattr(self,"hsprosock"):
