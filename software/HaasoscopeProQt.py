@@ -871,7 +871,6 @@ class MainWindow(TemplateBaseClass):
                 for board in range(self.num_board): # go through the ext trig boards first to make sure the ext triggers are active before the non-ext trig boards fire
                     if not self.doexttrig[board]:
                         noextboards.append(board)
-                        if self.noextboard == -1: self.noextboard = board # use the first noextboard as the trigger reference - TODO: is this best?
                         continue
                     readyevent[board] = self.getchannels(board)
                     if readyevent[board]:
@@ -883,6 +882,7 @@ class MainWindow(TemplateBaseClass):
                 for board in noextboards:
                     readyevent[board] = self.getchannels(board)
                     if readyevent[board]:
+                        if self.noextboard == -1: self.noextboard = board # use the first noextboard with data as the trigger reference
                         if debugread: print("noext board", board, "ready")
                         self.getpredata(board) # gets info needed for trigger time adjustments
                     else:
@@ -1366,8 +1366,19 @@ class MainWindow(TemplateBaseClass):
                 r2 = col2.red()
                 g2 = col2.green()
                 b2 = col2.blue()
-            #if self.dooversample:
-            #if self.dointerleaved:
+            if self.dooversample:
+                r2 = col1.red()
+                g2 = col1.green()
+                b2 = col1.blue()
+                r1 = 0
+                g1 = 0
+                b1 = 0
+            if self.dointerleaved and board%2==1:
+                col1 = self.linepens[(board-1) * self.num_chan_per_board].color()
+                dim = 10 # factor by which to dim the second led
+                r2 = col1.red()/dim
+                g2 = col1.green()/dim
+                b2 = col1.blue()/dim
             send_leds(usbs[board], r1, g1, b1, r2, g2, b2)
 
     def setupchannels(self):
