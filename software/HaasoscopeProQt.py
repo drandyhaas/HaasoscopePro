@@ -383,8 +383,8 @@ class MainWindow(TemplateBaseClass):
         setchanacdc(usbs[self.activeboard], self.selectedchannel,
                     self.ui.acdcCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])  # will be True for AC, False for DC
         self.changeoffset() # because offset gain is different in AC mode
-        if self.dooversample[self.activeboard] and self.ui.boardBox.value() % 2 == 0:  # also adjust other board we're oversampling with
-            setchanacdc(usbs[self.ui.boardBox.value()+1], self.selectedchannel,
+        if self.dooversample[self.activeboard] and self.activeboard%2==0:  # also adjust other board we're oversampling with
+            setchanacdc(usbs[self.activeboard+1], self.selectedchannel,
                     self.ui.acdcCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])
 
     def setohm(self):
@@ -394,6 +394,9 @@ class MainWindow(TemplateBaseClass):
     def setatt(self):
         setchanatt(usbs[self.activeboard], self.selectedchannel,
                    self.ui.attCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])  # will be True for attenuation on
+        if self.dooversample[self.activeboard] and self.activeboard%2==0:  # also adjust other board we're oversampling with
+            setchanatt(usbs[self.activeboard+1], self.selectedchannel,
+                       self.ui.attCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])
 
     def settenx(self):
         if self.ui.tenxCheck.checkState() == QtCore.Qt.Checked:
