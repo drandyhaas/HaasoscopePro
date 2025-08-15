@@ -63,7 +63,7 @@ class MainWindow(TemplateBaseClass):
     debugstrobe = False
     dofast = False
     dotwochannel = False
-    dointerleaved = False
+    dointerleaved = [False] * num_board
     dooverrange = False
     total_rx_len = 0
     time_start = time.time()
@@ -134,7 +134,7 @@ class MainWindow(TemplateBaseClass):
     plljustreset = [-10] * num_board
     plljustresetdir = [0] * num_board
     phasenbad = [[0] * 12] * num_board
-    dooversample = False
+    dooversample = [False] * num_board
     doresamp = 0
     dopersist = False
     triggerautocalibration = [False] * num_board
@@ -237,7 +237,14 @@ class MainWindow(TemplateBaseClass):
     def selectchannel(self):
         if self.activeboard%2==0 and not self.dotwochannel and self.num_board>1:
             self.ui.oversampCheck.setEnabled(True)
-            if self.dooversample: self.ui.interleavedCheck.setEnabled(True)
+            if self.dooversample[self.activeboard]:
+                self.ui.interleavedCheck.setEnabled(True)
+                self.ui.oversampCheck.setChecked(True)
+                self.ui.interleavedCheck.setChecked(self.dointerleaved[self.activeboard])
+            else:
+                self.ui.interleavedCheck.setEnabled(False)
+                self.ui.interleavedCheck.setChecked(False)
+                self.ui.oversampCheck.setChecked(False)
         else:
             self.ui.oversampCheck.setEnabled(False)
             self.ui.interleavedCheck.setEnabled(False)
@@ -257,6 +264,8 @@ class MainWindow(TemplateBaseClass):
         self.activexychannel = self.activeboard*self.num_chan_per_board + self.selectedchannel
         p = self.ui.chanColor.palette()
         col = self.linepens[self.activexychannel].color()
+        if self.activeboard%2==1 and self.dointerleaved[self.activeboard]:
+            col = self.linepens[self.activexychannel-self.num_chan_per_board].color().darker(200)
         p.setColor(QPalette.Base, col)  # Set background color of box
         self.ui.chanColor.setPalette(p)
         if self.lines[self.activexychannel].isVisible():
@@ -282,7 +291,7 @@ class MainWindow(TemplateBaseClass):
         self.dotwochannel = self.ui.twochanCheck.checkState() == QtCore.Qt.Checked
         for bo in range(self.num_board):
             for ch in range(self.num_chan_per_board):
-                setchanatt(usbs[bo], ch, self.dotwochannel, self.dooversample)  # turn on/off antialias for two/single channel mode
+                setchanatt(usbs[bo], ch, self.dotwochannel, self.dooversample[bo])  # turn on/off antialias for two/single channel mode
         self.ui.attCheck.setChecked(self.dotwochannel)
         self.setupchannels()
         self.doleds()
@@ -303,24 +312,24 @@ class MainWindow(TemplateBaseClass):
     def changeoffset(self):
         scaling = 1000*self.VperD[self.activeboard*2+self.selectedchannel]/160 # compare to 0 dB gain
         if self.ui.acdcCheck.checkState() == QtCore.Qt.Checked: scaling *= 245/160 # offset gain is different in AC mode
-        if dooffset(usbs[self.activeboard], self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx,self.dooversample):
-            if self.dooversample and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
-                dooffset(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx,self.dooversample)
+        if dooffset(usbs[self.activeboard], self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx,self.dooversample[self.activeboard]):
+            if self.dooversample[self.activeboard] and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
+                dooffset(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx,self.dooversample[self.activeboard])
             v2 = scaling*1.5*self.ui.offsetBox.value()
-            if self.dooversample: v2 *= 2.0
+            if self.dooversample[self.activeboard]: v2 *= 2.0
             if self.ui.acdcCheck.checkState() == QtCore.Qt.Checked: v2*=(160/245) # offset gain is different in AC mode
             self.ui.Voff.setText(str(int(v2))+" mV")
 
     def changegain(self):
-        setgain(usbs[self.activeboard], self.selectedchannel, self.ui.gainBox.value(),self.dooversample)
-        if self.dooversample and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
-            setgain(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.gainBox.value(),self.dooversample)
+        setgain(usbs[self.activeboard], self.selectedchannel, self.ui.gainBox.value(),self.dooversample[self.activeboard])
+        if self.dooversample[self.activeboard] and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
+            setgain(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.gainBox.value(),self.dooversample[self.activeboard])
         db = self.ui.gainBox.value()
         v2 = 0.1605*self.tenx/pow(10, db / 20.) # 0.16 V at 0 dB gain
-        if self.dooversample: v2 *= 2.0
+        if self.dooversample[self.activeboard]: v2 *= 2.0
         oldvperd = self.VperD[self.activeboard*2+self.selectedchannel]
         self.VperD[self.activeboard*2+self.selectedchannel] = v2
-        if self.dooversample and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
+        if self.dooversample[self.activeboard] and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
             self.VperD[(self.activeboard+1)*2+self.selectedchannel] = v2
         self.ui.offsetBox.setValue(int(self.ui.offsetBox.value()*oldvperd/v2))
         v2 = round(1000*v2,0)
@@ -372,19 +381,19 @@ class MainWindow(TemplateBaseClass):
 
     def setacdc(self):
         setchanacdc(usbs[self.activeboard], self.selectedchannel,
-                    self.ui.acdcCheck.checkState() == QtCore.Qt.Checked, self.dooversample)  # will be True for AC, False for DC
+                    self.ui.acdcCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])  # will be True for AC, False for DC
         self.changeoffset() # because offset gain is different in AC mode
-        if self.dooversample and self.ui.boardBox.value() % 2 == 0:  # also adjust other board we're oversampling with
+        if self.dooversample[self.activeboard] and self.ui.boardBox.value() % 2 == 0:  # also adjust other board we're oversampling with
             setchanacdc(usbs[self.ui.boardBox.value()+1], self.selectedchannel,
-                    self.ui.acdcCheck.checkState() == QtCore.Qt.Checked, self.dooversample)
+                    self.ui.acdcCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])
 
     def setohm(self):
         setchanimpedance(usbs[self.activeboard], self.selectedchannel,
-                         self.ui.ohmCheck.checkState() == QtCore.Qt.Checked, self.dooversample)  # will be True for 1M ohm, False for 50 ohm
+                         self.ui.ohmCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])  # will be True for 1M ohm, False for 50 ohm
 
     def setatt(self):
         setchanatt(usbs[self.activeboard], self.selectedchannel,
-                   self.ui.attCheck.checkState() == QtCore.Qt.Checked, self.dooversample)  # will be True for attenuation on
+                   self.ui.attCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])  # will be True for attenuation on
 
     def settenx(self):
         if self.ui.tenxCheck.checkState() == QtCore.Qt.Checked:
@@ -396,11 +405,13 @@ class MainWindow(TemplateBaseClass):
     def setoversamp(self):
         assert self.activeboard%2==0
         assert self.num_board>1
-        self.dooversample = self.ui.oversampCheck.checkState() == QtCore.Qt.Checked # will be True for oversampling, False otherwise
-        setsplit(usbs[self.activeboard],self.dooversample)
+        self.dooversample[self.activeboard] = self.ui.oversampCheck.checkState() == QtCore.Qt.Checked # will be True for oversampling, False otherwise
+        self.dooversample[self.activeboard+1] = self.ui.oversampCheck.checkState() == QtCore.Qt.Checked # will be True for oversampling, False otherwise
+        setsplit(usbs[self.activeboard],self.dooversample[self.activeboard])
         setsplit(usbs[self.activeboard+1], False)
-        for usb in usbs: swapinputs(usb,self.dooversample)
-        if self.dooversample:
+        for bo in range(self.num_board):
+            if bo==self.activeboard or bo==self.activeboard+1: swapinputs(usbs[bo],self.dooversample[self.activeboard])
+        if self.dooversample[self.activeboard]:
             self.ui.interleavedCheck.setEnabled(True)
             self.ui.twochanCheck.setEnabled(False)
         else:
@@ -414,14 +425,15 @@ class MainWindow(TemplateBaseClass):
     def interleave(self):
         assert self.activeboard%2==0
         assert self.num_board>1
-        self.dointerleaved = self.ui.interleavedCheck.checkState() == QtCore.Qt.Checked
+        self.dointerleaved[self.activeboard] = self.ui.interleavedCheck.checkState() == QtCore.Qt.Checked
+        self.dointerleaved[self.activeboard+1] = self.ui.interleavedCheck.checkState() == QtCore.Qt.Checked
         c = (self.activeboard+1) * self.num_chan_per_board
-        if self.dointerleaved: # TODO: update for >2 boards
+        if self.dointerleaved[self.activeboard]:
             self.lines[c].setVisible(False)
-            self.ui.boardBox.setMaximum(int(self.num_board/2)-1)
+            #self.ui.boardBox.setMaximum(int(self.num_board/2)-1)
         else:
             self.lines[c].setVisible(True)
-            self.ui.boardBox.setMaximum(self.num_board-1)
+            #self.ui.boardBox.setMaximum(self.num_board-1)
         self.selectchannel()
         self.timechanged()
         self.doleds()
@@ -777,7 +789,7 @@ class MainWindow(TemplateBaseClass):
             for c in range(self.num_chan_per_board * self.num_board):
                 self.xydata[c][0] = np.array([range(0, 4 * 10 * self.expect_samples)]) * (
                             1 * self.downsamplefactor / self.nsunits / self.samplerate)
-                if self.num_board%2==0 and self.dointerleaved:
+                if self.dointerleaved[int(c/2)]:
                     self.xydatainterleaved[c][0] = np.array([range(0, 2 * 4 * 10 * self.expect_samples)]) * (
                             0.5 * self.downsamplefactor / self.nsunits / self.samplerate)
         self.ui.plot.setRange(xRange=(self.min_x, self.max_x), padding=0.00)
@@ -823,14 +835,14 @@ class MainWindow(TemplateBaseClass):
         if not self.dodrawing: return
         # self.ui.plot.setTitle("%0.2f fps, %d events, %0.2f Hz, %0.2f MB/s"%(self.fps,self.nevents,self.lastrate,self.lastrate*self.lastsize/1e6))
         for li in range(self.nlines):
-            if not self.dointerleaved:
+            if not self.dointerleaved[int(li/2)]:
                 if self.doresamp:
                     ydatanew, xdatanew = resample(self.xydata[li][1], len(self.xydata[li][0]) * self.doresamp, t=self.xydata[li][0])
                     self.lines[li].setData(xdatanew,ydatanew)
                 else:
                     self.lines[li].setData(self.xydata[li][0], self.xydata[li][1])
             else:
-                if li%4 == 0: #TODO: update for >2 boards
+                if li%4 == 0:
                     self.xydatainterleaved[int(li/2)][1][0::2] = self.xydata[li][1]
                     self.xydatainterleaved[int(li/2)][1][1::2] = self.xydata[li+self.num_chan_per_board][1]
                     if self.doresamp:
@@ -923,7 +935,7 @@ class MainWindow(TemplateBaseClass):
             if self.doexttrigecho[board]: tt = 30
             else: tt = 3
         elif self.doextsmatrig[board] > 0: tt = 5
-        usbs[board].send(bytes([1, tt, self.dotwochannel+2*self.dooversample, 99] + inttobytes(
+        usbs[board].send(bytes([1, tt, self.dotwochannel+2*self.dooversample[board], 99] + inttobytes(
             self.expect_samples + self.expect_samples_extra - self.triggerpos + 1)))  # length to take after trigger (last 4 bytes)
         triggercounter = usbs[board].recv(4)  # get the 4 bytes
         acqstate = triggercounter[0]
@@ -1040,7 +1052,7 @@ class MainWindow(TemplateBaseClass):
         unpackedsamples = struct.unpack('<' + 'h' * (len(data) // 2), data)
         npunpackedsamples = np.array(unpackedsamples, dtype='float')
         npunpackedsamples *= self.yscale
-        if self.dooversample and board % 2 == 0: #TODO: update for >2 boards
+        if self.dooversample[board] and board%2==0:
             npunpackedsamples += self.extrigboardmeancorrection
             npunpackedsamples *= self.extrigboardstdcorrection
         downsampleoffset = 2 * (sample_triggered_touse + (self.downsamplemergingcounter[board]-1)%self.downsamplemerging * 10) // self.downsamplemerging
@@ -1117,10 +1129,10 @@ class MainWindow(TemplateBaseClass):
         thestr += "\n" + "Mean " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.mean(self.xydata[self.activexychannel][1]), 3) ) + " mV"
         thestr += "\n" + "RMS " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.std(self.xydata[self.activexychannel][1]), 3) ) + " mV"
 
-        if not self.dointerleaved:
+        if not self.dointerleaved[self.activeboard]:
             targety = self.xydata[self.activexychannel]
         else:
-            targety = self.xydatainterleaved[int(self.activeboard/2)] #TODO: update for >2 boards
+            targety = self.xydatainterleaved[int(self.activeboard/2)]
         p0 = [max(targety[1]), self.vline - 10, 20, min(targety[1])] #initial guess
         fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
         xc = targety[0][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]  # only fit in range
@@ -1279,12 +1291,12 @@ class MainWindow(TemplateBaseClass):
             self.autocalibration(64,True, oldtoff)
 
     def plot_fft(self):
-        if self.dointerleaved: y = self.xydatainterleaved[int(self.activeboard/2)][1]
+        if self.dointerleaved[self.activeboard]: y = self.xydatainterleaved[int(self.activeboard/2)][1]
         else: y = self.xydata[self.activeboard * self.num_chan_per_board + self.selectedchannel][1]  # channel signal to take fft of
         n = len(y)  # length of the signal
         k = np.arange(n)
         uspersample = self.downsamplefactor / self.samplerate / 1000.
-        if self.dointerleaved: uspersample = uspersample/2
+        if self.dointerleaved[self.activeboard]: uspersample = uspersample/2
         # t = np.arange(0,1,1.0/n) * (n*uspersample) # time vector in us
         frq = (k / uspersample)[list(range(int(n / 2)))] / n  # one side frequency range up to Nyquist
         Y = np.fft.fft(y)[list(range(int(n / 2)))] / n  # fft computing and normalization
@@ -1366,14 +1378,14 @@ class MainWindow(TemplateBaseClass):
                 r2 = col2.red()
                 g2 = col2.green()
                 b2 = col2.blue()
-            if self.dooversample:
+            if self.dooversample[board]:
                 r2 = col1.red()
                 g2 = col1.green()
                 b2 = col1.blue()
                 r1 = 0
                 g1 = 0
                 b1 = 0
-            if self.dointerleaved and board%2==1:
+            if self.dointerleaved[board] and board%2==1:
                 col1 = self.linepens[(board-1) * self.num_chan_per_board].color()
                 dim = 10 # factor by which to dim the second led
                 r2 = col1.red()/dim
@@ -1446,7 +1458,7 @@ class MainWindow(TemplateBaseClass):
             if self.firmwareversion != ver: self.firmwareversion = "various"
         self.adfreset(board)
         setupboard(usbs[board], self.dopattern, self.dotwochannel, self.dooverrange)
-        for c in range(self.num_chan_per_board): setchanacdc(usbs[board], c, 0, self.dooversample)
+        for c in range(self.num_chan_per_board): setchanacdc(usbs[board], c, 0, self.dooversample[board])
         self.pllreset(board)
         #switchclock(usbs[board], board)
         auxoutselector(usbs[board],0)
