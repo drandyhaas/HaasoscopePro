@@ -130,13 +130,13 @@ class MainWindow(TemplateBaseClass):
     extrigboardmeancorrection = 0
     lastrate = 0
     lastsize = 0
-    dodirect = True
     VperD = [0.16]*(num_board*2)
     plljustreset = [-10] * num_board
     plljustresetdir = [0] * num_board
     phasenbad = [[0] * 12] * num_board
     dooversample = False
     doresamp = 0
+    dopersist = False
     triggerautocalibration = [False] * num_board
     extraphasefortad = [0] * num_board
     doexttrigecho = [False] * num_board
@@ -235,7 +235,7 @@ class MainWindow(TemplateBaseClass):
         self.selectchannel()
 
     def selectchannel(self):
-        if self.activeboard%2==0 and not self.dotwochannel:
+        if self.activeboard%2==0 and not self.dotwochannel and self.num_board>1:
             self.ui.oversampCheck.setEnabled(True)
             if self.dooversample: self.ui.interleavedCheck.setEnabled(True)
         else:
@@ -802,8 +802,8 @@ class MainWindow(TemplateBaseClass):
             # print("drawing now",self.dodrawing)
 
     def persist(self):
-        self.dodirect = not self.dodirect
-        print("do direct array drawing now",self.dodirect)
+        self.dopersist = not self.dopersist
+        print("do persist",self.dopersist)
 
     def updateplot(self):
         if hasattr(self,"hsprosock"):
@@ -1038,13 +1038,11 @@ class MainWindow(TemplateBaseClass):
         nbadclkD = 0
         nbadstr = 0
         unpackedsamples = struct.unpack('<' + 'h' * (len(data) // 2), data)
-        npunpackedsamples = None
-        if self.dodirect:
-            npunpackedsamples = np.array(unpackedsamples, dtype='float')
-            npunpackedsamples *= self.yscale
-            if self.dooversample and board % 2 == 0: #TODO: update for >2 boards
-                npunpackedsamples += self.extrigboardmeancorrection
-                npunpackedsamples *= self.extrigboardstdcorrection
+        npunpackedsamples = np.array(unpackedsamples, dtype='float')
+        npunpackedsamples *= self.yscale
+        if self.dooversample and board % 2 == 0: #TODO: update for >2 boards
+            npunpackedsamples += self.extrigboardmeancorrection
+            npunpackedsamples *= self.extrigboardstdcorrection
         downsampleoffset = 2 * (sample_triggered_touse + (self.downsamplemergingcounter[board]-1)%self.downsamplemerging * 10) // self.downsamplemerging
         downsampleoffset += 20*self.triggershift # account for having moved actual trigger a little earlier, so we had time to shift a bit now for things like toff
         if not self.dotwochannel: downsampleoffset *= 2
@@ -1054,79 +1052,49 @@ class MainWindow(TemplateBaseClass):
             else: downsampleoffset -= int(self.toff/self.downsamplefactor) + int(8*self.lvdstrigdelay[board]/self.downsamplefactor) %40
         datasize = self.xydata[board][1].size
         for s in range(0, self.expect_samples+self.expect_samples_extra):
-
-            if self.dodirect: #This is the new faster way of doing things
-                vals = unpackedsamples[s*self.nsubsamples+40:s*self.nsubsamples + 50]
-                if vals[9]!=-16657: print("no beef?") # -16657 is 0xbeef
-                if vals[8]!=0 or (self.lastclk!=341 and self.lastclk!=682):
-                    # only bother checking if there was a clkstr problem detected in firmware, or we need to decode
-                    # because of a previous clkstr prob and now want to update self.lastclk
-                    for n in range(0,8): # the subsample to get
-                        val = vals[n]
-                        if n < 4:
-                            if val!=341 and val!= 682: # 0101010101 or 1010101010
-                                if n == 0: nbadclkA += 1
-                                if n == 1: nbadclkB += 1
-                                if n == 2: nbadclkC += 1
-                                if n == 3: nbadclkD += 1
-                                #print("s=", s, "n=", n, "clk", val, binprint(val))
-                            self.lastclk = val
-                        elif val not in {0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512}: # 10 bits long, and just one 1
-                            nbadstr = nbadstr + 1
-                            #print("s=", s, "n=", n, "str", val, binprint(val))
-                if self.dotwochannel:
-                    samp = s*20 - downsampleoffset - triggerphase//2
-                    nsamp=20
-                    nstart=0
-                    if samp<0:
-                        nsamp = 20 + samp
-                        nstart = -samp
-                        samp = 0
-                    if samp+20 >= datasize:
-                        nsamp = datasize - samp
-                    if 0 < nsamp <= 20:
-                        self.xydata[board * self.num_chan_per_board+0][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+20+nstart:s*self.nsubsamples+20+nstart+nsamp]
-                        self.xydata[board * self.num_chan_per_board+1][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
-                else:
-                    samp = s*40 - downsampleoffset - triggerphase
-                    nsamp=40
-                    nstart=0
-                    if samp<0:
-                        nsamp = 40 + samp
-                        nstart = -samp
-                        samp = 0
-                    if samp+40 >= datasize:
-                        nsamp = datasize - samp
-                    if 0 < nsamp <= 40:
-                        self.xydata[board * self.num_chan_per_board][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
-
-            else: # This is the older slower way
-                for n in range(self.nsubsamples): # the subsample to get
-                    val = unpackedsamples[s*self.nsubsamples + n] # this will be 16x larger than the 12 bit value, since it's shifted 4 bits to the left
-                    if 40 <= n < 44:
+            vals = unpackedsamples[s*self.nsubsamples+40:s*self.nsubsamples + 50]
+            if vals[9]!=-16657: print("no beef?") # -16657 is 0xbeef
+            if vals[8]!=0 or (self.lastclk!=341 and self.lastclk!=682):
+                # only bother checking if there was a clkstr problem detected in firmware, or we need to decode
+                # because of a previous clkstr prob and now want to update self.lastclk
+                for n in range(0,8): # the subsample to get
+                    val = vals[n]
+                    if n < 4:
                         if val!=341 and val!= 682: # 0101010101 or 1010101010
-                            if n == 40: nbadclkA += 1
-                            if n == 41: nbadclkB += 1
-                            if n == 42: nbadclkC += 1
-                            if n == 43: nbadclkD += 1
+                            if n == 0: nbadclkA += 1
+                            if n == 1: nbadclkB += 1
+                            if n == 2: nbadclkC += 1
+                            if n == 3: nbadclkD += 1
                             #print("s=", s, "n=", n, "clk", val, binprint(val))
-                        else: self.lastclk = val
-                    if (44 <= n < 48) and (val not in {0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512}):
-                        # 10 bits long, and just one 1
+                        self.lastclk = val
+                    elif val not in {0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512}: # 10 bits long, and just one 1
                         nbadstr = nbadstr + 1
                         #print("s=", s, "n=", n, "str", val, binprint(val))
-                    if n < 40:
-                        val = val * self.yscale
-                        if self.dooversample and board%2==0:
-                            val += self.extrigboardmeancorrection
-                            val *= self.extrigboardstdcorrection
-                        if self.dotwochannel:
-                            samp = s*20 + n - downsampleoffset
-                            if n>=20: samp -= 20
-                            if 0 <= samp < datasize: self.xydata[board*self.num_chan_per_board + (n<20)][1][samp] = val
-                        else:
-                            samp = s*40 + n - downsampleoffset
-                            if 0 <= samp < datasize: self.xydata[board*self.num_chan_per_board][1][samp] = val
+            if self.dotwochannel:
+                samp = s*20 - downsampleoffset - triggerphase//2
+                nsamp=20
+                nstart=0
+                if samp<0:
+                    nsamp = 20 + samp
+                    nstart = -samp
+                    samp = 0
+                if samp+20 >= datasize:
+                    nsamp = datasize - samp
+                if 0 < nsamp <= 20:
+                    self.xydata[board * self.num_chan_per_board+0][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+20+nstart:s*self.nsubsamples+20+nstart+nsamp]
+                    self.xydata[board * self.num_chan_per_board+1][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
+            else:
+                samp = s*40 - downsampleoffset - triggerphase
+                nsamp=40
+                nstart=0
+                if samp<0:
+                    nsamp = 40 + samp
+                    nstart = -samp
+                    samp = 0
+                if samp+40 >= datasize:
+                    nsamp = datasize - samp
+                if 0 < nsamp <= 40:
+                    self.xydata[board * self.num_chan_per_board][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
 
         self.adjustclocks(board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr)
         if board == self.activeboard:

@@ -254,7 +254,7 @@ def cleanup(usb):
     spimode(usb, 0)
     spicommand(usb, "DEVICE_CONFIG", 0x00, 0x02, 0x03, False)  # power down
     setfan(usb,0)
-    send_leds(usb, 50,50,50,50,50,50)
+    send_leds(usb, 50,35,50,50,35,50)
     return 1
 
 def getoverrange(usb):

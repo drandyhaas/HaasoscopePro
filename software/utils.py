@@ -1,3 +1,5 @@
+import time
+
 def reverse_bits(byte):
     reversed_byte = 0
     for i in range(8):
@@ -45,16 +47,22 @@ def inttobytes(theint):  # convert length number to a 4-byte byte array (with ty
     return [theint & 0xff, (theint >> 8) & 0xff, (theint >> 16) & 0xff, (theint >> 24) & 0xff]
 
 def send_leds(usb, r1,g1,b1, r2,g2,b2): # ch0, ch1
-    r1 = reverse_bits(r1)
-    g1 = reverse_bits(g1)
-    b1 = reverse_bits(b1)
-    r2 = reverse_bits(r2)
-    g2 = reverse_bits(g2)
-    b2 = reverse_bits(b2)
-    usb.send(bytes([11, 1, g1, r1, b1, g2, r2, b2]))  # send
-    usb.recv(4)
-    usb.send(bytes([11, 0, g1, r1, b1, g2, r2, b2]))  # stop sending
-    usb.recv(4)
+    rw = 0.3
+    gw = 0.4
+    bw = 0.2
+    r1 = reverse_bits(int(r1*rw))
+    g1 = reverse_bits(int(g1*gw))
+    b1 = reverse_bits(int(b1*bw))
+    r2 = reverse_bits(int(r2*rw))
+    g2 = reverse_bits(int(g2*gw))
+    b2 = reverse_bits(int(b2*bw))
+    for i in range(2):
+        usb.send(bytes([11, 1, g1, r1, b1, g2, r2, b2]))  # send
+        usb.recv(4)
+        time.sleep(.001)
+        usb.send(bytes([11, 0, g1, r1, b1, g2, r2, b2]))  # stop sending
+        usb.recv(4)
+        time.sleep(.001)
 
 def auxoutselector(usb, val, doprint=True):
     usb.send(bytes([2, 10, val, 0, 99, 99, 99, 99])) # set aux out SMA on back panel
