@@ -2,7 +2,7 @@
 
 ### An Affordable 2 GHz 3.2 GS/s 12 bit open-source open-hardware expandable USB oscilloscope
 
-### [Available on CrowdSupply](https://www.crowdsupply.com/andy-haas/haasoscope-pro)
+### [Available on CrowdSupply](https://www.crowdsupply.com/andy-haas/haasoscope-pro) and at [Mouser](https://www.mouser.com/c/?q=Haasoscope)
 
 ### [Hackaday.io Page](https://hackaday.io/project/200773-haasoscope-pro)
 
