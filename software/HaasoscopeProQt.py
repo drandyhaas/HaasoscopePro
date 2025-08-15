@@ -126,8 +126,8 @@ class MainWindow(TemplateBaseClass):
     triggerphase = [0] * num_board
     downsamplemergingcounter = [0] * num_board
     fitwidthfraction = 0.2
-    extrigboardstdcorrection = 1
-    extrigboardmeancorrection = 0
+    extrigboardstdcorrection = [1] * num_board
+    extrigboardmeancorrection = [0] * num_board
     lastrate = 0
     lastsize = 0
     VperD = [0.16]*(num_board*2)
@@ -1053,8 +1053,8 @@ class MainWindow(TemplateBaseClass):
         npunpackedsamples = np.array(unpackedsamples, dtype='float')
         npunpackedsamples *= self.yscale
         if self.dooversample[board] and board%2==0:
-            npunpackedsamples += self.extrigboardmeancorrection
-            npunpackedsamples *= self.extrigboardstdcorrection
+            npunpackedsamples += self.extrigboardmeancorrection[board]
+            npunpackedsamples *= self.extrigboardstdcorrection[board]
         downsampleoffset = 2 * (sample_triggered_touse + (self.downsamplemergingcounter[board]-1)%self.downsamplemerging * 10) // self.downsamplemerging
         downsampleoffset += 20*self.triggershift # account for having moved actual trigger a little earlier, so we had time to shift a bit now for things like toff
         if not self.dotwochannel: downsampleoffset *= 2
@@ -1217,15 +1217,15 @@ class MainWindow(TemplateBaseClass):
             dofiner=False
             oldtoff=0
         print("autocalibration",resamp,dofiner,finewidth)
+        if self.activeboard%2==1:
+            print("Select the even board number first!")
+            return
         if self.tad[self.activeboard]!=0:
             for t in range(255//5):
                 if self.tad[self.activeboard]>0: self.ui.tadBox.setValue(self.tad[self.activeboard]-5)
                 self.setTAD()
                 time.sleep(.1) # be gentle
-        c1 = self.activeboard
-        if c1 >= self.num_board - 1:
-            print("Select the even channel first!")
-            return
+        c1 = self.activeboard * self.num_chan_per_board
         c = (self.activeboard + 1) * self.num_chan_per_board
         fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
         #bare_max_x = 4 * 10 * self.expect_samples * self.downsamplefactor / self.nsunits / self.samplerate
@@ -1280,14 +1280,14 @@ class MainWindow(TemplateBaseClass):
                 (self.xydata[c1][0] > self.vline - fitwidth) & (self.xydata[c1][0] < self.vline + fitwidth)]
             extrigboardmean = np.mean(yc)
             otherboardmean = np.mean(yc1)
-            self.extrigboardmeancorrection = self.extrigboardmeancorrection + extrigboardmean - otherboardmean
+            self.extrigboardmeancorrection[self.activeboard] = self.extrigboardmeancorrection[self.activeboard] + extrigboardmean - otherboardmean
             extrigboardstd = np.std(yc)
             otherboardstd = np.std(yc1)
             if otherboardstd > 0:
-                self.extrigboardstdcorrection = self.extrigboardstdcorrection * extrigboardstd / otherboardstd
+                self.extrigboardstdcorrection[self.activeboard] = self.extrigboardstdcorrection[self.activeboard] * extrigboardstd / otherboardstd
             else:
-                self.extrigboardstdcorrection = self.extrigboardstdcorrection
-            print("calculated mean and std corrections", self.extrigboardmeancorrection, self.extrigboardstdcorrection)
+                self.extrigboardstdcorrection[self.activeboard] = self.extrigboardstdcorrection[self.activeboard]
+            print("calculated mean and std corrections", self.extrigboardmeancorrection[self.activeboard], self.extrigboardstdcorrection[self.activeboard])
             self.autocalibration(64,True, oldtoff)
 
     def plot_fft(self):
