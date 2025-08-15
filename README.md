@@ -38,7 +38,7 @@ See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiK
 ### Fuller way of running
 
 1) Install python3 and git for your operating system
-2) Install dependencies: <br><code>pip3 install numpy scipy pyqtgraph PyQt5 pyftdi ftd2xx</code>
+2) Install dependencies: <br><code>pip3 install numpy scipy pyqtgraph PyQt5 pyftdi matplotlib ftd2xx</code>
 3) Get code: <br><code>git clone https://github.com/drandyhaas/HaasoscopePro.git</code>
 4) Install FTDI driver (see Quick start above)
 5) Plug Haasoscope Pro into your computer via USB
