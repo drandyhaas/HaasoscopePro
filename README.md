@@ -23,9 +23,9 @@ See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiK
 1) Download code and unzip it: https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/main.zip
 2) Rename directory HaasoscopePro-main to HaasoscopePro (for consistency with git below)
 3) Install [FTDI D2xx driver](https://ftdichip.com/drivers/d2xx-drivers/) 
-<br>for Windows: install by running the setup exe at <code>HaasoscopePro/software/ftdi_setup.exe</code>
-<br>for Mac: <code>sudo mkdir -p /usr/local/lib; sudo cp HaasoscopePro/software/libftd2xx.dylib /usr/local/lib/</code> 
-<br>for Linux: <code>sudo cp HaasoscopePro/software/libftd2xx.so /usr/lib/</code>
+- for Windows: install by running the setup exe at <code>HaasoscopePro/software/ftdi_setup.exe</code>
+- for Mac: <code>sudo mkdir -p /usr/local/lib; sudo cp HaasoscopePro/software/libftd2xx.dylib /usr/local/lib/</code> 
+- for Linux: <code>sudo cp HaasoscopePro/software/libftd2xx.so /usr/lib/</code>
 4) Plug Haasoscope Pro into your computer via USB
 5) Run **HaasoscopeProQt** in the <code>HaasoscopePro/software/dist/(OS)_HaasoscopeProQt</code> directory
 
@@ -47,11 +47,11 @@ See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiK
 <br><code>python3 HaasoscopeProQt.py</code>
 
 ### To remake exe for quick start
-<code>pip3 install pyinstaller</code> # install dependency once
-<br><code>python3 -m PyInstaller HaasoscopeProQt.py</code>
-<br>Copy *.ui to dist/HaasoscopeProQt
-<br>Rename dist/HaasoscopeProQt to dist/(OS)_HaasoscopeProQt
-<br>Remove build directory
+1) <code>pip3 install pyinstaller</code>
+2) <code>python3 -m PyInstaller HaasoscopeProQt.py</code>
+3) Copy *.ui to dist/HaasoscopeProQt
+4) Rename dist/HaasoscopeProQt to dist/(OS)_HaasoscopeProQt
+5) Remove build directory
 
 ### Repository structure
 
@@ -68,10 +68,7 @@ All designs for the accompanying active probe are in a separate [repository](htt
 
 ### Editing the GUI
 
-The Haasoscope Pro GUI can be edited using [Qt Designer](https://www.pythonguis.com/installation/install-qt-designer-standalone/), started with:
-<br><code>pip install pyqt5-tools</code>
-<br><code>pyqt5-tools designer</code>
-<br>Then open software/HaasoscopePro.ui or HaasoscopeProFFT.ui etc.
+The Haasoscope Pro GUI can be edited using [Qt Designer](https://www.pythonguis.com/installation/install-qt-designer-standalone/), on software/HaasoscopePro.ui or HaasoscopeProFFT.ui etc.
 
 ### Other GUIs
 
