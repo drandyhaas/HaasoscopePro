@@ -55,7 +55,6 @@ class MainWindow(TemplateBaseClass):
     num_board = len(usbs)
     num_chan_per_board = 2
     num_logic_inputs = 0
-    tenx = 1
     debug = False
     dopattern = 0 # set to 4 to do max varying test pattern
     debugprint = True
@@ -146,6 +145,11 @@ class MainWindow(TemplateBaseClass):
     doeventtime = False
     lvdstrigdelay = [0] * num_board
     lastlvdstrigdelay = [0] * num_board
+    acdc = [False]*(num_board*num_chan_per_board)
+    mohm = [False]*(num_board*num_chan_per_board)
+    att = [False]*(num_board*num_chan_per_board)
+    tenx = [1]*(num_board*num_chan_per_board)
+    auxoutval = [0]*num_board
     noextboard = -1
 
     def __init__(self):
@@ -186,7 +190,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.gainBox.valueChanged.connect(self.changegain)
         self.ui.offsetBox.valueChanged.connect(self.changeoffset)
         self.ui.acdcCheck.stateChanged.connect(self.setacdc)
-        self.ui.ohmCheck.stateChanged.connect(self.setohm)
+        self.ui.ohmCheck.stateChanged.connect(self.setmohm)
         self.ui.oversampCheck.stateChanged.connect(self.setoversamp)
         self.ui.interleavedCheck.stateChanged.connect(self.interleave)
         self.ui.attCheck.stateChanged.connect(self.setatt)
@@ -273,6 +277,11 @@ class MainWindow(TemplateBaseClass):
         else:
             self.ui.chanonCheck.setChecked(QtCore.Qt.Unchecked)
         self.ui.tadBox.setValue(self.tad[self.activeboard])
+        self.ui.acdcCheck.setChecked(self.acdc[self.activexychannel])
+        self.ui.ohmCheck.setChecked(self.mohm[self.activexychannel])
+        self.ui.tenxCheck.setChecked(self.tenx[self.activexychannel]==10)
+        self.ui.attCheck.setChecked(self.att[self.activexychannel])
+        self.ui.Auxout_comboBox.setCurrentIndex(self.auxoutval[self.activeboard])
 
     def fft(self):
         if self.ui.fftCheck.checkState() == QtCore.Qt.Checked:
@@ -293,6 +302,7 @@ class MainWindow(TemplateBaseClass):
             for ch in range(self.num_chan_per_board):
                 setchanatt(usbs[bo], ch, self.dotwochannel, self.dooversample[bo])  # turn on/off antialias for two/single channel mode
         self.ui.attCheck.setChecked(self.dotwochannel)
+        self.att = [self.dotwochannel]*(self.num_board*self.num_chan_per_board)
         self.setupchannels()
         self.doleds()
         for usb in usbs: setupboard(usb,self.dopattern,self.dotwochannel,self.dooverrange)
@@ -312,9 +322,9 @@ class MainWindow(TemplateBaseClass):
     def changeoffset(self):
         scaling = 1000*self.VperD[self.activeboard*2+self.selectedchannel]/160 # compare to 0 dB gain
         if self.ui.acdcCheck.checkState() == QtCore.Qt.Checked: scaling *= 245/160 # offset gain is different in AC mode
-        if dooffset(usbs[self.activeboard], self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx,self.dooversample[self.activeboard]):
+        if dooffset(usbs[self.activeboard], self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx[self.activexychannel],self.dooversample[self.activeboard]):
             if self.dooversample[self.activeboard] and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
-                dooffset(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx,self.dooversample[self.activeboard])
+                dooffset(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx[self.activexychannel],self.dooversample[self.activeboard])
             v2 = scaling*1.5*self.ui.offsetBox.value()
             if self.dooversample[self.activeboard]: v2 *= 2.0
             if self.ui.acdcCheck.checkState() == QtCore.Qt.Checked: v2*=(160/245) # offset gain is different in AC mode
@@ -325,7 +335,7 @@ class MainWindow(TemplateBaseClass):
         if self.dooversample[self.activeboard] and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
             setgain(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.gainBox.value(),self.dooversample[self.activeboard])
         db = self.ui.gainBox.value()
-        v2 = 0.1605*self.tenx/pow(10, db / 20.) # 0.16 V at 0 dB gain
+        v2 = 0.1605*self.tenx[self.activexychannel]/pow(10, db / 20.) # 0.16 V at 0 dB gain
         if self.dooversample[self.activeboard]: v2 *= 2.0
         oldvperd = self.VperD[self.activeboard*2+self.selectedchannel]
         self.VperD[self.activeboard*2+self.selectedchannel] = v2
@@ -380,30 +390,34 @@ class MainWindow(TemplateBaseClass):
             self.lines[self.activexychannel].setVisible(False)
 
     def setacdc(self):
+        self.acdc[self.activexychannel] = self.ui.acdcCheck.checkState() == QtCore.Qt.Checked # remember it
         setchanacdc(usbs[self.activeboard], self.selectedchannel,
                     self.ui.acdcCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])  # will be True for AC, False for DC
         self.changeoffset() # because offset gain is different in AC mode
         if self.dooversample[self.activeboard] and self.activeboard%2==0:  # also adjust other board we're oversampling with
             setchanacdc(usbs[self.activeboard+1], self.selectedchannel,
                     self.ui.acdcCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])
+            self.acdc[self.activexychannel+self.num_chan_per_board] = self.ui.acdcCheck.checkState() == QtCore.Qt.Checked  # remember it
 
-    def setohm(self):
+    def setmohm(self):
+        self.mohm[self.activexychannel] = self.ui.ohmCheck.checkState() == QtCore.Qt.Checked # remember it
         setchanimpedance(usbs[self.activeboard], self.selectedchannel,
                          self.ui.ohmCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])  # will be True for 1M ohm, False for 50 ohm
 
     def setatt(self):
+        self.att[self.activexychannel] = self.ui.attCheck.checkState() == QtCore.Qt.Checked # remember it
         setchanatt(usbs[self.activeboard], self.selectedchannel,
                    self.ui.attCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])  # will be True for attenuation on
         if self.dooversample[self.activeboard] and self.activeboard%2==0:  # also adjust other board we're oversampling with
             setchanatt(usbs[self.activeboard+1], self.selectedchannel,
                        self.ui.attCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])
+            self.att[self.activexychannel+self.num_chan_per_board] = self.ui.attCheck.checkState() == QtCore.Qt.Checked  # remember it
 
     def settenx(self):
-        if self.ui.tenxCheck.checkState() == QtCore.Qt.Checked:
-            self.tenx = 10
-        else:
-            self.tenx = 1
+        if self.ui.tenxCheck.checkState() == QtCore.Qt.Checked: self.tenx[self.activexychannel] = 10
+        else: self.tenx[self.activexychannel] = 1
         self.changegain()
+        self.changeoffset()
 
     def setoversamp(self):
         assert self.activeboard%2==0
@@ -1157,7 +1171,7 @@ class MainWindow(TemplateBaseClass):
 
     def auxout(self):
         val = self.ui.Auxout_comboBox.currentIndex()
-        #for board in range(self.num_board): auxoutselector(usbs[board],val)
+        self.auxoutval[self.activeboard] = val # remember it
         auxoutselector(usbs[self.activeboard], val)
 
     def update_firmware(self):
@@ -1457,11 +1471,15 @@ class MainWindow(TemplateBaseClass):
         print("Setting up board",board)
         ver = version(usbs[board],False)
         if not hasattr(self,"firmwareversion"): self.firmwareversion = ver
-        else:
-            if self.firmwareversion != ver: self.firmwareversion = "various"
+        if ver < self.firmwareversion:
+            print("Warning - this board has older firmware than another being used!")
+            self.firmwareversion = ver # find the minimum firmware being used
         self.adfreset(board)
         setupboard(usbs[board], self.dopattern, self.dotwochannel, self.dooverrange)
-        for c in range(self.num_chan_per_board): setchanacdc(usbs[board], c, 0, self.dooversample[board])
+        for c in range(self.num_chan_per_board):
+            setchanacdc(usbs[board], c, 0, self.dooversample[board])
+            setchanimpedance(usbs[board], c, 0, self.dooversample[board])
+            setchanatt(usbs[board], c, 0, self.dooversample[board])
         self.pllreset(board)
         #switchclock(usbs[board], board)
         auxoutselector(usbs[board],0)
