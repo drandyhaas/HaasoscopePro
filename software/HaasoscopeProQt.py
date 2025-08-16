@@ -150,6 +150,8 @@ class MainWindow(TemplateBaseClass):
     att = [False]*(num_board*num_chan_per_board)
     tenx = [1]*(num_board*num_chan_per_board)
     auxoutval = [0]*num_board
+    offset = [0]*(num_board*num_chan_per_board)
+    gain = [0]*(num_board*num_chan_per_board)
     noextboard = -1
 
     def __init__(self):
@@ -282,6 +284,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.tenxCheck.setChecked(self.tenx[self.activexychannel]==10)
         self.ui.attCheck.setChecked(self.att[self.activexychannel])
         self.ui.Auxout_comboBox.setCurrentIndex(self.auxoutval[self.activeboard])
+        self.ui.offsetBox.setValue(self.offset[self.activexychannel])
+        self.ui.gainBox.setValue(self.gain[self.activexychannel])
 
     def fft(self):
         if self.ui.fftCheck.checkState() == QtCore.Qt.Checked:
@@ -320,20 +324,24 @@ class MainWindow(TemplateBaseClass):
                 else: self.lines[c].setVisible(False)
 
     def changeoffset(self):
+        self.offset[self.activexychannel] = self.ui.offsetBox.value() # remember it
         scaling = 1000*self.VperD[self.activeboard*2+self.selectedchannel]/160 # compare to 0 dB gain
         if self.ui.acdcCheck.checkState() == QtCore.Qt.Checked: scaling *= 245/160 # offset gain is different in AC mode
         if dooffset(usbs[self.activeboard], self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx[self.activexychannel],self.dooversample[self.activeboard]):
             if self.dooversample[self.activeboard] and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
                 dooffset(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.offsetBox.value(),scaling/self.tenx[self.activexychannel],self.dooversample[self.activeboard])
+                self.offset[self.activexychannel+self.num_chan_per_board] = self.ui.offsetBox.value()  # remember it
             v2 = scaling*1.5*self.ui.offsetBox.value()
             if self.dooversample[self.activeboard]: v2 *= 2.0
             if self.ui.acdcCheck.checkState() == QtCore.Qt.Checked: v2*=(160/245) # offset gain is different in AC mode
             self.ui.Voff.setText(str(int(v2))+" mV")
 
     def changegain(self):
+        self.gain[self.activexychannel] = self.ui.gainBox.value() # remember it
         setgain(usbs[self.activeboard], self.selectedchannel, self.ui.gainBox.value(),self.dooversample[self.activeboard])
         if self.dooversample[self.activeboard] and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
             setgain(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.gainBox.value(),self.dooversample[self.activeboard])
+            self.gain[self.activexychannel+self.num_chan_per_board] = self.ui.gainBox.value()  # remember it
         db = self.ui.gainBox.value()
         v2 = 0.1605*self.tenx[self.activexychannel]/pow(10, db / 20.) # 0.16 V at 0 dB gain
         if self.dooversample[self.activeboard]: v2 *= 2.0
@@ -1481,7 +1489,6 @@ class MainWindow(TemplateBaseClass):
             setchanimpedance(usbs[board], c, 0, self.dooversample[board])
             setchanatt(usbs[board], c, 0, self.dooversample[board])
         self.pllreset(board)
-        #switchclock(usbs[board], board)
         auxoutselector(usbs[board],0)
         return 1
 
