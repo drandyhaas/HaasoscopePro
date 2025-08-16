@@ -7,3 +7,4 @@ mv HaasoscopeProQt/* Mac_HaasoscopeProQt
 rmdir HaasoscopeProQt
 cd ..
 rm -rf build
+cp *.ui dist/Mac_HaasoscopeProQt/
