@@ -211,6 +211,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionForce_split.triggered.connect( self.force_split )
         self.ui.actionForce_switch_clocks.triggered.connect( self.force_switch_clocks )
         self.ui.Auxout_comboBox.currentIndexChanged.connect(self.auxout)
+        self.ui.actionToggle_PLL_controls.triggered.connect(self.toggle_pll_controls)
         self.dofft = False
         self.db = False
         self.lastTime = time.time()
@@ -236,6 +237,19 @@ class MainWindow(TemplateBaseClass):
 
     def force_switch_clocks(self):
         switchclock(usbs[self.activeboard], self.activeboard)
+
+    def toggle_pll_controls(self):
+        self.ui.upposButton0.setEnabled(not self.ui.pllBox.isEnabled())
+        self.ui.upposButton1.setEnabled(not self.ui.pllBox.isEnabled())
+        self.ui.upposButton2.setEnabled(not self.ui.pllBox.isEnabled())
+        self.ui.upposButton3.setEnabled(not self.ui.pllBox.isEnabled())
+        self.ui.upposButton4.setEnabled(not self.ui.pllBox.isEnabled())
+        self.ui.downposButton0.setEnabled(not self.ui.pllBox.isEnabled())
+        self.ui.downposButton1.setEnabled(not self.ui.pllBox.isEnabled())
+        self.ui.downposButton2.setEnabled(not self.ui.pllBox.isEnabled())
+        self.ui.downposButton3.setEnabled(not self.ui.pllBox.isEnabled())
+        self.ui.downposButton4.setEnabled(not self.ui.pllBox.isEnabled())
+        self.ui.pllBox.setEnabled(not self.ui.pllBox.isEnabled())
 
     def boardchanged(self):
         self.activeboard = self.ui.boardBox.value()
@@ -1379,6 +1393,9 @@ class MainWindow(TemplateBaseClass):
         self.use_ext_trigs()
         self.dostartstop()
         self.open_socket()
+        if self.num_board<2:
+            self.ui.ToffBox.setEnabled(False)
+            self.ui.tadBox.setEnabled(False)
         return 1
 
     def open_socket(self):

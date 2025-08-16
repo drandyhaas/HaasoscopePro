@@ -64,7 +64,7 @@ def send_leds(usb, r1,g1,b1, r2,g2,b2): # ch0, ch1
         usb.recv(4)
         time.sleep(.001)
 
-def auxoutselector(usb, val, doprint=True):
+def auxoutselector(usb, val, doprint=False):
     usb.send(bytes([2, 10, val, 0, 99, 99, 99, 99])) # set aux out SMA on back panel
     res = usb.recv(4)
     if doprint: print("auxoutselector now",val,"and was",res[0])

@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1212</width>
+    <width>1221</width>
     <height>800</height>
    </rect>
   </property>
@@ -640,7 +640,7 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>44</y>
+          <y>50</y>
           <width>41</width>
           <height>16</height>
          </rect>
@@ -658,7 +658,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>41</y>
+          <y>47</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -689,7 +689,7 @@
          <rect>
           <x>10</x>
           <y>100</y>
-          <width>61</width>
+          <width>51</width>
           <height>22</height>
          </rect>
         </property>
@@ -717,7 +717,7 @@
        <widget class="QLabel" name="label_20">
         <property name="geometry">
          <rect>
-          <x>80</x>
+          <x>70</x>
           <y>104</y>
           <width>41</width>
           <height>16</height>
@@ -868,7 +868,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>110</y>
+          <y>132</y>
           <width>61</width>
           <height>16</height>
          </rect>
@@ -886,7 +886,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>88</y>
+          <y>110</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -907,6 +907,32 @@
         </property>
         <property name="value">
          <number>20</number>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="persistCheck">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>80</y>
+          <width>71</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+          <italic>false</italic>
+          <strikeout>false</strikeout>
+         </font>
+        </property>
+        <property name="text">
+         <string>Persist</string>
+        </property>
+        <property name="checkable">
+         <bool>true</bool>
         </property>
        </widget>
       </widget>
@@ -931,7 +957,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>240</y>
+          <y>260</y>
           <width>111</width>
           <height>17</height>
          </rect>
@@ -985,7 +1011,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>120</y>
+          <y>130</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1009,7 +1035,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>140</y>
+          <y>150</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1030,7 +1056,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>100</y>
+          <y>110</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1051,7 +1077,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>200</y>
+          <y>220</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1072,7 +1098,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>280</y>
+          <y>290</y>
           <width>111</width>
           <height>17</height>
          </rect>
@@ -1084,32 +1110,6 @@
         </property>
         <property name="text">
          <string>Show FFT</string>
-        </property>
-       </widget>
-       <widget class="QCheckBox" name="persistCheck">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>300</y>
-          <width>111</width>
-          <height>17</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-          <italic>false</italic>
-          <strikeout>false</strikeout>
-         </font>
-        </property>
-        <property name="text">
-         <string>Persist</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
         </property>
        </widget>
        <widget class="QLabel" name="label_11">
@@ -1206,7 +1206,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>180</y>
+          <y>190</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1266,7 +1266,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>160</y>
+          <y>170</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1348,7 +1348,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>220</y>
+          <y>240</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1443,6 +1443,9 @@
         <enum>QFrame::Raised</enum>
        </property>
        <widget class="QToolButton" name="downposButton0">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="geometry">
          <rect>
           <x>10</x>
@@ -1464,6 +1467,9 @@
         </property>
        </widget>
        <widget class="QToolButton" name="upposButton0">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="geometry">
          <rect>
           <x>10</x>
@@ -1503,6 +1509,9 @@
         </property>
        </widget>
        <widget class="QToolButton" name="upposButton3">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="geometry">
          <rect>
           <x>100</x>
@@ -1542,6 +1551,9 @@
         </property>
        </widget>
        <widget class="QToolButton" name="downposButton3">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="geometry">
          <rect>
           <x>100</x>
@@ -1581,6 +1593,9 @@
         </property>
        </widget>
        <widget class="QToolButton" name="upposButton4">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="geometry">
          <rect>
           <x>130</x>
@@ -1602,6 +1617,9 @@
         </property>
        </widget>
        <widget class="QToolButton" name="downposButton4">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="geometry">
          <rect>
           <x>130</x>
@@ -1623,6 +1641,9 @@
         </property>
        </widget>
        <widget class="QSpinBox" name="pllBox">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="geometry">
          <rect>
           <x>40</x>
@@ -1665,6 +1686,9 @@
         </property>
        </widget>
        <widget class="QToolButton" name="upposButton2">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="geometry">
          <rect>
           <x>70</x>
@@ -1686,6 +1710,9 @@
         </property>
        </widget>
        <widget class="QToolButton" name="upposButton1">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="geometry">
          <rect>
           <x>40</x>
@@ -1707,6 +1734,9 @@
         </property>
        </widget>
        <widget class="QToolButton" name="downposButton2">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="geometry">
          <rect>
           <x>70</x>
@@ -1728,6 +1758,9 @@
         </property>
        </widget>
        <widget class="QToolButton" name="downposButton1">
+        <property name="enabled">
+         <bool>false</bool>
+        </property>
         <property name="geometry">
          <rect>
           <x>40</x>
@@ -1893,7 +1926,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1212</width>
+     <width>1221</width>
      <height>21</height>
     </rect>
    </property>
@@ -1918,6 +1951,7 @@
     <addaction name="separator"/>
     <addaction name="actionForce_split"/>
     <addaction name="actionForce_switch_clocks"/>
+    <addaction name="actionToggle_PLL_controls"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
@@ -1954,6 +1988,11 @@
   <action name="actionForce_switch_clocks">
    <property name="text">
     <string>Force switch clocks</string>
+   </property>
+  </action>
+  <action name="actionToggle_PLL_controls">
+   <property name="text">
+    <string>Toggle PLL controls</string>
    </property>
   </action>
  </widget>

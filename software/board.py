@@ -231,7 +231,7 @@ def setchanatt(usb, chan, att, doswap):
     else: return
     usb.send(bytes([10, controlbit, att, 0, 0, 0, 0, 0]))
     usb.recv(4)
-    print("Att for chan", chan, att)
+    #print("Att for chan", chan, att)
 
 def setsplit(usb, split):
     controlbit = 7
@@ -242,7 +242,7 @@ def setsplit(usb, split):
 def boardinbits(usb):
     usb.send(bytes([2, 1, 0, 100, 100, 100, 100, 100]))  # get board in
     res = usb.recv(4)
-    print("Board in bits", res[0], binprint(res[0]))
+    #print("Board in bits", res[0], binprint(res[0]))
     return res[0]
 
 def setfan(usb,fanon):
