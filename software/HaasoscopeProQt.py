@@ -99,7 +99,7 @@ class MainWindow(TemplateBaseClass):
     triggerdelta = 1
     triggerpos = int(expect_samples * 128 / 256)
     triggertimethresh = 0
-    triggerchan = 0
+    triggerchan = [0] * num_board
     hline = 0
     vline = 0
     getone = False
@@ -228,6 +228,7 @@ class MainWindow(TemplateBaseClass):
         # noinspection PyUnresolvedReferences
         self.timer2.timeout.connect(self.drawtext)
         self.ui.statusBar.showMessage("Hello!")
+        self.ui.triggerChanBox.setMaximum(0)
         self.show()
 
     def force_split(self):
@@ -286,6 +287,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.Auxout_comboBox.setCurrentIndex(self.auxoutval[self.activeboard])
         self.ui.offsetBox.setValue(self.offset[self.activexychannel])
         self.ui.gainBox.setValue(self.gain[self.activexychannel])
+        self.ui.triggerChanBox.setValue(self.triggerchan[self.activeboard])
 
     def fft(self):
         if self.ui.fftCheck.checkState() == QtCore.Qt.Checked:
@@ -315,9 +317,11 @@ class MainWindow(TemplateBaseClass):
         if self.dotwochannel:
             self.ui.chanBox.setMaximum(self.num_chan_per_board - 1)
             self.ui.oversampCheck.setEnabled(False)
+            self.ui.triggerChanBox.setMaximum(1)
         else:
             self.ui.chanBox.setMaximum(0)
             self.ui.oversampCheck.setEnabled(True)
+            self.ui.triggerChanBox.setMaximum(0)
         for c in range(self.num_board*self.num_chan_per_board):
             if c%2==1:
                 if self.dotwochannel: self.lines[c].setVisible(True)
@@ -649,8 +653,8 @@ class MainWindow(TemplateBaseClass):
         self.drawtriggerlines()
 
     def triggerchanchanged(self):
-        self.triggerchan = self.ui.triggerChanBox.value()
-        for board in range(self.num_board): self.sendtriggerinfo(board)
+        self.triggerchan[self.activeboard] = self.ui.triggerChanBox.value()
+        self.sendtriggerinfo(self.activeboard)
 
     def sendtriggerinfo(self, board):
         triggerpos = self.triggerpos + self.triggershift # move actual trigger a little earlier, so we have time to shift a bit later on (downsamplemerging, delayoffset, toff etc.)
@@ -659,7 +663,7 @@ class MainWindow(TemplateBaseClass):
             else: triggerpos += int(8*self.lvdstrigdelay[board] / 40 / self.downsamplefactor)
         #print("board", board, "triggerpos", triggerpos)
         usbs[board].send(bytes([8, self.triggerlevel + 1, self.triggerdelta, int(triggerpos / 256), triggerpos % 256,
-                        self.triggertimethresh, self.triggerchan, 100]))
+                        self.triggertimethresh, self.triggerchan[board], 100]))
         usbs[board].recv(4)
         # length to take after trigger is self.expect_samples - self.triggerpos + 1
         # we want self.expected_samples - that, which is about self.triggerpos, and then pad a little
