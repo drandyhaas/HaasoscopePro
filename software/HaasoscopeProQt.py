@@ -166,7 +166,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.singleButton.clicked.connect(self.single)
         self.ui.timeslowButton.clicked.connect(self.timeslow)
         self.ui.timefastButton.clicked.connect(self.timefast)
-        self.ui.risingedgeCheck.stateChanged.connect(self.risingfalling)
+        self.ui.risingfalling_comboBox.currentIndexChanged.connect(self.risingfalling)
         self.ui.exttrigCheck.stateChanged.connect(self.exttrig)
         self.ui.extsmatrigCheck.stateChanged.connect(self.extsmatrig)
         self.ui.totBox.valueChanged.connect(self.tot)
@@ -843,7 +843,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.timebaseBox.setText("2^"+str(self.downsample))
 
     def risingfalling(self):
-        fallingedge = not self.ui.risingedgeCheck.checkState()
+        fallingedge = self.ui.risingfalling_comboBox.currentIndex()==1
         if self.triggertype == 1:
             if fallingedge: self.triggertype = 2
         if self.triggertype == 2:
@@ -1165,7 +1165,7 @@ class MainWindow(TemplateBaseClass):
 
     def drawtext(self):  # happens once per second
         if not self.dodrawing: return
-        thestr = "\n" + "Trigger threshold " + str(round(self.hline, 3))
+        thestr = "Trigger threshold " + str(round(self.hline, 3))
         #thestr += "Nbadclks A B C D " + str(self.nbadclkA) + " " + str(self.nbadclkB) + " " + str(self.nbadclkC) + " " + str(self.nbadclkD)
         #thestr += "\n" + "Nbadstrobes " + str(self.nbadstr)
         #thestr += "\n" + "Last clk "+str(self.lastclk)
