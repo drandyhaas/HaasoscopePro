@@ -18,7 +18,7 @@
 
 See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiKQQmUUNoTf2oo_m5qS00k) !
 
-### Quick start (Windows/Mac/Linux)
+### Quick start (Windows/Mac)
 
 1) Download code and unzip it: https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/main.zip
 2) Rename directory HaasoscopePro-main to HaasoscopePro (for consistency with git below)
@@ -29,13 +29,7 @@ See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiK
 4) Plug Haasoscope Pro into your computer via USB
 5) Run **HaasoscopeProQt** in the <code>HaasoscopePro/software/dist/(OS)_HaasoscopeProQt</code> directory
 
-### Tips
-
-- If not enough power is supplied or issues happen during readout, plug in via a powered USB hub, a USB-A to C cable, or use an external 12V power adapter
-- If the board is not found on Linux, use this udev rule and then plug it in: <code>sudo cp HaasoscopePro/software/ft245.rules /etc/udev/rules.d/</code>
-- If you get an error like "qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found", try: <code>sudo apt install libxcb-xinerama0</code>
-
-### Fuller way of running
+### Fuller way of running (Windows/Mac/Linux)
 
 1) Install python3 and git for your operating system
 2) Install dependencies: <br><code>pip3 install numpy scipy pyqtgraph PyQt5 pyftdi matplotlib ftd2xx</code>
@@ -46,12 +40,16 @@ See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiK
 <br><code>cd HaasoscopePro/software</code>
 <br><code>python3 HaasoscopeProQt.py</code>
 
+### Tips
+
+- If not enough power is supplied or issues happen during readout, plug in via a powered USB hub, a USB-A to C cable, or use an external 12V power adapter
+- If the board is not found on Linux, use this udev rule and then plug it in: <code>sudo cp HaasoscopePro/software/ft245.rules /etc/udev/rules.d/</code>
+- If you get an error like "qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found", try: <code>sudo apt install libxcb-xinerama0</code>
+
 ### To remake exe for quick start
 1) <code>pip3 install pyinstaller</code>
-2) <code>python3 -m PyInstaller HaasoscopeProQt.py</code>
-3) Copy *.ui to dist/HaasoscopeProQt
-4) Rename dist/HaasoscopeProQt to dist/(OS)_HaasoscopeProQt
-5) Remove build directory
+2) <code>cd HaasoscopePro/software</code>
+3) <code>.\windowspyinstaller.bat</code> or <code>./macpyinstaller.sh</code>
 
 ### Repository structure
 
