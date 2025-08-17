@@ -13,22 +13,25 @@ def version(usb, quiet=True):
 
 def connectdevices(nmax=100):
     usbs = []
-    ftds = ftd2xx.listDevices()
-    if ftds is not None:
-        print("Found",len(ftds),"devices:", ftds)
-        for ftdserial in ftds:
-            #print("FTD serial:",ftdserial)
-            if not ftdserial.startswith(b'FT'): continue
-            if len(usbs)==nmax: continue # only connect up to nmax devices
-            usbdevice = UsbFt232hSync245mode('FTX232H', 'HaasoscopePro USB2', ftdserial)
-            if usbdevice.good:
-                # if usbdevice.serial != b"FT9M1UIT": continue
-                # if usbdevice.serial != b"FT9LYZXP": continue
-                usbs.append(usbdevice)
-                print("Connected USB device", usbdevice.serial)
-        print("Connected", len(usbs), "devices")
-    else:
-        print("Found no devices")
+    try:
+        ftds = ftd2xx.listDevices()
+        if ftds is not None:
+            print("Found",len(ftds),"devices:", ftds)
+            for ftdserial in ftds:
+                #print("FTD serial:",ftdserial)
+                if not ftdserial.startswith(b'FT'): continue
+                if len(usbs)==nmax: continue # only connect up to nmax devices
+                usbdevice = UsbFt232hSync245mode('FTX232H', 'HaasoscopePro USB2', ftdserial)
+                if usbdevice.good:
+                    # if usbdevice.serial != b"FT9M1UIT": continue
+                    # if usbdevice.serial != b"FT9LYZXP": continue
+                    usbs.append(usbdevice)
+                    print("Connected USB device", usbdevice.serial)
+            print("Connected", len(usbs), "devices")
+        else:
+            print("Found no devices")
+    except ftd2xx.DeviceError as e:
+        print(f"Failed to communicate with the FTDI device:",e)
     return usbs
 
 def findnextboard(currentboard,firstboard,usbs):
