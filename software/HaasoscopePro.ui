@@ -1914,6 +1914,8 @@
     <addaction name="actionRecord"/>
     <addaction name="separator"/>
     <addaction name="actionUpdate_firmware"/>
+    <addaction name="separator"/>
+    <addaction name="actionAbout"/>
    </widget>
    <widget class="QMenu" name="menuCalibration">
     <property name="title">
@@ -1923,7 +1925,7 @@
    </widget>
    <widget class="QMenu" name="menuOther">
     <property name="title">
-     <string>Other</string>
+     <string>Advanced</string>
     </property>
     <addaction name="separator"/>
     <addaction name="actionForce_split"/>
@@ -1970,6 +1972,11 @@
   <action name="actionToggle_PLL_controls">
    <property name="text">
     <string>Toggle PLL controls</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
    </property>
   </action>
  </widget>

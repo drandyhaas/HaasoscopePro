@@ -4,7 +4,7 @@ import sys, time, warnings
 import pyqtgraph as pg
 import PyQt5
 from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
-from PyQt5.QtGui import QPalette, QColor
+from PyQt5.QtGui import QPalette, QColor, QIcon
 from PyQt5.QtWidgets import QApplication, QMessageBox, QWidget, QPushButton
 from scipy.optimize import curve_fit
 from scipy.signal import resample
@@ -213,6 +213,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.Auxout_comboBox.currentIndexChanged.connect(self.auxout)
         self.ui.actionToggle_PLL_controls.triggered.connect(self.toggle_pll_controls)
         self.ui.actionRecord.triggered.connect(self.recordtofile)
+        self.ui.actionAbout.triggered.connect(self.about)
         self.dofft = False
         self.db = False
         self.lastTime = time.time()
@@ -231,6 +232,13 @@ class MainWindow(TemplateBaseClass):
         self.ui.statusBar.showMessage(str(self.num_board)+" boards connected!")
         self.ui.trigchan_comboBox.setMaxVisibleItems(1)
         self.show()
+
+    def about(self):
+        QMessageBox.about(
+            self,  # Parent widget (optional, but good practice)
+            "Haasoscope Pro Qt, by DrAndyHaas",  # Title of the About dialog
+            "A PyQt5 application for the Haasoscope Pro\n\nVersion 27.01"  # Text content
+        )
 
     def recordtofile(self):
         self.dorecordtofile = not self.dorecordtofile
@@ -1578,6 +1586,7 @@ if __name__ == '__main__': # calls setup_connection for each board, then init
         font = app.font()
         font.setPixelSize(11)
         app.setFont(font)
+        app.setWindowIcon(QIcon('icon.png'))
         win = MainWindow()
         win.setWindowTitle('Haasoscope Pro Qt')
         for usbi in range(len(usbs)):
