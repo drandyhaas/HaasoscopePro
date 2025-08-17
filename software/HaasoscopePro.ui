@@ -1416,7 +1416,7 @@
         <property name="geometry">
          <rect>
           <x>130</x>
-          <y>330</y>
+          <y>350</y>
           <width>47</width>
           <height>20</height>
          </rect>
@@ -1434,7 +1434,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>330</y>
+          <y>350</y>
           <width>111</width>
           <height>22</height>
          </rect>
@@ -1495,8 +1495,8 @@
          <rect>
           <x>10</x>
           <y>100</y>
-          <width>31</width>
-          <height>31</height>
+          <width>21</width>
+          <height>21</height>
          </rect>
         </property>
         <property name="font">
@@ -1518,9 +1518,9 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>70</y>
-          <width>31</width>
-          <height>31</height>
+          <y>80</y>
+          <width>21</width>
+          <height>21</height>
          </rect>
         </property>
         <property name="font">
@@ -1539,7 +1539,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>50</y>
+          <y>60</y>
           <width>31</width>
           <height>16</height>
          </rect>
@@ -1560,9 +1560,9 @@
         <property name="geometry">
          <rect>
           <x>100</x>
-          <y>70</y>
-          <width>31</width>
-          <height>31</height>
+          <y>80</y>
+          <width>21</width>
+          <height>21</height>
          </rect>
         </property>
         <property name="font">
@@ -1581,7 +1581,7 @@
         <property name="geometry">
          <rect>
           <x>100</x>
-          <y>50</y>
+          <y>60</y>
           <width>31</width>
           <height>16</height>
          </rect>
@@ -1603,8 +1603,8 @@
          <rect>
           <x>100</x>
           <y>100</y>
-          <width>31</width>
-          <height>31</height>
+          <width>21</width>
+          <height>21</height>
          </rect>
         </property>
         <property name="font">
@@ -1623,7 +1623,7 @@
         <property name="geometry">
          <rect>
           <x>130</x>
-          <y>50</y>
+          <y>60</y>
           <width>31</width>
           <height>16</height>
          </rect>
@@ -1644,9 +1644,9 @@
         <property name="geometry">
          <rect>
           <x>130</x>
-          <y>70</y>
-          <width>31</width>
-          <height>31</height>
+          <y>80</y>
+          <width>21</width>
+          <height>21</height>
          </rect>
         </property>
         <property name="font">
@@ -1669,8 +1669,8 @@
          <rect>
           <x>130</x>
           <y>100</y>
-          <width>31</width>
-          <height>31</height>
+          <width>21</width>
+          <height>21</height>
          </rect>
         </property>
         <property name="font">
@@ -1692,7 +1692,7 @@
         <property name="geometry">
          <rect>
           <x>40</x>
-          <y>20</y>
+          <y>30</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -1716,7 +1716,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>20</y>
+          <y>30</y>
           <width>41</width>
           <height>20</height>
          </rect>
@@ -1737,9 +1737,9 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>70</y>
-          <width>31</width>
-          <height>31</height>
+          <y>80</y>
+          <width>21</width>
+          <height>21</height>
          </rect>
         </property>
         <property name="font">
@@ -1761,9 +1761,9 @@
         <property name="geometry">
          <rect>
           <x>40</x>
-          <y>70</y>
-          <width>31</width>
-          <height>31</height>
+          <y>80</y>
+          <width>21</width>
+          <height>21</height>
          </rect>
         </property>
         <property name="font">
@@ -1786,8 +1786,8 @@
          <rect>
           <x>70</x>
           <y>100</y>
-          <width>31</width>
-          <height>31</height>
+          <width>21</width>
+          <height>21</height>
          </rect>
         </property>
         <property name="font">
@@ -1810,8 +1810,8 @@
          <rect>
           <x>40</x>
           <y>100</y>
-          <width>31</width>
-          <height>31</height>
+          <width>21</width>
+          <height>21</height>
          </rect>
         </property>
         <property name="font">
@@ -1830,7 +1830,7 @@
         <property name="geometry">
          <rect>
           <x>40</x>
-          <y>50</y>
+          <y>60</y>
           <width>31</width>
           <height>16</height>
          </rect>
@@ -1848,7 +1848,7 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>50</y>
+          <y>60</y>
           <width>31</width>
           <height>16</height>
          </rect>
@@ -1862,11 +1862,11 @@
          <string>c2</string>
         </property>
        </widget>
-       <widget class="QToolButton" name="pllresetButton">
+       <widget class="QPushButton" name="pllresetButton">
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>140</y>
+          <y>130</y>
           <width>61</width>
           <height>21</height>
          </rect>
@@ -1879,15 +1879,12 @@
         <property name="text">
          <string>ResetPll</string>
         </property>
-        <property name="arrowType">
-         <enum>Qt::NoArrow</enum>
-        </property>
        </widget>
-       <widget class="QToolButton" name="adfresetButton">
+       <widget class="QPushButton" name="adfresetButton">
         <property name="geometry">
          <rect>
           <x>80</x>
-          <y>140</y>
+          <y>130</y>
           <width>71</width>
           <height>21</height>
          </rect>
@@ -1898,10 +1895,7 @@
          </font>
         </property>
         <property name="text">
-         <string>ResetAdf</string>
-        </property>
-        <property name="arrowType">
-         <enum>Qt::NoArrow</enum>
+         <string>ResetClk</string>
         </property>
        </widget>
       </widget>
