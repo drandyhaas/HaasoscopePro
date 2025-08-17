@@ -1213,35 +1213,37 @@ class MainWindow(TemplateBaseClass):
         thestr = ""
         if self.dorecordtofile: thestr += "Recording to file "+str(self.outf.name)+str("\n")
         if self.dodrawing:
-            thestr += "Measurements:"
-            thestr += "\nTrigger threshold " + str(round(self.hline, 3))
-            #thestr += "Nbadclks A B C D " + str(self.nbadclkA) + " " + str(self.nbadclkB) + " " + str(self.nbadclkC) + " " + str(self.nbadclkD)
-            #thestr += "\n" + "Nbadstrobes " + str(self.nbadstr)
-            #thestr += "\n" + "Last clk "+str(self.lastclk)
-            thestr += "\n" + gettemps(usbs[self.activeboard])
-            thestr += "\n" + "Mean " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.mean(self.xydata[self.activexychannel][1]), 3) ) + " mV"
-            thestr += "\n" + "RMS " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.std(self.xydata[self.activexychannel][1]), 3) ) + " mV"
+            if self.ui.actionTrigger_thresh.isChecked(): thestr += "Trigger threshold: "+str(round(self.hline, 3))+" div\n"
+            #thestr += "Nbadclks A B C D:" + str(self.nbadclkA) + " " + str(self.nbadclkB) + " " + str(self.nbadclkC) + " " + str(self.nbadclkD) + str("\n")
+            #thestr += "Nbadstrobes:" + str(self.nbadstr) + str("\n")
+            #thestr += "Last clk:"+str(self.lastclk) + str("\n")
+            if self.ui.actionTemperatures.isChecked(): thestr += gettemps(usbs[self.activeboard]) + str("\n")
 
-            if not self.dointerleaved[self.activeboard]:
-                targety = self.xydata[self.activexychannel]
-            else:
-                targety = self.xydatainterleaved[int(self.activeboard/2)]
-            p0 = [max(targety[1]), self.vline - 10, 20, min(targety[1])] #initial guess
-            fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
-            xc = targety[0][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]  # only fit in range
-            yc = targety[1][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]
-            if xc.size > 10: # require at least something to fit, otherwise we'll through an area
-                with warnings.catch_warnings():
-                    try:
-                        warnings.simplefilter("ignore")
-                        popt, pcov = curve_fit(fit_rise, xc, yc, p0)
-                        perr = np.sqrt(np.diag(pcov))
-                        risetime = 0.8 * popt[2]
-                        risetimeerr = perr[2]
-                        # print(popt)
-                        thestr += "\n" + "Rise time " + str(risetime.round(2)) + "+-" + str(risetimeerr.round(2)) + " " + self.units
-                    except RuntimeError:
-                        pass
+            thestr += "\nMeasurements for board "+str(self.activeboard)+" and chan "+str(self.selectedchannel)+":\n"
+            if self.ui.actionMean.isChecked(): thestr += "Mean: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.mean(self.xydata[self.activexychannel][1]), 3) ) + " mV\n"
+            if self.ui.actionRMS.isChecked(): thestr += "RMS: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.std(self.xydata[self.activexychannel][1]), 3) ) + " mV\n"
+
+            if self.ui.actionRisetime.isChecked():
+                if not self.dointerleaved[self.activeboard]:
+                    targety = self.xydata[self.activexychannel]
+                else:
+                    targety = self.xydatainterleaved[int(self.activeboard/2)]
+                p0 = [max(targety[1]), self.vline - 10, 20, min(targety[1])] #initial guess
+                fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
+                xc = targety[0][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]  # only fit in range
+                yc = targety[1][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]
+                if xc.size > 10: # require at least something to fit, otherwise we'll through an area
+                    with warnings.catch_warnings():
+                        try:
+                            warnings.simplefilter("ignore")
+                            popt, pcov = curve_fit(fit_rise, xc, yc, p0)
+                            perr = np.sqrt(np.diag(pcov))
+                            risetime = 0.8 * popt[2]
+                            risetimeerr = perr[2]
+                            # print(popt)
+                            thestr += "Risetime: " + str(risetime.round(2)) + "+-" + str(risetimeerr.round(2)) + " " + self.units + str("\n")
+                        except RuntimeError:
+                            pass
 
         self.ui.textBrowser.setText(thestr)
 
