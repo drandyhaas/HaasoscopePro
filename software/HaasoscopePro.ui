@@ -317,7 +317,7 @@
          <rect>
           <x>10</x>
           <y>110</y>
-          <width>131</width>
+          <width>121</width>
           <height>191</height>
          </rect>
         </property>
@@ -435,7 +435,7 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>50</y>
+           <y>53</y>
            <width>51</width>
            <height>22</height>
           </rect>
@@ -459,7 +459,7 @@
          <property name="geometry">
           <rect>
            <x>70</x>
-           <y>50</y>
+           <y>53</y>
            <width>51</width>
            <height>16</height>
           </rect>
@@ -470,7 +470,7 @@
           </font>
          </property>
          <property name="text">
-          <string>Channel</string>
+          <string>Chan</string>
          </property>
         </widget>
         <widget class="QCheckBox" name="extsmatrigCheck">
@@ -495,7 +495,7 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>20</y>
+           <y>24</y>
            <width>81</width>
            <height>21</height>
           </rect>
