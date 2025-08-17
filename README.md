@@ -43,6 +43,7 @@ See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiK
 ### Tips
 
 - If not enough power is supplied or issues happen during readout, plug in via a powered USB hub, a USB-A to C cable, or use an external 12V power adapter
+- If you get security issues on Mac, do: <code>xattr -cr Mac_HaasoscopeProQt</code>
 - If the board is not found on Linux, use this udev rule and then plug it in: <code>sudo cp HaasoscopePro/software/ft245.rules /etc/udev/rules.d/</code>
 - If you get an error like "qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found", try: <code>sudo apt install libxcb-xinerama0</code>
 
