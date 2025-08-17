@@ -255,7 +255,7 @@ class MainWindow(TemplateBaseClass):
             self.ui.actionRecord.setText("Record to file")
 
     def force_split(self):
-        setsplit(usbs[self.activeboard], True)
+        setsplit(usbs[self.activeboard], self.ui.actionForce_split.isChecked())
 
     def force_switch_clocks(self):
         switchclock(usbs[self.activeboard], self.activeboard)
@@ -360,7 +360,7 @@ class MainWindow(TemplateBaseClass):
             self.ui.trigchan_comboBox.setMaxVisibleItems(2)
         else:
             self.ui.chanBox.setMaximum(0)
-            self.ui.oversampCheck.setEnabled(True)
+            if self.activeboard%2==0 and self.num_board>1: self.ui.oversampCheck.setEnabled(True)
             self.ui.trigchan_comboBox.setCurrentIndex(0)
             self.ui.trigchan_comboBox.setMaxVisibleItems(1)
         for c in range(self.num_board*self.num_chan_per_board):
@@ -1568,6 +1568,7 @@ class MainWindow(TemplateBaseClass):
             setchanacdc(usbs[board], c, 0, self.dooversample[board])
             setchanimpedance(usbs[board], c, 0, self.dooversample[board])
             setchanatt(usbs[board], c, 0, self.dooversample[board])
+        setsplit(usbs[board], False)
         self.pllreset(board)
         auxoutselector(usbs[board],0)
         return 1

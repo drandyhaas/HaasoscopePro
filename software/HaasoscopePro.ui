@@ -1980,6 +1980,9 @@
    </property>
   </action>
   <action name="actionForce_split">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Force split chan 1</string>
    </property>
