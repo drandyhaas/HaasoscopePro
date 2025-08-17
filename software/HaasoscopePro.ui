@@ -1914,8 +1914,6 @@
     <addaction name="actionRecord"/>
     <addaction name="separator"/>
     <addaction name="actionUpdate_firmware"/>
-    <addaction name="separator"/>
-    <addaction name="actionAbout"/>
    </widget>
    <widget class="QMenu" name="menuCalibration">
     <property name="title">
@@ -1932,9 +1930,16 @@
     <addaction name="actionForce_switch_clocks"/>
     <addaction name="actionToggle_PLL_controls"/>
    </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
    <addaction name="menuOther"/>
+   <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusBar">
    <property name="autoFillBackground">
