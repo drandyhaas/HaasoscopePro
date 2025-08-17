@@ -16,7 +16,7 @@ import threading
 import matplotlib.cm as cm
 
 usbs = connectdevices(100) # max of 100 devices
-if len(usbs)==0: sys.exit(0)
+#if len(usbs)==0: sys.exit(0)
 for b in range(len(usbs)):
     if len(usbs) > 1: clkout_ena(usbs[b], 1) # turn on lvdsout_clk for boards
     version(usbs[b])
@@ -228,7 +228,7 @@ class MainWindow(TemplateBaseClass):
         self.timer2 = QtCore.QTimer()
         # noinspection PyUnresolvedReferences
         self.timer2.timeout.connect(self.drawtext)
-        self.ui.statusBar.showMessage("Hello!")
+        self.ui.statusBar.showMessage(str(self.num_board)+" boards connected!")
         self.ui.triggerChanBox.setMaximum(0)
         self.show()
 
@@ -256,6 +256,7 @@ class MainWindow(TemplateBaseClass):
         self.selectchannel()
 
     def selectchannel(self):
+        if self.num_board==0: return
         if self.activeboard%2==0 and not self.dotwochannel and self.num_board>1:
             self.ui.oversampCheck.setEnabled(True)
             if self.dooversample[self.activeboard]:
@@ -497,7 +498,7 @@ class MainWindow(TemplateBaseClass):
         self.dophase(self.activeboard, plloutnum=0, updown=1)
 
     def uppos1(self):
-        self.dophase(self.activeboard, plloutnum=1, updown=1, quiet=True)
+        self.dophase(self.activeboard, plloutnum=1, updown=1)
 
     def uppos2(self):
         self.dophase(self.activeboard, plloutnum=2, updown=1)
@@ -1164,11 +1165,11 @@ class MainWindow(TemplateBaseClass):
 
     def drawtext(self):  # happens once per second
         if not self.dodrawing: return
-        thestr = "Nbadclks A B C D " + str(self.nbadclkA) + " " + str(self.nbadclkB) + " " + str(self.nbadclkC) + " " + str(self.nbadclkD)
-        thestr += "\n" + "Nbadstrobes " + str(self.nbadstr)
-        thestr += "\n" + "Last clk "+str(self.lastclk)
+        thestr = "\n" + "Trigger threshold " + str(round(self.hline, 3))
+        #thestr += "Nbadclks A B C D " + str(self.nbadclkA) + " " + str(self.nbadclkB) + " " + str(self.nbadclkC) + " " + str(self.nbadclkD)
+        #thestr += "\n" + "Nbadstrobes " + str(self.nbadstr)
+        #thestr += "\n" + "Last clk "+str(self.lastclk)
         thestr += "\n" + gettemps(usbs[self.activeboard])
-        thestr += "\n" + "Trigger threshold " + str(round(self.hline, 3))
         thestr += "\n" + "Mean " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.mean(self.xydata[self.activexychannel][1]), 3) ) + " mV"
         thestr += "\n" + "RMS " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.std(self.xydata[self.activexychannel][1]), 3) ) + " mV"
 
@@ -1391,7 +1392,7 @@ class MainWindow(TemplateBaseClass):
         self.selectchannel()
         self.timechanged()
         self.use_ext_trigs()
-        self.dostartstop()
+        if self.num_board>0: self.dostartstop()
         self.open_socket()
         if self.num_board<2:
             self.ui.ToffBox.setEnabled(False)

@@ -78,7 +78,7 @@ def orderusbs(usbs):
                 newusbs.append(board)
     if len(newusbs)==0:
         print("Didn't find a first board with no external clock!")
-        sys.exit(0)
+        #sys.exit(0)
     while len(newusbs)<len(usbs):
         nextboard = findnextboard(newusbs[-1],newusbs[0],usbs)
         print("Found next board to be board",nextboard)
