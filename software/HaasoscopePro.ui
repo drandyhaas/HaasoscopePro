@@ -1867,7 +1867,7 @@
          <rect>
           <x>10</x>
           <y>130</y>
-          <width>61</width>
+          <width>71</width>
           <height>21</height>
          </rect>
         </property>
@@ -1883,7 +1883,7 @@
        <widget class="QPushButton" name="adfresetButton">
         <property name="geometry">
          <rect>
-          <x>80</x>
+          <x>90</x>
           <y>130</y>
           <width>71</width>
           <height>21</height>
