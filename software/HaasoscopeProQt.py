@@ -212,6 +212,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionForce_switch_clocks.triggered.connect( self.force_switch_clocks )
         self.ui.Auxout_comboBox.currentIndexChanged.connect(self.auxout)
         self.ui.actionToggle_PLL_controls.triggered.connect(self.toggle_pll_controls)
+        self.ui.actionRecord.triggered.connect(self.recordtofile)
         self.dofft = False
         self.db = False
         self.lastTime = time.time()
@@ -219,8 +220,7 @@ class MainWindow(TemplateBaseClass):
         self.lastclk = -1
         self.lines = []
         self.otherlines = []
-        self.savetofile = False  # save scope data to file
-        self.doh5 = False  # use the h5 binary file format
+        self.dorecordtofile = False  # save scope data to file
         self.numrecordeventsperfile = 1000  # number of events in each file to record before opening new file
         self.timer = QtCore.QTimer()
         # noinspection PyUnresolvedReferences
@@ -231,6 +231,20 @@ class MainWindow(TemplateBaseClass):
         self.ui.statusBar.showMessage(str(self.num_board)+" boards connected!")
         self.ui.trigchan_comboBox.setMaxVisibleItems(1)
         self.show()
+
+    def recordtofile(self):
+        self.dorecordtofile = not self.dorecordtofile
+        if self.dorecordtofile:
+            fname = "HaasoscopePro_out_" + time.strftime("%Y%m%d-%H%M%S") + ".csv"
+            self.outf = open(fname, "wt")
+            self.outf.write("Event #, Time (s), Channel, Trigger time (ns), Sample period (ns), # samples")
+            evtstr = ""
+            for s in range( (2 if self.dotwochannel else 4) *10*self.expect_samples): evtstr += " , Sample "+str(s)
+            self.outf.write(evtstr+"\n")
+            self.ui.actionRecord.setText("Stop recording")
+        else:
+            self.outf.close()
+            self.ui.actionRecord.setText("Record to file")
 
     def force_split(self):
         setsplit(usbs[self.activeboard], True)
@@ -319,6 +333,9 @@ class MainWindow(TemplateBaseClass):
 
     def twochan(self):
         self.dotwochannel = self.ui.twochanCheck.checkState() == QtCore.Qt.Checked
+        if self.dorecordtofile:  # if writing, close and open new file, by calling recordtofile() twice, since the number of samples per event for each channel will change
+            self.recordtofile()
+            self.recordtofile()
         for bo in range(self.num_board):
             for ch in range(self.num_chan_per_board):
                 setchanatt(usbs[bo], ch, self.dotwochannel, self.dooversample[bo])  # turn on/off antialias for two/single channel mode
@@ -865,7 +882,7 @@ class MainWindow(TemplateBaseClass):
     def updateplot(self):
         if hasattr(self,"hsprosock"):
             while self.hsprosock.issending: time.sleep(.001)
-        self.getevent()
+        gotevent = self.getevent()
         now = time.time()
         dt = now - self.lastTime + 0.00001
         self.lastTime = now
@@ -877,8 +894,14 @@ class MainWindow(TemplateBaseClass):
         self.statuscounter = self.statuscounter + 1
         if self.statuscounter % 20 == 0: self.ui.statusBar.showMessage("%0.2f fps, %d events, %0.2f Hz, %0.2f MB/s" % (
             self.fps, self.nevents, self.lastrate, self.lastrate * self.lastsize / 1e6))
+        if not gotevent: return
+        if self.dorecordtofile:
+            self.recordeventtofile()
+            if self.nevents % self.numrecordeventsperfile == 0:
+                if self.dorecordtofile: # if writing, close and open new file, by calling recordtofile() twice
+                    self.recordtofile()
+                    self.recordtofile()
         if not self.dodrawing: return
-        # self.ui.plot.setTitle("%0.2f fps, %d events, %0.2f Hz, %0.2f MB/s"%(self.fps,self.nevents,self.lastrate,self.lastrate*self.lastsize/1e6))
         for li in range(self.nlines):
             if not self.dointerleaved[int(li/2)]:
                 if self.doresamp:
@@ -912,6 +935,19 @@ class MainWindow(TemplateBaseClass):
                 self.dofft = False
                 self.ui.fftCheck.setChecked(QtCore.Qt.Unchecked)
         app.processEvents()
+
+    def recordeventtofile(self):
+        time_s = str(time.time())
+        for c in range(self.num_board*self.num_chan_per_board):
+            if self.lines[c].isVisible():  # only save the data for visible channels
+                self.outf.write(str(self.nevents) + ",")  # start of each line is the event number
+                self.outf.write(time_s + ",")  # next column is the time in seconds of the current event
+                self.outf.write(str(c) + ",")  # next column is the channel number
+                self.outf.write(str(self.vline * self.xscaling) + ",")  # next column is the trigger time
+                self.outf.write(str(self.downsamplefactor / self.samplerate) + ",")  # next column is the time between samples, in ns
+                self.outf.write(str( (2 if self.dotwochannel else 4) * 10 * self.expect_samples) + ",")  # next column is the number of samples
+                self.xydata[c][1].tofile(self.outf, ",", format="%.3f")  # save y data (1) from fast adc channel c
+                self.outf.write("\n")  # newline
 
     # gets event data for all boards
     def getevent(self):
@@ -963,15 +999,16 @@ class MainWindow(TemplateBaseClass):
                 sys.exit(1)
             if self.db: print(time.time() - self.oldtime, "done with evt", self.nevents)
             if rx_len > 0: self.nevents += 1
+            else: return 0
             if self.nevents - self.oldnevents >= self.tinterval:
                 now = time.time()
                 elapsedtime = now - self.oldtime
                 self.oldtime = now
                 self.lastrate = round(self.tinterval / elapsedtime, 2)
                 self.lastsize = rx_len
-                if not self.dodrawing: print(self.nevents, "events,", self.lastrate, "Hz",
-                                             round(self.lastrate * self.lastsize / 1e6, 3), "MB/s")
+                #if not self.dodrawing: print(self.nevents, "events,", self.lastrate, "Hz", round(self.lastrate * self.lastsize / 1e6, 3), "MB/s")
                 self.oldnevents = self.nevents
+            return 1
 
     # sets trigger on a board, and sees whether an event is ready to be read out (and then if so calculates sample_triggered)
     def getchannels(self, board):
@@ -1165,35 +1202,38 @@ class MainWindow(TemplateBaseClass):
             self.autocalibration()
 
     def drawtext(self):  # happens once per second
-        if not self.dodrawing: return
-        thestr = "Trigger threshold " + str(round(self.hline, 3))
-        #thestr += "Nbadclks A B C D " + str(self.nbadclkA) + " " + str(self.nbadclkB) + " " + str(self.nbadclkC) + " " + str(self.nbadclkD)
-        #thestr += "\n" + "Nbadstrobes " + str(self.nbadstr)
-        #thestr += "\n" + "Last clk "+str(self.lastclk)
-        thestr += "\n" + gettemps(usbs[self.activeboard])
-        thestr += "\n" + "Mean " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.mean(self.xydata[self.activexychannel][1]), 3) ) + " mV"
-        thestr += "\n" + "RMS " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.std(self.xydata[self.activexychannel][1]), 3) ) + " mV"
+        thestr = ""
+        if self.dorecordtofile: thestr += "Recording to file "+str(self.outf.name)+str("\n")
+        if self.dodrawing:
+            thestr += "Measurements:"
+            thestr += "\nTrigger threshold " + str(round(self.hline, 3))
+            #thestr += "Nbadclks A B C D " + str(self.nbadclkA) + " " + str(self.nbadclkB) + " " + str(self.nbadclkC) + " " + str(self.nbadclkD)
+            #thestr += "\n" + "Nbadstrobes " + str(self.nbadstr)
+            #thestr += "\n" + "Last clk "+str(self.lastclk)
+            thestr += "\n" + gettemps(usbs[self.activeboard])
+            thestr += "\n" + "Mean " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.mean(self.xydata[self.activexychannel][1]), 3) ) + " mV"
+            thestr += "\n" + "RMS " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.std(self.xydata[self.activexychannel][1]), 3) ) + " mV"
 
-        if not self.dointerleaved[self.activeboard]:
-            targety = self.xydata[self.activexychannel]
-        else:
-            targety = self.xydatainterleaved[int(self.activeboard/2)]
-        p0 = [max(targety[1]), self.vline - 10, 20, min(targety[1])] #initial guess
-        fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
-        xc = targety[0][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]  # only fit in range
-        yc = targety[1][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]
-        if xc.size > 10: # require at least something to fit, otherwise we'll through an area
-            with warnings.catch_warnings():
-                try:
-                    warnings.simplefilter("ignore")
-                    popt, pcov = curve_fit(fit_rise, xc, yc, p0)
-                    perr = np.sqrt(np.diag(pcov))
-                    risetime = 0.8 * popt[2]
-                    risetimeerr = perr[2]
-                    # print(popt)
-                    thestr += "\n" + "Rise time " + str(risetime.round(2)) + "+-" + str(risetimeerr.round(2)) + " " + self.units
-                except RuntimeError:
-                    pass
+            if not self.dointerleaved[self.activeboard]:
+                targety = self.xydata[self.activexychannel]
+            else:
+                targety = self.xydatainterleaved[int(self.activeboard/2)]
+            p0 = [max(targety[1]), self.vline - 10, 20, min(targety[1])] #initial guess
+            fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
+            xc = targety[0][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]  # only fit in range
+            yc = targety[1][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]
+            if xc.size > 10: # require at least something to fit, otherwise we'll through an area
+                with warnings.catch_warnings():
+                    try:
+                        warnings.simplefilter("ignore")
+                        popt, pcov = curve_fit(fit_rise, xc, yc, p0)
+                        perr = np.sqrt(np.diag(pcov))
+                        risetime = 0.8 * popt[2]
+                        risetimeerr = perr[2]
+                        # print(popt)
+                        thestr += "\n" + "Rise time " + str(risetime.round(2)) + "+-" + str(risetimeerr.round(2)) + " " + self.units
+                    except RuntimeError:
+                        pass
 
         self.ui.textBrowser.setText(thestr)
 
@@ -1516,10 +1556,11 @@ class MainWindow(TemplateBaseClass):
         return 1
 
     def closeEvent(self, event):
-        print("Handling closeEvent", event)
+        if event: print("Handling closeEvent")
         self.close_socket()
         self.timer.stop()
         self.timer2.stop()
+        if self.dorecordtofile: self.outf.close()
         if self.fftui != 0: self.fftui.close()
         for usb in usbs: cleanup(usb)
 
