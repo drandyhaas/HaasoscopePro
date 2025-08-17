@@ -1936,8 +1936,23 @@
     </property>
     <addaction name="actionAbout"/>
    </widget>
+   <widget class="QMenu" name="menuMeasurements">
+    <property name="title">
+     <string>Measurements</string>
+    </property>
+    <addaction name="actionTrigger_thresh"/>
+    <addaction name="actionTemperatures"/>
+    <addaction name="actionMean"/>
+    <addaction name="actionRMS"/>
+    <addaction name="actionRisetime"/>
+    <addaction name="actionMaximum"/>
+    <addaction name="actionMinimum"/>
+    <addaction name="actionVpp"/>
+    <addaction name="actionFreq"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
+   <addaction name="menuMeasurements"/>
    <addaction name="menuOther"/>
    <addaction name="menuHelp"/>
   </widget>
@@ -1956,7 +1971,7 @@
   </action>
   <action name="actionDo_autocalibration">
    <property name="text">
-    <string>Oversampling cal</string>
+    <string>Oversampling alignment</string>
    </property>
   </action>
   <action name="actionUpdate_firmware">
@@ -1982,6 +1997,93 @@
   <action name="actionAbout">
    <property name="text">
     <string>About</string>
+   </property>
+  </action>
+  <action name="actionMean">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Mean</string>
+   </property>
+  </action>
+  <action name="actionRMS">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>RMS</string>
+   </property>
+  </action>
+  <action name="actionRisetime">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Risetime</string>
+   </property>
+  </action>
+  <action name="actionTrigger_thresh">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Trigger threshold</string>
+   </property>
+  </action>
+  <action name="actionTemperatures">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Temperatures</string>
+   </property>
+  </action>
+  <action name="actionMaximum">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Maximum</string>
+   </property>
+  </action>
+  <action name="actionMinimum">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Minimum</string>
+   </property>
+  </action>
+  <action name="actionVpp">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Vpp</string>
+   </property>
+  </action>
+  <action name="actionFreq">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Freq</string>
    </property>
   </action>
  </widget>
