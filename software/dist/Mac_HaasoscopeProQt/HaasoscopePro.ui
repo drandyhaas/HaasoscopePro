@@ -1923,16 +1923,23 @@
    </widget>
    <widget class="QMenu" name="menuOther">
     <property name="title">
-     <string>Other</string>
+     <string>Advanced</string>
     </property>
     <addaction name="separator"/>
     <addaction name="actionForce_split"/>
     <addaction name="actionForce_switch_clocks"/>
     <addaction name="actionToggle_PLL_controls"/>
    </widget>
+   <widget class="QMenu" name="menuHelp">
+    <property name="title">
+     <string>Help</string>
+    </property>
+    <addaction name="actionAbout"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
    <addaction name="menuOther"/>
+   <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusBar">
    <property name="autoFillBackground">
@@ -1941,7 +1948,7 @@
   </widget>
   <action name="actionRecord">
    <property name="enabled">
-    <bool>false</bool>
+    <bool>true</bool>
    </property>
    <property name="text">
     <string>Record to file</string>
@@ -1970,6 +1977,11 @@
   <action name="actionToggle_PLL_controls">
    <property name="text">
     <string>Toggle PLL controls</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
    </property>
   </action>
  </widget>
