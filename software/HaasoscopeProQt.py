@@ -1222,7 +1222,14 @@ class MainWindow(TemplateBaseClass):
             thestr += "\nMeasurements for board "+str(self.activeboard)+" and chan "+str(self.selectedchannel)+":\n"
             if self.ui.actionMean.isChecked(): thestr += "Mean: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.mean(self.xydata[self.activexychannel][1]), 3) ) + " mV\n"
             if self.ui.actionRMS.isChecked(): thestr += "RMS: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.std(self.xydata[self.activexychannel][1]), 3) ) + " mV\n"
-
+            if self.ui.actionMaximum.isChecked(): thestr += "Max: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.max(self.xydata[self.activexychannel][1]), 3) ) + " mV\n"
+            if self.ui.actionMinimum.isChecked(): thestr += "Min: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.min(self.xydata[self.activexychannel][1]), 3) ) + " mV\n"
+            if self.ui.actionVpp.isChecked(): thestr += "Vpp: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * (np.max(self.xydata[self.activexychannel][1]) - np.min(self.xydata[self.activexychannel][1])), 3) ) + " mV\n"
+            if self.ui.actionFreq.isChecked():
+                sampling_rate = self.samplerate*1e9/self.downsamplefactor # Hz
+                if self.dotwochannel: sampling_rate /= 2
+                found_freq = find_fundamental_frequency_scipy(self.xydata[self.activexychannel][1], sampling_rate)
+                thestr += "Freq: " + str(format_freq(found_freq))
             if self.ui.actionRisetime.isChecked():
                 if not self.dointerleaved[self.activeboard]:
                     targety = self.xydata[self.activexychannel]

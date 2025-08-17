@@ -1,4 +1,7 @@
 import time
+import numpy as np
+from scipy.signal import find_peaks
+from scipy.fft import fft, fftfreq
 
 def reverse_bits(byte):
     reversed_byte = 0
@@ -139,3 +142,59 @@ def flash_readall(usb):
                         readbytes.append(outbyte)
         else: print("flash_readall timeout?")
     return readbytes
+
+def find_fundamental_frequency_scipy(signal, sampling_rate):
+    """
+    Finds the fundamental frequency using SciPy's find_peaks for robustness.
+
+    Args:
+        signal (np.ndarray): The input signal.
+        sampling_rate (float): The sampling rate in Hz.
+
+    Returns:
+        float: The fundamental frequency in Hz.
+    """
+    n = len(signal)
+
+    # Use scipy.fft for consistency, though np.fft.fft works identically
+    fft_values = fft(signal)
+    frequencies = fftfreq(n, 1 / sampling_rate)
+
+    # We only care about the positive frequencies
+    positive_mask = frequencies > 0
+    positive_freqs = frequencies[positive_mask]
+    positive_mags = np.abs(fft_values[positive_mask])
+
+    # Find peaks in the magnitude spectrum
+    # 'height=...' is a great way to filter out noise!
+    # It requires a peak to have at least this magnitude.
+    peak_indices, _ = find_peaks(positive_mags, height=np.max(positive_mags) / 4)
+
+    if not peak_indices.any():
+        return None  # No peak found
+
+    # Assume the fundamental is the lowest frequency peak found
+    # (Often the strongest, but not always if harmonics are stronger)
+    fundamental_freq_index = peak_indices[0]
+    fundamental_freq = positive_freqs[fundamental_freq_index]
+
+    return fundamental_freq
+
+
+def format_freq(freq_hz):
+    """Formats a frequency in Hz to a string with appropriate units."""
+    if freq_hz is None:
+        return "N/A"
+
+    if freq_hz < 1000:
+        # Keep as Hz
+        return f"{freq_hz:.3f} Hz"
+    elif freq_hz < 1_000_000:
+        # Convert to kHz
+        return f"{freq_hz / 1000:.3f} kHz"
+    elif freq_hz < 1_000_000_000:
+        # Convert to MHz
+        return f"{freq_hz / 1_000_000:.3f} MHz"
+    else:
+        # Convert to GHz
+        return f"{freq_hz / 1_000_000_000:.3f} GHz"

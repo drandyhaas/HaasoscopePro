@@ -1945,6 +1945,10 @@
     <addaction name="actionMean"/>
     <addaction name="actionRMS"/>
     <addaction name="actionRisetime"/>
+    <addaction name="actionMaximum"/>
+    <addaction name="actionMinimum"/>
+    <addaction name="actionVpp"/>
+    <addaction name="actionFreq"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
@@ -2045,6 +2049,41 @@
    </property>
    <property name="text">
     <string>Temperatures</string>
+   </property>
+  </action>
+  <action name="actionMaximum">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Maximum</string>
+   </property>
+  </action>
+  <action name="actionMinimum">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Minimum</string>
+   </property>
+  </action>
+  <action name="actionVpp">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Vpp</string>
+   </property>
+  </action>
+  <action name="actionFreq">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Freq</string>
    </property>
   </action>
  </widget>
