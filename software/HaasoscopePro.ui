@@ -47,9 +47,9 @@
        <property name="geometry">
         <rect>
          <x>0</x>
-         <y>560</y>
+         <y>580</y>
          <width>400</width>
-         <height>181</height>
+         <height>161</height>
         </rect>
        </property>
        <property name="font">
@@ -58,31 +58,19 @@
         </font>
        </property>
       </widget>
-      <widget class="QFrame" name="frame_2">
+      <widget class="QGroupBox" name="groupBox_2">
        <property name="geometry">
         <rect>
          <x>190</x>
          <y>0</y>
          <width>211</width>
-         <height>371</height>
+         <height>391</height>
         </rect>
        </property>
        <property name="font">
         <font>
          <family>Arial</family>
         </font>
-       </property>
-       <property name="frameShape">
-        <enum>QFrame::Panel</enum>
-       </property>
-       <property name="frameShadow">
-        <enum>QFrame::Raised</enum>
-       </property>
-       <property name="lineWidth">
-        <number>1</number>
-       </property>
-       <property name="midLineWidth">
-        <number>0</number>
        </property>
        <widget class="QSlider" name="threshold">
         <property name="geometry">
@@ -166,8 +154,8 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>320</y>
-          <width>51</width>
+          <y>330</y>
+          <width>71</width>
           <height>16</height>
          </rect>
         </property>
@@ -177,7 +165,7 @@
          </font>
         </property>
         <property name="text">
-         <string>Time base</string>
+         <string>Time factor</string>
         </property>
        </widget>
        <widget class="QLabel" name="label_3">
@@ -201,9 +189,9 @@
        <widget class="QLabel" name="label_4">
         <property name="geometry">
          <rect>
-          <x>150</x>
+          <x>140</x>
           <y>10</y>
-          <width>51</width>
+          <width>71</width>
           <height>20</height>
          </rect>
         </property>
@@ -292,7 +280,7 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>340</y>
+          <y>350</y>
           <width>61</width>
           <height>21</height>
          </rect>
@@ -310,7 +298,7 @@
         <property name="geometry">
          <rect>
           <x>140</x>
-          <y>340</y>
+          <y>350</y>
           <width>61</width>
           <height>21</height>
          </rect>
@@ -532,7 +520,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>340</y>
+          <y>350</y>
           <width>51</width>
           <height>20</height>
          </rect>
@@ -554,7 +542,7 @@
        <property name="geometry">
         <rect>
          <x>190</x>
-         <y>380</y>
+         <y>400</y>
          <width>121</width>
          <height>171</height>
         </rect>
@@ -785,7 +773,7 @@
        <property name="geometry">
         <rect>
          <x>320</x>
-         <y>380</y>
+         <y>400</y>
          <width>81</width>
          <height>171</height>
         </rect>
@@ -952,6 +940,9 @@
        </property>
        <property name="title">
         <string/>
+       </property>
+       <property name="flat">
+        <bool>false</bool>
        </property>
        <widget class="QCheckBox" name="twochanCheck">
         <property name="geometry">
@@ -1422,7 +1413,7 @@
         </property>
        </widget>
       </widget>
-      <widget class="QFrame" name="frame_3">
+      <widget class="QGroupBox" name="groupBox_3">
        <property name="geometry">
         <rect>
          <x>0</x>
@@ -1435,12 +1426,6 @@
         <font>
          <family>Arial</family>
         </font>
-       </property>
-       <property name="frameShape">
-        <enum>QFrame::Panel</enum>
-       </property>
-       <property name="frameShadow">
-        <enum>QFrame::Raised</enum>
        </property>
        <widget class="QToolButton" name="downposButton0">
         <property name="enabled">
