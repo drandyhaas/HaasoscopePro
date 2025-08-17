@@ -172,7 +172,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.totBox.valueChanged.connect(self.tot)
         self.ui.depthBox.valueChanged.connect(self.depth)
         self.ui.boardBox.valueChanged.connect(self.boardchanged)
-        self.ui.triggerChanBox.valueChanged.connect(self.triggerchanchanged)
+        self.ui.trigchan_comboBox.currentIndexChanged.connect(self.triggerchanchanged)
         self.ui.gridCheck.stateChanged.connect(self.grid)
         self.ui.markerCheck.stateChanged.connect(self.marker)
         self.ui.highresCheck.stateChanged.connect(self.highres)
@@ -229,7 +229,7 @@ class MainWindow(TemplateBaseClass):
         # noinspection PyUnresolvedReferences
         self.timer2.timeout.connect(self.drawtext)
         self.ui.statusBar.showMessage(str(self.num_board)+" boards connected!")
-        self.ui.triggerChanBox.setMaximum(0)
+        self.ui.trigchan_comboBox.setMaxVisibleItems(1)
         self.show()
 
     def force_split(self):
@@ -302,7 +302,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.Auxout_comboBox.setCurrentIndex(self.auxoutval[self.activeboard])
         self.ui.offsetBox.setValue(self.offset[self.activexychannel])
         self.ui.gainBox.setValue(self.gain[self.activexychannel])
-        self.ui.triggerChanBox.setValue(self.triggerchan[self.activeboard])
+        self.ui.trigchan_comboBox.setCurrentIndex(self.triggerchan[self.activeboard] if self.dotwochannel else 0)
 
     def fft(self):
         if self.ui.fftCheck.checkState() == QtCore.Qt.Checked:
@@ -332,11 +332,12 @@ class MainWindow(TemplateBaseClass):
         if self.dotwochannel:
             self.ui.chanBox.setMaximum(self.num_chan_per_board - 1)
             self.ui.oversampCheck.setEnabled(False)
-            self.ui.triggerChanBox.setMaximum(1)
+            self.ui.trigchan_comboBox.setMaxVisibleItems(2)
         else:
             self.ui.chanBox.setMaximum(0)
             self.ui.oversampCheck.setEnabled(True)
-            self.ui.triggerChanBox.setMaximum(0)
+            self.ui.trigchan_comboBox.setCurrentIndex(0)
+            self.ui.trigchan_comboBox.setMaxVisibleItems(1)
         for c in range(self.num_board*self.num_chan_per_board):
             if c%2==1:
                 if self.dotwochannel: self.lines[c].setVisible(True)
@@ -668,7 +669,7 @@ class MainWindow(TemplateBaseClass):
         self.drawtriggerlines()
 
     def triggerchanchanged(self):
-        self.triggerchan[self.activeboard] = self.ui.triggerChanBox.value()
+        self.triggerchan[self.activeboard] = self.ui.trigchan_comboBox.currentIndex()
         self.sendtriggerinfo(self.activeboard)
 
     def sendtriggerinfo(self, board):
