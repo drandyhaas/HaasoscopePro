@@ -9,8 +9,8 @@ import ftd2xx
 from ftd2xx import DeviceError
 
 # --- Imports from actual hardware libraries ---
-from board import *  # Imports all functions like version, setupboard, etc.
-from usbs import *  # Import cleanup specifically if it's in usbs.py
+from board import *
+from usbs import *
 
 # --- Imports from refactored modules ---
 from utilsfuncs import inttobytes, find_longest_zero_stretch
@@ -22,7 +22,6 @@ class HardwareManager:
         self.num_boards = len(usbs)
         self.time_start = time.time()
 
-        # State related to asynchronous event fetching
         self.event_counters = [0] * self.num_boards
         self.sample_triggered = [0] * self.num_boards
         self.trigger_phase = [0] * self.num_boards
@@ -32,7 +31,6 @@ class HardwareManager:
         self.last_lvds_trig_delay = [0] * self.num_boards
         self.no_ext_board_idx = -1
 
-        # Rate calculation
         self.rate_calc_time = time.time()
         self.rate_calc_events = 0
         self.last_rate = 0
@@ -40,7 +38,7 @@ class HardwareManager:
 
     def setup_board(self, board_idx, state):
         usb = self.usbs[board_idx]
-        ver = version(usb, False)  # This function must exist in board.py
+        ver = version(usb, False)
         if state.firmware_version is None:
             state.firmware_version = ver
         elif ver < state.firmware_version:
@@ -206,7 +204,59 @@ class HardwareManager:
             self.rate_calc_time = now
 
     def adjust_clocks(self, board_idx, nbad_counts, state):
-        return True  # Placeholder for done status
+        """
+        Manages the multi-step PLL clock phase calibration sequence after a reset.
+        Returns True when the sequence is complete, False otherwise.
+        """
+        nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr = nbad_counts
+        pll_state = state.pll_just_reset[board_idx]
+        pll_dir = state.pll_just_reset_dir[board_idx]
+
+        # Step 1: Sweep phase up, collecting badness data
+        if 0 <= pll_state < 12:
+            nbad = sum(nbad_counts)
+            state.phase_nbad[board_idx][pll_state] += nbad
+            self.dophase(board_idx, 0, (pll_dir == 1), 0, state, quiet=True)  # clklvds
+            self.dophase(board_idx, 1, (pll_dir == 1), 0, state, quiet=True)  # clklvdsout
+            state.pll_just_reset[board_idx] += pll_dir
+            return False
+
+        # Step 2: Turn around and continue sweep to find edges
+        elif pll_state >= 12:
+            if pll_state == 15:
+                state.pll_just_reset_dir[board_idx] = -1
+            state.pll_just_reset[board_idx] += state.pll_just_reset_dir[board_idx]
+            self.dophase(board_idx, 0, (state.pll_just_reset_dir[board_idx] == 1), 0, state, quiet=True)
+            self.dophase(board_idx, 1, (state.pll_just_reset_dir[board_idx] == 1), 0, state, quiet=True)
+            return False
+
+        # Step 3: Analyze data and set to optimal phase
+        elif pll_state == -1:
+            print(f"Bad clk/str per phase step for board {board_idx}: {state.phase_nbad[board_idx]}")
+            start, length = find_longest_zero_stretch(state.phase_nbad[board_idx], True)
+            print(f"Found good phase range at step {start} for {length} steps.")
+
+            if start >= 12: start -= 12
+            n_steps = start + length // 2 + 1
+            if n_steps >= 12: n_steps -= 12
+
+            for i in range(n_steps):
+                is_last_step = (i == n_steps - 1)
+                self.dophase(board_idx, 0, 1, 0, state, quiet=not is_last_step)
+                self.dophase(board_idx, 1, 1, 0, state, quiet=not is_last_step)
+
+            state.pll_just_reset[board_idx] -= 1
+            return False
+
+        # Step 4 & 5: Finalization steps
+        elif pll_state < -1:
+            state.pll_just_reset[board_idx] -= 1
+            if state.pll_just_reset[board_idx] < -3:
+                state.pll_just_reset[board_idx] = -10
+                print(f"PLL reset for board {board_idx} complete.")
+                return True  # Sequence is finished
+
+        return False
 
     def use_external_triggers(self, state):
         for board in range(1, self.num_boards):

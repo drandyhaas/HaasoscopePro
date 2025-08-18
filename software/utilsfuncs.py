@@ -1,4 +1,4 @@
-# utilsfuncs.py
+# utils.py
 """
 Utility functions for data processing and formatting.
 """
@@ -14,8 +14,51 @@ def inttobytes(val):
 
 
 def find_longest_zero_stretch(data, circular):
-    # Placeholder implementation
-    return 5, 6  # A plausible good phase start and length
+    """
+    Finds the starting index and length of the longest continuous stretch of zeros in a list.
+    Handles circular (wraparound) arrays if specified.
+    """
+    if not data:
+        return -1, 0
+
+    arr = np.array(data)
+    original_len = len(arr)
+
+    # By doubling the array, a wraparound stretch becomes a single continuous stretch
+    search_arr = np.concatenate([arr, arr]) if circular else arr
+
+    max_len = 0
+    max_start = -1
+    current_len = 0
+    current_start = -1
+
+    for i, val in enumerate(search_arr):
+        if val == 0:
+            if current_len == 0:
+                current_start = i
+            current_len += 1
+        else:
+            if current_len > max_len:
+                max_len = current_len
+                max_start = current_start
+            current_len = 0
+            current_start = -1
+
+    # Final check in case the longest stretch is at the very end of the search array
+    if current_len > max_len:
+        max_len = current_len
+        max_start = current_start
+
+    # The length of a stretch cannot be longer than the original array's length
+    if max_len > original_len:
+        max_len = original_len
+
+    # If no zeros were found, return a safe default
+    if max_start == -1:
+        return 0, 0
+
+    # The start index must be within the bounds of the original array
+    return max_start % original_len, max_len
 
 
 def format_freq(freq_hz):
@@ -62,8 +105,6 @@ def calculate_risetime(x_data, y_data, trigger_x, fit_width):
             warnings.simplefilter("ignore", RuntimeWarning)
             popt, pcov = curve_fit(fit_rise, xc, yc, p0=p0, maxfev=5000)
         perr = np.sqrt(np.diag(pcov))
-        # The 10-90% risetime of an error function is approximately 1.16 * sigma
-        # The original code uses 0.8 * popt[2], which seems empirical. We'll use it.
         risetime = 0.8 * popt[2]
         risetime_err = perr[2]
         return risetime, risetime_err

@@ -10,7 +10,7 @@ import struct
 class DataManager:
     def __init__(self, state):
         self.state = state
-        self.last_clk = -1
+        self.last_clk = -1  # ADDED: Tracks the last clock state
         self.nbad_counts = (0, 0, 0, 0, 0)  # A, B, C, D, STR
 
     def process_event_data(self, event_data):
@@ -40,16 +40,16 @@ class DataManager:
             y_ch2 = np.zeros(int(2 * 10 * state.expect_samples))
         else:
             y_ch1 = np.zeros(int(4 * 10 * state.expect_samples))
-            y_ch2 = None  # Not used in single channel mode
+            y_ch2 = None
 
         unpack_format = '<' + 'h' * (len(raw_data) // 2)
         unpacked_samples = np.array(struct.unpack(unpack_format, raw_data), dtype=float)
 
-        unpacked_samples *= state.yscale
+        unpacked_samples_scaled = unpacked_samples * state.yscale
 
         if state.is_oversampling_list[board_idx] and board_idx % 2 == 0:
-            unpacked_samples += state.extrig_board_mean_correction[board_idx]
-            unpacked_samples *= state.extrig_board_std_correction[board_idx]
+            unpacked_samples_scaled += state.extrig_board_mean_correction[board_idx]
+            unpacked_samples_scaled *= state.extrig_board_std_correction[board_idx]
 
         st = params['sample_triggered']
         tp = params['trigger_phase']
@@ -57,7 +57,6 @@ class DataManager:
         if state.is_ext_triggered[board_idx]:
             no_ext_board = params['no_ext_board_idx']
             if no_ext_board != -1:
-                # Logic to use triggering info from a different board
                 pass
 
         st_touse = st
@@ -83,7 +82,26 @@ class DataManager:
         n_subsamples = 50
 
         for s in range(0, state.expect_samples + state.expect_samples_extra):
-            # NOTE: Full clock/strobe checking logic would go here to update nbad* vars
+            # --- START: RE-IMPLEMENTED ERROR COUNTING LOGIC ---
+            # Get the clock and strobe check values for this sample
+            check_values = unpacked_samples[s * n_subsamples + 40: s * n_subsamples + 50]
+
+            # Check for magic number, firmware status, or previous error
+            if check_values[9] != -16657: print("Warning: Magic number 0xbeef not found.")
+            if check_values[8] != 0 or (self.last_clk != 341 and self.last_clk != 682):
+                for n in range(0, 8):
+                    val = check_values[n]
+                    if n < 4:  # Clock check
+                        if val != 341 and val != 682:  # 341=0b0101010101, 682=0b1010101010
+                            if n == 0: nbadA += 1
+                            if n == 1: nbadB += 1
+                            if n == 2: nbadC += 1
+                            if n == 3: nbadD += 1
+                        self.last_clk = val
+                    else:  # Strobe check
+                        if val not in {0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512}:
+                            nbadS += 1
+            # --- END: RE-IMPLEMENTED ERROR COUNTING LOGIC ---
 
             if state.is_two_channel_mode:
                 orig_samp = int(s * 20 - downsample_offset - trigger_phase // 2)
@@ -92,15 +110,15 @@ class DataManager:
                     src_slice = slice(s * n_subsamples + nstart, s * n_subsamples + nstart + nsamp)
                     src_slice_ch2 = slice(s * n_subsamples + 20 + nstart, s * n_subsamples + 20 + nstart + nsamp)
                     dest_slice = slice(samp, samp + nsamp)
-                    y_ch2[dest_slice] = unpacked_samples[src_slice]
-                    y_ch1[dest_slice] = unpacked_samples[src_slice_ch2]
+                    y_ch2[dest_slice] = unpacked_samples_scaled[src_slice]
+                    y_ch1[dest_slice] = unpacked_samples_scaled[src_slice_ch2]
             else:  # Single channel mode
                 orig_samp = int(s * 40 - downsample_offset - trigger_phase)
                 samp, nsamp, nstart = self._get_slice_params(orig_samp, 40, y_ch1.size)
                 if nsamp > 0:
                     src_slice = slice(s * n_subsamples + nstart, s * n_subsamples + nstart + nsamp)
                     dest_slice = slice(samp, samp + nsamp)
-                    y_ch1[dest_slice] = unpacked_samples[src_slice]
+                    y_ch1[dest_slice] = unpacked_samples_scaled[src_slice]
 
         return (y_ch1, y_ch2), (nbadA, nbadB, nbadC, nbadD, nbadS)
 
@@ -120,11 +138,14 @@ class DataManager:
         return int(samp), int(nsamp), int(nstart)
 
     def _generate_x_axis(self, board_idx, num_samples):
-        time_per_sample = self.state.downsample_factor / self.state.samplerate_ghz
-        if not self.state.is_two_channel_mode:
-            time_per_sample /= 2
+        time_multiplier = 2.0 if self.state.is_two_channel_mode else 1.0
+
+        time_per_sample = (time_multiplier *
+                           self.state.downsample_factor /
+                           self.state.samplerate_ghz)
+
         if self.state.is_interleaved_list[board_idx]:
-            time_per_sample /= 2
+            time_per_sample /= 2.0
 
         x_data = np.arange(num_samples) * time_per_sample
         return x_data / self.state.ns_per_unit
