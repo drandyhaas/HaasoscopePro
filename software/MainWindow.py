@@ -178,7 +178,7 @@ class MainWindow(TemplateBaseClass):
 
         for board_idx in event_data.keys():
             if self.state.pll_just_reset[board_idx] > -10:
-                is_done = self.hardware.adjust_clocks(board_idx, self.data_manager.nbad_counts, self.state)
+                is_done = self.hardware.adjust_clocks(board_idx, self.data_manager.nbad_counts, self.state, self.data_manager)
                 if is_done:
                     self.state.is_drawing = True
                     self._on_depth_changed(self.ui.depthBox.value())

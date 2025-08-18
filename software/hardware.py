@@ -144,11 +144,18 @@ class HardwareManager:
             raise e
 
     def _poll_and_predata(self, board_idx, state):
-        tt = state.trigger_type
-        if state.is_ext_triggered[board_idx]:
-            tt = 30 if self.do_ext_trig_echo[board_idx] else 3
-        elif state.is_ext_sma_triggered[board_idx]:
-            tt = 5
+        # --- FIX #1: ASYMMETRY ---
+        # Force a specific trigger mode during calibration for ALL boards
+        is_calibrating = state.pll_just_reset[board_idx] > -10
+
+        if is_calibrating:
+            tt = 30  # Use special calibration trigger mode
+        else:
+            tt = state.trigger_type
+            if state.is_ext_triggered[board_idx]:
+                tt = 30 if self.do_ext_trig_echo[board_idx] else 3
+            elif state.is_ext_sma_triggered[board_idx]:
+                tt = 5
 
         post_trig_len = state.expect_samples + state.expect_samples_extra - state.get_trigger_pos_samples() + 1
         self.usbs[board_idx].send(bytes(
@@ -203,25 +210,21 @@ class HardwareManager:
             self.rate_calc_events = 0
             self.rate_calc_time = now
 
-    def adjust_clocks(self, board_idx, nbad_counts, state):
-        """
-        Manages the multi-step PLL clock phase calibration sequence after a reset.
-        Returns True when the sequence is complete, False otherwise.
-        """
-        nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr = nbad_counts
+    def adjust_clocks(self, board_idx, nbad_counts, state, data_manager):
         pll_state = state.pll_just_reset[board_idx]
         pll_dir = state.pll_just_reset_dir[board_idx]
 
-        # Step 1: Sweep phase up, collecting badness data
+        if pll_state == 0 and pll_dir == 1:
+            data_manager.reset_clock_state()
+
         if 0 <= pll_state < 12:
             nbad = sum(nbad_counts)
             state.phase_nbad[board_idx][pll_state] += nbad
-            self.dophase(board_idx, 0, (pll_dir == 1), 0, state, quiet=True)  # clklvds
-            self.dophase(board_idx, 1, (pll_dir == 1), 0, state, quiet=True)  # clklvdsout
+            self.dophase(board_idx, 0, (pll_dir == 1), 0, state, quiet=True)
+            self.dophase(board_idx, 1, (pll_dir == 1), 0, state, quiet=True)
             state.pll_just_reset[board_idx] += pll_dir
             return False
 
-        # Step 2: Turn around and continue sweep to find edges
         elif pll_state >= 12:
             if pll_state == 15:
                 state.pll_just_reset_dir[board_idx] = -1
@@ -230,15 +233,15 @@ class HardwareManager:
             self.dophase(board_idx, 1, (state.pll_just_reset_dir[board_idx] == 1), 0, state, quiet=True)
             return False
 
-        # Step 3: Analyze data and set to optimal phase
         elif pll_state == -1:
             print(f"Bad clk/str per phase step for board {board_idx}: {state.phase_nbad[board_idx]}")
             start, length = find_longest_zero_stretch(state.phase_nbad[board_idx], True)
             print(f"Found good phase range at step {start} for {length} steps.")
 
-            if start >= 12: start -= 12
-            n_steps = start + length // 2 + 1
-            if n_steps >= 12: n_steps -= 12
+            # --- FIX #2: PHASE SELECTION ---
+            # Remove erroneous "+ 1" from calculation
+            n_steps = start + length // 2
+            n_steps = n_steps % 12
 
             for i in range(n_steps):
                 is_last_step = (i == n_steps - 1)
@@ -248,13 +251,12 @@ class HardwareManager:
             state.pll_just_reset[board_idx] -= 1
             return False
 
-        # Step 4 & 5: Finalization steps
         elif pll_state < -1:
             state.pll_just_reset[board_idx] -= 1
             if state.pll_just_reset[board_idx] < -3:
                 state.pll_just_reset[board_idx] = -10
                 print(f"PLL reset for board {board_idx} complete.")
-                return True  # Sequence is finished
+                return True
 
         return False
 

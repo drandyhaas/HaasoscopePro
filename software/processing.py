@@ -13,6 +13,10 @@ class DataManager:
         self.last_clk = -1
         self.nbad_counts = (0, 0, 0, 0, 0)
 
+    def reset_clock_state(self):
+        """Resets the persistent clock state for a new calibration run."""
+        self.last_clk = -1
+
     def process_event_data(self, event_data):
         processed_waveforms = {}
         for board_idx, data in event_data.items():
