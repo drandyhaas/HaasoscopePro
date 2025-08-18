@@ -209,31 +209,55 @@ class MainWindow(TemplateBaseClass):
 
     def update_text_display(self):
         """Updates the text browser with measurements once per second."""
-        if not self.processed_data or not self.state.is_drawing: return
+        if not self.processed_data or not self.state.is_drawing:
+            self.ui.textBrowser.clear()
+            return
 
         s = self.state
         active_idx = s.active_channel_index
-        if active_idx not in self.processed_data: return
+        if active_idx not in self.processed_data:
+            self.ui.textBrowser.clear()
+            return
 
         wfm = self.processed_data[active_idx]
         y_data, x_data = wfm['y'], wfm['x']
-        v_per_div = s.get_volts_per_div(s.active_board, s.selected_channel)
 
         text = f"Measurements for Board {s.active_board} Chan {s.selected_channel}:\n"
 
-        measurements = self.data_manager.calculate_measurements(y_data, v_per_div)
-        for name, val in measurements.items():
-            text += f"{name}: {val * 1000:.3f} mV\n"
+        # --- ADDED CHECKS FOR EACH MEASUREMENT ---
 
-        _, trig_x = s.get_trigger_line_positions()
-        fit_width = (s.max_x - s.min_x) * s.fit_width_fraction
-        rt, rt_err = calculate_risetime(x_data, y_data, trig_x, fit_width)
-        if rt is not None:
-            text += f"Risetime: {rt:.2f} \u00B1 {rt_err:.2f} {s.x_units}\n"
+        # Check if any of the basic V/mV measurements are enabled
+        v_per_div = s.get_volts_per_div(s.active_board, s.selected_channel)
+        if any([self.ui.actionMean.isChecked(), self.ui.actionRMS.isChecked(),
+                self.ui.actionMaximum.isChecked(), self.ui.actionMinimum.isChecked(),
+                self.ui.actionVpp.isChecked()]):
 
-        sampling_rate = (s.samplerate_ghz * 1e9) / s.downsample_factor
-        freq = find_fundamental_frequency_scipy(y_data, sampling_rate)
-        text += f"Freq: {format_freq(freq)}\n"
+            measurements = self.data_manager.calculate_measurements(y_data, v_per_div)
+
+            if self.ui.actionMean.isChecked():
+                text += f"Mean: {measurements['Mean'] * 1000:.3f} mV\n"
+            if self.ui.actionRMS.isChecked():
+                text += f"RMS: {measurements['RMS'] * 1000:.3f} mV\n"
+            if self.ui.actionMaximum.isChecked():
+                text += f"Max: {measurements['Max'] * 1000:.3f} mV\n"
+            if self.ui.actionMinimum.isChecked():
+                text += f"Min: {measurements['Min'] * 1000:.3f} mV\n"
+            if self.ui.actionVpp.isChecked():
+                text += f"Vpp: {measurements['Vpp'] * 1000:.3f} mV\n"
+
+        if self.ui.actionRisetime.isChecked():
+            _, trig_x = s.get_trigger_line_positions()
+            fit_width = (s.max_x - s.min_x) * s.fit_width_fraction
+            rt, rt_err = calculate_risetime(x_data, y_data, trig_x, fit_width)
+            if rt is not None:
+                text += f"Risetime: {rt:.2f} \u00B1 {rt_err:.2f} {s.x_units}\n"
+
+        if self.ui.actionFreq.isChecked():
+            sampling_rate = (s.samplerate_ghz * 1e9) / s.downsample_factor
+            if not s.is_two_channel_mode:
+                sampling_rate *= 2
+            freq = find_fundamental_frequency_scipy(y_data, sampling_rate)
+            text += f"Freq: {format_freq(freq)}\n"
 
         text += f"\n{gettemps(self.hardware.usbs[s.active_board])}"
         self.ui.textBrowser.setText(text)
