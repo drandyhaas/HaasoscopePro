@@ -1,8 +1,7 @@
 import time
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
-from PyQt5.QtGui import QPalette, QColor, QIcon
-from PyQt5.QtWidgets import QApplication, QMessageBox, QWidget, QPushButton
+from pyqtgraph.Qt import loadUiType
+from PyQt5.QtGui import QColor
 
 # Define fft window class from template
 FFTWindowTemplate, FFTTemplateBaseClass = loadUiType("HaasoscopeProFFT.ui")

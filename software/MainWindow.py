@@ -23,6 +23,7 @@ class MainWindow(TemplateBaseClass):
         TemplateBaseClass.__init__(self)
         self.usbs=usbs
         self.num_board = len(usbs)
+        self.setWindowTitle('Haasoscope Pro Qt')
         self.phasecs = []
         for ph in range(self.num_board): self.phasecs.append([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
         self.firmwareversion = None
@@ -186,7 +187,6 @@ class MainWindow(TemplateBaseClass):
         self.plljustreset = [-10] * self.num_board
         self.plljustresetdir = [0] * self.num_board
         self.phasenbad = [[0] * 12] * self.num_board
-        print("num_board is", self.num_board)
         self.dooversample = [False] * self.num_board
         self.doresamp = 0
         self.dopersist = False
@@ -207,6 +207,15 @@ class MainWindow(TemplateBaseClass):
         self.offset = [0] * (self.num_board * self.num_chan_per_board)
         self.gain = [0] * (self.num_board * self.num_chan_per_board)
         self.noextboard = -1
+        for usbi in range(self.num_board):
+            if not self.setup_connection(usbi):
+                print("Exiting now - failed setup_connections!")
+                cleanup(self.usbs[usbi])
+                sys.exit(1)
+        if not self.init():
+            print("Exiting now - failed init!")
+            for usbi in range(self.num_board): cleanup(self.usbs[usbi])
+            sys.exit(2)
         self.show()
 
     def about(self):
@@ -496,35 +505,16 @@ class MainWindow(TemplateBaseClass):
         if not quiet: print("phase for pllnum", pllnum, "plloutnum", plloutnum, "on board", board, "now",
                             self.phasecs[board][pllnum][plloutnum])
 
-    def uppos(self):
-        self.dophase(self.activeboard, plloutnum=0, updown=1)
-
-    def uppos1(self):
-        self.dophase(self.activeboard, plloutnum=1, updown=1)
-
-    def uppos2(self):
-        self.dophase(self.activeboard, plloutnum=2, updown=1)
-
-    def uppos3(self):
-        self.dophase(self.activeboard, plloutnum=3, updown=1)
-
-    def uppos4(self):
-        self.dophase(self.activeboard, plloutnum=4, updown=1)
-
-    def downpos(self):
-        self.dophase(self.activeboard, plloutnum=0, updown=0)
-
-    def downpos1(self):
-        self.dophase(self.activeboard, plloutnum=1, updown=0)
-
-    def downpos2(self):
-        self.dophase(self.activeboard, plloutnum=2, updown=0)
-
-    def downpos3(self):
-        self.dophase(self.activeboard, plloutnum=3, updown=0)
-
-    def downpos4(self):
-        self.dophase(self.activeboard, plloutnum=4, updown=0)
+    def uppos(self):  self.dophase(self.activeboard, plloutnum=0, updown=1)
+    def uppos1(self): self.dophase(self.activeboard, plloutnum=1, updown=1)
+    def uppos2(self): self.dophase(self.activeboard, plloutnum=2, updown=1)
+    def uppos3(self): self.dophase(self.activeboard, plloutnum=3, updown=1)
+    def uppos4(self): self.dophase(self.activeboard, plloutnum=4, updown=1)
+    def downpos(self):  self.dophase(self.activeboard, plloutnum=0, updown=0)
+    def downpos1(self): self.dophase(self.activeboard, plloutnum=1, updown=0)
+    def downpos2(self): self.dophase(self.activeboard, plloutnum=2, updown=0)
+    def downpos3(self): self.dophase(self.activeboard, plloutnum=3, updown=0)
+    def downpos4(self): self.dophase(self.activeboard, plloutnum=4, updown=0)
 
     def pllreset(self, board):
         if not board: board = self.activeboard # if we called it from the button
@@ -537,7 +527,6 @@ class MainWindow(TemplateBaseClass):
         self.phasenbad[board] = [0]*12 # reset nbad counters
         self.expect_samples = 1000
         self.dodrawing = False
-        #switchclock(self.usbs,board)
         if self.num_board>1 and self.doexttrig[board]: self.doexttrigecho[board] = True
         #CALLBACK is to adjustclocks, below, which runs for each event and then finishes up at the end of that function
 
@@ -578,25 +567,6 @@ class MainWindow(TemplateBaseClass):
         elif self.plljustreset[board] == -3: # pllreset is now DONE
             self.dodrawing = True
             self.plljustreset[board] = -10
-
-    def wheelEvent(self, event):  # QWheelEvent
-        if hasattr(event, "delta"):
-            if event.delta() > 0:
-                self.uppos()
-            else:
-                self.downpos()
-        elif hasattr(event, "angleDelta"):
-            if event.angleDelta() > 0:
-                self.uppos()
-            else:
-                self.downpos()
-
-    def keyPressEvent(self, event):
-        if event.key() == QtCore.Qt.Key_Up: self.uppos()
-        if event.key() == QtCore.Qt.Key_Down: self.downpos()
-        if event.key() == QtCore.Qt.Key_Left: self.timefast()
-        if event.key() == QtCore.Qt.Key_Right: self.timeslow()
-        # modifiers = QtWidgets.QApplication.keyboardModifiers()
 
     def exttrig(self, value):
         board = self.ui.boardBox.value()
@@ -1541,7 +1511,6 @@ class MainWindow(TemplateBaseClass):
         self.adfreset(board)
         setupboard(self.usbs[board], self.dopattern, self.dotwochannel, self.dooverrange)
         for c in range(self.num_chan_per_board):
-            print("XYZ",len(self.usbs),"  ",self.dooversample)
             setchanacdc(self.usbs[board], c, 0, self.dooversample[board])
             setchanimpedance(self.usbs[board], c, 0, self.dooversample[board])
             setchanatt(self.usbs[board], c, 0, self.dooversample[board])
