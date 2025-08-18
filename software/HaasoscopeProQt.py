@@ -14,45 +14,16 @@ from board import *
 from SCPIsocket import hspro_socket
 import threading
 import matplotlib.cm as cm
-
-usbs = connectdevices(100) # max of 100 devices
-#if len(usbs)==0: sys.exit(0)
-for b in range(len(usbs)):
-    if len(usbs) > 1: clkout_ena(usbs[b], 1) # turn on lvdsout_clk for boards
-    version(usbs[b])
-    version(usbs[b])
-    version(usbs[b])
-time.sleep(.1) # wait for clocks to lock
-usbs = orderusbs(usbs)
-tellfirstandlast(usbs)
-
-# Define fft window class from template
-FFTWindowTemplate, FFTTemplateBaseClass = loadUiType("HaasoscopeProFFT.ui")
-class FFTWindow(FFTTemplateBaseClass):
-    def __init__(self):
-        FFTTemplateBaseClass.__init__(self)
-        self.ui = FFTWindowTemplate()
-        self.ui.setupUi(self)
-        self.ui.plot.setLabel('bottom', 'Frequency (MHz)')
-        self.ui.plot.setLabel('left', 'Amplitude')
-        self.ui.plot.showGrid(x=True, y=True, alpha=1.0)
-        #self.ui.plot.setRange(xRange=(0.0, 1600.0))
-        self.ui.plot.setBackground(QColor('black'))
-        c = (10, 10, 10)
-        self.fftpen = pg.mkPen(color=c) # width=2 slower
-        self.fftline = self.ui.plot.plot(pen=self.fftpen, name="fft_plot")
-        self.fftlastTime = time.time() - 10
-        self.fftyrange = 1
+from FFTWindow import *
 
 # Define main window class from template
 WindowTemplate, TemplateBaseClass = loadUiType("HaasoscopePro.ui")
 class MainWindow(TemplateBaseClass):
-
     expect_samples = 100
     expect_samples_extra = 5 # enough to cover downsample shifting and toff shifting
     samplerate = 3.2  # freq in GHz
     nsunits = 1
-    num_board = len(usbs)
+    num_board = -1 # len(usbs)
     num_chan_per_board = 2
     num_logic_inputs = 0
     debug = False
@@ -76,7 +47,6 @@ class MainWindow(TemplateBaseClass):
     triggershift = 2 # amount to shift trigger earlier, so we have time to shift later on for toff etc.
     themuxoutV = True
     phasecs = []
-    for ph in range(len(usbs)): phasecs.append([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
     phaseoffset = 0 # how many positive phase steps to take from middle of good range
     doexttrig = [0] * num_board
     doextsmatrig = [0] * num_board
@@ -154,8 +124,14 @@ class MainWindow(TemplateBaseClass):
     gain = [0]*(num_board*num_chan_per_board)
     noextboard = -1
 
-    def __init__(self):
+    def __init__(self, usbs):
         TemplateBaseClass.__init__(self)
+        self.num_board = len(usbs)
+        for ph in range(self.num_board): phasecs.append([[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]])
+        self.firmwareversion = None
+        self.hsprosock_t1 = None
+        self.hsprosock = None
+        self.outf = None
         self.ui = WindowTemplate()
         self.ui.setupUi(self)
         self.ui.runButton.clicked.connect(self.dostartstop)
@@ -849,7 +825,7 @@ class MainWindow(TemplateBaseClass):
         else:
             self.min_x = 0
 
-        if hasattr(self,"hsprosock"):
+        if hasattr(self,"hsprosock") and self.hsprosock is not None:
             while self.hsprosock.issending: time.sleep(.001)
         if self.dotwochannel:
             for c in range(self.num_chan_per_board * self.num_board):
@@ -1499,7 +1475,7 @@ class MainWindow(TemplateBaseClass):
             send_leds(usbs[board], r1, g1, b1, r2, g2, b2)
 
     def setupchannels(self):
-        if hasattr(self,"hsprosock"):
+        if hasattr(self,"hsprosock") and self.hsprosock is not None:
             while self.hsprosock.issending: time.sleep(.001)
         if self.dotwochannel:
             self.xydata = np.empty([int(self.num_chan_per_board * self.num_board), 2, 2 * 10 * self.expect_samples], dtype=float)
@@ -1582,6 +1558,18 @@ class MainWindow(TemplateBaseClass):
         if self.fftui != 0: self.fftui.close()
         for usb in usbs: cleanup(usb)
 
+
+usbs = connectdevices(100) # max of 100 devices
+#if len(usbs)==0: sys.exit(0)
+for b in range(len(usbs)):
+    if len(usbs) > 1: clkout_ena(usbs[b], 1) # turn on lvdsout_clk for boards
+    version(usbs[b])
+    version(usbs[b])
+    version(usbs[b])
+time.sleep(.1) # wait for clocks to lock
+usbs = orderusbs(usbs)
+tellfirstandlast(usbs)
+
 if __name__ == '__main__': # calls setup_connection for each board, then init
     print('Argument List:', str(sys.argv))
     for a in sys.argv:
@@ -1597,7 +1585,7 @@ if __name__ == '__main__': # calls setup_connection for each board, then init
         font.setPixelSize(11)
         app.setFont(font)
         app.setWindowIcon(QIcon('icon.png'))
-        win = MainWindow()
+        win = MainWindow(usbs)
         win.setWindowTitle('Haasoscope Pro Qt')
         for usbi in range(len(usbs)):
             if not win.setup_connection(usbi):
