@@ -343,18 +343,19 @@ class MainWindow(TemplateBaseClass):
     def select_channel(self):
         if self.num_board == 0: return
 
-        is_even_board = self.activeboard % 2 == 0
-        can_oversample = is_even_board and not self.dotwochannel and self.num_board > 1
-
-        self.ui.oversampCheck.setEnabled(can_oversample)
-        if can_oversample:
-            self.ui.interleavedCheck.setEnabled(self.dooversample[self.activeboard])
-            self.ui.oversampCheck.setChecked(self.dooversample[self.activeboard])
-            self.ui.interleavedCheck.setChecked(self.dointerleaved[self.activeboard])
+        if self.activeboard % 2 == 0 and not self.dotwochannel and self.num_board > 1:
+            self.ui.oversampCheck.setEnabled(True)
+            if self.dooversample[self.activeboard]:
+                self.ui.interleavedCheck.setEnabled(True)
+                self.ui.oversampCheck.setChecked(True)
+                self.ui.interleavedCheck.setChecked(self.dointerleaved[self.activeboard])
+            else:
+                self.ui.interleavedCheck.setEnabled(False)
+                self.ui.interleavedCheck.setChecked(False)
+                self.ui.oversampCheck.setChecked(False)
         else:
-            self.ui.oversampCheck.setChecked(False)
+            self.ui.oversampCheck.setEnabled(False)
             self.ui.interleavedCheck.setEnabled(False)
-            self.ui.interleavedCheck.setChecked(False)
 
         self.ui.exttrigCheck.setChecked(self.doexttrig[self.activeboard])
         self.ui.extsmatrigCheck.setEnabled(not self.doexttrig[self.activeboard])
