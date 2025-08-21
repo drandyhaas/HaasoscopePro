@@ -4,7 +4,7 @@ import ftd2xx, sys
 from USB_FT232H import UsbFt232hSync245mode
 from utils import *
 
-def version(usb, quiet=True):
+def version(usb, quiet=False):
     usb.send(bytes([2, 0, 100, 100, 100, 100, 100, 100]))  # get version
     res = usb.recv(4)
     ver = int.from_bytes(res,"little")
@@ -65,11 +65,13 @@ def orderusbs(usbs):
         oldbytes(usbs[board])
         version(usbs[board])
         usbs[board].send(bytes([2, 5, 0, 0, 99, 99, 99, 99]))  # get clock info
-        usbs[board].recv(4)
+        res = usbs[board].recv(4)
+        if len(res) < 4:
+            print("Couldn't get lvds info from board", board, "! ", res[0])
         usbs[board].send(bytes([2, 5, 0, 0, 99, 99, 99, 99]))  # get clock info again, fixes a glitch on Mac (?)
         res = usbs[board].recv(4)
         if len(res)<4:
-            print("Couldn't get lvds info from board",board,"!")
+            print("Couldn't get lvds info from board",board,"!! ",res[0])
             sys.exit(0)
         if getbit(res[1],3):
             print("Board",board,"has no ext clock")

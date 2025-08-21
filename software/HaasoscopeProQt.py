@@ -18,10 +18,11 @@ import matplotlib.cm as cm
 usbs = connectdevices(100) # max of 100 devices
 #if len(usbs)==0: sys.exit(0)
 for b in range(len(usbs)):
-    if len(usbs) > 1: clkout_ena(usbs[b], 1) # turn on lvdsout_clk for boards
     version(usbs[b])
     version(usbs[b])
     version(usbs[b])
+    oldbytes(usbs[b])
+    if len(usbs) > 1: clkout_ena(usbs[b], 1)  # turn on lvdsout_clk for boards
 time.sleep(.1) # wait for clocks to lock
 usbs = orderusbs(usbs)
 tellfirstandlast(usbs)
