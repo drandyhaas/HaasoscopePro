@@ -20,7 +20,7 @@ def main():
     # --- Hardware Connection and Initialization ---
     try:
         # Scan for and connect to a maximum of 100 devices.
-        usbs = connectdevices(0)
+        usbs = connectdevices(100)
         if not usbs: print("No devices found!")
 
         # Initialize and verify communication with each board.
