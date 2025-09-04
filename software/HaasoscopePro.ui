@@ -892,9 +892,9 @@
          <number>20</number>
         </property>
        </widget>
-       <widget class="QCheckBox" name="persistCheck">
+       <widget class="QCheckBox" name="wideCheck">
         <property name="enabled">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
         <property name="geometry">
          <rect>
@@ -912,7 +912,7 @@
          </font>
         </property>
         <property name="text">
-         <string>Persist</string>
+         <string>Wide</string>
         </property>
         <property name="checkable">
          <bool>true</bool>

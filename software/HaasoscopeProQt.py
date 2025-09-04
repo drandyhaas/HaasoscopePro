@@ -35,7 +35,7 @@ class FFTWindow(FFTTemplateBaseClass):
         self.ui.setupUi(self)
         self.ui.plot.setLabel('bottom', 'Frequency (MHz)')
         self.ui.plot.setLabel('left', 'Amplitude')
-        self.ui.plot.showGrid(x=True, y=True, alpha=1.0)
+        self.ui.plot.showGrid(x=True, y=True, alpha=1)
         #self.ui.plot.setRange(xRange=(0.0, 1600.0))
         self.ui.plot.setBackground(QColor('black'))
         c = (10, 10, 10)
@@ -55,6 +55,7 @@ class MainWindow(TemplateBaseClass):
     num_board = len(usbs)
     num_chan_per_board = 2
     num_logic_inputs = 0
+    firmwareversion = -1
     debug = False
     dopattern = 0 # set to 4 to do max varying test pattern
     debugprint = True
@@ -136,7 +137,6 @@ class MainWindow(TemplateBaseClass):
     phasenbad = [[0] * 12] * num_board
     dooversample = [False] * num_board
     doresamp = 0
-    dopersist = False
     triggerautocalibration = [False] * num_board
     extraphasefortad = [0] * num_board
     doexttrigecho = [False] * num_board
@@ -200,7 +200,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.tenxCheck.stateChanged.connect(self.settenx)
         self.ui.chanonCheck.stateChanged.connect(self.chanon)
         self.ui.drawingCheck.clicked.connect(self.drawing)
-        self.ui.persistCheck.clicked.connect(self.persist)
+        self.ui.wideCheck.clicked.connect(self.wideline)
         self.ui.fwfBox.valueChanged.connect(self.fwf)
         self.ui.tadBox.valueChanged.connect(self.setTAD)
         self.ui.resampBox.valueChanged.connect(self.resamp)
@@ -884,9 +884,9 @@ class MainWindow(TemplateBaseClass):
             self.dodrawing = False
             # print("drawing now",self.dodrawing)
 
-    def persist(self):
-        self.dopersist = not self.dopersist
-        print("do persist",self.dopersist)
+    def wideline(self):
+        for chan in range(self.num_board*self.num_chan_per_board):
+            self.linepens[chan].setWidth(3 if self.ui.wideCheck.checkState() == QtCore.Qt.Checked else 1)
 
     def updateplot(self):
         if hasattr(self,"hsprosock"):
@@ -1139,7 +1139,8 @@ class MainWindow(TemplateBaseClass):
     def drawchannels(self, data, board):
         if self.dofast: return
         if self.num_board>0 and self.firmwareversion<28:
-            print("Firmware v28+ required, for new triggerphase calculation!")
+            if self.firmwareversion>-1: print("Firmware v28+ required, for new triggerphase calculation!")
+            self.firmwareversion = -1
             return 0
         if self.doexttrig[board]:
             boardtouse = self.noextboard
@@ -1532,7 +1533,7 @@ class MainWindow(TemplateBaseClass):
         for board in range(self.num_board):
             for boardchan in range( self.num_chan_per_board ):
                 #print("chan=",chan, " board=",board, "boardchan=",boardchan)
-                alpha = 0.9
+                alpha = 1
                 colors[chan][3] = alpha
                 c = QColor.fromRgbF(*colors[chan])
                 pen = pg.mkPen(color=c) # width=2 slows drawing down
@@ -1576,7 +1577,7 @@ class MainWindow(TemplateBaseClass):
     def setup_connection(self, board):
         print("Setting up board",board)
         ver = version(usbs[board],False)
-        if not hasattr(self,"firmwareversion"): self.firmwareversion = ver
+        if self.firmwareversion<0: self.firmwareversion = ver
         if ver < self.firmwareversion:
             print("Warning - this board has older firmware than another being used!")
             self.firmwareversion = ver # find the minimum firmware being used
