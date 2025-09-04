@@ -1453,7 +1453,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.boardBox.setValue(0)
 
     def init(self):
-        if self.firmwareversion<28:
+        if self.num_board>0 and self.firmwareversion<28:
             print("Firmware v28+ required, for new triggerphase calculation!")
             return 0
         self.tot()
