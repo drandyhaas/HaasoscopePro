@@ -1138,6 +1138,9 @@ class MainWindow(TemplateBaseClass):
 
     def drawchannels(self, data, board):
         if self.dofast: return
+        if self.num_board>0 and self.firmwareversion<28:
+            print("Firmware v28+ required, for new triggerphase calculation!")
+            return 0
         if self.doexttrig[board]:
             boardtouse = self.noextboard
             self.sample_triggered[board] = self.sample_triggered[boardtouse] # take from the other board when using ext trig
@@ -1456,9 +1459,6 @@ class MainWindow(TemplateBaseClass):
         self.ui.boardBox.setValue(0)
 
     def init(self):
-        if self.num_board>0 and self.firmwareversion<28:
-            print("Firmware v28+ required, for new triggerphase calculation!")
-            return 0
         self.tot()
         self.ui.ToffBox.setValue(self.toff)
         self.setupchannels()
