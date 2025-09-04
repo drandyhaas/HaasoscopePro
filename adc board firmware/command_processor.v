@@ -94,10 +94,16 @@ module command_processor (
    input [8:0]    triggerphase,
    input [31:0]   eventtime,
    input [15:0]    phase_diff,
-   input [15:0]    phase_diff_b
+   input [15:0]    phase_diff_b,
+
+   input [19:0]   sample1_triggered,
+   input [19:0]   sample2_triggered,
+   input [19:0]   sample3_triggered,
+   input [19:0]   sample4_triggered
+
 );
 
-integer version = 27; // firmware version
+integer version = 28; // firmware version
 
 // these first 10 debugout's go to LEDs on the board
 assign debugout[0] = clkswitch;
@@ -149,6 +155,10 @@ reg [ 7:0]  acqstate_sync = 0;
 integer     eventcounter_sync = 0;
 reg [ 9:0]  ram_address_triggered_sync = 0;
 reg [19:0]  sample_triggered_sync = 0;
+reg [19:0]  sample1_triggered_sync = 0;
+reg [19:0]  sample2_triggered_sync = 0;
+reg [19:0]  sample3_triggered_sync = 0;
+reg [19:0]  sample4_triggered_sync = 0;
 reg [7:0]   downsamplemergingcounter_triggered_sync = 0;
 reg [8:0]   triggerphase_sync = 0;
 integer     eventtime_sync = 0;
@@ -169,6 +179,10 @@ always @ (posedge clk) begin
    eventcounter_sync <= eventcounter;
    ram_address_triggered_sync <= ram_address_triggered;
    sample_triggered_sync <= sample_triggered;
+   sample1_triggered_sync <= sample1_triggered;
+   sample2_triggered_sync <= sample2_triggered;
+   sample3_triggered_sync <= sample3_triggered;
+   sample4_triggered_sync <= sample4_triggered;
    downsamplemergingcounter_triggered_sync <= downsamplemergingcounter_triggered;
    triggerphase_sync <= triggerphase;
    eventtime_sync <= eventtime;
@@ -268,6 +282,10 @@ always @ (posedge clk) begin
             firstlast <= rx_data[2][1:0];
             o_tdata <= {30'd0,firstlast};
          end
+         15: o_tdata <= {12'd0, sample1_triggered_sync};
+         16: o_tdata <= {12'd0, sample2_triggered_sync};
+         17: o_tdata <= {12'd0, sample3_triggered_sync};
+         18: o_tdata <= {12'd0, sample4_triggered_sync};
          endcase
          `SEND_STD_USB_RESPONSE
       end

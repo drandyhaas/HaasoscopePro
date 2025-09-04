@@ -60,6 +60,7 @@ class MainWindow(TemplateBaseClass):
     debugprint = True
     showbinarydata = True
     debugstrobe = False
+    debug_trigger_phase = False
     dofast = False
     dotwochannel = False
     dointerleaved = [False] * num_board
@@ -237,7 +238,7 @@ class MainWindow(TemplateBaseClass):
         QMessageBox.about(
             self,  # Parent widget (optional, but good practice)
             "Haasoscope Pro Qt, by DrAndyHaas",  # Title of the About dialog
-            "A PyQt5 application for the Haasoscope Pro\n\nVersion 27.01"  # Text content
+            "A PyQt5 application for the Haasoscope Pro\n\nVersion 28.01"  # Text content
         )
 
     def recordtofile(self):
@@ -1030,19 +1031,32 @@ class MainWindow(TemplateBaseClass):
         triggercounter = usbs[board].recv(4)  # get the 4 bytes
         acqstate = triggercounter[0]
         if acqstate == 251:  # an event is ready to be read out
-            gotzerobit = False
-            for s in range(20):
-                thebit = getbit(triggercounter[int(s / 8) + 1], s % 8)
-                if thebit == 0:
-                    gotzerobit = True
-                if thebit == 1 and gotzerobit:
-                    self.sample_triggered[board] = s
-                    gotzerobit = False
-            #if board==0: print("board",board,"sample triggered", binprint(triggercounter[3]), binprint(triggercounter[2]), binprint(triggercounter[1]))
-            #if board==0: print("sample_triggered", self.sample_triggered[board], "for board", board)
-            # if board==0:
-            #     if 9<=self.sample_triggered[board]<=11: self.dodrawing=True
-            #     else: self.dodrawing=False
+            self.sample_triggered[board] = triggercounter[1]
+            if self.debug_trigger_phase:
+                if board==0:
+                    print("\nbest sample triggered from triggercounter[1] =", triggercounter[1])
+                    print("board",board,"sample triggered", binprint(triggercounter[3]), binprint(triggercounter[2]), binprint(triggercounter[1]))
+                    print("sample_triggered", self.sample_triggered[board], "for board", board)
+                ststring = [0]*4
+                for st in range(4):
+                    usbs[board].send(bytes([2, 15+st, 100, 100, 100, 100, 100, 100]))  # get sample triggered 0
+                    ststring[st] = usbs[board].recv(4)
+                    print("sample triggered", st, binprint(ststring[st][2]), binprint(ststring[st][1]), binprint(ststring[st][0]))
+                # if board==0:
+                #     if 9<=self.sample_triggered[board]<=11: self.dodrawing=True
+                #     else: self.dodrawing=False
+                gotzerobit = False
+                for tb in range(0,20):
+                    for st in range(4):
+                        if self.dotwochannel and (st+1)%2==self.triggerchan[board]: continue
+                        thebit = getbit(ststring[st][tb//8],tb%8 )
+                        print(tb, thebit )
+                        if not thebit: gotzerobit = True
+                        if gotzerobit and thebit:
+                            gotzerobit = False
+                            print("X", tb, st)
+                            #self.triggerphase[board] = st
+                            #self.sample_triggered[board] = tb
             return 1
         else:
             return 0
@@ -1074,7 +1088,8 @@ class MainWindow(TemplateBaseClass):
         if self.downsamplemergingcounter[board] == self.downsamplemerging:
             if not self.doexttrig[board]:
                 self.downsamplemergingcounter[board] = 0
-        self.triggerphase[board]=res[1]
+        if self.debug_trigger_phase: print("got triggerphase from firmware =",res[1])
+        self.triggerphase[board] = res[1]
 
         if not self.doexttrig[board] and any(self.doexttrigecho):
             assert self.doexttrigecho.count(True)==1
@@ -1128,12 +1143,9 @@ class MainWindow(TemplateBaseClass):
             self.sample_triggered[board] = self.sample_triggered[boardtouse] # take from the other board when using ext trig
             self.triggerphase[board] = self.triggerphase[boardtouse]
         sample_triggered_touse = self.sample_triggered[board]
-        if (self.triggerphase[board]%4) != (self.triggerphase[board]>>2)%4:
-            #print("sampletriggered",self.sample_triggered[board],"and triggerphase for board",board,"is",self.triggerphase[board]>>4, "needzeros:",self.triggerphase[board]%4, "zeroblind:",(self.triggerphase[board]>>2)%4)
-            if self.sample_triggered[board]<10: sample_triggered_touse = self.sample_triggered[board]-1 # if we're in this rare case, adjust sample_triggered by 1 since the real thing would have had all ones
-        if self.sample_triggered[board]<10:
-            triggerphase = (self.triggerphase[board]>>2)%4 # use the triggerphase from the lower 10 bits of sample_triggered, the version not caring about whether it has zeros
-        else: triggerphase = self.triggerphase[board]>>4 # just use triggerphase from the upper 10 bits of sample_triggered when sample_triggered is occuring in the last 10 bits
+        if self.debug_trigger_phase: print("sampletriggered", self.sample_triggered[board], "and triggerphase for board", board, "is", self.triggerphase[board])
+        if self.dotwochannel: triggerphase = self.triggerphase[board]//2
+        else: triggerphase = self.triggerphase[board]
         nbadclkA = 0
         nbadclkB = 0
         nbadclkC = 0
@@ -1173,7 +1185,7 @@ class MainWindow(TemplateBaseClass):
                         nbadstr = nbadstr + 1
                         #print("s=", s, "n=", n, "str", val, binprint(val))
             if self.dotwochannel:
-                samp = s*20 - downsampleoffset - triggerphase//2
+                samp = s*20 - downsampleoffset - triggerphase
                 nsamp=20
                 nstart=0
                 if samp<0:
@@ -1441,6 +1453,9 @@ class MainWindow(TemplateBaseClass):
         self.ui.boardBox.setValue(0)
 
     def init(self):
+        if self.firmwareversion<28:
+            print("Firmware v28+ required, for new triggerphase calculation!")
+            return 0
         self.tot()
         self.ui.ToffBox.setValue(self.toff)
         self.setupchannels()

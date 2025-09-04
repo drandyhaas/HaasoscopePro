@@ -1571,7 +1571,7 @@ https://fpgasoftware.intel.com/eula.
 	)
 )
 (symbol
-	(rect 328 1696 528 1808)
+	(rect 328 1680 528 1792)
 	(text "phase_detector" (rect 5 0 80 12)(font "Arial" ))
 	(text "inst10" (rect 8 96 37 108)(font "Arial" ))
 	(port
@@ -2148,6 +2148,34 @@ https://fpgasoftware.intel.com/eula.
 		(text "eventtime[31..0]" (rect 279 235 347 247)(font "Arial" ))
 		(line (pt 368 240)(pt 352 240)(line_width 3))
 	)
+	(port
+		(pt 368 256)
+		(output)
+		(text "sample1_triggered[19..0]" (rect 0 0 121 12)(font "Arial" ))
+		(text "sample1_triggered[19..0]" (rect 245 251 347 263)(font "Arial" ))
+		(line (pt 368 256)(pt 352 256)(line_width 3))
+	)
+	(port
+		(pt 368 272)
+		(output)
+		(text "sample2_triggered[19..0]" (rect 0 0 121 12)(font "Arial" ))
+		(text "sample2_triggered[19..0]" (rect 245 267 347 279)(font "Arial" ))
+		(line (pt 368 272)(pt 352 272)(line_width 3))
+	)
+	(port
+		(pt 368 288)
+		(output)
+		(text "sample3_triggered[19..0]" (rect 0 0 121 12)(font "Arial" ))
+		(text "sample3_triggered[19..0]" (rect 245 283 347 295)(font "Arial" ))
+		(line (pt 368 288)(pt 352 288)(line_width 3))
+	)
+	(port
+		(pt 368 304)
+		(output)
+		(text "sample4_triggered[19..0]" (rect 0 0 121 12)(font "Arial" ))
+		(text "sample4_triggered[19..0]" (rect 245 299 347 311)(font "Arial" ))
+		(line (pt 368 304)(pt 352 304)(line_width 3))
+	)
 	(drawing
 		(rectangle (rect 16 16 352 384))
 	)
@@ -2337,6 +2365,34 @@ https://fpgasoftware.intel.com/eula.
 		(text "phase_diff_b[15..0]" (rect 0 0 96 12)(font "Arial" ))
 		(text "phase_diff_b[15..0]" (rect 21 427 117 439)(font "Arial" ))
 		(line (pt 0 432)(pt 16 432)(line_width 3))
+	)
+	(port
+		(pt 0 448)
+		(input)
+		(text "sample1_triggered[19..0]" (rect 0 0 121 12)(font "Arial" ))
+		(text "sample1_triggered[19..0]" (rect 21 443 142 455)(font "Arial" ))
+		(line (pt 0 448)(pt 16 448)(line_width 3))
+	)
+	(port
+		(pt 0 464)
+		(input)
+		(text "sample2_triggered[19..0]" (rect 0 0 121 12)(font "Arial" ))
+		(text "sample2_triggered[19..0]" (rect 21 459 142 471)(font "Arial" ))
+		(line (pt 0 464)(pt 16 464)(line_width 3))
+	)
+	(port
+		(pt 0 480)
+		(input)
+		(text "sample3_triggered[19..0]" (rect 0 0 121 12)(font "Arial" ))
+		(text "sample3_triggered[19..0]" (rect 21 475 142 487)(font "Arial" ))
+		(line (pt 0 480)(pt 16 480)(line_width 3))
+	)
+	(port
+		(pt 0 496)
+		(input)
+		(text "sample4_triggered[19..0]" (rect 0 0 121 12)(font "Arial" ))
+		(text "sample4_triggered[19..0]" (rect 21 491 142 503)(font "Arial" ))
+		(line (pt 0 496)(pt 16 496)(line_width 3))
 	)
 	(port
 		(pt 368 32)
@@ -4303,11 +4359,6 @@ https://fpgasoftware.intel.com/eula.
 	(bus)
 )
 (connector
-	(pt 552 1728)
-	(pt 552 1480)
-	(bus)
-)
-(connector
 	(pt 656 1480)
 	(pt 552 1480)
 	(bus)
@@ -4328,29 +4379,6 @@ https://fpgasoftware.intel.com/eula.
 (connector
 	(pt 536 1464)
 	(pt 536 1496)
-	(bus)
-)
-(connector
-	(pt 328 1728)
-	(pt 184 1728)
-	(color 0 170 0)
-)
-(connector
-	(pt 184 1496)
-	(pt 184 1728)
-	(color 0 170 0)
-)
-(connector
-	(pt -352 1528)
-	(pt -320 1528)
-)
-(connector
-	(pt -320 1528)
-	(pt -240 1528)
-)
-(connector
-	(pt 528 1728)
-	(pt 552 1728)
 	(bus)
 )
 (connector
@@ -4375,27 +4403,11 @@ https://fpgasoftware.intel.com/eula.
 	(pt 328 1528)
 )
 (connector
-	(pt 312 1744)
-	(pt 328 1744)
-)
-(connector
-	(pt 328 1760)
-	(pt -320 1760)
-)
-(connector
-	(pt -320 1528)
-	(pt -320 1760)
-)
-(connector
 	(pt -824 1528)
 	(pt -824 1872)
 )
 (connector
 	(pt -824 1872)
-	(pt 312 1872)
-)
-(connector
-	(pt 312 1744)
 	(pt 312 1872)
 )
 (connector
@@ -4409,17 +4421,6 @@ https://fpgasoftware.intel.com/eula.
 (connector
 	(pt 1232 424)
 	(pt 1232 592)
-	(color 0 170 0)
-)
-(connector
-	(text "clklvdsout3" (rect 124 1480 179 1497)(font "Intel Clear" ))
-	(pt 112 1496)
-	(pt 184 1496)
-	(color 0 170 0)
-)
-(connector
-	(pt 184 1496)
-	(pt 328 1496)
 	(color 0 170 0)
 )
 (connector
@@ -4675,6 +4676,161 @@ https://fpgasoftware.intel.com/eula.
 	(pt -808 1888)
 	(bus)
 )
+(connector
+	(pt -352 1704)
+	(pt -232 1704)
+	(bus)
+)
+(connector
+	(pt -232 1704)
+	(pt -232 1800)
+	(bus)
+)
+(connector
+	(pt -232 1800)
+	(pt 576 1800)
+	(bus)
+)
+(connector
+	(pt 576 1800)
+	(pt 576 1496)
+	(bus)
+)
+(connector
+	(pt 576 1496)
+	(pt 656 1496)
+	(bus)
+)
+(connector
+	(pt 656 1512)
+	(pt 592 1512)
+	(bus)
+)
+(connector
+	(pt 592 1512)
+	(pt 592 1816)
+	(bus)
+)
+(connector
+	(pt 592 1816)
+	(pt -248 1816)
+	(bus)
+)
+(connector
+	(pt -248 1816)
+	(pt -248 1720)
+	(bus)
+)
+(connector
+	(pt -248 1720)
+	(pt -352 1720)
+	(bus)
+)
+(connector
+	(pt -352 1736)
+	(pt -264 1736)
+	(bus)
+)
+(connector
+	(pt 608 1528)
+	(pt 656 1528)
+	(bus)
+)
+(connector
+	(pt -264 1736)
+	(pt -264 1832)
+	(bus)
+)
+(connector
+	(pt -264 1832)
+	(pt 608 1832)
+	(bus)
+)
+(connector
+	(pt 608 1528)
+	(pt 608 1832)
+	(bus)
+)
+(connector
+	(pt 552 1480)
+	(pt 552 1712)
+	(bus)
+)
+(connector
+	(pt 184 1712)
+	(pt 328 1712)
+	(color 0 170 0)
+)
+(connector
+	(pt 184 1496)
+	(pt 184 1712)
+	(color 0 170 0)
+)
+(connector
+	(pt 552 1712)
+	(pt 528 1712)
+	(bus)
+)
+(connector
+	(pt 312 1728)
+	(pt 328 1728)
+)
+(connector
+	(pt -320 1744)
+	(pt 328 1744)
+)
+(connector
+	(pt -320 1528)
+	(pt -320 1744)
+)
+(connector
+	(pt 312 1872)
+	(pt 312 1728)
+)
+(connector
+	(text "clklvdsout3" (rect 124 1480 179 1497)(font "Intel Clear" ))
+	(pt 112 1496)
+	(pt 184 1496)
+	(color 0 170 0)
+)
+(connector
+	(pt 184 1496)
+	(pt 328 1496)
+	(color 0 170 0)
+)
+(connector
+	(pt -352 1528)
+	(pt -320 1528)
+)
+(connector
+	(pt -320 1528)
+	(pt -240 1528)
+)
+(connector
+	(pt -352 1752)
+	(pt -280 1752)
+	(bus)
+)
+(connector
+	(pt -280 1752)
+	(pt -280 1848)
+	(bus)
+)
+(connector
+	(pt -280 1848)
+	(pt 624 1848)
+	(bus)
+)
+(connector
+	(pt 624 1848)
+	(pt 624 1544)
+	(bus)
+)
+(connector
+	(pt 624 1544)
+	(pt 656 1544)
+	(bus)
+)
 (junction (pt 1704 1592))
 (junction (pt -872 1768))
 (junction (pt -888 1752))
@@ -4718,7 +4874,7 @@ https://fpgasoftware.intel.com/eula.
 (text "PLL phase paths" (rect 376 504 516 527)(font "Intel Clear" (color 255 170 0)(font_size 12)))
 (text "Clock status paths" (rect 920 520 1073 543)(font "Intel Clear" (color 0 0 255)(font_size 12)))
 (text "Reset paths" (rect 424 1032 524 1055)(font "Intel Clear" (color 170 255 0)(font_size 12)))
-(text "For finding ext trig delays" (rect 360 1624 511 1643)(font "Intel Clear" (font_size 8)))
+(text "For finding ext trig delays" (rect 360 1616 511 1635)(font "Intel Clear" (font_size 8)))
 (text "PLL for making 80 MHz from the 50 MHz oscillator" (rect 208 -32 507 -13)(font "Intel Clear" (font_size 8)))
 (text "PLL for making 80 MHz from the 10 MHz external SMA ref clock" (rect 176 -248 553 -229)(font "Intel Clear" (font_size 8)))
 (text "10 MHz external SMA ref clock in" (rect -184 -192 10 -173)(font "Intel Clear" (font_size 8)))
