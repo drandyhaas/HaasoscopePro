@@ -1273,12 +1273,15 @@ class MainWindow(TemplateBaseClass):
 
     def update_firmware(self):
         print("thinking about updating firmware on board",self.activeboard)
-        if not os.path.exists("../adc board firmware/output_files/coincidence_auto.rpd"):
-            print("../adc board firmware/output_files/coincidence_auto.rpd was not found!")
-            return
+        firmwarepath = "../adc board firmware/output_files/coincidence_auto.rpd"
+        if not os.path.exists(firmwarepath):
+            firmwarepath = "../../../adc board firmware/output_files/coincidence_auto.rpd"
+            if not os.path.exists(firmwarepath):
+                print("coincidence_auto.rpd was not found!")
+                return
         msg_box = QMessageBox()
         msg_box.setWindowTitle("Confirmation")
-        msg_box.setText("Do you really want to update the firmware with ../adc board firmware/output_files/coincidence_auto.rpd?")
+        msg_box.setText("Do you really want to update the firmware with "+firmwarepath)
         msg_box.setIcon(QMessageBox.Question)
         msg_box.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
         msg_box.setDefaultButton(QMessageBox.Cancel)  # Set default focused button
@@ -1307,7 +1310,7 @@ class MainWindow(TemplateBaseClass):
                     baderase=True
             if not baderase: print("erase verified")
             else: return
-        writtenbytes = flash_writeall_from_file(usbs[self.activeboard],'../adc board firmware/output_files/coincidence_auto.rpd', dowrite=True)
+        writtenbytes = flash_writeall_from_file(usbs[self.activeboard],firmwarepath, dowrite=True)
         print("took",round(time.time()-starttime,3),"seconds so far")
         print("verifying write")
         readbytes = flash_readall(usbs[self.activeboard])
