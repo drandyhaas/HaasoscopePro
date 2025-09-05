@@ -590,14 +590,18 @@ class MainWindow(TemplateBaseClass):
             print("bad clkstr per phase step:",self.phasenbad[board])
             startofzeros, lengthofzeros = find_longest_zero_stretch(self.phasenbad[board], True)
             print("good phase starts at",startofzeros, "and goes for", lengthofzeros,"steps")
-            if startofzeros>=12: startofzeros-=12
-            n = startofzeros + lengthofzeros//2 + self.phaseoffset # amount to adjust clklvds and clklvdsout (positive)
-            if n>=12: n-=12
-            n+=1 # extra 1 because we went to phase=-1 before
-            for i in range(n):
-                self.dophase(board, plloutnum, 1, pllnum=0, quiet=(i != n - 1)) # adjust phase of plloutnum
-                self.dophase(board, plloutnum2, 1, pllnum=0, quiet=(i != n - 1))  # adjust phase of plloutnum
-            self.plljustreset[board] += self.plljustresetdir[board]
+            if lengthofzeros<4:
+                print("Bad PLL calibration found! Check power connections?!")
+                self.dostartstop()
+            else:
+                if startofzeros>=12: startofzeros-=12
+                n = startofzeros + lengthofzeros//2 + self.phaseoffset # amount to adjust clklvds and clklvdsout (positive)
+                if n>=12: n-=12
+                n+=1 # extra 1 because we went to phase=-1 before
+                for i in range(n):
+                    self.dophase(board, plloutnum, 1, pllnum=0, quiet=(i != n - 1)) # adjust phase of plloutnum
+                    self.dophase(board, plloutnum2, 1, pllnum=0, quiet=(i != n - 1))  # adjust phase of plloutnum
+                self.plljustreset[board] += self.plljustresetdir[board]
         elif self.plljustreset[board] == -2: # pllreset is now ALMOST DONE
             self.depth()
             self.plljustreset[board] += self.plljustresetdir[board]
