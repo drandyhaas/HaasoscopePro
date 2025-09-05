@@ -16,6 +16,21 @@ from SCPIsocket import hspro_socket
 import threading
 import matplotlib.cm as cm
 
+# Look for special paths when double-clicking on the pre-made exe, so we can find the .ui files
+path_string = sys.path[0]
+pwd = path_string # it will be the current direct directory already if we are running from the command line
+target = "Mac_HaasoscopeProQt"
+index = path_string.find(target)
+if index != -1: # The substring was found
+    index_with_target = index + len(target)
+    pwd = path_string[:index_with_target]
+target = "Windows_HaasoscopeProQt"
+index = path_string.find(target)
+if index != -1:  # The substring was found
+    index_with_target = index + len(target)
+    pwd = path_string[:index_with_target]
+print("Current dir is "+pwd)
+
 usbs = connectdevices(100) # max of 100 devices
 #if len(usbs)==0: sys.exit(0)
 for b in range(len(usbs)):
@@ -28,7 +43,7 @@ usbs = orderusbs(usbs)
 tellfirstandlast(usbs)
 
 # Define fft window class from template
-FFTWindowTemplate, FFTTemplateBaseClass = loadUiType("HaasoscopeProFFT.ui")
+FFTWindowTemplate, FFTTemplateBaseClass = loadUiType(pwd+"/HaasoscopeProFFT.ui")
 class FFTWindow(FFTTemplateBaseClass):
     def __init__(self):
         FFTTemplateBaseClass.__init__(self)
@@ -46,7 +61,7 @@ class FFTWindow(FFTTemplateBaseClass):
         self.fftyrange = 1
 
 # Define main window class from template
-WindowTemplate, TemplateBaseClass = loadUiType("HaasoscopePro.ui")
+WindowTemplate, TemplateBaseClass = loadUiType(pwd+"/HaasoscopePro.ui")
 class MainWindow(TemplateBaseClass):
 
     expect_samples = 100
