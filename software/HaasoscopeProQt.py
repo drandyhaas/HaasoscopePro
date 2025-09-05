@@ -1,3 +1,4 @@
+import math
 import os.path
 import numpy as np
 import sys, time, warnings
@@ -1275,25 +1276,45 @@ class MainWindow(TemplateBaseClass):
                 if self.dotwochannel: sampling_rate /= 2
                 found_freq = find_fundamental_frequency_scipy(self.xydata[self.activexychannel][1], sampling_rate)
                 thestr += "Freq: " + str(format_freq(found_freq)) + "\n"
+
+            for i in range(3): self.otherlines[2+i].setVisible(False) # assume we're not drawing the risetime fit line
             if self.ui.actionRisetime.isChecked():
                 if not self.dointerleaved[self.activeboard]:
                     targety = self.xydata[self.activexychannel]
                 else:
                     targety = self.xydatainterleaved[int(self.activeboard/2)]
-                p0 = [max(targety[1]), self.vline - 10, 20, min(targety[1])] #initial guess
                 fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
                 xc = targety[0][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]  # only fit in range
                 yc = targety[1][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]
-                if xc.size > 10: # require at least something to fit, otherwise we'll throw an error
+                p0 = [max(targety[1]), xc[xc.size//3], 1.0, min(targety[1])] #initial guess
+                if xc.size < 10: # require at least something to fit, otherwise we'll throw an error
+                    thestr += "Risetime: fit range too small\n"
+                else:
                     with warnings.catch_warnings():
                         try:
                             warnings.simplefilter("ignore")
                             popt, pcov = curve_fit(fit_rise, xc, yc, p0)
                             perr = np.sqrt(np.diag(pcov))
-                            risetime = 0.8 * popt[2]
-                            risetimeerr = perr[2]
-                            # print(popt)
+                            #print(popt)
+                            top = popt[0]
+                            left = popt[1]
+                            bot = popt[3]
+                            slope = popt[2]
+                            right = left+(top-bot)/slope
+                            #print("right",right)
+                            risetime = 0.6 * (top-bot)/slope # from 20 - 80%
+                            risetimeerr = 0.6 * 4 * (top-bot) * perr[2] / (slope*slope) # 4 is fudge factor, since the error is often underestimated
                             thestr += "Risetime: " + str(risetime.round(2)) + "+-" + str(risetimeerr.round(2)) + " " + self.units + str("\n")
+                            if self.ui.actionRisetime_fit_lines.isChecked():
+                                self.otherlines[2].setData([right, xc[-1]],[top, top])
+                                self.otherlines[3].setData([left, right], [bot, top])
+                                self.otherlines[4].setData([xc[0], left], [bot, bot])
+                                #print(risetimeerr)
+                                if abs(risetimeerr) != math.inf:
+                                    for i in range(3): self.otherlines[2+i].setVisible(True)
+                                else:
+                                    self.otherlines[3].setData([xc[0], xc[-1]], [-2.0, 2.0])
+                                    self.otherlines[3].setVisible(True)
                         except RuntimeError:
                             pass
 
@@ -1592,6 +1613,13 @@ class MainWindow(TemplateBaseClass):
         pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
         line = self.ui.plot.plot([-2.0, 2.0], [self.hline, self.hline], pen=pen, name="trigger thresh horiz")
         self.otherlines.append(line)
+
+        # risetime fit lines
+        for i in range(3):
+            pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DotLine)
+            line = self.ui.plot.plot([700.0, 700.0], [-2.0, 2.0], pen=pen, name="risetime fit line")
+            line.setVisible(False)
+            self.otherlines.append(line)
 
         # other stuff
         # https://pyqtgraph.readthedocs.io/en/latest/api_reference/graphicsItems/plotitem.html

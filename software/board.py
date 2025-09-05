@@ -178,11 +178,12 @@ def dooffset(usb, chan, val, scaling, doswap):
     spimode(usb, 0)
     return ret
 
-def fit_rise(x, top, left, leftplus, bot):  # a function for fitting to find risetime
-    val = bot + (x - left) * (top - bot) / leftplus
+def fit_rise(x, top, left, slope, bot):  # a function for fitting to find risetime
+    val = slope * (x - left) + bot # y=mx+b
     inbottom = (x <= left)
     val[inbottom] = bot
-    intop = (x >= (left + leftplus))
+    right = left + (top-bot)/slope
+    intop = ( x >= right )
     val[intop] = top
     return val
 
