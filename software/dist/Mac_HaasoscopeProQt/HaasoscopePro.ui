@@ -1945,11 +1945,12 @@
     <addaction name="actionTemperatures"/>
     <addaction name="actionMean"/>
     <addaction name="actionRMS"/>
-    <addaction name="actionRisetime"/>
     <addaction name="actionMaximum"/>
     <addaction name="actionMinimum"/>
     <addaction name="actionVpp"/>
     <addaction name="actionFreq"/>
+    <addaction name="actionRisetime"/>
+    <addaction name="actionRisetime_fit_lines"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
@@ -2099,6 +2100,17 @@
    </property>
    <property name="text">
     <string>Toggle trig stabilizer</string>
+   </property>
+  </action>
+  <action name="actionRisetime_fit_lines">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Risetime fit lines</string>
    </property>
   </action>
  </widget>
