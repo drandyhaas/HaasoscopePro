@@ -136,7 +136,7 @@ class MainWindow(TemplateBaseClass):
     plljustresetdir = [0] * num_board
     phasenbad = [[0] * 12] * num_board
     dooversample = [False] * num_board
-    doresamp = 0
+    doresamp = 4
     triggerautocalibration = [False] * num_board
     extraphasefortad = [0] * num_board
     doexttrigecho = [False] * num_board
@@ -1223,6 +1223,8 @@ class MainWindow(TemplateBaseClass):
             xc = thed[0][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
             #print("xc size start end", xc.size, xc[0], xc[-1], "and vline at", self.vline)
             yc = thed[1][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
+            fallingedge = self.ui.risingfalling_comboBox.currentIndex() == 1
+            if fallingedge: yc = -yc
             if xc.size>1:
                 distcorr = find_crossing_distance(yc, self.hline, self.vline, xc[0], xc[1] - xc[0])
                 if distcorr is not None and abs(distcorr) < 1.0:
