@@ -806,7 +806,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>40</y>
+          <y>60</y>
           <width>70</width>
           <height>17</height>
          </rect>
@@ -824,7 +824,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>60</y>
+          <y>40</y>
           <width>70</width>
           <height>17</height>
          </rect>
@@ -892,9 +892,9 @@
          <number>20</number>
         </property>
        </widget>
-       <widget class="QCheckBox" name="persistCheck">
+       <widget class="QCheckBox" name="wideCheck">
         <property name="enabled">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
         <property name="geometry">
          <rect>
@@ -912,7 +912,7 @@
          </font>
         </property>
         <property name="text">
-         <string>Persist</string>
+         <string>Wide</string>
         </property>
         <property name="checkable">
          <bool>true</bool>
@@ -1929,6 +1929,7 @@
     <addaction name="actionForce_split"/>
     <addaction name="actionForce_switch_clocks"/>
     <addaction name="actionToggle_PLL_controls"/>
+    <addaction name="actionToggle_trig_stabilizer"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -2087,6 +2088,17 @@
    </property>
    <property name="text">
     <string>Freq</string>
+   </property>
+  </action>
+  <action name="actionToggle_trig_stabilizer">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle trig stabilizer</string>
    </property>
   </action>
  </widget>
