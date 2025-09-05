@@ -144,6 +144,7 @@ class MainWindow(TemplateBaseClass):
     doeventcounter = False
     oldeventtime = -9999
     doeventtime = False
+    totdistcorr = [0]*num_board
     lvdstrigdelay = [0] * num_board
     lastlvdstrigdelay = [0] * num_board
     acdc = [False]*(num_board*num_chan_per_board)
@@ -852,6 +853,7 @@ class MainWindow(TemplateBaseClass):
 
         if hasattr(self,"hsprosock"):
             while self.hsprosock.issending: time.sleep(.001)
+        self.totdistcorr = [0]*self.num_board
         if self.dotwochannel:
             for c in range(self.num_chan_per_board * self.num_board):
                 self.xydata[c][0] = np.array([range(0, 2 * 10 * self.expect_samples)]) * (
@@ -1216,6 +1218,10 @@ class MainWindow(TemplateBaseClass):
 
         if self.ui.actionToggle_trig_stabilizer.isChecked():
             thed = self.xydata[board * self.num_chan_per_board + self.triggerchan[board]]
+            if abs(self.totdistcorr[board]) > 1.0:
+                self.xydata[board * self.num_chan_per_board][0] += self.totdistcorr[board]
+                if self.dotwochannel: self.xydata[board * self.num_chan_per_board + 1][0] += self.totdistcorr[board]
+                self.totdistcorr[board] = 0
             fitwidth = (self.max_x - self.min_x)
             xc = thed[0][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
             numsamp = 4 # number of samples to use
@@ -1230,7 +1236,8 @@ class MainWindow(TemplateBaseClass):
                 if distcorr is not None and abs(distcorr) < 1.0:
                     self.xydata[board * self.num_chan_per_board][0] -= distcorr
                     if self.dotwochannel: self.xydata[board * self.num_chan_per_board + 1][0] -= distcorr
-                #print("distcorr", distcorr)
+                    self.totdistcorr[board] += distcorr
+                #print("totdistcorr distcorr", self.totdistcorr[board], distcorr)
 
         self.adjustclocks(board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr)
         if board == self.activeboard:
