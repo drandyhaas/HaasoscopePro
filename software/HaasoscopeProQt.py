@@ -1261,7 +1261,7 @@ class MainWindow(TemplateBaseClass):
                 sampling_rate = self.samplerate*1e9/self.downsamplefactor # Hz
                 if self.dotwochannel: sampling_rate /= 2
                 found_freq = find_fundamental_frequency_scipy(self.xydata[self.activexychannel][1], sampling_rate)
-                thestr += "Freq: " + str(format_freq(found_freq))
+                thestr += "Freq: " + str(format_freq(found_freq)) + "\n"
             if self.ui.actionRisetime.isChecked():
                 if not self.dointerleaved[self.activeboard]:
                     targety = self.xydata[self.activexychannel]
