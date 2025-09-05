@@ -1214,6 +1214,22 @@ class MainWindow(TemplateBaseClass):
                 if 0 < nsamp <= 40:
                     self.xydata[board * self.num_chan_per_board][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
 
+        if self.ui.actionToggle_trig_stabilizer.isChecked():
+            thed = self.xydata[board * self.num_chan_per_board + self.triggerchan[board]]
+            fitwidth = (self.max_x - self.min_x)
+            xc = thed[0][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
+            numsamp = 4 # number of samples to use
+            fitwidth *= numsamp / max(2,xc.size)
+            xc = thed[0][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
+            #print("xc size start end", xc.size, xc[0], xc[-1], "and vline at", self.vline)
+            yc = thed[1][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
+            if xc.size>1:
+                distcorr = find_crossing_distance(yc, self.hline, self.vline, xc[0], xc[1] - xc[0])
+                if distcorr is not None and abs(distcorr) < 1.0:
+                    self.xydata[board * self.num_chan_per_board][0] -= distcorr
+                    if self.dotwochannel: self.xydata[board * self.num_chan_per_board + 1][0] -= distcorr
+                #print("distcorr", distcorr)
+
         self.adjustclocks(board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr)
         if board == self.activeboard:
             self.nbadclkA = nbadclkA
@@ -1255,7 +1271,7 @@ class MainWindow(TemplateBaseClass):
                 fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
                 xc = targety[0][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]  # only fit in range
                 yc = targety[1][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]
-                if xc.size > 10: # require at least something to fit, otherwise we'll through an area
+                if xc.size > 10: # require at least something to fit, otherwise we'll throw an error
                     with warnings.catch_warnings():
                         try:
                             warnings.simplefilter("ignore")

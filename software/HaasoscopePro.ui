@@ -1929,6 +1929,7 @@
     <addaction name="actionForce_split"/>
     <addaction name="actionForce_switch_clocks"/>
     <addaction name="actionToggle_PLL_controls"/>
+    <addaction name="actionToggle_trig_stabilizer"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -2087,6 +2088,14 @@
    </property>
    <property name="text">
     <string>Freq</string>
+   </property>
+  </action>
+  <action name="actionToggle_trig_stabilizer">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Toggle trig stabilizer</string>
    </property>
   </action>
  </widget>
