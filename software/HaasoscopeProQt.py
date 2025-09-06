@@ -19,16 +19,12 @@ import matplotlib.cm as cm
 # Look for special paths when double-clicking on the pre-made exe, so we can find the .ui files
 path_string = sys.path[0]
 pwd = path_string # it will be the current direct directory already if we are running from the command line
-target = "Mac_HaasoscopeProQt"
-index = path_string.find(target)
-if index != -1: # The substring was found
-    index_with_target = index + len(target)
-    pwd = path_string[:index_with_target]
-target = "Windows_HaasoscopeProQt"
-index = path_string.find(target)
-if index != -1:  # The substring was found
-    index_with_target = index + len(target)
-    pwd = path_string[:index_with_target]
+target = ["Mac_HaasoscopeProQt", "Windows_HaasoscopeProQt"]
+for tar in target:
+    index = path_string.find(tar)
+    if index != -1: # The substring was found
+        index_with_target = index + len(tar)
+        pwd = path_string[:index_with_target]
 print("Current dir is "+pwd)
 
 usbs = connectdevices(100) # max of 100 devices
