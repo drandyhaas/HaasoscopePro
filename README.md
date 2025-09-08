@@ -18,6 +18,12 @@
 
 See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiKQQmUUNoTf2oo_m5qS00k) !
 
+### Versions
+
+- v27 is the firmware that shipped with the first round of units, found in the "main" branch
+- v28 is the latest firmware, and software development is also happening in the "v28fixtrigger" branch
+- to use a different branch, do <code>git pull && git checkout "branchname"</code> or select the branch name in the drop down box on github and then download the zip file of the code, then run the new software, update the firmware on your board from that new software, and power cycle the board
+
 ### Quick start (Windows/Mac)
 
 1) Download code and unzip it: https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/main.zip
