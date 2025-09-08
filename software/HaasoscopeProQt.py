@@ -1297,7 +1297,11 @@ class MainWindow(TemplateBaseClass):
                 fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
                 xc = targety[0][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]  # only fit in range
                 yc = targety[1][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]
-                p0 = [max(targety[1]), xc[xc.size//3], 1.0, min(targety[1])] #initial guess
+                fallingedge = self.ui.risingfalling_comboBox.currentIndex() == 1
+                if fallingedge:
+                    p0 = [min(targety[1]), xc[xc.size//3], -0.5, max(targety[1])] #initial guess
+                else:
+                    p0 = [max(targety[1]), xc[xc.size//3], 0.5, min(targety[1])] #initial guess
                 if xc.size < 10: # require at least something to fit, otherwise we'll throw an error
                     thestr += "Risetime: fit range too small\n"
                 else:
