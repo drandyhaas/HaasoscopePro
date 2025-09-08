@@ -9,6 +9,7 @@ from PyQt5.QtGui import QPalette, QColor, QIcon
 from PyQt5.QtWidgets import QApplication, QMessageBox, QWidget, QPushButton
 from scipy.optimize import curve_fit
 from scipy.signal import resample
+from scipy.interpolate import interp1d
 import struct
 from usbs import *
 from board import *
@@ -943,8 +944,14 @@ class MainWindow(TemplateBaseClass):
                 if li%4 == 0:
                     self.xydatainterleaved[int(li/2)][1][0::2] = self.xydata[li][1]
                     self.xydatainterleaved[int(li/2)][1][1::2] = self.xydata[li+self.num_chan_per_board][1]
+                    if self.ui.actionToggle_trig_stabilizer.isChecked():
+                        self.xydatainterleaved[int(li/2)][0][0::2] = self.xydata[li][0]
+                        self.xydatainterleaved[int(li/2)][0][1::2] = self.xydata[li+self.num_chan_per_board][0] + 0.15625
                     if self.doresamp:
-                        ydatanew, xdatanew = resample(self.xydatainterleaved[int(li/2)][1], len(self.xydatainterleaved[int(li/2)][0]) * self.doresamp, t=self.xydatainterleaved[int(li/2)][0])
+                        xdatanew = np.linspace(self.xydatainterleaved[int(li/2)][0].min(), self.xydatainterleaved[int(li/2)][0].max(), len(self.xydatainterleaved[int(li/2)][0])*1) # first put them on a regular x spacing
+                        f_cubic = interp1d(self.xydatainterleaved[int(li/2)][0], self.xydatainterleaved[int(li/2)][1], kind='linear')
+                        ydatanew = f_cubic(xdatanew)
+                        ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * self.doresamp, t=xdatanew) # then resample
                         self.lines[li].setData(xdatanew,ydatanew)
                     else:
                         self.lines[li].setData(self.xydatainterleaved[int(li/2)][0],self.xydatainterleaved[int(li/2)][1])
