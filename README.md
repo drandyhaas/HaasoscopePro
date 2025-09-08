@@ -26,7 +26,7 @@ See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiK
 
 ### Quick start (Windows/Mac)
 
-1) Download code and unzip it: https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/main.zip
+1) [Download code](https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/main.zip) and unzip it (or another zip file version like [v28fixtrigger](https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/v28fixtrigger.zip))
 2) Rename directory HaasoscopePro-main to HaasoscopePro (for consistency with git below)
 3) Install [FTDI D2xx driver](https://ftdichip.com/drivers/d2xx-drivers/) 
 - for Windows: install by running the setup exe at <code>HaasoscopePro/software/ftdi_setup.exe</code>
