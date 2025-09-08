@@ -86,7 +86,7 @@ class MainWindow(TemplateBaseClass):
     activeboard = 0
     activexychannel = 0
     tad = [0] * num_board
-    toff = 36
+    toff = 50
     triggershift = 2 # amount to shift trigger earlier, so we have time to shift later on for toff etc.
     themuxoutV = True
     phasecs = []
@@ -156,6 +156,7 @@ class MainWindow(TemplateBaseClass):
     doeventcounter = False
     oldeventtime = -9999
     doeventtime = False
+    distcorr = [0]*num_board
     totdistcorr = [0]*num_board
     lvdstrigdelay = [0] * num_board
     lastlvdstrigdelay = [0] * num_board
@@ -424,18 +425,20 @@ class MainWindow(TemplateBaseClass):
         #     spicommand(usbs[self.activeboard], "TAD", 0x02, 0xB7, 1, False, quiet=False)
         self.tad[self.activeboard] = self.ui.tadBox.value()
         spicommand(usbs[self.activeboard], "TAD", 0x02, 0xB6, abs(self.tad[self.activeboard]), False, quiet=True)
-        if self.tad[self.activeboard]>135:
-            if not self.extraphasefortad[self.activeboard]:
-                self.dophase(self.activeboard, plloutnum=0, updown=1, pllnum=0) # adjust up one, to account for phase offset of TAD
-                self.dophase(self.activeboard, plloutnum=1, updown=1, pllnum=0)
-                self.extraphasefortad[self.activeboard]+=1
-                print("extra phase for TAD>135 now",self.extraphasefortad[self.activeboard])
-        else:
-            if self.extraphasefortad[self.activeboard]:
-                self.dophase(self.activeboard, plloutnum=0, updown=0, pllnum=0) # adjust down one, to not account for phase offset of TAD
-                self.dophase(self.activeboard, plloutnum=1, updown=0, pllnum=0)
-                self.extraphasefortad[self.activeboard]-=1
-                print("extra phase for TAD>135 now",self.extraphasefortad[self.activeboard])
+        adjustphaseforTAD = False
+        if adjustphaseforTAD:
+            if self.tad[self.activeboard]>135:
+                if not self.extraphasefortad[self.activeboard]:
+                    self.dophase(self.activeboard, plloutnum=0, updown=1, pllnum=0) # adjust up one, to account for phase offset of TAD
+                    self.dophase(self.activeboard, plloutnum=1, updown=1, pllnum=0)
+                    self.extraphasefortad[self.activeboard]+=1
+                    print("extra phase for TAD>135 now",self.extraphasefortad[self.activeboard])
+            else:
+                if self.extraphasefortad[self.activeboard]:
+                    self.dophase(self.activeboard, plloutnum=0, updown=0, pllnum=0) # adjust down one, to not account for phase offset of TAD
+                    self.dophase(self.activeboard, plloutnum=1, updown=0, pllnum=0)
+                    self.extraphasefortad[self.activeboard]-=1
+                    print("extra phase for TAD>135 now",self.extraphasefortad[self.activeboard])
 
     def setToff(self):
         self.toff = self.ui.ToffBox.value()
@@ -1009,14 +1012,16 @@ class MainWindow(TemplateBaseClass):
                         if debugread: print("noext board", board, "not ready")
                 if not any(readyevent):
                     if debugread: print("none ready")
-                for board in range(self.num_board):
-                    if not readyevent[board]:
-                        if debugread: print("board",board,"data not ready?")
-                        continue
-                    data = self.getdata(usbs[board])
-                    rx_len = rx_len + len(data)
-                    if self.dofft and board==self.activeboard: self.plot_fft()
-                    self.drawchannels(data, board)
+                for nodoext in [True, False]:
+                    if nodoext: continue # first do just the non-ext-trigger boards, to find the right trig stabilizer offsets
+                    for board in range(self.num_board):
+                        if not readyevent[board]:
+                            if debugread: print("board",board,"data not ready?")
+                            continue
+                        data = self.getdata(usbs[board])
+                        rx_len = rx_len + len(data)
+                        self.drawchannels(data, board)
+                        if self.dofft and board==self.activeboard: self.plot_fft()
                 if self.getone and rx_len > 0:
                     self.dostartstop()
                     self.drawtext()
@@ -1233,27 +1238,38 @@ class MainWindow(TemplateBaseClass):
                     self.xydata[board * self.num_chan_per_board][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
 
         if self.ui.actionToggle_trig_stabilizer.isChecked():
-            thed = self.xydata[board * self.num_chan_per_board + self.triggerchan[board]]
             if abs(self.totdistcorr[board]) > 1.0:
                 self.xydata[board * self.num_chan_per_board][0] += self.totdistcorr[board]
                 if self.dotwochannel: self.xydata[board * self.num_chan_per_board + 1][0] += self.totdistcorr[board]
                 self.totdistcorr[board] = 0
-            fitwidth = (self.max_x - self.min_x)
-            xc = thed[0][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
-            numsamp = 4 # number of samples to use
-            fitwidth *= numsamp / max(2,xc.size)
-            xc = thed[0][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
-            #print("xc size start end", xc.size, xc[0], xc[-1], "and vline at", self.vline)
-            yc = thed[1][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
-            fallingedge = self.ui.risingfalling_comboBox.currentIndex() == 1
-            if fallingedge: yc = -yc
-            if xc.size>1:
-                distcorr = find_crossing_distance(yc, self.hline, self.vline, xc[0], xc[1] - xc[0])
-                if distcorr is not None and abs(distcorr) < 1.0:
-                    self.xydata[board * self.num_chan_per_board][0] -= distcorr
-                    if self.dotwochannel: self.xydata[board * self.num_chan_per_board + 1][0] -= distcorr
-                    self.totdistcorr[board] += distcorr
-                #print("totdistcorr distcorr", self.totdistcorr[board], distcorr)
+            distcorrtemp=None
+            if self.doexttrig[board]: # take from the best non exttrig board
+                if self.dooversample[board] and board%2==1: distcorrtemp = self.distcorr[board-1]
+                elif not self.doexttrig[self.activeboard]: distcorrtemp = self.distcorr[self.activeboard]
+                else:
+                    for bn in range(self.num_board):
+                        if not self.doexttrig[board]:
+                            distcorrtemp = self.distcorr[bn]
+                            continue
+            else: # find distcorr for this board which is triggering
+                thed = self.xydata[board * self.num_chan_per_board + self.triggerchan[board]]
+                fitwidth = (self.max_x - self.min_x)
+                xc = thed[0][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
+                numsamp = 4 # number of samples to use
+                fitwidth *= numsamp / max(2,xc.size)
+                xc = thed[0][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
+                #print("xc size start end", xc.size, xc[0], xc[-1], "and vline at", self.vline)
+                yc = thed[1][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
+                fallingedge = self.ui.risingfalling_comboBox.currentIndex() == 1
+                if fallingedge: yc = -yc
+                if xc.size>1:
+                    distcorrtemp = find_crossing_distance(yc, self.hline, self.vline, xc[0], xc[1] - xc[0])
+            if distcorrtemp is not None and abs(distcorrtemp) < 1.0:
+                self.distcorr[board]=distcorrtemp
+                self.xydata[board * self.num_chan_per_board][0] -= self.distcorr[board]
+                if self.dotwochannel: self.xydata[board * self.num_chan_per_board + 1][0] -= self.distcorr[board]
+                self.totdistcorr[board] += self.distcorr[board]
+            #print("board totdistcorr distcorrtemp distcorr", board, self.totdistcorr[board], distcorrtemp, self.distcorr[board])
 
         self.adjustclocks(board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr)
         if board == self.activeboard:
