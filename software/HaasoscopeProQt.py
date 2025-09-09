@@ -253,7 +253,7 @@ class MainWindow(TemplateBaseClass):
         QMessageBox.about(
             self,  # Parent widget (optional, but good practice)
             "Haasoscope Pro Qt, by DrAndyHaas",  # Title of the About dialog
-            "A PyQt5 application for the Haasoscope Pro\n\nVersion 28.03"  # Text content
+            "A PyQt5 application for the Haasoscope Pro\n\nVersion 28.04"  # Text content
         )
 
     def recordtofile(self):
@@ -1322,25 +1322,33 @@ class MainWindow(TemplateBaseClass):
                 yc = targety[1][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]
                 fallingedge = self.ui.risingfalling_comboBox.currentIndex() == 1
                 if fallingedge:
-                    p0 = [min(targety[1]), xc[xc.size//3], -0.5, max(targety[1])] #initial guess
+                    p0 = [min(targety[1]), xc[xc.size//2], -2, max(targety[1])] #initial guess
                 else:
-                    p0 = [max(targety[1]), xc[xc.size//3], 0.5, min(targety[1])] #initial guess
+                    p0 = [max(targety[1]), xc[xc.size//2], 2, min(targety[1])] #initial guess
                 if xc.size < 10: # require at least something to fit, otherwise we'll throw an error
                     thestr += "Risetime: fit range too small\n"
                 else:
                     with warnings.catch_warnings():
                         try:
                             warnings.simplefilter("ignore")
+                            p0[1] -= (p0[0]-p0[3])/p0[2]/2 # correct the left edge inital guess
                             popt, pcov = curve_fit(fit_rise, xc, yc, p0)
                             perr = np.sqrt(np.diag(pcov))
                             #print(popt)
                             top = popt[0]
                             left = popt[1]
-                            bot = popt[3]
                             slope = popt[2]
+                            bot = popt[3]
+                            drawinitialguess=False
+                            if drawinitialguess:
+                                top = p0[0]  # popt[0]
+                                left = p0[1]  # popt[1]
+                                slope = p0[2]  # popt[2]
+                                bot = p0[3]  # popt[3]
                             right = left+(top-bot)/slope
                             #print("right",right)
                             risetime = 0.6 * (top-bot)/slope # from 20 - 80%
+                            if fallingedge: risetime*=-1
                             risetimeerr = 0.6 * 4 * (top-bot) * perr[2] / (slope*slope) # 4 is fudge factor, since the error is often underestimated
                             thestr += "Risetime: " + str(risetime.round(2)) + "+-" + str(risetimeerr.round(2)) + " " + self.units + str("\n")
                             if self.ui.actionRisetime_fit_lines.isChecked():
