@@ -62,7 +62,7 @@ See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiK
 
 - [adc board](adc%20board/): Design files and documentation for the main board, based on Eagle 9.6.2
 - [adc board/Kicad](adc%20board/Kicad): An import of the main board design files into KiCad 8
-- [adc board firmware](adc%20board%20firmware/): Quartus lite project for the Altera Cyclone IV FPGA firmware (see [README](adc%20board%20firmware/README.md) in there for firmware upload instructions)
+- [adc board firmware](adc%20board%20firmware/): Quartus lite project for the Altera Cyclone IV FPGA firmware (see [README](adc%20board%20firmware/README.md) in there for more info)
 - [case](case/): Front and back PCB panels for the aluminum case
 - [software](software/): Python files for the oscilloscope program
 - [sub boards](sub%20boards/): Eagle design files and documentation for smaller test boards that were used during development 
