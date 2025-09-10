@@ -48,6 +48,7 @@ class FFTWindow(FFTTemplateBaseClass):
         self.ui = FFTWindowTemplate()
         self.ui.setupUi(self)
         self.ui.actionTake_screenshot.triggered.connect(self.take_screenshot)
+        self.ui.actionLog_scale.triggered.connect(self.log_scale)
         self.ui.plot.setLabel('bottom', 'Frequency (MHz)')
         self.ui.plot.setLabel('left', 'Amplitude')
         self.ui.plot.showGrid(x=True, y=True, alpha=1)
@@ -58,6 +59,9 @@ class FFTWindow(FFTTemplateBaseClass):
         self.fftline = self.ui.plot.plot(pen=self.fftpen, name="fft_plot")
         self.fftlastTime = time.time() - 10
         self.fftyrange = 1
+        self.fftyrangelow = 1e-10
+        self.dolog = False
+        self.newplot = True
 
     def take_screenshot(self):
         # Capture the entire FFT window
@@ -66,6 +70,13 @@ class FFTWindow(FFTTemplateBaseClass):
         filename = f"HaasoscopePro_FFT_{timestamp}.png"
         pixmap.save(filename)
         print(f"Screenshot saved as {filename}")
+
+    def log_scale(self):
+        self.dolog = self.ui.actionLog_scale.isChecked()
+        self.ui.plot.setLogMode(x=False, y=self.dolog)
+        self.newplot = True
+        if self.dolog: self.ui.plot.setLabel('left', 'log10 Amplitude')
+        else: self.ui.plot.setLabel('left', 'Amplitude')
 
 # Define main window class from template
 WindowTemplate, TemplateBaseClass = loadUiType(pwd+"/HaasoscopePro.ui")
@@ -975,10 +986,13 @@ class MainWindow(TemplateBaseClass):
             self.fftui.ui.plot.setRange(xRange=(0.0, self.fftui.fftax_xlim))
             now = time.time()
             dt = now - self.fftui.fftlastTime
-            if dt>3.0 or self.fftui.fftyrange<self.fftui.fftfreqplot_ydatamax*1.1:
+            if dt>3.0 or self.fftui.fftyrange<self.fftui.fftfreqplot_ydatamax or self.fftui.fftyrangelow>self.fftui.fftfreqplot_ydatamin*100 or self.fftui.newplot:
+                self.fftui.newplot = False
                 self.fftui.fftlastTime = now
-                self.fftui.ui.plot.setRange(yRange=(0.0, self.fftui.fftfreqplot_ydatamax*1.1))
-                self.fftui.fftyrange = self.fftui.fftfreqplot_ydatamax * 1.1
+                self.fftui.fftyrange = self.fftui.fftfreqplot_ydatamax * 1.2
+                self.fftui.fftyrangelow = self.fftui.fftfreqplot_ydatamin / 1.0
+                if self.fftui.dolog: self.fftui.ui.plot.setYRange(log(self.fftui.fftyrangelow,10), log(self.fftui.fftyrange,10))
+                else: self.fftui.ui.plot.setYRange(0, self.fftui.fftyrange)
             if not self.fftui.isVisible(): # closed the fft window
                 self.dofft = False
                 self.ui.fftCheck.setChecked(QtCore.Qt.Unchecked)
@@ -1537,7 +1551,7 @@ class MainWindow(TemplateBaseClass):
         # t = np.arange(0,1,1.0/n) * (n*uspersample) # time vector in us
         frq = (k / uspersample)[list(range(int(n / 2)))] / n  # one side frequency range up to Nyquist
         Y = np.fft.fft(y)[list(range(int(n / 2)))] / n  # fft computing and normalization
-        Y[0] = 0  # to suppress DC
+        Y[0] = 1e-3  # to suppress DC
         if np.max(frq) < .001:
             self.fftui.fftfreqplot_xdata = frq * 1000000.0
             self.fftui.fftax_xlabel = 'Frequency (Hz)'
@@ -1550,8 +1564,9 @@ class MainWindow(TemplateBaseClass):
             self.fftui.fftfreqplot_xdata = frq
             self.fftui.fftax_xlabel = 'Frequency (MHz)'
             self.fftui.fftax_xlim = frq[int(n / 2) - 1]
-        self.fftui.fftfreqplot_ydata = abs(Y)
-        self.fftui.fftfreqplot_ydatamax = np.max(abs(Y))
+        self.fftui.fftfreqplot_ydata = abs(Y)+1e-10
+        self.fftui.fftfreqplot_ydatamax = np.max(self.fftui.fftfreqplot_ydata)
+        self.fftui.fftfreqplot_ydatamin = np.min(self.fftui.fftfreqplot_ydata)
 
     def fastadclineclick(self, curve):
         for li in range(self.nlines):
