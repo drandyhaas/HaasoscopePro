@@ -1418,7 +1418,8 @@ class MainWindow(TemplateBaseClass):
             print("verified!")
             print("took", round(time.time() - starttime, 3), "seconds")
 
-            if self.firmwareversion>=29:
+            ver = version(usbs[self.activeboard], True)
+            if ver>=29:
                 # now reset the board and exit the softare
                 reload_firmware(usbs[self.activeboard])
                 self.closeEvent()
