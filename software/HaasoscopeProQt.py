@@ -14,6 +14,7 @@ import struct
 from usbs import *
 from board import *
 from SCPIsocket import hspro_socket
+from datetime import datetime
 import threading
 import matplotlib.cm as cm
 
@@ -222,6 +223,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.twochanCheck.clicked.connect(self.twochan)
         self.ui.ToffBox.valueChanged.connect(self.setToff)
         self.ui.fftCheck.clicked.connect(self.fft)
+        self.ui.actionTake_screenshot.triggered.connect(self.take_screenshot)
         self.ui.actionDo_autocalibration.triggered.connect(self.autocalibration)
         self.ui.actionUpdate_firmware.triggered.connect(self.update_firmware)
         self.ui.actionForce_split.triggered.connect( self.force_split )
@@ -1712,6 +1714,14 @@ class MainWindow(TemplateBaseClass):
         if self.dorecordtofile: self.outf.close()
         if self.fftui != 0: self.fftui.close()
         for usb in usbs: cleanup(usb)
+
+    def take_screenshot(self):
+        # Capture the entire window
+        pixmap = self.grab()
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"HaasoscopePro_{timestamp}.png"
+        pixmap.save(filename)
+        print(f"Screenshot saved as {filename}")
 
 if __name__ == '__main__': # calls setup_connection for each board, then init
     print('Argument List:', str(sys.argv))
