@@ -2181,9 +2181,124 @@ https://fpgasoftware.intel.com/eula.
 	)
 )
 (symbol
-	(rect 656 1048 1024 1864)
+	(rect 2264 1440 2568 1784)
+	(text "remoteupdate" (rect 113 -1 206 15)(font "Arial" (font_size 10)))
+	(text "inst11" (rect 8 328 36 345)(font "Intel Clear" ))
+	(port
+		(pt 0 72)
+		(input)
+		(text "clock" (rect 0 0 29 14)(font "Arial" (font_size 8)))
+		(text "clock" (rect 4 61 33 75)(font "Arial" (font_size 8)))
+		(line (pt 0 72)(pt 96 72))
+	)
+	(port
+		(pt 0 112)
+		(input)
+		(text "param[2..0]" (rect 0 0 63 14)(font "Arial" (font_size 8)))
+		(text "param[2..0]" (rect 4 101 67 115)(font "Arial" (font_size 8)))
+		(line (pt 0 112)(pt 96 112)(line_width 3))
+	)
+	(port
+		(pt 0 152)
+		(input)
+		(text "read_param" (rect 0 0 68 14)(font "Arial" (font_size 8)))
+		(text "read_param" (rect 4 141 72 155)(font "Arial" (font_size 8)))
+		(line (pt 0 152)(pt 96 152))
+	)
+	(port
+		(pt 0 192)
+		(input)
+		(text "read_source[1..0]" (rect 0 0 101 14)(font "Arial" (font_size 8)))
+		(text "read_source[1..0]" (rect 4 181 105 195)(font "Arial" (font_size 8)))
+		(line (pt 0 192)(pt 96 192)(line_width 3))
+	)
+	(port
+		(pt 0 232)
+		(input)
+		(text "reconfig" (rect 0 0 47 14)(font "Arial" (font_size 8)))
+		(text "reconfig" (rect 4 221 51 235)(font "Arial" (font_size 8)))
+		(line (pt 0 232)(pt 96 232))
+	)
+	(port
+		(pt 0 272)
+		(input)
+		(text "reset" (rect 0 0 29 14)(font "Arial" (font_size 8)))
+		(text "reset" (rect 4 261 33 275)(font "Arial" (font_size 8)))
+		(line (pt 0 272)(pt 96 272))
+	)
+	(port
+		(pt 0 312)
+		(input)
+		(text "reset_timer" (rect 0 0 63 14)(font "Arial" (font_size 8)))
+		(text "reset_timer" (rect 4 301 67 315)(font "Arial" (font_size 8)))
+		(line (pt 0 312)(pt 96 312))
+	)
+	(port
+		(pt 304 72)
+		(output)
+		(text "busy" (rect 0 0 28 14)(font "Arial" (font_size 8)))
+		(text "busy" (rect 278 61 306 75)(font "Arial" (font_size 8)))
+		(line (pt 304 72)(pt 208 72))
+	)
+	(port
+		(pt 304 112)
+		(output)
+		(text "data_out[28..0]" (rect 0 0 84 14)(font "Arial" (font_size 8)))
+		(text "data_out[28..0]" (rect 229 101 313 115)(font "Arial" (font_size 8)))
+		(line (pt 304 112)(pt 208 112)(line_width 3))
+	)
+	(drawing
+		(text "busy" (rect 209 43 239 58)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "busy" (rect 184 67 208 79)(font "Arial" (color 0 0 0)))
+		(text "clock" (rect 68 43 101 58)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "clk" (rect 101 67 115 79)(font "Arial" (color 0 0 0)))
+		(text "data_out" (rect 209 83 265 98)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "data_out" (rect 168 107 210 119)(font "Arial" (color 0 0 0)))
+		(text "param" (rect 60 83 102 98)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "param" (rect 101 107 131 119)(font "Arial" (color 0 0 0)))
+		(text "read_param" (rect 26 123 106 138)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "read_param" (rect 101 147 158 159)(font "Arial" (color 0 0 0)))
+		(text "read_source" (rect 24 163 106 178)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "read_source" (rect 101 187 161 199)(font "Arial" (color 0 0 0)))
+		(text "reconfig" (rect 50 203 101 218)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "reconfig" (rect 101 227 141 239)(font "Arial" (color 0 0 0)))
+		(text "reset" (rect 67 243 100 258)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "reset" (rect 101 267 125 279)(font "Arial" (color 0 0 0)))
+		(text "reset_timer" (rect 29 283 103 298)(font "Arial" (color 128 0 0)(font_size 9)))
+		(text "reset_timer" (rect 101 307 156 319)(font "Arial" (color 0 0 0)))
+		(text " remoteupdate " (rect 243 328 317 340)(font "Arial" ))
+		(line (pt 96 32)(pt 208 32))
+		(line (pt 208 32)(pt 208 328))
+		(line (pt 96 328)(pt 208 328))
+		(line (pt 96 32)(pt 96 328))
+		(line (pt 207 52)(pt 207 76))
+		(line (pt 206 52)(pt 206 76))
+		(line (pt 97 52)(pt 97 76))
+		(line (pt 98 52)(pt 98 76))
+		(line (pt 207 92)(pt 207 116))
+		(line (pt 206 92)(pt 206 116))
+		(line (pt 97 92)(pt 97 116))
+		(line (pt 98 92)(pt 98 116))
+		(line (pt 97 132)(pt 97 156))
+		(line (pt 98 132)(pt 98 156))
+		(line (pt 97 172)(pt 97 196))
+		(line (pt 98 172)(pt 98 196))
+		(line (pt 97 212)(pt 97 236))
+		(line (pt 98 212)(pt 98 236))
+		(line (pt 97 252)(pt 97 276))
+		(line (pt 98 252)(pt 98 276))
+		(line (pt 97 292)(pt 97 316))
+		(line (pt 98 292)(pt 98 316))
+		(line (pt 0 0)(pt 304 0))
+		(line (pt 304 0)(pt 304 344))
+		(line (pt 0 344)(pt 304 344))
+		(line (pt 0 0)(pt 0 344))
+	)
+)
+(symbol
+	(rect 656 1048 1024 1896)
 	(text "command_processor" (rect 5 0 107 12)(font "Arial" ))
-	(text "inst1" (rect 8 800 31 812)(font "Arial" ))
+	(text "inst1" (rect 8 832 31 844)(font "Arial" ))
 	(port
 		(pt 0 32)
 		(input)
@@ -2730,8 +2845,15 @@ https://fpgasoftware.intel.com/eula.
 		(text "firstlast[1..0]" (rect 294 779 347 791)(font "Arial" ))
 		(line (pt 368 784)(pt 352 784)(line_width 3))
 	)
+	(port
+		(pt 368 800)
+		(output)
+		(text "reloadflash" (rect 0 0 54 12)(font "Arial" ))
+		(text "reloadflash" (rect 302 795 347 807)(font "Arial" ))
+		(line (pt 368 800)(pt 352 800))
+	)
 	(drawing
-		(rectangle (rect 16 16 352 800))
+		(rectangle (rect 16 16 352 832))
 	)
 )
 (connector
@@ -3011,177 +3133,6 @@ https://fpgasoftware.intel.com/eula.
 	(bus)
 )
 (connector
-	(pt 1184 1816)
-	(pt 1184 1904)
-	(bus)
-)
-(connector
-	(pt 1224 1784)
-	(pt 1224 1936)
-	(bus)
-)
-(connector
-	(pt 1360 1656)
-	(pt 1360 2064)
-)
-(connector
-	(pt 1376 1640)
-	(pt 1376 2080)
-	(bus)
-)
-(connector
-	(pt 1200 1920)
-	(pt -856 1920)
-)
-(connector
-	(pt 1200 1800)
-	(pt 1200 1920)
-)
-(connector
-	(pt 1224 1936)
-	(pt -872 1936)
-	(bus)
-)
-(connector
-	(pt 1248 1952)
-	(pt -888 1952)
-	(bus)
-)
-(connector
-	(pt -1000 2064)
-	(pt -1000 1640)
-)
-(connector
-	(pt 1360 2064)
-	(pt -1000 2064)
-)
-(connector
-	(pt 1392 1624)
-	(pt 1392 2096)
-	(bus)
-)
-(connector
-	(pt 1408 1608)
-	(pt 1408 2112)
-	(bus)
-)
-(connector
-	(pt 1424 1592)
-	(pt 1424 2128)
-	(bus)
-)
-(connector
-	(pt -1016 1624)
-	(pt -1016 2080)
-	(bus)
-)
-(connector
-	(pt 1376 2080)
-	(pt -1016 2080)
-	(bus)
-)
-(connector
-	(pt 1392 2096)
-	(pt -1032 2096)
-	(bus)
-)
-(connector
-	(pt -1032 1608)
-	(pt -1032 2096)
-	(bus)
-)
-(connector
-	(pt -1048 1592)
-	(pt -1048 2112)
-	(bus)
-)
-(connector
-	(pt 1408 2112)
-	(pt -1048 2112)
-	(bus)
-)
-(connector
-	(pt 1424 2128)
-	(pt -1064 2128)
-	(bus)
-)
-(connector
-	(pt -1064 1576)
-	(pt -1064 2128)
-	(bus)
-)
-(connector
-	(pt 1248 1768)
-	(pt 1248 1952)
-	(bus)
-)
-(connector
-	(pt 1280 1736)
-	(pt 1280 1984)
-)
-(connector
-	(pt 1280 1984)
-	(pt -920 1984)
-)
-(connector
-	(pt -920 1720)
-	(pt -920 1984)
-)
-(connector
-	(pt 1296 1720)
-	(pt 1296 2000)
-)
-(connector
-	(pt -936 1704)
-	(pt -936 2000)
-)
-(connector
-	(pt 1296 2000)
-	(pt -936 2000)
-)
-(connector
-	(pt 1312 1704)
-	(pt 1312 2016)
-	(bus)
-)
-(connector
-	(pt 1312 2016)
-	(pt -952 2016)
-	(bus)
-)
-(connector
-	(pt -952 1688)
-	(pt -952 2016)
-	(bus)
-)
-(connector
-	(pt 1328 1688)
-	(pt 1328 2032)
-	(bus)
-)
-(connector
-	(pt -968 1672)
-	(pt -968 2032)
-	(bus)
-)
-(connector
-	(pt 1328 2032)
-	(pt -968 2032)
-	(bus)
-)
-(connector
-	(pt 1344 1672)
-	(pt 1344 2048)
-)
-(connector
-	(pt 1344 2048)
-	(pt -984 2048)
-)
-(connector
-	(pt -984 1656)
-	(pt -984 2048)
-)
-(connector
 	(pt -1064 1576)
 	(pt -720 1576)
 	(bus)
@@ -3368,37 +3319,13 @@ https://fpgasoftware.intel.com/eula.
 	(pt -856 1296)
 )
 (connector
-	(pt -856 1296)
-	(pt -856 1920)
-)
-(connector
 	(pt -784 1280)
 	(pt -872 1280)
 	(bus)
 )
 (connector
-	(pt -872 1280)
-	(pt -872 1768)
-	(bus)
-)
-(connector
-	(pt -872 1768)
-	(pt -872 1936)
-	(bus)
-)
-(connector
 	(pt -784 1264)
 	(pt -888 1264)
-	(bus)
-)
-(connector
-	(pt -888 1264)
-	(pt -888 1752)
-	(bus)
-)
-(connector
-	(pt -888 1752)
-	(pt -888 1952)
 	(bus)
 )
 (connector
@@ -3586,11 +3513,6 @@ https://fpgasoftware.intel.com/eula.
 (connector
 	(pt -768 568)
 	(pt -768 672)
-	(color 0 170 0)
-)
-(connector
-	(pt 1024 1416)
-	(pt 1704 1416)
 	(color 0 170 0)
 )
 (connector
@@ -4071,11 +3993,6 @@ https://fpgasoftware.intel.com/eula.
 	(color 255 0 255)
 )
 (connector
-	(pt 1184 1904)
-	(pt -840 1904)
-	(bus)
-)
-(connector
 	(pt -784 1312)
 	(pt -840 1312)
 	(bus)
@@ -4083,16 +4000,6 @@ https://fpgasoftware.intel.com/eula.
 (connector
 	(pt -840 1784)
 	(pt -720 1784)
-	(bus)
-)
-(connector
-	(pt -840 1312)
-	(pt -840 1784)
-	(bus)
-)
-(connector
-	(pt -840 1784)
-	(pt -840 1904)
 	(bus)
 )
 (connector
@@ -4194,11 +4101,6 @@ https://fpgasoftware.intel.com/eula.
 )
 (connector
 	(pt 1560 1528)
-	(pt 1560 1752)
-	(color 170 255 0)
-)
-(connector
-	(pt 1736 1752)
 	(pt 1560 1752)
 	(color 170 255 0)
 )
@@ -4340,21 +4242,6 @@ https://fpgasoftware.intel.com/eula.
 )
 (connector
 	(pt -904 1736)
-	(pt -904 1968)
-	(bus)
-)
-(connector
-	(pt 1264 1968)
-	(pt -904 1968)
-	(bus)
-)
-(connector
-	(pt 1264 1752)
-	(pt 1264 1968)
-	(bus)
-)
-(connector
-	(pt -904 1736)
 	(pt -720 1736)
 	(bus)
 )
@@ -4401,22 +4288,6 @@ https://fpgasoftware.intel.com/eula.
 (connector
 	(pt 32 1528)
 	(pt 328 1528)
-)
-(connector
-	(pt -824 1528)
-	(pt -824 1872)
-)
-(connector
-	(pt -824 1872)
-	(pt 312 1872)
-)
-(connector
-	(pt -936 1528)
-	(pt -824 1528)
-)
-(connector
-	(pt -824 1528)
-	(pt -720 1528)
 )
 (connector
 	(pt 1232 424)
@@ -4657,23 +4528,8 @@ https://fpgasoftware.intel.com/eula.
 	(bus)
 )
 (connector
-	(pt 1168 1832)
-	(pt 1168 1888)
-	(bus)
-)
-(connector
-	(pt 1168 1888)
-	(pt -808 1888)
-	(bus)
-)
-(connector
 	(pt -808 1800)
 	(pt -720 1800)
-	(bus)
-)
-(connector
-	(pt -808 1800)
-	(pt -808 1888)
 	(bus)
 )
 (connector
@@ -4772,20 +4628,12 @@ https://fpgasoftware.intel.com/eula.
 	(bus)
 )
 (connector
-	(pt 312 1728)
-	(pt 328 1728)
-)
-(connector
 	(pt -320 1744)
 	(pt 328 1744)
 )
 (connector
 	(pt -320 1528)
 	(pt -320 1744)
-)
-(connector
-	(pt 312 1872)
-	(pt 312 1728)
 )
 (connector
 	(text "clklvdsout3" (rect 124 1480 179 1497)(font "Intel Clear" ))
@@ -4831,6 +4679,335 @@ https://fpgasoftware.intel.com/eula.
 	(pt 656 1544)
 	(bus)
 )
+(connector
+	(pt 1184 1816)
+	(pt 1184 2008)
+	(bus)
+)
+(connector
+	(pt 1224 1784)
+	(pt 1224 2040)
+	(bus)
+)
+(connector
+	(pt 1360 1656)
+	(pt 1360 2168)
+)
+(connector
+	(pt 1376 1640)
+	(pt 1376 2184)
+	(bus)
+)
+(connector
+	(pt 1200 2024)
+	(pt -856 2024)
+)
+(connector
+	(pt 1200 1800)
+	(pt 1200 2024)
+)
+(connector
+	(pt 1224 2040)
+	(pt -872 2040)
+	(bus)
+)
+(connector
+	(pt 1248 2056)
+	(pt -888 2056)
+	(bus)
+)
+(connector
+	(pt -1000 1640)
+	(pt -1000 2168)
+)
+(connector
+	(pt 1360 2168)
+	(pt -1000 2168)
+)
+(connector
+	(pt 1392 1624)
+	(pt 1392 2200)
+	(bus)
+)
+(connector
+	(pt 1408 1608)
+	(pt 1408 2216)
+	(bus)
+)
+(connector
+	(pt 1424 1592)
+	(pt 1424 2232)
+	(bus)
+)
+(connector
+	(pt -1016 1624)
+	(pt -1016 2184)
+	(bus)
+)
+(connector
+	(pt 1376 2184)
+	(pt -1016 2184)
+	(bus)
+)
+(connector
+	(pt 1392 2200)
+	(pt -1032 2200)
+	(bus)
+)
+(connector
+	(pt -1032 1608)
+	(pt -1032 2200)
+	(bus)
+)
+(connector
+	(pt -1048 1592)
+	(pt -1048 2216)
+	(bus)
+)
+(connector
+	(pt 1408 2216)
+	(pt -1048 2216)
+	(bus)
+)
+(connector
+	(pt 1424 2232)
+	(pt -1064 2232)
+	(bus)
+)
+(connector
+	(pt -1064 1576)
+	(pt -1064 2232)
+	(bus)
+)
+(connector
+	(pt 1248 1768)
+	(pt 1248 2056)
+	(bus)
+)
+(connector
+	(pt 1280 1736)
+	(pt 1280 2088)
+)
+(connector
+	(pt 1280 2088)
+	(pt -920 2088)
+)
+(connector
+	(pt -920 1720)
+	(pt -920 2088)
+)
+(connector
+	(pt 1296 1720)
+	(pt 1296 2104)
+)
+(connector
+	(pt -936 1704)
+	(pt -936 2104)
+)
+(connector
+	(pt 1296 2104)
+	(pt -936 2104)
+)
+(connector
+	(pt 1312 1704)
+	(pt 1312 2120)
+	(bus)
+)
+(connector
+	(pt 1312 2120)
+	(pt -952 2120)
+	(bus)
+)
+(connector
+	(pt -952 1688)
+	(pt -952 2120)
+	(bus)
+)
+(connector
+	(pt 1328 1688)
+	(pt 1328 2136)
+	(bus)
+)
+(connector
+	(pt -968 1672)
+	(pt -968 2136)
+	(bus)
+)
+(connector
+	(pt 1328 2136)
+	(pt -968 2136)
+	(bus)
+)
+(connector
+	(pt 1344 1672)
+	(pt 1344 2152)
+)
+(connector
+	(pt 1344 2152)
+	(pt -984 2152)
+)
+(connector
+	(pt -984 1656)
+	(pt -984 2152)
+)
+(connector
+	(pt -856 1296)
+	(pt -856 2024)
+)
+(connector
+	(pt 1184 2008)
+	(pt -840 2008)
+	(bus)
+)
+(connector
+	(pt -904 1736)
+	(pt -904 2072)
+	(bus)
+)
+(connector
+	(pt 1264 2072)
+	(pt -904 2072)
+	(bus)
+)
+(connector
+	(pt 1264 1752)
+	(pt 1264 2072)
+	(bus)
+)
+(connector
+	(pt -824 1528)
+	(pt -824 1976)
+)
+(connector
+	(pt 1168 1832)
+	(pt 1168 1992)
+	(bus)
+)
+(connector
+	(pt 1168 1992)
+	(pt -808 1992)
+	(bus)
+)
+(connector
+	(pt -808 1800)
+	(pt -808 1992)
+	(bus)
+)
+(connector
+	(pt -936 1528)
+	(pt -824 1528)
+)
+(connector
+	(pt -824 1528)
+	(pt -720 1528)
+)
+(connector
+	(pt -872 1280)
+	(pt -872 1768)
+	(bus)
+)
+(connector
+	(pt -872 1768)
+	(pt -872 2040)
+	(bus)
+)
+(connector
+	(pt -888 1264)
+	(pt -888 1752)
+	(bus)
+)
+(connector
+	(pt -888 1752)
+	(pt -888 2056)
+	(bus)
+)
+(connector
+	(pt -840 1312)
+	(pt -840 1784)
+	(bus)
+)
+(connector
+	(pt -840 1784)
+	(pt -840 2008)
+	(bus)
+)
+(connector
+	(pt 328 1728)
+	(pt -216 1728)
+)
+(connector
+	(pt -824 1976)
+	(pt -216 1976)
+)
+(connector
+	(pt -216 1728)
+	(pt -216 1976)
+)
+(connector
+	(pt 1560 1752)
+	(pt 1656 1752)
+	(color 170 255 0)
+)
+(connector
+	(pt 1656 1752)
+	(pt 1736 1752)
+	(color 170 255 0)
+)
+(connector
+	(pt 2264 1712)
+	(pt 2048 1712)
+	(color 170 255 0)
+)
+(connector
+	(pt 1656 1752)
+	(pt 1656 1736)
+	(color 170 255 0)
+)
+(connector
+	(pt 1656 1736)
+	(pt 2048 1736)
+	(color 170 255 0)
+)
+(connector
+	(pt 2048 1712)
+	(pt 2048 1736)
+	(color 170 255 0)
+)
+(connector
+	(pt 1024 1416)
+	(pt 1704 1416)
+	(color 0 255 0)
+)
+(connector
+	(pt 1704 1416)
+	(pt 2192 1416)
+	(color 0 255 0)
+)
+(connector
+	(pt 2192 1416)
+	(pt 2192 1512)
+	(color 0 255 0)
+)
+(connector
+	(pt 2192 1512)
+	(pt 2264 1512)
+	(color 0 255 0)
+)
+(connector
+	(pt 2192 1848)
+	(pt 2192 1672)
+	(color 0 170 255)
+)
+(connector
+	(pt 2192 1672)
+	(pt 2264 1672)
+	(color 0 170 255)
+)
+(connector
+	(pt 1024 1848)
+	(pt 2192 1848)
+	(color 0 170 255)
+)
 (junction (pt 1704 1592))
 (junction (pt -872 1768))
 (junction (pt -888 1752))
@@ -4852,6 +5029,8 @@ https://fpgasoftware.intel.com/eula.
 (junction (pt 184 1496))
 (junction (pt 136 56))
 (junction (pt 1216 576))
+(junction (pt 1704 1416))
+(junction (pt 1656 1752))
 (text "LVDS input deserializers" (rect -568 360 -423 379)(font "Intel Clear" (font_size 8)))
 (text "50 MHz oscillator" (rect -144 24 -42 43)(font "Intel Clear" (font_size 8)))
 (text "Buffer where samples are held" (rect -128 1104 52 1123)(font "Intel Clear" (font_size 8)))
@@ -4860,7 +5039,7 @@ https://fpgasoftware.intel.com/eula.
 (text "USB data I/O block" (rect 736 600 849 619)(font "Intel Clear" (font_size 8)))
 (text "Main processor block" (rect 736 1016 859 1035)(font "Intel Clear" (font_size 8)))
 (text "Main PLL" (rect 680 280 734 299)(font "Intel Clear" (font_size 8)))
-(text "For writing and reading to flash, for firmware upgrade" (rect 1744 1400 2060 1419)(font "Intel Clear" (font_size 8)))
+(text "For writing and reading to flash, for firmware upgrade" (rect 1744 1416 2060 1435)(font "Intel Clear" (font_size 8)))
 (text "Output clocks to ADF4350 and SMA" (rect 1264 368 1477 387)(font "Intel Clear" (font_size 8)))
 (text "Output clock to LVDS" (rect 1888 536 2014 555)(font "Intel Clear" (font_size 8)))
 (text "Can switch LVDS clk out on/off" (rect 1592 480 1772 499)(font "Intel Clear" (font_size 8)))
@@ -4880,3 +5059,4 @@ https://fpgasoftware.intel.com/eula.
 (text "10 MHz external SMA ref clock in" (rect -184 -192 10 -173)(font "Intel Clear" (font_size 8)))
 (text "80 MHz LVDS clock in from another board" (rect 152 360 400 379)(font "Intel Clear" (font_size 8)))
 (text "Can switch here whether we use sma or oscillator" (rect 600 48 886 67)(font "Intel Clear" (font_size 8)))
+(text "For reloading firmware, after an upgrade" (rect 2304 1416 2543 1435)(font "Intel Clear" (font_size 8)))

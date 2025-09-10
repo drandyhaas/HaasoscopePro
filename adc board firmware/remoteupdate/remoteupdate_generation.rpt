@@ -1,0 +1,30 @@
+Info: Starting: Create block symbol file (.bsf)
+Info: qsys-generate "C:\gitwork\master\HaasoscopePro\adc board firmware\remoteupdate.qsys" --block-symbol-file --output-directory="C:\gitwork\master\HaasoscopePro\adc board firmware\remoteupdate" --family="Cyclone IV E" --part=EP4CE30F23C6
+Progress: Loading adc board firmware/remoteupdate.qsys
+Progress: Reading input file
+Progress: Adding remote_update_0 [altera_remote_update 23.1]
+Progress: Parameterizing module remote_update_0
+Progress: Building connections
+Progress: Parameterizing connections
+Progress: Validating
+Progress: Done reading input file
+Info: qsys-generate succeeded.
+Info: Finished: Create block symbol file (.bsf)
+Info: 
+Info: Starting: Create HDL design files for synthesis
+Info: qsys-generate "C:\gitwork\master\HaasoscopePro\adc board firmware\remoteupdate.qsys" --synthesis=VERILOG --output-directory="C:\gitwork\master\HaasoscopePro\adc board firmware\remoteupdate\synthesis" --family="Cyclone IV E" --part=EP4CE30F23C6
+Progress: Loading adc board firmware/remoteupdate.qsys
+Progress: Reading input file
+Progress: Adding remote_update_0 [altera_remote_update 23.1]
+Progress: Parameterizing module remote_update_0
+Progress: Building connections
+Progress: Parameterizing connections
+Progress: Validating
+Progress: Done reading input file
+Info: remoteupdate: Generating remoteupdate "remoteupdate" for QUARTUS_SYNTH
+Info: remote_update_0: "remoteupdate" instantiated altera_remote_update "remote_update_0"
+Info: remote_update_core: Generating top-level entity altera_remote_update_core.
+Info: remote_update_core: "remote_update_0" instantiated altera_remote_update_core "remote_update_core"
+Info: remoteupdate: Done "remoteupdate" with 3 modules, 3 files
+Info: qsys-generate succeeded.
+Info: Finished: Create HDL design files for synthesis

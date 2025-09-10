@@ -1,0 +1,14 @@
+	component remoteupdate is
+		port (
+			busy        : out std_logic;                                        -- busy
+			clock       : in  std_logic                     := 'X';             -- clk
+			data_out    : out std_logic_vector(28 downto 0);                    -- data_out
+			param       : in  std_logic_vector(2 downto 0)  := (others => 'X'); -- param
+			read_param  : in  std_logic                     := 'X';             -- read_param
+			read_source : in  std_logic_vector(1 downto 0)  := (others => 'X'); -- read_source
+			reconfig    : in  std_logic                     := 'X';             -- reconfig
+			reset       : in  std_logic                     := 'X';             -- reset
+			reset_timer : in  std_logic                     := 'X'              -- reset_timer
+		);
+	end component remoteupdate;
+

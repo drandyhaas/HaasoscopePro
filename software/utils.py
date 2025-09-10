@@ -143,6 +143,11 @@ def flash_readall(usb):
         else: print("flash_readall timeout?")
     return readbytes
 
+def reload_firmware(usb):
+    print("New firmware is being loaded into the FPGA")
+    usb.send(bytes([2, 19, 1, 0, 100, 100, 100, 100]))
+    usb.recv(4)
+
 def find_fundamental_frequency_scipy(signal, sampling_rate):
     """
     Finds the fundamental frequency using SciPy's find_peaks for robustness.

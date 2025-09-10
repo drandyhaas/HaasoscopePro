@@ -1,0 +1,273 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<deploy
+ date="2025.09.10.08:00:09"
+ outputDirectory="C:/gitwork/master/HaasoscopePro/adc board firmware/remoteupdate/">
+ <perimeter>
+  <parameter
+     name="AUTO_GENERATION_ID"
+     type="Integer"
+     defaultValue="0"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_UNIQUE_ID"
+     type="String"
+     defaultValue=""
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_FAMILY"
+     type="String"
+     defaultValue="Cyclone IV E"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE"
+     type="String"
+     defaultValue="EP4CE30F23C6"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_DEVICE_SPEEDGRADE"
+     type="String"
+     defaultValue="6"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_CLOCK_CLOCK_RATE"
+     type="Long"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_CLOCK_CLOCK_DOMAIN"
+     type="Integer"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <parameter
+     name="AUTO_CLOCK_RESET_DOMAIN"
+     type="Integer"
+     defaultValue="-1"
+     onHdl="0"
+     affectsHdl="1" />
+  <interface name="busy" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port name="busy" direction="output" role="busy" width="1" />
+  </interface>
+  <interface name="clock" kind="clock" start="0">
+   <property name="clockRate" value="0" />
+   <property name="externallyDriven" value="false" />
+   <property name="ptfSchematicName" value="" />
+   <port name="clock" direction="input" role="clk" width="1" />
+  </interface>
+  <interface name="data_out" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port name="data_out" direction="output" role="data_out" width="29" />
+  </interface>
+  <interface name="param" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port name="param" direction="input" role="param" width="3" />
+  </interface>
+  <interface name="read_param" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port name="read_param" direction="input" role="read_param" width="1" />
+  </interface>
+  <interface name="read_source" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port name="read_source" direction="input" role="read_source" width="2" />
+  </interface>
+  <interface name="reconfig" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port name="reconfig" direction="input" role="reconfig" width="1" />
+  </interface>
+  <interface name="reset" kind="reset" start="0">
+   <property name="associatedClock" value="clock" />
+   <property name="synchronousEdges" value="DEASSERT" />
+   <port name="reset" direction="input" role="reset" width="1" />
+  </interface>
+  <interface name="reset_timer" kind="conduit" start="0">
+   <property name="associatedClock" value="" />
+   <property name="associatedReset" value="" />
+   <port name="reset_timer" direction="input" role="reset_timer" width="1" />
+  </interface>
+ </perimeter>
+ <entity
+   path=""
+   parameterizationKey="remoteupdate:1.0:AUTO_CLOCK_CLOCK_DOMAIN=-1,AUTO_CLOCK_CLOCK_RATE=-1,AUTO_CLOCK_RESET_DOMAIN=-1,AUTO_DEVICE=EP4CE30F23C6,AUTO_DEVICE_FAMILY=Cyclone IV E,AUTO_DEVICE_SPEEDGRADE=6,AUTO_GENERATION_ID=1757505605,AUTO_UNIQUE_ID=(altera_remote_update:23.1:AUTO_DEVICE_SPEEDGRADE=6,CBX_AUTO_BLACKBOX=ALL,DEVICE=EP4CE30F23C6,DEVICE_FAMILY=Cyclone IV E,GUI_config_device=EPCS16,check_app_pof=false,check_avalon_interface=false,config_device_addr_width=24,in_data_width=24,is_epcq=false,m_support_write_config_check=false,operation_mode=REMOTE,out_data_width=24(altera_clock_bridge:23.1:DERIVED_CLOCK_RATE=0,EXPLICIT_CLOCK_RATE=0,NUM_CLOCK_OUTPUTS=1)(altera_reset_bridge:23.1:ACTIVE_LOW_RESET=0,AUTO_CLK_CLOCK_RATE=0,NUM_RESET_OUTPUTS=1,SYNCHRONOUS_EDGES=deassert,USE_RESET_REQUEST=0)(altera_remote_update_core:23.1:CBX_AUTO_BLACKBOX=ALL,DEVICE=EP4CE30F23C6,DEVICE_FAMILY=Cyclone IV E,GUI_config_device=EPCS16,check_app_pof=false,config_device_addr_width=24,in_data_width=24,is_epcq=false,m_support_write_config_check=false,operation_mode=REMOTE,out_data_width=29)(clock:23.1:)(clock:23.1:)(reset:23.1:))"
+   instancePathKey="remoteupdate"
+   kind="remoteupdate"
+   version="1.0"
+   name="remoteupdate">
+  <parameter name="AUTO_CLOCK_CLOCK_RATE" value="-1" />
+  <parameter name="AUTO_CLOCK_CLOCK_DOMAIN" value="-1" />
+  <parameter name="AUTO_CLOCK_RESET_DOMAIN" value="-1" />
+  <parameter name="AUTO_GENERATION_ID" value="1757505605" />
+  <parameter name="AUTO_DEVICE" value="EP4CE30F23C6" />
+  <parameter name="AUTO_DEVICE_FAMILY" value="Cyclone IV E" />
+  <parameter name="AUTO_UNIQUE_ID" value="" />
+  <parameter name="AUTO_DEVICE_SPEEDGRADE" value="6" />
+  <generatedFiles>
+   <file
+       path="C:/gitwork/master/HaasoscopePro/adc board firmware/remoteupdate/synthesis/remoteupdate.v"
+       type="VERILOG" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="C:/gitwork/master/HaasoscopePro/adc board firmware/remoteupdate/synthesis/submodules/remoteupdate_remote_update_0.v"
+       type="VERILOG" />
+   <file
+       path="C:/gitwork/master/HaasoscopePro/adc board firmware/remoteupdate/synthesis/submodules/altera_remote_update_core.v"
+       type="VERILOG"
+       attributes="" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file
+       path="C:/gitwork/master/HaasoscopePro/adc board firmware/remoteupdate.qsys" />
+  </sourceFiles>
+  <childSourceFiles>
+   <file
+       path="C:/intelfpga_lite/23.1std/ip/altera/altera_remote_update/altera_remote_update_hw.tcl" />
+   <file
+       path="C:/intelfpga_lite/23.1std/ip/altera/altera_remote_update/altera_remote_update_core_hw.tcl" />
+  </childSourceFiles>
+  <messages>
+   <message level="Debug" culprit="remoteupdate">queue size: 0 starting:remoteupdate "remoteupdate"</message>
+   <message level="Progress" culprit="min"></message>
+   <message level="Progress" culprit="max"></message>
+   <message level="Progress" culprit="current"></message>
+   <message level="Debug">Transform: CustomInstructionTransform</message>
+   <message level="Debug">No custom instruction connections, skipping transform </message>
+   <message level="Debug" culprit="merlin_custom_instruction_transform"><![CDATA[After transform: <b>1</b> modules, <b>0</b> connections]]></message>
+   <message level="Debug">Transform: MMTransform</message>
+   <message level="Debug">Transform: InterruptMapperTransform</message>
+   <message level="Debug">Transform: InterruptSyncTransform</message>
+   <message level="Debug">Transform: InterruptFanoutTransform</message>
+   <message level="Debug">Transform: AvalonStreamingTransform</message>
+   <message level="Debug">Transform: ResetAdaptation</message>
+   <message level="Debug" culprit="remoteupdate"><![CDATA["<b>remoteupdate</b>" reuses <b>altera_remote_update</b> "<b>submodules/remoteupdate_remote_update_0</b>"]]></message>
+   <message level="Debug" culprit="remoteupdate">queue size: 0 starting:altera_remote_update "submodules/remoteupdate_remote_update_0"</message>
+   <message level="Progress" culprit="min"></message>
+   <message level="Progress" culprit="max"></message>
+   <message level="Progress" culprit="current"></message>
+   <message level="Debug">Transform: CustomInstructionTransform</message>
+   <message level="Debug">No custom instruction connections, skipping transform </message>
+   <message level="Debug" culprit="merlin_custom_instruction_transform"><![CDATA[After transform: <b>3</b> modules, <b>3</b> connections]]></message>
+   <message level="Debug">Transform: MMTransform</message>
+   <message level="Debug">Transform: InterruptMapperTransform</message>
+   <message level="Debug">Transform: InterruptSyncTransform</message>
+   <message level="Debug">Transform: InterruptFanoutTransform</message>
+   <message level="Debug">Transform: AvalonStreamingTransform</message>
+   <message level="Debug">Transform: ResetAdaptation</message>
+   <message level="Debug" culprit="remote_update_0"><![CDATA["<b>remote_update_0</b>" reuses <b>altera_remote_update_core</b> "<b>submodules/altera_remote_update_core</b>"]]></message>
+   <message level="Info" culprit="remote_update_0"><![CDATA["<b>remoteupdate</b>" instantiated <b>altera_remote_update</b> "<b>remote_update_0</b>"]]></message>
+   <message level="Debug" culprit="remoteupdate">queue size: 0 starting:altera_remote_update_core "submodules/altera_remote_update_core"</message>
+   <message level="Info" culprit="remote_update_core">Generating top-level entity altera_remote_update_core.</message>
+   <message level="Info" culprit="remote_update_core"><![CDATA["<b>remote_update_0</b>" instantiated <b>altera_remote_update_core</b> "<b>remote_update_core</b>"]]></message>
+  </messages>
+ </entity>
+ <entity
+   path="submodules/"
+   parameterizationKey="altera_remote_update:23.1:AUTO_DEVICE_SPEEDGRADE=6,CBX_AUTO_BLACKBOX=ALL,DEVICE=EP4CE30F23C6,DEVICE_FAMILY=Cyclone IV E,GUI_config_device=EPCS16,check_app_pof=false,check_avalon_interface=false,config_device_addr_width=24,in_data_width=24,is_epcq=false,m_support_write_config_check=false,operation_mode=REMOTE,out_data_width=24(altera_clock_bridge:23.1:DERIVED_CLOCK_RATE=0,EXPLICIT_CLOCK_RATE=0,NUM_CLOCK_OUTPUTS=1)(altera_reset_bridge:23.1:ACTIVE_LOW_RESET=0,AUTO_CLK_CLOCK_RATE=0,NUM_RESET_OUTPUTS=1,SYNCHRONOUS_EDGES=deassert,USE_RESET_REQUEST=0)(altera_remote_update_core:23.1:CBX_AUTO_BLACKBOX=ALL,DEVICE=EP4CE30F23C6,DEVICE_FAMILY=Cyclone IV E,GUI_config_device=EPCS16,check_app_pof=false,config_device_addr_width=24,in_data_width=24,is_epcq=false,m_support_write_config_check=false,operation_mode=REMOTE,out_data_width=29)(clock:23.1:)(clock:23.1:)(reset:23.1:)"
+   instancePathKey="remoteupdate:.:remote_update_0"
+   kind="altera_remote_update"
+   version="23.1"
+   name="remoteupdate_remote_update_0">
+  <parameter name="GUI_config_device" value="EPCS16" />
+  <parameter name="check_avalon_interface" value="false" />
+  <parameter name="in_data_width" value="24" />
+  <parameter name="out_data_width" value="24" />
+  <parameter name="check_app_pof" value="false" />
+  <parameter name="DEVICE_FAMILY" value="Cyclone IV E" />
+  <parameter name="DEVICE" value="EP4CE30F23C6" />
+  <parameter name="operation_mode" value="REMOTE" />
+  <parameter name="AUTO_DEVICE_SPEEDGRADE" value="6" />
+  <parameter name="config_device_addr_width" value="24" />
+  <parameter name="m_support_write_config_check" value="false" />
+  <parameter name="is_epcq" value="false" />
+  <parameter name="CBX_AUTO_BLACKBOX" value="ALL" />
+  <generatedFiles>
+   <file
+       path="C:/gitwork/master/HaasoscopePro/adc board firmware/remoteupdate/synthesis/submodules/remoteupdate_remote_update_0.v"
+       type="VERILOG" />
+  </generatedFiles>
+  <childGeneratedFiles>
+   <file
+       path="C:/gitwork/master/HaasoscopePro/adc board firmware/remoteupdate/synthesis/submodules/altera_remote_update_core.v"
+       type="VERILOG"
+       attributes="" />
+  </childGeneratedFiles>
+  <sourceFiles>
+   <file
+       path="C:/intelfpga_lite/23.1std/ip/altera/altera_remote_update/altera_remote_update_hw.tcl" />
+  </sourceFiles>
+  <childSourceFiles>
+   <file
+       path="C:/intelfpga_lite/23.1std/ip/altera/altera_remote_update/altera_remote_update_core_hw.tcl" />
+  </childSourceFiles>
+  <instantiator instantiator="remoteupdate" as="remote_update_0" />
+  <messages>
+   <message level="Debug" culprit="remoteupdate">queue size: 0 starting:altera_remote_update "submodules/remoteupdate_remote_update_0"</message>
+   <message level="Progress" culprit="min"></message>
+   <message level="Progress" culprit="max"></message>
+   <message level="Progress" culprit="current"></message>
+   <message level="Debug">Transform: CustomInstructionTransform</message>
+   <message level="Debug">No custom instruction connections, skipping transform </message>
+   <message level="Debug" culprit="merlin_custom_instruction_transform"><![CDATA[After transform: <b>3</b> modules, <b>3</b> connections]]></message>
+   <message level="Debug">Transform: MMTransform</message>
+   <message level="Debug">Transform: InterruptMapperTransform</message>
+   <message level="Debug">Transform: InterruptSyncTransform</message>
+   <message level="Debug">Transform: InterruptFanoutTransform</message>
+   <message level="Debug">Transform: AvalonStreamingTransform</message>
+   <message level="Debug">Transform: ResetAdaptation</message>
+   <message level="Debug" culprit="remote_update_0"><![CDATA["<b>remote_update_0</b>" reuses <b>altera_remote_update_core</b> "<b>submodules/altera_remote_update_core</b>"]]></message>
+   <message level="Info" culprit="remote_update_0"><![CDATA["<b>remoteupdate</b>" instantiated <b>altera_remote_update</b> "<b>remote_update_0</b>"]]></message>
+   <message level="Debug" culprit="remoteupdate">queue size: 0 starting:altera_remote_update_core "submodules/altera_remote_update_core"</message>
+   <message level="Info" culprit="remote_update_core">Generating top-level entity altera_remote_update_core.</message>
+   <message level="Info" culprit="remote_update_core"><![CDATA["<b>remote_update_0</b>" instantiated <b>altera_remote_update_core</b> "<b>remote_update_core</b>"]]></message>
+  </messages>
+ </entity>
+ <entity
+   path="submodules/"
+   parameterizationKey="altera_remote_update_core:23.1:CBX_AUTO_BLACKBOX=ALL,DEVICE=EP4CE30F23C6,DEVICE_FAMILY=Cyclone IV E,GUI_config_device=EPCS16,check_app_pof=false,config_device_addr_width=24,in_data_width=24,is_epcq=false,m_support_write_config_check=false,operation_mode=REMOTE,out_data_width=29"
+   instancePathKey="remoteupdate:.:remote_update_0:.:remote_update_core"
+   kind="altera_remote_update_core"
+   version="23.1"
+   name="altera_remote_update_core">
+  <parameter name="GUI_config_device" value="EPCS16" />
+  <parameter name="in_data_width" value="24" />
+  <parameter name="out_data_width" value="29" />
+  <parameter name="check_app_pof" value="false" />
+  <parameter name="DEVICE_FAMILY" value="Cyclone IV E" />
+  <parameter name="DEVICE" value="EP4CE30F23C6" />
+  <parameter name="operation_mode" value="REMOTE" />
+  <parameter name="config_device_addr_width" value="24" />
+  <parameter name="m_support_write_config_check" value="false" />
+  <parameter name="is_epcq" value="false" />
+  <parameter name="CBX_AUTO_BLACKBOX" value="ALL" />
+  <generatedFiles>
+   <file
+       path="C:/gitwork/master/HaasoscopePro/adc board firmware/remoteupdate/synthesis/submodules/altera_remote_update_core.v"
+       type="VERILOG"
+       attributes="" />
+  </generatedFiles>
+  <childGeneratedFiles/>
+  <sourceFiles>
+   <file
+       path="C:/intelfpga_lite/23.1std/ip/altera/altera_remote_update/altera_remote_update_core_hw.tcl" />
+  </sourceFiles>
+  <childSourceFiles/>
+  <instantiator instantiator="remoteupdate_remote_update_0" as="remote_update_core" />
+  <messages>
+   <message level="Debug" culprit="remoteupdate">queue size: 0 starting:altera_remote_update_core "submodules/altera_remote_update_core"</message>
+   <message level="Info" culprit="remote_update_core">Generating top-level entity altera_remote_update_core.</message>
+   <message level="Info" culprit="remote_update_core"><![CDATA["<b>remote_update_0</b>" instantiated <b>altera_remote_update_core</b> "<b>remote_update_core</b>"]]></message>
+  </messages>
+ </entity>
+</deploy>

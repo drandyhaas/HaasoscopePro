@@ -571,8 +571,8 @@ class MainWindow(TemplateBaseClass):
     def pllreset(self, board):
         if not board: board = self.activeboard # if we called it from the button
         usbs[board].send(bytes([5, 99, 99, 99, 100, 100, 100, 100]))
-        tres = usbs[board].recv(4)
-        print("pllreset sent to board",board,"- got back:", tres[3], tres[2], tres[1], tres[0])
+        usbs[board].recv(4)
+        print("Pllreset sent to board",board)
         self.phasecs[board] = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]  # reset counters
         self.plljustreset[board] = 0
         self.plljustresetdir[board] = 1
@@ -1414,7 +1414,16 @@ class MainWindow(TemplateBaseClass):
         print("took",round(time.time()-starttime,3),"seconds so far")
         print("verifying write")
         readbytes = flash_readall(usbs[self.activeboard])
-        if writtenbytes == readbytes: print("verified!")
+        if writtenbytes == readbytes:
+            print("verified!")
+            print("took", round(time.time() - starttime, 3), "seconds")
+
+            if self.firmwareversion>=29:
+                # now reset the board and exit the softare
+                reload_firmware(usbs[self.activeboard])
+                self.closeEvent()
+                print("Exiting software")
+                sys.exit(0)
         else:
             print("not verified!!!")
             nbad=0
@@ -1426,7 +1435,6 @@ class MainWindow(TemplateBaseClass):
                         print("not showing more")
                         break
         for bo in range(self.num_board): clkout_ena(usbs[bo],self.num_board>1)
-        print("took",round(time.time()-starttime,3),"seconds")
 
     def autocalibration(self, resamp=2, dofiner=False, oldtoff=0, finewidth=16):
         if not resamp: # called from GUI, defaults aren't filled
@@ -1695,7 +1703,7 @@ class MainWindow(TemplateBaseClass):
         auxoutselector(usbs[board],0)
         return 1
 
-    def closeEvent(self, event):
+    def closeEvent(self, event=None):
         if event: print("Handling closeEvent")
         self.close_socket()
         self.timer.stop()

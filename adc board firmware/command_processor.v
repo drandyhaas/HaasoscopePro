@@ -85,6 +85,8 @@ module command_processor (
    output reg [4:0]  downsample,
    output reg [1:0]  firstlast,
    
+   output reg reloadflash=0,
+   
    // synced inputs from triggerer
    input [7:0]    acqstate,
    input [31:0]   eventcounter,
@@ -103,7 +105,7 @@ module command_processor (
 
 );
 
-integer version = 28; // firmware version
+integer version = 29; // firmware version
 
 // these first 10 debugout's go to LEDs on the board
 assign debugout[0] = clkswitch;
@@ -286,6 +288,11 @@ always @ (posedge clk) begin
          16: o_tdata <= {12'd0, sample2_triggered_sync};
          17: o_tdata <= {12'd0, sample3_triggered_sync};
          18: o_tdata <= {12'd0, sample4_triggered_sync};
+         19: begin
+            reloadflash = rx_data[2][0];
+            o_tdata <= {31'd0,reloadflash};
+         end
+         default: o_tdata <= 0;
          endcase
          `SEND_STD_USB_RESPONSE
       end
@@ -472,7 +479,7 @@ always @ (posedge clk) begin
             11: o_tdata <= {31'd0, highres};
             12: o_tdata <= {20'd0, upperthresh};
             13: o_tdata <= {31'd0, flash_busy};
-            default: o_tdata <= {32'd0};
+            default: o_tdata <= 0;
          endcase
          `SEND_STD_USB_RESPONSE
       end

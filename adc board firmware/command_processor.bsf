@@ -21,9 +21,9 @@ https://fpgasoftware.intel.com/eula.
 */
 (header "symbol" (version "1.1"))
 (symbol
-	(rect 16 16 384 832)
+	(rect 16 16 384 864)
 	(text "command_processor" (rect 5 0 91 12)(font "Arial" ))
-	(text "inst" (rect 8 800 20 812)(font "Arial" ))
+	(text "inst" (rect 8 832 20 844)(font "Arial" ))
 	(port
 		(pt 0 32)
 		(input)
@@ -570,7 +570,14 @@ https://fpgasoftware.intel.com/eula.
 		(text "firstlast[1..0]" (rect 300 779 347 791)(font "Arial" ))
 		(line (pt 368 784)(pt 352 784)(line_width 3))
 	)
+	(port
+		(pt 368 800)
+		(output)
+		(text "reloadflash" (rect 0 0 42 12)(font "Arial" ))
+		(text "reloadflash" (rect 305 795 347 807)(font "Arial" ))
+		(line (pt 368 800)(pt 352 800)(line_width 1))
+	)
 	(drawing
-		(rectangle (rect 16 16 352 800)(line_width 1))
+		(rectangle (rect 16 16 352 832)(line_width 1))
 	)
 )
