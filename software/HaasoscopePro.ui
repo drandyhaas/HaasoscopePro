@@ -879,6 +879,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="accelerated">
+         <bool>true</bool>
+        </property>
         <property name="suffix">
          <string>%</string>
         </property>
@@ -1129,6 +1132,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="accelerated">
+         <bool>true</bool>
         </property>
         <property name="minimum">
          <number>-999</number>
