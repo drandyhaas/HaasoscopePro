@@ -3,7 +3,7 @@ from spi import *
 from utils import *
 from adf435x_core import *
 
-def adf4350(usb, freq, phase, r_counter=1, divided=FeedbackSelect.Divider, ref_doubler=False, ref_div2=True, themuxout=False):
+def adf4350(usb, freq, phase, r_counter=1, divided=FeedbackSelect.Divider, ref_doubler=False, ref_div2=True, themuxout=False, quiet=True):
     print('ADF4350 being set to %0.2f MHz' % freq)
     INT, MOD, FRAC, output_divider, band_select_clock_divider = (calculate_regs(
         device_type=DeviceType.ADF4350, freq=freq, ref_freq=50.0,
@@ -11,7 +11,7 @@ def adf4350(usb, freq, phase, r_counter=1, divided=FeedbackSelect.Divider, ref_d
         feedback_select=divided,
         r_counter=r_counter,  # needed when using FeedbackSelect.Divider (needed for phase resync?!)
         ref_doubler=ref_doubler, ref_div2=ref_div2, enable_gcd=True))
-    print("INT", INT, "MOD", MOD, "FRAC", FRAC, "outdiv", output_divider, "bandselclkdiv", band_select_clock_divider)
+    if not quiet: print("INT", INT, "MOD", MOD, "FRAC", FRAC, "outdiv", output_divider, "bandselclkdiv", band_select_clock_divider)
     regs = make_regs(
         INT=INT, MOD=MOD, FRAC=FRAC, output_divider=output_divider,
         band_select_clock_divider=band_select_clock_divider, r_counter=r_counter, ref_doubler=ref_doubler,
@@ -26,7 +26,7 @@ def adf4350(usb, freq, phase, r_counter=1, divided=FeedbackSelect.Divider, ref_d
     spimode(usb, 0)
     for r in reversed(range(len(regs))):
         # regs[2]=0x5004E42 #to override from ADF435x software
-        print("adf4350 reg", r, binprint(regs[r]), hex(regs[r]))
+        if not quiet: print("adf4350 reg", r, binprint(regs[r]), hex(regs[r]))
         fourbytes = inttobytes(regs[r])
         # for i in range(4): print(binprint(fourbytes[i]))
         spicommand(usb, "ADF4350 Reg " + str(r), fourbytes[3], fourbytes[2], fourbytes[1], False, fourth=fourbytes[0],

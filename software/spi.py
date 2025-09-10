@@ -1,5 +1,5 @@
 
-def spicommand(usb, name, first, second, third, read, fourth=100, show_bin=False, cs=0, nbyte=3, quiet=False):
+def spicommand(usb, name, first, second, third, read, fourth=100, show_bin=False, cs=0, nbyte=3, quiet=True):
     # first byte to send, start of address
     # second byte to send, rest of address
     # third byte to send, value to write, ignored during read
@@ -22,7 +22,7 @@ def spicommand(usb, name, first, second, third, read, fourth=100, show_bin=False
             else:
                 print("SPI write:\t" + name, "(", hex(first), hex(second), ")", hex(third))
 
-def spicommand2(usb, name, first, second, third, fourth, read, cs=0, nbyte=3):
+def spicommand2(usb, name, first, second, third, fourth, read, cs=0, nbyte=3, quiet=True):
     # first byte to send, start of address
     # second byte to send, rest of address
     # third byte to send, value to write, ignored during read, to address +1 (the higher 8 bits)
@@ -35,9 +35,11 @@ def spicommand2(usb, name, first, second, third, fourth, read, cs=0, nbyte=3):
     usb.send(bytes([3, cs, first, second + 0x01, third, 100, 100, nbyte]))  # get SPI result from command for next byte
     spires2 = usb.recv(4)
     if read:
-        print("SPI read:\t" + name, "(", hex(first), hex(second), ")", hex(spires2[0]), hex(spires[0]))
+        if not quiet:
+            print("SPI read:\t" + name, "(", hex(first), hex(second), ")", hex(spires2[0]), hex(spires[0]))
     else:
-        print("SPI write:\t" + name, "(", hex(first), hex(second), ")", hex(fourth), hex(third))
+        if not quiet:
+            print("SPI write:\t" + name, "(", hex(first), hex(second), ")", hex(fourth), hex(third))
 
 debugspi = False
 def spimode(usb, mode):  # set SPI mode (polarity of clk and data)
