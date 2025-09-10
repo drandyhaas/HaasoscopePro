@@ -47,6 +47,7 @@ class FFTWindow(FFTTemplateBaseClass):
         FFTTemplateBaseClass.__init__(self)
         self.ui = FFTWindowTemplate()
         self.ui.setupUi(self)
+        self.ui.actionTake_screenshot.triggered.connect(self.take_screenshot)
         self.ui.plot.setLabel('bottom', 'Frequency (MHz)')
         self.ui.plot.setLabel('left', 'Amplitude')
         self.ui.plot.showGrid(x=True, y=True, alpha=1)
@@ -57,6 +58,14 @@ class FFTWindow(FFTTemplateBaseClass):
         self.fftline = self.ui.plot.plot(pen=self.fftpen, name="fft_plot")
         self.fftlastTime = time.time() - 10
         self.fftyrange = 1
+
+    def take_screenshot(self):
+        # Capture the entire FFT window
+        pixmap = self.grab()
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"HaasoscopePro_FFT_{timestamp}.png"
+        pixmap.save(filename)
+        print(f"Screenshot saved as {filename}")
 
 # Define main window class from template
 WindowTemplate, TemplateBaseClass = loadUiType(pwd+"/HaasoscopePro.ui")
