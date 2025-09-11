@@ -246,10 +246,10 @@ def boardinbits(usb):
     #print("Board in bits", res[0], binprint(res[0]))
     return res[0]
 
-def setfan(usb,fanon):
+def setfan(usb,fanon, quiet=True):
     usb.send(bytes([2, 6, fanon, 100, 100, 100, 100, 100]))  # set / get fan status
     res = usb.recv(4)
-    print("Set fan", fanon, "and it was",res[0])
+    if not quiet: print("Set fan", fanon, "and it was",res[0])
 
 def cleanup(usb):
     spimode(usb, 0)
