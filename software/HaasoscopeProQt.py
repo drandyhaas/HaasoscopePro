@@ -253,6 +253,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionToggle_PLL_controls.triggered.connect(self.toggle_pll_controls)
         self.ui.actionRecord.triggered.connect(self.recordtofile)
         self.ui.actionAbout.triggered.connect(self.about)
+        self.ui.actionOversampling_mean_and_RMS.triggered.connect(self.do_meanrms_calibration)
         self.dofft = False
         self.db = False
         self.lastTime = time.time()
@@ -1576,21 +1577,27 @@ class MainWindow(TemplateBaseClass):
         else:
             oldtoff = self.toff
             self.toff = minshift//resamp + self.toff
-            yc = self.xydata[c][1][
-                (self.xydata[c][0] > self.vline - fitwidth) & (self.xydata[c][0] < self.vline + fitwidth)]
-            yc1 = self.xydata[c1][1][
-                (self.xydata[c1][0] > self.vline - fitwidth) & (self.xydata[c1][0] < self.vline + fitwidth)]
-            extrigboardmean = np.mean(yc)
-            otherboardmean = np.mean(yc1)
-            self.extrigboardmeancorrection[self.activeboard] = self.extrigboardmeancorrection[self.activeboard] + extrigboardmean - otherboardmean
-            extrigboardstd = np.std(yc)
-            otherboardstd = np.std(yc1)
-            if otherboardstd > 0:
-                self.extrigboardstdcorrection[self.activeboard] = self.extrigboardstdcorrection[self.activeboard] * extrigboardstd / otherboardstd
-            else:
-                self.extrigboardstdcorrection[self.activeboard] = self.extrigboardstdcorrection[self.activeboard]
-            print("calculated mean and std corrections", self.extrigboardmeancorrection[self.activeboard], self.extrigboardstdcorrection[self.activeboard])
+            self.do_meanrms_calibration()
             self.autocalibration(64,True, oldtoff)
+
+    def do_meanrms_calibration(self):
+        c1 = self.activeboard * self.num_chan_per_board
+        c = (self.activeboard + 1) * self.num_chan_per_board
+        fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
+        yc = self.xydata[c][1][
+                (self.xydata[c][0] > self.vline - fitwidth) & (self.xydata[c][0] < self.vline + fitwidth)]
+        yc1 = self.xydata[c1][1][
+            (self.xydata[c1][0] > self.vline - fitwidth) & (self.xydata[c1][0] < self.vline + fitwidth)]
+        extrigboardmean = np.mean(yc)
+        otherboardmean = np.mean(yc1)
+        self.extrigboardmeancorrection[self.activeboard] = self.extrigboardmeancorrection[self.activeboard] + extrigboardmean - otherboardmean
+        extrigboardstd = np.std(yc)
+        otherboardstd = np.std(yc1)
+        if otherboardstd > 0:
+            self.extrigboardstdcorrection[self.activeboard] = self.extrigboardstdcorrection[self.activeboard] * extrigboardstd / otherboardstd
+        else:
+            self.extrigboardstdcorrection[self.activeboard] = self.extrigboardstdcorrection[self.activeboard]
+        print("calculated mean and std corrections", self.extrigboardmeancorrection[self.activeboard], self.extrigboardstdcorrection[self.activeboard])
 
     def plot_fft(self):
         if self.dointerleaved[self.activeboard]: y = self.xydatainterleaved[int(self.activeboard/2)][1]
