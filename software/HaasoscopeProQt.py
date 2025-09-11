@@ -1018,8 +1018,24 @@ class MainWindow(TemplateBaseClass):
                         ydatanew = f_cubic(xdatanew)
                         ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * self.doresamp, t=xdatanew) # then resample
                     else:
-                        if self.persist_time>0: xdatanew, ydatanew = self.xydatainterleaved[int(li/2)][0].copy(),self.xydatainterleaved[int(li/2)][1].copy()
-                        else: xdatanew, ydatanew = self.xydatainterleaved[int(li/2)][0], self.xydatainterleaved[int(li/2)][1]
+                        if self.persist_time>0 or self.ui.actionToggle_trig_stabilizer.isChecked(): xdatanew, ydatanew = self.xydatainterleaved[int(li/2)][0].copy(),self.xydatainterleaved[int(li/2)][1].copy()
+                        else: xdatanew, ydatanew = self.xydatainterleaved[int(li/2)][0],self.xydatainterleaved[int(li/2)][1]
+
+                    if self.ui.actionToggle_trig_stabilizer.isChecked(): # special stabilization for interleaved data (it's done on a copy, so we don't have to be careful
+                        fitwidth = (self.max_x - self.min_x)
+                        xc = xdatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
+                        numsamp = 4  # number of samples to use
+                        if self.doresamp: numsamp *= self.doresamp # adjust for extra samples from upsampling
+                        fitwidth *= numsamp / max(2, xc.size)
+                        xc = xdatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
+                        # print("xc size start end", xc.size, xc[0], xc[-1], "and vline at", self.vline)
+                        yc = ydatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
+                        fallingedge = self.ui.risingfalling_comboBox.currentIndex() == 1
+                        if fallingedge: yc = -yc
+                        if xc.size > 1:
+                            distcorrtemp = find_crossing_distance(yc, self.hline, self.vline, xc[0], xc[1] - xc[0])
+                            if distcorrtemp is not None and abs(distcorrtemp) < 1.0:
+                                xdatanew -= distcorrtemp
 
             if xdatanew is not None and self.lines[li].isVisible():
                 self.lines[li].setData(xdatanew, ydatanew)
@@ -1330,11 +1346,11 @@ class MainWindow(TemplateBaseClass):
             if self.doexttrig[board]: # take from the best non exttrig board
                 if self.dooversample[board] and board%2==1: distcorrtemp = self.distcorr[board-1]
                 elif not self.doexttrig[self.activeboard]: distcorrtemp = self.distcorr[self.activeboard]
-                else:
+                else: # take from first triggering board
                     for bn in range(self.num_board):
                         if not self.doexttrig[board]:
                             distcorrtemp = self.distcorr[bn]
-                            continue
+                            break
             else: # find distcorr for this board which is triggering
                 thed = self.xydata[board * self.num_chan_per_board + self.triggerchan[board]]
                 fitwidth = (self.max_x - self.min_x)
