@@ -7,7 +7,7 @@ import pyqtgraph as pg
 import PyQt5
 from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
 from PyQt5.QtGui import QPalette, QColor, QIcon
-from PyQt5.QtWidgets import QApplication, QMessageBox, QWidget, QPushButton
+from PyQt5.QtWidgets import QApplication, QMessageBox, QWidget, QPushButton, QFrame
 from scipy.optimize import curve_fit
 from scipy.signal import resample
 from scipy.interpolate import interp1d
@@ -282,7 +282,7 @@ class MainWindow(TemplateBaseClass):
         QMessageBox.about(
             self,  # Parent widget (optional, but good practice)
             "Haasoscope Pro Qt, by DrAndyHaas",  # Title of the About dialog
-            "A PyQt5 application for the Haasoscope Pro\n\nVersion 29.04"  # Text content
+            "A PyQt5 application for the Haasoscope Pro\n\nVersion 29.05"  # Text content
         )
 
     def persist(self):
@@ -309,7 +309,6 @@ class MainWindow(TemplateBaseClass):
                 color = pen.color()
                 color.setAlpha(alpha)
                 new_pen = pg.mkPen(color, width=pen.width())
-                #if self.doresamp:
                 item.setPen(new_pen)
 
     def recordtofile(self):
@@ -349,6 +348,10 @@ class MainWindow(TemplateBaseClass):
         self.activeboard = self.ui.boardBox.value()
         self.selectchannel()
 
+    def set_channel_frame(self):
+        if self.doexttrig[self.activeboard] or self.doextsmatrig[self.activeboard] or self.triggerchan[self.activeboard]!=self.activexychannel%2: self.ui.chanColor.setFrameStyle(QFrame.NoFrame)
+        else: self.ui.chanColor.setFrameStyle(QFrame.Box)
+
     def selectchannel(self):
         if self.num_board==0: return
         if self.activeboard%2==0 and not self.dotwochannel and self.num_board>1:
@@ -384,6 +387,7 @@ class MainWindow(TemplateBaseClass):
             col = self.linepens[self.activexychannel-self.num_chan_per_board].color().darker(200)
         p.setColor(QPalette.Base, col)  # Set background color of box
         self.ui.chanColor.setPalette(p)
+        self.set_channel_frame()
         if self.lines[self.activexychannel].isVisible():
             self.ui.chanonCheck.setChecked(QtCore.Qt.Checked)
         else:
@@ -718,12 +722,14 @@ class MainWindow(TemplateBaseClass):
         else:
             self.doexttrigecho[board] = False  # turn off for this one since it's not doing exttrig anymore
         self.sendtriggerinfo(board) # to account for trigger time delay or not
+        self.set_channel_frame()
 
     def extsmatrig(self):
         self.doextsmatrig[self.activeboard] = self.ui.extsmatrigCheck.isChecked()
         #print("ext SMA trig now",self.doextsmatrig[self.activeboard],"for board",self.activeboard)
         if self.doextsmatrig[self.activeboard]: self.ui.exttrigCheck.setEnabled(False)
         else: self.ui.exttrigCheck.setEnabled(True)
+        self.set_channel_frame()
 
     def grid(self):
         if self.ui.actionGrid.isChecked():
@@ -774,6 +780,7 @@ class MainWindow(TemplateBaseClass):
     def triggerchanchanged(self):
         self.triggerchan[self.activeboard] = self.ui.trigchan_comboBox.currentIndex()
         self.sendtriggerinfo(self.activeboard)
+        self.set_channel_frame()
 
     def sendtriggerinfo(self, board):
         triggerpos = self.triggerpos + self.triggershift # move actual trigger a little earlier, so we have time to shift a bit later on (downsamplemerging, delayoffset, toff etc.)
