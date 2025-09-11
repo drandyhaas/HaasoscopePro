@@ -289,10 +289,11 @@ class MainWindow(TemplateBaseClass):
         self.persist_time = 50*pow(2,self.ui.persistTbox.value())
         if self.ui.persistTbox.value()==0: self.persist_time=0
         if self.persist_time>0: self.persist_timer.start(50) # ms
-        #else: self.persist_timer.stop()
+        self.ui.persistText.setText(str(self.persist_time/1000)+" s")
 
     def update_persist_effect(self):
         """Updates the alpha/transparency of the persistent lines."""
+        if len(self.persist_lines)==0 and self.persist_time==0: self.persist_timer.stop()
         current_time = time.time()
         for item, creation_time, li in list(self.persist_lines):
             age = (current_time - creation_time) * 1000.

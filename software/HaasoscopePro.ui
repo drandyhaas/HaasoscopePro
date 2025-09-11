@@ -942,7 +942,7 @@
           <x>50</x>
           <y>30</y>
           <width>51</width>
-          <height>21</height>
+          <height>20</height>
          </rect>
         </property>
         <property name="font">
@@ -958,7 +958,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>31</y>
+          <y>30</y>
           <width>47</width>
           <height>20</height>
          </rect>
@@ -1099,7 +1099,7 @@
         <property name="geometry">
          <rect>
           <x>50</x>
-          <y>62</y>
+          <y>63</y>
           <width>51</width>
           <height>20</height>
          </rect>
@@ -1126,7 +1126,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>90</y>
+          <y>89</y>
           <width>47</width>
           <height>19</height>
          </rect>
@@ -1197,7 +1197,7 @@
           <x>50</x>
           <y>7</y>
           <width>51</width>
-          <height>21</height>
+          <height>20</height>
          </rect>
         </property>
         <property name="font">
@@ -1213,7 +1213,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>8</y>
+          <y>7</y>
           <width>47</width>
           <height>20</height>
          </rect>
@@ -1365,7 +1365,7 @@
         <property name="geometry">
          <rect>
           <x>107</x>
-          <y>60</y>
+          <y>63</y>
           <width>71</width>
           <height>20</height>
          </rect>
@@ -1446,31 +1446,13 @@
          </property>
         </item>
        </widget>
-       <widget class="QLabel" name="label_24">
-        <property name="geometry">
-         <rect>
-          <x>80</x>
-          <y>322</y>
-          <width>91</width>
-          <height>16</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="text">
-         <string>Persiancet time</string>
-        </property>
-       </widget>
        <widget class="QSpinBox" name="persistTbox">
         <property name="geometry">
          <rect>
-          <x>10</x>
+          <x>50</x>
           <y>320</y>
-          <width>61</width>
-          <height>22</height>
+          <width>51</width>
+          <height>20</height>
          </rect>
         </property>
         <property name="font">
@@ -1491,10 +1473,56 @@
          <number>0</number>
         </property>
         <property name="maximum">
-         <number>10</number>
+         <number>12</number>
         </property>
         <property name="value">
          <number>0</number>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="persistText">
+        <property name="geometry">
+         <rect>
+          <x>110</x>
+          <y>320</y>
+          <width>71</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="inputMask">
+         <string/>
+        </property>
+        <property name="text">
+         <string notr="true">0 s</string>
+        </property>
+        <property name="maxLength">
+         <number>50</number>
+        </property>
+        <property name="frame">
+         <bool>false</bool>
+        </property>
+        <property name="cursorPosition">
+         <number>3</number>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_13">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>320</y>
+          <width>47</width>
+          <height>19</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="text">
+         <string>Persist</string>
         </property>
        </widget>
       </widget>
