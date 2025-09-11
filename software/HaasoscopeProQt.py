@@ -2,6 +2,7 @@ import math
 import os.path
 import numpy as np
 import sys, time, warnings
+from collections import deque
 import pyqtgraph as pg
 import PyQt5
 from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
@@ -210,11 +211,11 @@ class MainWindow(TemplateBaseClass):
         self.ui.depthBox.valueChanged.connect(self.depth)
         self.ui.boardBox.valueChanged.connect(self.boardchanged)
         self.ui.trigchan_comboBox.currentIndexChanged.connect(self.triggerchanchanged)
-        self.ui.gridCheck.stateChanged.connect(self.grid)
+        self.ui.actionGrid.triggered.connect(self.grid)
         self.ui.markerCheck.stateChanged.connect(self.marker)
         self.ui.highresCheck.stateChanged.connect(self.highres)
         self.ui.pllresetButton.clicked.connect(self.pllreset)
-        self.ui.adfresetButton.clicked.connect(self.adfreset)
+        self.ui.actionClock_reset.triggered.connect(self.adfreset)
         self.ui.upposButton0.clicked.connect(self.uppos)
         self.ui.downposButton0.clicked.connect(self.downpos)
         self.ui.upposButton1.clicked.connect(self.uppos1)
@@ -235,7 +236,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.attCheck.stateChanged.connect(self.setatt)
         self.ui.tenxCheck.stateChanged.connect(self.settenx)
         self.ui.chanonCheck.stateChanged.connect(self.chanon)
-        self.ui.drawingCheck.clicked.connect(self.drawing)
+        self.ui.actionDrawing.triggered.connect(self.drawing)
         self.ui.wideCheck.clicked.connect(self.wideline)
         self.ui.fwfBox.valueChanged.connect(self.fwf)
         self.ui.tadBox.valueChanged.connect(self.setTAD)
@@ -269,6 +270,12 @@ class MainWindow(TemplateBaseClass):
         self.timer2.timeout.connect(self.drawtext)
         self.ui.statusBar.showMessage(str(self.num_board)+" boards connected!")
         self.ui.trigchan_comboBox.setMaxVisibleItems(1)
+        self.max_persist_lines = 16
+        self.persist_time = 0 # ms for each line to live
+        self.persist_lines = deque(maxlen=self.max_persist_lines)
+        self.persist_timer = QtCore.QTimer()
+        self.persist_timer.timeout.connect(self.update_persist_effect)
+        self.ui.persistTbox.valueChanged.connect(self.persist)
         self.show()
 
     def about(self):
@@ -277,6 +284,32 @@ class MainWindow(TemplateBaseClass):
             "Haasoscope Pro Qt, by DrAndyHaas",  # Title of the About dialog
             "A PyQt5 application for the Haasoscope Pro\n\nVersion 29.04"  # Text content
         )
+
+    def persist(self):
+        self.persist_time = 50*pow(2,self.ui.persistTbox.value())
+        if self.ui.persistTbox.value()==0: self.persist_time=0
+        if self.persist_time>0: self.persist_timer.start(50) # ms
+        #else: self.persist_timer.stop()
+
+    def update_persist_effect(self):
+        """Updates the alpha/transparency of the persistent lines."""
+        current_time = time.time()
+        for item, creation_time, li in list(self.persist_lines):
+            age = (current_time - creation_time) * 1000.
+            if age > self.persist_time: # this line is too old, though the deque should handle removal as new events come in
+                # as a fallback, remove it here
+                self.ui.plot.removeItem(item)
+                self.persist_lines.remove((item, creation_time, li))
+                #alpha = 0
+            else:
+                # Calculate alpha based on age (linear fade)
+                alpha = int(255 * (1 - (age / self.persist_time)))
+                pen = self.linepens[li]
+                color = pen.color()
+                color.setAlpha(alpha)
+                new_pen = pg.mkPen(color, width=pen.width())
+                #if self.doresamp:
+                item.setPen(new_pen)
 
     def recordtofile(self):
         self.dorecordtofile = not self.dorecordtofile
@@ -692,7 +725,7 @@ class MainWindow(TemplateBaseClass):
         else: self.ui.exttrigCheck.setEnabled(True)
 
     def grid(self):
-        if self.ui.gridCheck.isChecked():
+        if self.ui.actionGrid.isChecked():
             self.ui.plot.showGrid(x=True, y=True)
         else:
             self.ui.plot.showGrid(x=False, y=False)
@@ -921,7 +954,7 @@ class MainWindow(TemplateBaseClass):
             if not fallingedge: self.triggertype = 1
 
     def drawing(self):
-        if self.ui.drawingCheck.checkState() == QtCore.Qt.Checked:
+        if self.ui.actionDrawing.isChecked():
             self.dodrawing = True
             # print("drawing now",self.dodrawing)
         else:
@@ -956,12 +989,13 @@ class MainWindow(TemplateBaseClass):
                     self.recordtofile()
         if not self.dodrawing: return
         for li in range(self.nlines):
+            xdatanew, ydatanew = None, None
             if not self.dointerleaved[int(li/2)]:
                 if self.doresamp:
                     ydatanew, xdatanew = resample(self.xydata[li][1], len(self.xydata[li][0]) * self.doresamp, t=self.xydata[li][0])
-                    self.lines[li].setData(xdatanew,ydatanew)
                 else:
-                    self.lines[li].setData(self.xydata[li][0], self.xydata[li][1])
+                    if self.persist_time>0: xdatanew, ydatanew = self.xydata[li][0].copy(), self.xydata[li][1].copy()
+                    else: xdatanew, ydatanew = self.xydata[li][0], self.xydata[li][1]
             else:
                 if li%4 == 0:
                     self.xydatainterleaved[int(li/2)][1][0::2] = self.xydata[li][1]
@@ -974,9 +1008,18 @@ class MainWindow(TemplateBaseClass):
                         f_cubic = interp1d(self.xydatainterleaved[int(li/2)][0], self.xydatainterleaved[int(li/2)][1], kind='linear')
                         ydatanew = f_cubic(xdatanew)
                         ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * self.doresamp, t=xdatanew) # then resample
-                        self.lines[li].setData(xdatanew,ydatanew)
                     else:
-                        self.lines[li].setData(self.xydatainterleaved[int(li/2)][0],self.xydatainterleaved[int(li/2)][1])
+                        if self.persist_time>0: xdatanew, ydatanew = self.xydatainterleaved[int(li/2)][0],self.xydatainterleaved[int(li/2)][1]
+                        else: xdatanew, ydatanew = self.xydatainterleaved[int(li/2)][0].copy(), self.xydatainterleaved[int(li/2)][1].copy()
+
+            if xdatanew is not None and self.lines[li].isVisible():
+                self.lines[li].setData(xdatanew, ydatanew)
+                if li==self.activexychannel and self.persist_time>0:
+                    if len(self.persist_lines) >= self.max_persist_lines:
+                        oldest_item, _, _ = self.persist_lines[0]
+                        self.ui.plot.removeItem(oldest_item)
+                    persist_item = self.ui.plot.plot(xdatanew, ydatanew, pen=self.linepens[li])
+                    self.persist_lines.append((persist_item, time.time(), li))
 
         if self.dofft and hasattr(self.fftui,"fftfreqplot_xdata"):
             self.fftui.fftline.setPen(self.linepens[self.activeboard * self.num_chan_per_board + self.selectedchannel])

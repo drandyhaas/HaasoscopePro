@@ -361,6 +361,9 @@
            <family>Arial</family>
           </font>
          </property>
+         <property name="toolTip">
+          <string>Time over threshold required to trigger (samples)</string>
+         </property>
          <property name="minimum">
           <number>0</number>
          </property>
@@ -402,6 +405,9 @@
           <font>
            <family>Arial</family>
           </font>
+         </property>
+         <property name="toolTip">
+          <string>Amount needed over threshold to trigger (ADC values)</string>
          </property>
          <property name="minimum">
           <number>0</number>
@@ -536,9 +542,9 @@
       <widget class="QGroupBox" name="readoutgroupBox">
        <property name="geometry">
         <rect>
-         <x>190</x>
+         <x>130</x>
          <y>420</y>
-         <width>121</width>
+         <width>131</width>
          <height>171</height>
         </rect>
        </property>
@@ -564,6 +570,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Average samples at lower speeds</string>
+        </property>
         <property name="text">
          <string>Highres</string>
         </property>
@@ -575,8 +584,8 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>74</y>
-          <width>41</width>
+          <y>73</y>
+          <width>51</width>
           <height>16</height>
          </rect>
         </property>
@@ -603,6 +612,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Fine ADC delay</string>
+        </property>
         <property name="suffix">
          <string/>
         </property>
@@ -623,8 +635,8 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>50</y>
-          <width>41</width>
+          <y>49</y>
+          <width>51</width>
           <height>16</height>
          </rect>
         </property>
@@ -650,6 +662,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Course delay of waveform (samples)</string>
         </property>
         <property name="accelerated">
          <bool>true</bool>
@@ -681,6 +696,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Memory depth / 40</string>
+        </property>
         <property name="suffix">
          <string/>
         </property>
@@ -701,8 +719,8 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>104</y>
-          <width>41</width>
+          <y>102</y>
+          <width>51</width>
           <height>16</height>
          </rect>
         </property>
@@ -729,6 +747,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Number of points per sample via sinc interpolation</string>
+        </property>
         <property name="suffix">
          <string/>
         </property>
@@ -749,7 +770,7 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>130</y>
+          <y>132</y>
           <width>51</width>
           <height>20</height>
          </rect>
@@ -767,9 +788,9 @@
       <widget class="QGroupBox" name="viewgroupBox">
        <property name="geometry">
         <rect>
-         <x>320</x>
+         <x>270</x>
          <y>420</y>
-         <width>81</width>
+         <width>131</width>
          <height>171</height>
         </rect>
        </property>
@@ -781,7 +802,7 @@
        <property name="title">
         <string>View options</string>
        </property>
-       <widget class="QCheckBox" name="gridCheck">
+       <widget class="QCheckBox" name="markerCheck">
         <property name="geometry">
          <rect>
           <x>10</x>
@@ -796,62 +817,14 @@
          </font>
         </property>
         <property name="text">
-         <string>Grid</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
-       <widget class="QCheckBox" name="markerCheck">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>60</y>
-          <width>70</width>
-          <height>17</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="text">
          <string>Markers</string>
-        </property>
-       </widget>
-       <widget class="QCheckBox" name="drawingCheck">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>40</y>
-          <width>70</width>
-          <height>17</height>
-         </rect>
-        </property>
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="text">
-         <string>Drawing</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
         </property>
        </widget>
        <widget class="QLabel" name="label_16">
         <property name="geometry">
          <rect>
-          <x>10</x>
-          <y>132</y>
+          <x>70</x>
+          <y>73</y>
           <width>61</width>
           <height>16</height>
          </rect>
@@ -862,14 +835,14 @@
          </font>
         </property>
         <property name="text">
-         <string>Fit fraction</string>
+         <string>Fit frac.</string>
         </property>
        </widget>
        <widget class="QSpinBox" name="fwfBox">
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>110</y>
+          <y>71</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -878,6 +851,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>For risetime and calibration</string>
         </property>
         <property name="accelerated">
          <bool>true</bool>
@@ -902,7 +878,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>80</y>
+          <y>40</y>
           <width>71</width>
           <height>17</height>
          </rect>
@@ -919,6 +895,57 @@
         </property>
         <property name="checkable">
          <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_24">
+        <property name="geometry">
+         <rect>
+          <x>70</x>
+          <y>132</y>
+          <width>61</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="text">
+         <string>Persit time</string>
+        </property>
+       </widget>
+       <widget class="QSpinBox" name="persistTbox">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>130</y>
+          <width>51</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>50*2^x milliseconds</string>
+        </property>
+        <property name="accelerated">
+         <bool>false</bool>
+        </property>
+        <property name="suffix">
+         <string/>
+        </property>
+        <property name="minimum">
+         <number>0</number>
+        </property>
+        <property name="maximum">
+         <number>10</number>
+        </property>
+        <property name="value">
+         <number>0</number>
         </property>
        </widget>
       </widget>
@@ -1476,7 +1503,7 @@
         <rect>
          <x>0</x>
          <y>420</y>
-         <width>181</width>
+         <width>121</width>
          <height>171</height>
         </rect>
        </property>
@@ -1560,7 +1587,7 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>100</x>
+          <x>70</x>
           <y>80</y>
           <width>21</width>
           <height>21</height>
@@ -1581,7 +1608,7 @@
        <widget class="QLabel" name="label_8">
         <property name="geometry">
          <rect>
-          <x>100</x>
+          <x>70</x>
           <y>60</y>
           <width>31</width>
           <height>16</height>
@@ -1602,7 +1629,7 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>100</x>
+          <x>70</x>
           <y>100</y>
           <width>21</width>
           <height>21</height>
@@ -1623,7 +1650,7 @@
        <widget class="QLabel" name="label_12">
         <property name="geometry">
          <rect>
-          <x>130</x>
+          <x>90</x>
           <y>60</y>
           <width>31</width>
           <height>16</height>
@@ -1644,7 +1671,7 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>130</x>
+          <x>90</x>
           <y>80</y>
           <width>21</width>
           <height>21</height>
@@ -1668,7 +1695,7 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>130</x>
+          <x>90</x>
           <y>100</y>
           <width>21</width>
           <height>21</height>
@@ -1737,7 +1764,7 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>70</x>
+          <x>50</x>
           <y>80</y>
           <width>21</width>
           <height>21</height>
@@ -1761,7 +1788,7 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>40</x>
+          <x>30</x>
           <y>80</y>
           <width>21</width>
           <height>21</height>
@@ -1785,7 +1812,7 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>70</x>
+          <x>50</x>
           <y>100</y>
           <width>21</width>
           <height>21</height>
@@ -1809,7 +1836,7 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>40</x>
+          <x>30</x>
           <y>100</y>
           <width>21</width>
           <height>21</height>
@@ -1830,7 +1857,7 @@
        <widget class="QLabel" name="label_7">
         <property name="geometry">
          <rect>
-          <x>40</x>
+          <x>30</x>
           <y>60</y>
           <width>31</width>
           <height>16</height>
@@ -1848,7 +1875,7 @@
        <widget class="QLabel" name="label_9">
         <property name="geometry">
          <rect>
-          <x>70</x>
+          <x>50</x>
           <y>60</y>
           <width>31</width>
           <height>16</height>
@@ -1866,9 +1893,9 @@
        <widget class="QPushButton" name="pllresetButton">
         <property name="geometry">
          <rect>
-          <x>10</x>
+          <x>20</x>
           <y>130</y>
-          <width>71</width>
+          <width>81</width>
           <height>23</height>
          </rect>
         </property>
@@ -1877,26 +1904,11 @@
           <family>Arial</family>
          </font>
         </property>
-        <property name="text">
-         <string>ResetPll</string>
-        </property>
-       </widget>
-       <widget class="QPushButton" name="adfresetButton">
-        <property name="geometry">
-         <rect>
-          <x>90</x>
-          <y>130</y>
-          <width>71</width>
-          <height>23</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
+        <property name="toolTip">
+         <string>Reset PLL of active board and find best PLL phase</string>
         </property>
         <property name="text">
-         <string>ResetClk</string>
+         <string>Reset PLL</string>
         </property>
        </widget>
       </widget>
@@ -1935,6 +1947,7 @@
     <addaction name="separator"/>
     <addaction name="actionForce_split"/>
     <addaction name="actionForce_switch_clocks"/>
+    <addaction name="actionClock_reset"/>
     <addaction name="actionToggle_PLL_controls"/>
     <addaction name="actionToggle_trig_stabilizer"/>
    </widget>
@@ -1959,8 +1972,16 @@
     <addaction name="actionRisetime"/>
     <addaction name="actionRisetime_fit_lines"/>
    </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <addaction name="actionDrawing"/>
+    <addaction name="actionGrid"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
+   <addaction name="menuView"/>
    <addaction name="menuMeasurements"/>
    <addaction name="menuOther"/>
    <addaction name="menuHelp"/>
@@ -2003,7 +2024,7 @@
   </action>
   <action name="actionToggle_PLL_controls">
    <property name="text">
-    <string>Toggle PLL controls</string>
+    <string>PLL controls</string>
    </property>
   </action>
   <action name="actionAbout">
@@ -2106,7 +2127,7 @@
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Toggle trig stabilizer</string>
+    <string>Trigger stabilizer</string>
    </property>
   </action>
   <action name="actionRisetime_fit_lines">
@@ -2123,6 +2144,41 @@
   <action name="actionTake_screenshot">
    <property name="text">
     <string>Take screenshot</string>
+   </property>
+  </action>
+  <action name="actionPersist">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Persist</string>
+   </property>
+  </action>
+  <action name="actionClock_reset">
+   <property name="text">
+    <string>Clock reset</string>
+   </property>
+  </action>
+  <action name="actionGrid">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Grid</string>
+   </property>
+  </action>
+  <action name="actionDrawing">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Drawing</string>
    </property>
   </action>
  </widget>
