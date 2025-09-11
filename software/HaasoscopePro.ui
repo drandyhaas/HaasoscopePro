@@ -897,13 +897,13 @@
          <bool>true</bool>
         </property>
        </widget>
-       <widget class="QLabel" name="label_24">
+       <widget class="QCheckBox" name="twochanCheck">
         <property name="geometry">
          <rect>
-          <x>70</x>
+          <x>10</x>
           <y>132</y>
-          <width>61</width>
-          <height>16</height>
+          <width>111</width>
+          <height>17</height>
          </rect>
         </property>
         <property name="font">
@@ -912,40 +912,7 @@
          </font>
         </property>
         <property name="text">
-         <string>Persit time</string>
-        </property>
-       </widget>
-       <widget class="QSpinBox" name="persistTbox">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>130</y>
-          <width>51</width>
-          <height>22</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>50*2^x milliseconds</string>
-        </property>
-        <property name="accelerated">
-         <bool>false</bool>
-        </property>
-        <property name="suffix">
-         <string/>
-        </property>
-        <property name="minimum">
-         <number>0</number>
-        </property>
-        <property name="maximum">
-         <number>10</number>
-        </property>
-        <property name="value">
-         <number>0</number>
+         <string>Two channels</string>
         </property>
        </widget>
       </widget>
@@ -969,24 +936,6 @@
        <property name="flat">
         <bool>false</bool>
        </property>
-       <widget class="QCheckBox" name="twochanCheck">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>280</y>
-          <width>111</width>
-          <height>17</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="text">
-         <string>Two channels</string>
-        </property>
-       </widget>
        <widget class="QSpinBox" name="chanBox">
         <property name="geometry">
          <rect>
@@ -1114,7 +1063,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>310</y>
+          <y>290</y>
           <width>111</width>
           <height>17</height>
          </rect>
@@ -1444,7 +1393,7 @@
         <property name="geometry">
          <rect>
           <x>130</x>
-          <y>370</y>
+          <y>372</y>
           <width>47</width>
           <height>20</height>
          </rect>
@@ -1496,6 +1445,57 @@
           <string>Clock</string>
          </property>
         </item>
+       </widget>
+       <widget class="QLabel" name="label_24">
+        <property name="geometry">
+         <rect>
+          <x>80</x>
+          <y>322</y>
+          <width>91</width>
+          <height>16</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="text">
+         <string>Persiancet time</string>
+        </property>
+       </widget>
+       <widget class="QSpinBox" name="persistTbox">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>320</y>
+          <width>61</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>50*2^x milliseconds</string>
+        </property>
+        <property name="accelerated">
+         <bool>false</bool>
+        </property>
+        <property name="suffix">
+         <string/>
+        </property>
+        <property name="minimum">
+         <number>0</number>
+        </property>
+        <property name="maximum">
+         <number>10</number>
+        </property>
+        <property name="value">
+         <number>0</number>
+        </property>
        </widget>
       </widget>
       <widget class="QGroupBox" name="groupBox_3">
