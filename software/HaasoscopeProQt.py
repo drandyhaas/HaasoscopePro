@@ -1017,8 +1017,8 @@ class MainWindow(TemplateBaseClass):
                         ydatanew = f_cubic(xdatanew)
                         ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * self.doresamp, t=xdatanew) # then resample
                     else:
-                        if self.persist_time>0: xdatanew, ydatanew = self.xydatainterleaved[int(li/2)][0],self.xydatainterleaved[int(li/2)][1]
-                        else: xdatanew, ydatanew = self.xydatainterleaved[int(li/2)][0].copy(), self.xydatainterleaved[int(li/2)][1].copy()
+                        if self.persist_time>0: xdatanew, ydatanew = self.xydatainterleaved[int(li/2)][0].copy(),self.xydatainterleaved[int(li/2)][1].copy()
+                        else: xdatanew, ydatanew = self.xydatainterleaved[int(li/2)][0], self.xydatainterleaved[int(li/2)][1]
 
             if xdatanew is not None and self.lines[li].isVisible():
                 self.lines[li].setData(xdatanew, ydatanew)
