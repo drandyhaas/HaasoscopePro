@@ -57,7 +57,7 @@ class FFTWindow(FFTTemplateBaseClass):
         self.ui.plot.setBackground(QColor('black'))
         c = (10, 10, 10)
         self.fftpen = pg.mkPen(color=c) # width=2 slower
-        self.fftline = self.ui.plot.plot(pen=self.fftpen, name="fft_plot")
+        self.fftline = self.ui.plot.plot(pen=self.fftpen, name="fft_plot", skipFiniteCheck=True, connect="finite")
         self.fftlastTime = time.time() - 10
         self.fftyrange = 1
         self.fftyrangelow = 1e-10
@@ -1018,7 +1018,7 @@ class MainWindow(TemplateBaseClass):
                     if len(self.persist_lines) >= self.max_persist_lines:
                         oldest_item, _, _ = self.persist_lines[0]
                         self.ui.plot.removeItem(oldest_item)
-                    persist_item = self.ui.plot.plot(xdatanew, ydatanew, pen=self.linepens[li])
+                    persist_item = self.ui.plot.plot(xdatanew, ydatanew, pen=self.linepens[li], skipFiniteCheck=True, connect="finite")
                     self.persist_lines.append((persist_item, time.time(), li))
 
         if self.dofft and hasattr(self.fftui,"fftfreqplot_xdata"):
@@ -1711,7 +1711,7 @@ class MainWindow(TemplateBaseClass):
                 colors[chan][3] = alpha
                 c = QColor.fromRgbF(*colors[chan])
                 pen = pg.mkPen(color=c) # width=2 slows drawing down
-                line = self.ui.plot.plot(pen=pen, name=self.chtext + str(chan))
+                line = self.ui.plot.plot(pen=pen, name=self.chtext + str(chan), skipFiniteCheck=True, connect="finite")
                 line.curve.setClickable(True)
                 line.curve.sigClicked.connect(self.fastadclineclick)
                 self.lines.append(line)
@@ -1730,18 +1730,18 @@ class MainWindow(TemplateBaseClass):
         # trigger lines
         self.vline = 0.0
         pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
-        line = self.ui.plot.plot([self.vline, self.vline], [-2.0, 2.0], pen=pen, name="trigger time vert")
+        line = self.ui.plot.plot([self.vline, self.vline], [-2.0, 2.0], pen=pen, name="trigger time vert", skipFiniteCheck=True, connect="finite")
         self.otherlines.append(line)
 
         self.hline = 0.0
         pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
-        line = self.ui.plot.plot([-2.0, 2.0], [self.hline, self.hline], pen=pen, name="trigger thresh horiz")
+        line = self.ui.plot.plot([-2.0, 2.0], [self.hline, self.hline], pen=pen, name="trigger thresh horiz", skipFiniteCheck=True, connect="finite")
         self.otherlines.append(line)
 
         # risetime fit lines
         for i in range(3):
             pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DotLine)
-            line = self.ui.plot.plot([700.0, 700.0], [-2.0, 2.0], pen=pen, name="risetime fit line")
+            line = self.ui.plot.plot([700.0, 700.0], [-2.0, 2.0], pen=pen, name="risetime fit line", skipFiniteCheck=True, connect="finite")
             line.setVisible(False)
             self.otherlines.append(line)
 
