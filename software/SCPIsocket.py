@@ -81,7 +81,7 @@ class hspro_socket:
     def open_socket(self,arg1):
         print('started socket with arg1',arg1)
         while self.runthethread:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.s:
+            with (socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.s):
                 self.s.bind((self.HOST, self.PORT))
                 self.s.listen()
                 self.s.settimeout(1)
@@ -118,8 +118,9 @@ class hspro_socket:
                                             conn.sendall(b"DrAndyHaas,HaasoscopePro,v1,2025,\n")
                                         elif com==b'RATES?':
                                             print("Got command: Rates")
-                                            #rate = str(3.2e9/self.hspro.downsamplefactor) + ",\n" # crashes ngscopeclient?!
-                                            rate = str(1.0e9/self.hspro.downsamplefactor) + ",\n"
+                                            rate = str(3.2e9/self.hspro.downsamplefactor) + ","
+                                            rate += str(1.0e9) + "," # ngscopeclient crashes without this?!
+                                            rate += "\n"
                                             conn.sendall(bytes(rate,'utf-8'))
                                         elif com==b'DEPTHS?':
                                             print("Got command: Depths")
