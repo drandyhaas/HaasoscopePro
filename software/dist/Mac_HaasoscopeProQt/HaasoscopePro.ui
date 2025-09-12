@@ -1305,8 +1305,17 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Color of the currently selected channel, outlined if triggering</string>
+        </property>
         <property name="frameShape">
-         <enum>QFrame::NoFrame</enum>
+         <enum>QFrame::Box</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Plain</enum>
+        </property>
+        <property name="lineWidth">
+         <number>2</number>
         </property>
        </widget>
        <widget class="QCheckBox" name="interleavedCheck">
@@ -1482,7 +1491,7 @@
        <widget class="QLineEdit" name="persistText">
         <property name="geometry">
          <rect>
-          <x>110</x>
+          <x>107</x>
           <y>320</y>
           <width>71</width>
           <height>20</height>
@@ -1967,6 +1976,7 @@
      <string>Calibration</string>
     </property>
     <addaction name="actionDo_autocalibration"/>
+    <addaction name="actionOversampling_mean_and_RMS"/>
    </widget>
    <widget class="QMenu" name="menuOther">
     <property name="title">
@@ -2207,6 +2217,11 @@
    </property>
    <property name="text">
     <string>Drawing</string>
+   </property>
+  </action>
+  <action name="actionOversampling_mean_and_RMS">
+   <property name="text">
+    <string>Oversampling mean and RMS</string>
    </property>
   </action>
  </widget>
