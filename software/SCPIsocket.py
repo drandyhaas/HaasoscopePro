@@ -118,7 +118,8 @@ class hspro_socket:
                                             conn.sendall(b"DrAndyHaas,HaasoscopePro,v1,2025,\n")
                                         elif com==b'RATES?':
                                             print("Got command: Rates")
-                                            rate = str(3.2e9/self.hspro.downsamplefactor) + ",\n"
+                                            #rate = str(3.2e9/self.hspro.downsamplefactor) + ",\n" # crashes ngscopeclient?!
+                                            rate = str(1.0e9/self.hspro.downsamplefactor) + ",\n"
                                             conn.sendall(bytes(rate,'utf-8'))
                                         elif com==b'DEPTHS?':
                                             print("Got command: Depths")
