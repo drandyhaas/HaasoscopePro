@@ -883,7 +883,7 @@ class MainWindow(TemplateBaseClass):
     def timefast(self):
         amount = 1
         if self.downsample - amount < -10:
-            print("downsample too small!")
+            #print("downsample too small!")
             return
         self.downsample = self.downsample - amount
         if self.downsample<0:
@@ -898,7 +898,7 @@ class MainWindow(TemplateBaseClass):
     def timeslow(self):
         amount = 1
         if (self.downsample + amount - 5) > 31:
-            print("downsample too large!")
+            #print("downsample too large!")
             return
         self.downsample = self.downsample + amount
         if self.downsample<0:
@@ -1350,7 +1350,6 @@ class MainWindow(TemplateBaseClass):
                 self.xydata[board * self.num_chan_per_board][0] += self.totdistcorr[board]
                 if self.dotwochannel: self.xydata[board * self.num_chan_per_board + 1][0] += self.totdistcorr[board]
                 self.totdistcorr[board] = 0
-                print("totdistcorr reset")
             distcorrtemp=None
             if self.doexttrig[board]: # take from the best non exttrig board
                 if self.dooversample[board] and board%2==1: distcorrtemp = self.distcorr[board-1]
@@ -1379,7 +1378,6 @@ class MainWindow(TemplateBaseClass):
                 if self.dotwochannel: self.xydata[board * self.num_chan_per_board + 1][0] -= self.distcorr[board]
                 self.totdistcorr[board] += self.distcorr[board]
             #print("board totdistcorr distcorrtemp distcorr", board, self.totdistcorr[board], distcorrtemp, self.distcorr[board])
-
         self.isdrawing = False
 
         self.adjustclocks(board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr)
