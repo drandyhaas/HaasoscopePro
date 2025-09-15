@@ -206,48 +206,37 @@ def format_freq(freq_hz):
 
 def find_crossing_distance(y_data, y_threshold, x_start, x0=0.0, dx=1.0):
     """
-    Calculates the horizontal distance from a starting x-position to the point
-    where the data first crosses a y-threshold from below.
+    Calculates the horizontal distance from a starting x-position to the
+    crossing point that is CLOSEST to that position.
 
     Args:
         y_data (np.ndarray): An array of y-values, assumed to be evenly spaced in x.
         y_threshold (float): The y-value to find the crossing for.
-        x_start (float): The reference x-position to measure the distance from.
+        x_start (float): The reference x-position to find the closest crossing to.
         x0 (float, optional): The x-coordinate of the first data point. Defaults to 0.0.
         dx (float, optional): The spacing between x-coordinates. Defaults to 1.0.
 
     Returns:
-        float: The distance along x from x_start to the intersection point.
-               Returns None if no such crossing is found.
+        float: The signed distance along x from x_start to the closest
+               intersection point. Returns None if no crossing is found.
     """
     # Find all indices where y_data goes from below to at or above the threshold
-    # The condition checks pairs of consecutive points (y[i], y[i+1])
-    try:
-        # np.where returns a tuple of arrays; we want the first element of the first array
-        crossover_indices = np.where((y_data[:-1] < y_threshold) & (y_data[1:] >= y_threshold))[0]
+    crossover_indices = np.where((y_data[:-1] < y_threshold) & (y_data[1:] >= y_threshold))[0]
 
-        if crossover_indices.size == 0:
-            # No crossover found
-            return None
+    if crossover_indices.size == 0: return None
 
-        # We only care about the *first* time it crosses
-        i = crossover_indices[0]
+    # Calculate the x-intersection point for ALL crossovers
+    y1 = y_data[crossover_indices]
+    y2 = y_data[crossover_indices + 1]
+    x1 = x0 + crossover_indices * dx
 
-    except IndexError:
-        # Array is too short to have a crossover
-        return None
-
-    # Get the y-values that bracket the threshold
-    y1 = y_data[i]
-    y2 = y_data[i + 1]
-
-    # Calculate the corresponding x-values
-    x1 = x0 + i * dx
-
-    # Perform linear interpolation to find the exact x-coordinate of the crossing
-    # This finds what fraction of the way y_threshold is between y1 and y2,
-    # and then adds that same fraction of the x-distance (dx) to x1.
     fraction = (y_threshold - y1) / (y2 - y1)
-    x_intersect = x1 + fraction * dx
+    all_x_intersects = x1 + fraction * dx
 
-    return x_intersect - x_start
+    # Find the intersection point that is closest to x_start
+    # We calculate the absolute difference to find the minimum distance,
+    # then select the corresponding x_intersect value.
+    closest_idx = np.argmin(np.abs(all_x_intersects - x_start))
+    closest_x_intersect = all_x_intersects[closest_idx]
+
+    return closest_x_intersect - x_start

@@ -30,8 +30,6 @@ class hspro_socket:
     wfms_per_s = 100.0
     memdepth = 40 * 100 # for depth = 100
     maxval = 5.0
-    trigphase = 0.0
-    offset = 0.0
     clipping = 0
 
     def data_seqnum(self):
@@ -49,18 +47,24 @@ class hspro_socket:
         return struct.pack('d', self.wfms_per_s)
 
     issending = False
-    def data_channel(self,chan):
+    def data_channel(self,chan): # TODO: implement for interleaved samples? (Or does ngscopeclient take care of that?)
+        while self.hspro.isdrawing:
+            time.sleep(.001)
+            self.issending = False
         self.issending = True
         res = bytearray([chan]) # channel index
         hsprochan = chan
         if not self.hspro.dotwochannel: hsprochan*=2 # we use just every other channel in single-channel mode
+        board = hsprochan//2
+        offset = 0.0
+        trigphase = -self.hspro.totdistcorr[board]*1e6*self.hspro.nsunits # convert to fs from ns
         memdepth = self.hspro.xydata[hsprochan][1].size
         if memdepth < self.memdepth: self.memdepth = memdepth
         res += self.memdepth.to_bytes(8,"little")
         scale = self.maxval/pow(2,15)
         res += struct.pack('f', scale) # scale
-        res += struct.pack('f', self.offset) # offset
-        res += struct.pack('f', self.trigphase) # trigphase
+        res += struct.pack('f', offset) # offset
+        res += struct.pack('f', trigphase) # trigphase
         res += bytearray([self.clipping]) # clipping?
 
         #these are the samples, 16-bit signed
@@ -142,8 +146,7 @@ class hspro_socket:
                                             if not self.hspro.isrolling: self.hspro.ui.rollingButton.clicked.emit()
                                             if not self.hspro.getone: self.hspro.ui.singleButton.clicked.emit()
                                             if self.hspro.paused: self.hspro.ui.runButton.clicked.emit()
-                                        else:
-                                            print("Got command:", com)
+                                        #else: print("Got command:", com)
                     except socket.timeout:
                         pass
                     except ConnectionResetError:

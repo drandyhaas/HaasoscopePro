@@ -105,6 +105,7 @@ class MainWindow(TemplateBaseClass):
     time_start = time.time()
     triggertype = 1
     isrolling = 0
+    isdrawing = False # for interlock with hspro socket thread
     selectedchannel = 0
     activeboard = 0
     activexychannel = 0
@@ -181,6 +182,8 @@ class MainWindow(TemplateBaseClass):
     doeventtime = False
     distcorr = [0]*num_board
     totdistcorr = [0]*num_board
+    distcorrtol = 2.0 # ns of max correction
+    distcorrsamp = 10 # num samples on each side of trig line to search for trig crossing
     lvdstrigdelay = [0] * num_board
     lastlvdstrigdelay = [0] * num_board
     acdc = [False]*(num_board*num_chan_per_board)
@@ -1024,7 +1027,7 @@ class MainWindow(TemplateBaseClass):
                     if self.ui.actionToggle_trig_stabilizer.isChecked(): # special stabilization for interleaved data (it's done on a copy, so we don't have to be careful
                         fitwidth = (self.max_x - self.min_x)
                         xc = xdatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
-                        numsamp = 4  # number of samples to use
+                        numsamp = self.distcorrsamp  # number of samples to use on each side of trigger time
                         if self.doresamp: numsamp *= self.doresamp # adjust for extra samples from upsampling
                         fitwidth *= numsamp / max(2, xc.size)
                         xc = xdatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
@@ -1034,7 +1037,7 @@ class MainWindow(TemplateBaseClass):
                         if fallingedge: yc = -yc
                         if xc.size > 1:
                             distcorrtemp = find_crossing_distance(yc, self.hline, self.vline, xc[0], xc[1] - xc[0])
-                            if distcorrtemp is not None and abs(distcorrtemp) < 1.0:
+                            if distcorrtemp is not None and abs(distcorrtemp) < self.distcorrtol*self.downsamplefactor:
                                 xdatanew -= distcorrtemp
 
             if xdatanew is not None and self.lines[li].isVisible():
@@ -1265,6 +1268,11 @@ class MainWindow(TemplateBaseClass):
             if self.firmwareversion>-1: print("Firmware v28+ required, for new triggerphase calculation!")
             self.firmwareversion = -1
             return 0
+        if hasattr(self,"hsprosock"):
+            while self.hsprosock.issending:
+                time.sleep(.001)
+                self.isdrawing=False
+        self.isdrawing=True
         if self.doexttrig[board]:
             boardtouse = self.noextboard
             self.sample_triggered[board] = self.sample_triggered[boardtouse] # take from the other board when using ext trig
@@ -1338,10 +1346,11 @@ class MainWindow(TemplateBaseClass):
                     self.xydata[board * self.num_chan_per_board][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
 
         if self.ui.actionToggle_trig_stabilizer.isChecked():
-            if abs(self.totdistcorr[board]) > 1.0:
+            if abs(self.totdistcorr[board]) > self.distcorrtol*self.downsamplefactor:
                 self.xydata[board * self.num_chan_per_board][0] += self.totdistcorr[board]
                 if self.dotwochannel: self.xydata[board * self.num_chan_per_board + 1][0] += self.totdistcorr[board]
                 self.totdistcorr[board] = 0
+                print("totdistcorr reset")
             distcorrtemp=None
             if self.doexttrig[board]: # take from the best non exttrig board
                 if self.dooversample[board] and board%2==1: distcorrtemp = self.distcorr[board-1]
@@ -1355,7 +1364,7 @@ class MainWindow(TemplateBaseClass):
                 thed = self.xydata[board * self.num_chan_per_board + self.triggerchan[board]]
                 fitwidth = (self.max_x - self.min_x)
                 xc = thed[0][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
-                numsamp = 4 # number of samples to use
+                numsamp = self.distcorrsamp # number of samples to use on each side of trigger time
                 fitwidth *= numsamp / max(2,xc.size)
                 xc = thed[0][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
                 #print("xc size start end", xc.size, xc[0], xc[-1], "and vline at", self.vline)
@@ -1364,12 +1373,14 @@ class MainWindow(TemplateBaseClass):
                 if fallingedge: yc = -yc
                 if xc.size>1:
                     distcorrtemp = find_crossing_distance(yc, self.hline, self.vline, xc[0], xc[1] - xc[0])
-            if distcorrtemp is not None and abs(distcorrtemp) < 1.0:
+            if distcorrtemp is not None and abs(distcorrtemp) < self.distcorrtol*self.downsamplefactor:
                 self.distcorr[board]=distcorrtemp
                 self.xydata[board * self.num_chan_per_board][0] -= self.distcorr[board]
                 if self.dotwochannel: self.xydata[board * self.num_chan_per_board + 1][0] -= self.distcorr[board]
                 self.totdistcorr[board] += self.distcorr[board]
             #print("board totdistcorr distcorrtemp distcorr", board, self.totdistcorr[board], distcorrtemp, self.distcorr[board])
+
+        self.isdrawing = False
 
         self.adjustclocks(board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr)
         if board == self.activeboard:
