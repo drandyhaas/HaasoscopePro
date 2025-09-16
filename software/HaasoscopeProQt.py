@@ -721,8 +721,8 @@ class MainWindow(TemplateBaseClass):
                 self.downpos()
 
     def keyPressEvent(self, event):
-        if event.key() == QtCore.Qt.Key_Up: self.uppos()
-        if event.key() == QtCore.Qt.Key_Down: self.downpos()
+        #if event.key() == QtCore.Qt.Key_Up: self.uppos()
+        #if event.key() == QtCore.Qt.Key_Down: self.downpos()
         if event.key() == QtCore.Qt.Key_Left: self.timefast()
         if event.key() == QtCore.Qt.Key_Right: self.timeslow()
         # modifiers = QtWidgets.QApplication.keyboardModifiers()
