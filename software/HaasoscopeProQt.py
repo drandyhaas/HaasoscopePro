@@ -709,20 +709,11 @@ class MainWindow(TemplateBaseClass):
             self.plljustreset[board] = -10
 
     def wheelEvent(self, event):  # QWheelEvent
-        if hasattr(event, "delta"):
-            if event.delta() > 0:
-                self.uppos()
-            else:
-                self.downpos()
-        elif hasattr(event, "angleDelta"):
-            if event.angleDelta() > 0:
-                self.uppos()
-            else:
-                self.downpos()
+        return
 
     def keyPressEvent(self, event):
-        #if event.key() == QtCore.Qt.Key_Up: self.uppos()
-        #if event.key() == QtCore.Qt.Key_Down: self.downpos()
+        if event.key() == QtCore.Qt.Key_Up: self.ui.offsetBox.stepUp()
+        if event.key() == QtCore.Qt.Key_Down: self.ui.offsetBox.stepDown()
         if event.key() == QtCore.Qt.Key_Left: self.timefast()
         if event.key() == QtCore.Qt.Key_Right: self.timeslow()
         # modifiers = QtWidgets.QApplication.keyboardModifiers()
