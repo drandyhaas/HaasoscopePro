@@ -2016,6 +2016,7 @@
     </property>
     <addaction name="actionDrawing"/>
     <addaction name="actionGrid"/>
+    <addaction name="actionPan_and_zoom"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
@@ -2222,6 +2223,14 @@
   <action name="actionOversampling_mean_and_RMS">
    <property name="text">
     <string>Oversampling mean and RMS</string>
+   </property>
+  </action>
+  <action name="actionPan_and_zoom">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Pan and zoom</string>
    </property>
   </action>
  </widget>
