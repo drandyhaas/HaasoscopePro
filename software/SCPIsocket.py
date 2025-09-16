@@ -48,16 +48,13 @@ class hspro_socket:
 
     issending = False
     def data_channel(self,chan): # TODO: implement for interleaved samples? (Or does ngscopeclient take care of that?)
-        while self.hspro.isdrawing:
-            time.sleep(.001)
-            self.issending = False
-        self.issending = True
         res = bytearray([chan]) # channel index
         hsprochan = chan
         if not self.hspro.dotwochannel: hsprochan*=2 # we use just every other channel in single-channel mode
         board = hsprochan//2
         offset = 0.0
         trigphase = -self.hspro.totdistcorr[board]*1e6*self.hspro.nsunits # convert to fs from ns
+        if self.hspro.dotwochannel: trigphase /= 2.0
         memdepth = self.hspro.xydata[hsprochan][1].size
         if memdepth < self.memdepth: self.memdepth = memdepth
         res += self.memdepth.to_bytes(8,"little")
@@ -76,7 +73,6 @@ class hspro_socket:
             if scaledval>32767: scaledval=32767
             res+=scaledval.to_bytes(2, byteorder='little', signed=True)
         self.memdepth = memdepth # update at the end in case it's changed
-        self.issending = False
         return res
 
     runthethread = True
@@ -110,12 +106,17 @@ class hspro_socket:
                                     if com == b'': continue # empty from end of line
                                     elif com == b'K':
                                         #print("Got command: Get event")
+                                        while self.hspro.isdrawing:
+                                            time.sleep(.001)
+                                            self.issending = False
+                                        self.issending = True
                                         conn.sendall(self.data_seqnum())
                                         conn.sendall(self.data_numchan())
                                         conn.sendall(self.data_fspersample())
                                         conn.sendall(self.data_triggerpos())
                                         conn.sendall(self.data_wfms_per_s())
                                         for c in range(self.numchan): conn.sendall(self.data_channel(c))
+                                        self.issending = False
                                     else:
                                         if com==b'*IDN?':
                                             print("Got command: IDN")
