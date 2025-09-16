@@ -835,7 +835,7 @@ class MainWindow(TemplateBaseClass):
     def depth(self):
         self.expect_samples = self.ui.depthBox.value()
         self.setupchannels()
-        self.triggerposchanged(self.ui.thresholdPos.value())
+        #self.triggerposchanged(self.ui.thresholdPos.value())
         self.tot()
         self.timechanged()
 
@@ -906,9 +906,11 @@ class MainWindow(TemplateBaseClass):
         if self.downsample<0:
             self.downsamplezoom = pow(2, -self.downsample)
             self.ui.thresholdPos.setEnabled(False)
+            self.otherlines[0].setMovable(False)
         else:
             self.downsamplezoom = 1
             self.ui.thresholdPos.setEnabled(True)
+            self.otherlines[0].setMovable(True)
             for usb in usbs: self.telldownsample(usb, self.downsample)
         self.timechanged()
 
@@ -921,9 +923,11 @@ class MainWindow(TemplateBaseClass):
         if self.downsample<0:
             self.downsamplezoom = pow(2, -self.downsample)
             self.ui.thresholdPos.setEnabled(False)
+            self.otherlines[0].setMovable(False)
         else:
             self.downsamplezoom = 1
             self.ui.thresholdPos.setEnabled(True)
+            self.otherlines[0].setMovable(True)
             for usb in usbs: self.telldownsample(usb, self.downsample)
         self.timechanged()
 
@@ -1819,8 +1823,8 @@ class MainWindow(TemplateBaseClass):
         for usb in usbs: self.telldownsample(usb, 0)
 
     def on_vline_dragged(self, line):
-        t = line.value() / (4 * 10 * (self.downsamplefactor / self.nsunits / self.samplerate)) - 1.0
-        self.ui.thresholdPos.setValue(int(t))
+        t = (line.value() / (4 * 10 * (self.downsamplefactor / self.nsunits / self.samplerate)) - 1.0) * 100./self.expect_samples
+        self.ui.thresholdPos.setValue(int(round(t,2)))
         self.drawtriggerlines()
 
     def on_hline_dragged(self, line):
