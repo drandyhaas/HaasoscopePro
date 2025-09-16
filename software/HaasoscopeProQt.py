@@ -298,9 +298,15 @@ class MainWindow(TemplateBaseClass):
         if self.ui.actionPan_and_zoom.isChecked():
             self.ui.plot.setMouseEnabled(x=True, y=True)
             self.ui.plot.showButtons()
+            if len(self.otherlines)>0:
+                self.otherlines[0].setMovable(False)
+                self.otherlines[1].setMovable(False)
         else:
             self.ui.plot.setMouseEnabled(x=False, y=False)
             self.ui.plot.hideButtons()
+            if len(self.otherlines)>0:
+                self.otherlines[0].setMovable(True)
+                self.otherlines[1].setMovable(True)
 
     def persist(self):
         self.persist_time = 50*pow(2,self.ui.persistTbox.value())
