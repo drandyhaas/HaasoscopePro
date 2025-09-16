@@ -52,7 +52,10 @@ class FFTWindow(FFTTemplateBaseClass):
         self.ui.actionLog_scale.triggered.connect(self.log_scale)
         self.ui.plot.setLabel('bottom', 'Frequency (MHz)')
         self.ui.plot.setLabel('left', 'Amplitude')
-        self.ui.plot.showGrid(x=True, y=True, alpha=1)
+        self.ui.plot.showGrid(x=True, y=True, alpha=.8)
+        self.ui.plot.setMenuEnabled(False) # disables the right-click menu
+        self.ui.plot.setMouseEnabled(x=False, y=False) # diesables pan and zoom
+        self.ui.plot.hideButtons() # hides the little autoscale button in the lower left
         #self.ui.plot.setRange(xRange=(0.0, 1600.0))
         self.ui.plot.setBackground(QColor('black'))
         c = (10, 10, 10)
@@ -257,6 +260,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionRecord.triggered.connect(self.recordtofile)
         self.ui.actionAbout.triggered.connect(self.about)
         self.ui.actionOversampling_mean_and_RMS.triggered.connect(self.do_meanrms_calibration)
+        self.ui.actionPan_and_zoom.triggered.connect(self.dopanandzoom)
         self.dofft = False
         self.db = False
         self.lastTime = time.time()
@@ -280,14 +284,23 @@ class MainWindow(TemplateBaseClass):
         self.persist_timer = QtCore.QTimer()
         self.persist_timer.timeout.connect(self.update_persist_effect)
         self.ui.persistTbox.valueChanged.connect(self.persist)
+        self.dopanandzoom()
         self.show()
 
     def about(self):
         QMessageBox.about(
             self,  # Parent widget (optional, but good practice)
             "Haasoscope Pro Qt, by DrAndyHaas",  # Title of the About dialog
-            "A PyQt5 application for the Haasoscope Pro\n\nVersion 29.07"  # Text content
+            "A PyQt5 application for the Haasoscope Pro\n\nVersion 29.08"  # Text content
         )
+
+    def dopanandzoom(self):
+        if self.ui.actionPan_and_zoom.isChecked():
+            self.ui.plot.setMouseEnabled(x=True, y=True)
+            self.ui.plot.showButtons()
+        else:
+            self.ui.plot.setMouseEnabled(x=False, y=False)
+            self.ui.plot.hideButtons()
 
     def persist(self):
         self.persist_time = 50*pow(2,self.ui.persistTbox.value())
@@ -737,7 +750,7 @@ class MainWindow(TemplateBaseClass):
 
     def grid(self):
         if self.ui.actionGrid.isChecked():
-            self.ui.plot.showGrid(x=True, y=True)
+            self.ui.plot.showGrid(x=True, y=True, alpha=0.8)
         else:
             self.ui.plot.showGrid(x=False, y=False)
 
@@ -1792,7 +1805,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.plot.setRange(yRange=(self.min_y, self.max_y), padding=0.01)
         self.ui.plot.getAxis("left").setTickSpacing(1,.1)
         self.ui.plot.setBackground(QColor('black'))
-        self.ui.plot.showGrid(x=True, y=True)
+        self.ui.plot.showGrid(x=True, y=True, alpha=0.8)
+        self.ui.plot.setMenuEnabled(False) # disables the right-click menu
         for usb in usbs: self.telldownsample(usb, 0)
 
     def setup_connection(self, board):
