@@ -815,14 +815,12 @@ class MainWindow(TemplateBaseClass):
         usbs[board].recv(4)
 
     def drawtriggerlines(self):
-        self.hline = (self.triggerlevel - 127) * self.yscale * 16 * 16
-        self.otherlines[1].setData([self.min_x, self.max_x],
-                                   [self.hline, self.hline])  # horizontal line showing trigger threshold
         point = self.triggerpos + 1.0
         self.vline = 4 * 10 * point * (self.downsamplefactor / self.nsunits / self.samplerate)
-        self.otherlines[0].setData([self.vline, self.vline], [max(self.hline + self.min_y / 2, self.min_y),
-                                                              min(self.hline + self.max_y / 2,
-                                                                  self.max_y)])  # vertical line showing trigger time
+        self.otherlines[0].setValue(self.vline) # vertical line showing trigger time
+
+        self.hline = (self.triggerlevel - 127) * self.yscale * 256
+        self.otherlines[1].setValue(self.hline)  # horizontal line showing trigger threshold
 
     def tot(self):
         self.triggertimethresh = self.ui.totBox.value()
@@ -1780,15 +1778,20 @@ class MainWindow(TemplateBaseClass):
         else: self.ui.chanBox.setMaximum(0)
         self.ui.boardBox.setMaximum(self.num_board - 1)
 
-        # trigger lines
+        # vertical trigger position line
         self.vline = 0.0
-        pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
-        line = self.ui.plot.plot([self.vline, self.vline], [-2.0, 2.0], pen=pen, name="trigger time vert", skipFiniteCheck=True, connect="finite")
+        dashedpen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
+        hoverpen = pg.mkPen(color="w", width=2.0, style=QtCore.Qt.DashLine)
+        line = pg.InfiniteLine(pos=self.vline, angle=90, movable=True, pen=dashedpen, hoverPen=hoverpen)
+        self.ui.plot.addItem(line)
+        line.sigPositionChanged.connect(self.on_vline_dragged)
         self.otherlines.append(line)
 
+        # horizontal trigger threshold line
         self.hline = 0.0
-        pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
-        line = self.ui.plot.plot([-2.0, 2.0], [self.hline, self.hline], pen=pen, name="trigger thresh horiz", skipFiniteCheck=True, connect="finite")
+        line = pg.InfiniteLine(pos=self.hline, angle=0, movable=True, pen=dashedpen, hoverPen=hoverpen)
+        self.ui.plot.addItem(line)
+        line.sigPositionChanged.connect(self.on_hline_dragged)
         self.otherlines.append(line)
 
         # risetime fit lines
@@ -1808,6 +1811,15 @@ class MainWindow(TemplateBaseClass):
         self.ui.plot.showGrid(x=True, y=True, alpha=0.8)
         self.ui.plot.setMenuEnabled(False) # disables the right-click menu
         for usb in usbs: self.telldownsample(usb, 0)
+
+    def on_vline_dragged(self, line):
+        t = line.value() / (4 * 10 * (self.downsamplefactor / self.nsunits / self.samplerate)) - 1.0
+        self.ui.thresholdPos.setValue(int(t))
+        self.drawtriggerlines()
+
+    def on_hline_dragged(self, line):
+        t = line.value() / (self.yscale * 256) + 127
+        self.ui.threshold.setValue(int(t))
 
     def setup_connection(self, board):
         print("Setting up board",board)
