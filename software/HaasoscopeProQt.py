@@ -1016,7 +1016,7 @@ class MainWindow(TemplateBaseClass):
         for li in range(self.nlines):
             xdatanew, ydatanew = None, None
             if not self.dointerleaved[int(li/2)]:
-                if self.doresamp:
+                if self.doresamp and self.downsample<0:
                     ydatanew, xdatanew = resample(self.xydata[li][1], len(self.xydata[li][0]) * self.doresamp, t=self.xydata[li][0])
                 else:
                     if self.persist_time>0: xdatanew, ydatanew = self.xydata[li][0].copy(), self.xydata[li][1].copy()
@@ -1028,7 +1028,7 @@ class MainWindow(TemplateBaseClass):
                     if self.ui.actionToggle_trig_stabilizer.isChecked():
                         self.xydatainterleaved[int(li/2)][0][0::2] = self.xydata[li][0]
                         self.xydatainterleaved[int(li/2)][0][1::2] = self.xydata[li+self.num_chan_per_board][0] + 0.15625
-                    if self.doresamp:
+                    if self.doresamp and self.downsample<0:
                         xdatanew = np.linspace(self.xydatainterleaved[int(li/2)][0].min(), self.xydatainterleaved[int(li/2)][0].max(), len(self.xydatainterleaved[int(li/2)][0])*1) # first put them on a regular x spacing
                         f_cubic = interp1d(self.xydatainterleaved[int(li/2)][0], self.xydatainterleaved[int(li/2)][1], kind='linear')
                         ydatanew = f_cubic(xdatanew)
@@ -1041,7 +1041,7 @@ class MainWindow(TemplateBaseClass):
                         fitwidth = (self.max_x - self.min_x)
                         xc = xdatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
                         numsamp = self.distcorrsamp  # number of samples to use on each side of trigger time
-                        if self.doresamp: numsamp *= self.doresamp # adjust for extra samples from upsampling
+                        if self.doresamp and self.downsample<0: numsamp *= self.doresamp # adjust for extra samples from upsampling
                         fitwidth *= numsamp / max(2, xc.size)
                         xc = xdatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
                         # print("xc size start end", xc.size, xc[0], xc[-1], "and vline at", self.vline)
