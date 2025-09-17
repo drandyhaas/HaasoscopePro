@@ -830,6 +830,8 @@ class MainWindow(TemplateBaseClass):
         self.triggerposchanged(5000)
         self.tot()
         self.timechanged()
+        self.timeslow()
+        self.timefast()
 
     def rolling(self):
         self.isrolling = not self.isrolling
@@ -1027,7 +1029,7 @@ class MainWindow(TemplateBaseClass):
                     self.xydatainterleaved[int(li/2)][1][1::2] = self.xydata[li+self.num_chan_per_board][1]
                     if self.ui.actionToggle_trig_stabilizer.isChecked():
                         self.xydatainterleaved[int(li/2)][0][0::2] = self.xydata[li][0]
-                        self.xydatainterleaved[int(li/2)][0][1::2] = self.xydata[li+self.num_chan_per_board][0] + 0.15625
+                        self.xydatainterleaved[int(li/2)][0][1::2] = self.xydata[li+self.num_chan_per_board][0] + (1/2.)/3.2/self.nsunits
                     if self.doresamp and self.downsample<0:
                         xdatanew = np.linspace(self.xydatainterleaved[int(li/2)][0].min(), self.xydatainterleaved[int(li/2)][0].max(), len(self.xydatainterleaved[int(li/2)][0])*1) # first put them on a regular x spacing
                         f_cubic = interp1d(self.xydatainterleaved[int(li/2)][0], self.xydatainterleaved[int(li/2)][1], kind='linear')
@@ -1437,9 +1439,9 @@ class MainWindow(TemplateBaseClass):
                 yc = targety[1][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]
                 fallingedge = self.ui.risingfalling_comboBox.currentIndex() == 1
                 if fallingedge:
-                    p0 = [min(targety[1]), xc[xc.size//2], -2, max(targety[1])] #initial guess
+                    p0 = [min(targety[1]), xc[xc.size//2], -2*self.nsunits, max(targety[1])] #initial guess
                 else:
-                    p0 = [max(targety[1]), xc[xc.size//2], 2, min(targety[1])] #initial guess
+                    p0 = [max(targety[1]), xc[xc.size//2], 2*self.nsunits, min(targety[1])] #initial guess
                 if xc.size < 10: # require at least something to fit, otherwise we'll throw an error
                     thestr += "Risetime: fit range too small\n"
                 else:
@@ -1462,10 +1464,10 @@ class MainWindow(TemplateBaseClass):
                                 bot = p0[3]  # popt[3]
                             right = left+(top-bot)/slope
                             #print("right",right)
-                            risetime = 0.6 * (top-bot)/slope # from 20 - 80%
+                            risetime = self.nsunits * 0.6 * (top-bot)/slope # from 20 - 80%
                             if fallingedge: risetime*=-1
-                            risetimeerr = 0.6 * 4 * (top-bot) * perr[2] / (slope*slope) # 4 is fudge factor, since the error is often underestimated
-                            thestr += "Risetime: " + str(risetime.round(2)) + "+-" + str(risetimeerr.round(2)) + " " + self.units + str("\n")
+                            risetimeerr = self.nsunits * 0.6 * 4 * (top-bot) * perr[2] / (slope*slope) # 4 is fudge factor, since the error is often underestimated
+                            thestr += "Risetime: " + str(risetime.round(2)) + "+-" + str(risetimeerr.round(2)) + " ns\n"
                             if self.ui.actionRisetime_fit_lines.isChecked():
                                 self.otherlines[2].setData([right, xc[-1]],[top, top])
                                 self.otherlines[3].setData([left, right], [bot, top])
