@@ -449,11 +449,12 @@ class MainWindow(TemplateBaseClass):
         if self.dorecordtofile:  # if writing, close and open new file, by calling recordtofile() twice, since the number of samples per event for each channel will change
             self.recordtofile()
             self.recordtofile()
-        for bo in range(self.num_board):
-            for ch in range(self.num_chan_per_board):
-                setchanatt(usbs[bo], ch, self.dotwochannel, self.dooversample[bo])  # turn on/off antialias for two/single channel mode
-        self.ui.attCheck.setChecked(self.dotwochannel)
-        self.att = [self.dotwochannel]*(self.num_board*self.num_chan_per_board)
+        if self.num_board>1 or usbs[self.activeboard].beta > 1.2:
+            for bo in range(self.num_board):
+                for ch in range(self.num_chan_per_board):
+                    setchanatt(usbs[bo], ch, self.dotwochannel, self.dooversample[bo])  # turn on/off antialias for two/single channel mode
+            self.ui.attCheck.setChecked(self.dotwochannel)
+            self.att = [self.dotwochannel]*(self.num_board*self.num_chan_per_board)
         self.setupchannels()
         self.doleds()
         for usb in usbs: setupboard(usb,self.dopattern,self.dotwochannel,self.dooverrange)
