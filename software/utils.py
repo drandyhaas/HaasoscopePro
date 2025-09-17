@@ -2,6 +2,8 @@ import time
 import numpy as np
 from scipy.signal import find_peaks
 from scipy.fft import fft, fftfreq
+import pyqtgraph as pg
+from pyqtgraph.Qt import QtWidgets
 
 def reverse_bits(byte):
     reversed_byte = 0
@@ -240,3 +242,49 @@ def find_crossing_distance(y_data, y_threshold, x_start, x0=0.0, dx=1.0):
     closest_x_intersect = all_x_intersects[closest_idx]
 
     return closest_x_intersect - x_start
+
+def add_secondary_axis(plot_item, conversion_func, **axis_args):
+    """
+    Adds a secondary y-axis that is dynamically linked by a conversion function.
+
+    The conversion function and update logic are attached to the returned
+    AxisItem, allowing them to be modified later.
+    """
+    # Create and add the proxy ViewBox
+    proxy_view = pg.ViewBox()
+    proxy_view.setMenuEnabled(False)  # disables the right-click menu
+    plot_item.scene().addItem(proxy_view)
+
+    # Get the right axis and link it
+    axis = plot_item.getAxis('right')
+    axis.linkToView(proxy_view)
+    axis.setLabel(**axis_args)
+    plot_item.showAxis('right')
+
+    # Attach the key components to the axis object
+    axis.proxy_view = proxy_view
+    axis.conversion_func = conversion_func  # Attach the function itself
+
+    # Define the update function
+    def update_proxy_range():
+        # Use the conversion_func attached to this axis object
+        main_yrange = plot_item.getViewBox().viewRange()[1]
+        proxy_range = [axis.conversion_func(y) for y in main_yrange]
+        axis.proxy_view.setYRange(*proxy_range, padding=0.01, update=False)
+
+    # Attach the update function so we can call it manually
+    axis.update_function = update_proxy_range
+
+    # Connect signals
+    plot_item.getViewBox().sigYRangeChanged.connect(axis.update_function)
+
+    def update_geometry():
+        axis.proxy_view.setGeometry(plot_item.getViewBox().sceneBoundingRect())
+
+    plot_item.getViewBox().sigResized.connect(update_geometry)
+
+    # Trigger initial updates
+    axis.update_function()
+    update_geometry()
+
+    return axis

@@ -174,7 +174,7 @@ class MainWindow(TemplateBaseClass):
     extrigboardmeancorrection = [0] * num_board
     lastrate = 0
     lastsize = 0
-    VperD = [0.16]*(num_board*2)
+    VperD = [0.16]*(num_board*num_chan_per_board)
     plljustreset = [-10] * num_board
     plljustresetdir = [0] * num_board
     phasenbad = [[0] * 12] * num_board
@@ -265,6 +265,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionAbout.triggered.connect(self.about)
         self.ui.actionOversampling_mean_and_RMS.triggered.connect(self.do_meanrms_calibration)
         self.ui.actionPan_and_zoom.triggered.connect(self.dopanandzoom)
+        self.rightaxis = None
         self.dofft = False
         self.db = False
         self.lastTime = time.time()
@@ -436,6 +437,15 @@ class MainWindow(TemplateBaseClass):
         self.ui.offsetBox.setValue(self.offset[self.activexychannel])
         self.ui.gainBox.setValue(self.gain[self.activexychannel])
         self.ui.trigchan_comboBox.setCurrentIndex(self.triggerchan[self.activeboard] if self.dotwochannel else 0)
+        self.update_right_axis()
+
+    def update_right_axis(self):
+        if self.num_board>0:
+            self.rightaxis.setPen( self.linepens[self.activexychannel] )
+            self.rightaxis.setTextPen(color=self.linepens[self.activexychannel].color())
+            self.rightaxis.setLabel(text="Voltage for board "+str(self.activeboard)+" channel "+str(self.selectedchannel), units='V')
+            self.rightaxis.conversion_func = lambda val: val * self.VperD[self.activexychannel]
+            self.rightaxis.update_function()
 
     def fft(self):
         if self.ui.fftCheck.checkState() == QtCore.Qt.Checked:
@@ -511,6 +521,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.VperD.setText(str(int(v2))+" mV/div")
         if self.ui.gainBox.value()>24: self.ui.gainBox.setSingleStep(2)
         else: self.ui.gainBox.setSingleStep(6)
+        self.update_right_axis()
 
     def fwf(self):
         self.fitwidthfraction = self.ui.fwfBox.value() / 100.
@@ -1827,6 +1838,13 @@ class MainWindow(TemplateBaseClass):
         self.ui.plot.setBackground(QColor('black'))
         self.ui.plot.showGrid(x=True, y=True, alpha=0.8)
         self.ui.plot.setMenuEnabled(False) # disables the right-click menu
+        if self.num_board>0:
+            self.rightaxis = add_secondary_axis(
+                plot_item=self.ui.plot,
+                conversion_func=lambda val: val * self.VperD[self.activexychannel],
+                text='Voltage', units='V', color="w")
+            self.rightaxis.setWidth(w=40)
+            self.update_right_axis()
         for usb in usbs: self.telldownsample(usb, 0)
 
     def on_vline_dragged(self, line):
