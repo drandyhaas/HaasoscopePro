@@ -252,7 +252,8 @@ def add_secondary_axis(plot_item, conversion_func, **axis_args):
     """
     # Create and add the proxy ViewBox
     proxy_view = pg.ViewBox()
-    proxy_view.setMenuEnabled(False)  # disables the right-click menu
+    proxy_view.setMenuEnabled(False) # disables the right-click menu
+    proxy_view.setMouseEnabled(x=False, y=False) # disables pan and zoom
     plot_item.scene().addItem(proxy_view)
 
     # Get the right axis and link it
@@ -270,7 +271,7 @@ def add_secondary_axis(plot_item, conversion_func, **axis_args):
         # Use the conversion_func attached to this axis object
         main_yrange = plot_item.getViewBox().viewRange()[1]
         proxy_range = [axis.conversion_func(y) for y in main_yrange]
-        axis.proxy_view.setYRange(*proxy_range, padding=0.01, update=False)
+        axis.proxy_view.setYRange(*proxy_range, padding=0, update=False)
 
     # Attach the update function so we can call it manually
     axis.update_function = update_proxy_range

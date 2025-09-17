@@ -58,7 +58,7 @@ class FFTWindow(FFTTemplateBaseClass):
         self.ui.plot.setLabel('left', 'Amplitude')
         self.ui.plot.showGrid(x=True, y=True, alpha=.8)
         self.ui.plot.setMenuEnabled(False) # disables the right-click menu
-        self.ui.plot.setMouseEnabled(x=False, y=False) # diesables pan and zoom
+        self.ui.plot.setMouseEnabled(x=False, y=False) # disables pan and zoom
         self.ui.plot.hideButtons() # hides the little autoscale button in the lower left
         #self.ui.plot.setRange(xRange=(0.0, 1600.0))
         self.ui.plot.setBackground(QColor('black'))
@@ -174,7 +174,8 @@ class MainWindow(TemplateBaseClass):
     extrigboardmeancorrection = [0] * num_board
     lastrate = 0
     lastsize = 0
-    VperD = [0.16]*(num_board*num_chan_per_board)
+    basevoltage = 200 # 160 or 200
+    VperD = [basevoltage/1000.]*(num_board*num_chan_per_board)
     plljustreset = [-10] * num_board
     plljustresetdir = [0] * num_board
     phasenbad = [[0] * 12] * num_board
@@ -473,7 +474,7 @@ class MainWindow(TemplateBaseClass):
             self.att = [self.dotwochannel]*(self.num_board*self.num_chan_per_board)
         self.setupchannels()
         self.doleds()
-        for usb in usbs: setupboard(usb,self.dopattern,self.dotwochannel,self.dooverrange)
+        for usb in usbs: setupboard(usb,self.dopattern,self.dotwochannel,self.dooverrange,self.basevoltage==200)
         for usb in usbs: self.telldownsample(usb, self.downsample)
         self.timechanged()
         if self.dotwochannel:
@@ -510,15 +511,16 @@ class MainWindow(TemplateBaseClass):
             setgain(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.gainBox.value(),self.dooversample[self.activeboard])
             self.gain[self.activexychannel+self.num_chan_per_board] = self.ui.gainBox.value()  # remember it
         db = self.ui.gainBox.value()
-        v2 = 0.1605*self.tenx[self.activexychannel]/pow(10, db / 20.) # 0.16 V at 0 dB gain
+        v2 = (self.basevoltage/1000.)*self.tenx[self.activexychannel]/pow(10, db / 20.) # basevoltage V at 0 dB gain
         if self.dooversample[self.activeboard]: v2 *= 2.0
         oldvperd = self.VperD[self.activeboard*2+self.selectedchannel]
         self.VperD[self.activeboard*2+self.selectedchannel] = v2
         if self.dooversample[self.activeboard] and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
             self.VperD[(self.activeboard+1)*2+self.selectedchannel] = v2
         self.ui.offsetBox.setValue(int(self.ui.offsetBox.value()*oldvperd/v2))
-        v2 = round(1000*v2,0)
-        self.ui.VperD.setText(str(int(v2))+" mV/div")
+        v2 = round(1002*v2,0) # to get the numbers to round well
+        if int(v2)==13: self.ui.VperD.setText(str(12.5)+" mV/div")
+        else: self.ui.VperD.setText(str(int(v2))+" mV/div")
         if self.ui.gainBox.value()>24: self.ui.gainBox.setSingleStep(2)
         else: self.ui.gainBox.setSingleStep(6)
         self.update_right_axis()
@@ -732,8 +734,12 @@ class MainWindow(TemplateBaseClass):
             self.dodrawing = True
             self.plljustreset[board] = -10
 
-    def wheelEvent(self, event):  # QWheelEvent
-        return
+    def wheelEvent(self, event): # QWheelEvent
+        if hasattr(event, "angleDelta"):
+            if event.angleDelta().y() > 0:
+                self.ui.gainBox.setValue(self.ui.gainBox.value()+1)
+            else:
+                self.ui.gainBox.setValue(self.ui.gainBox.value()-1)
 
     def keyPressEvent(self, event):
         if event.key() == QtCore.Qt.Key_Up: self.ui.offsetBox.stepUp()
@@ -853,6 +859,7 @@ class MainWindow(TemplateBaseClass):
         self.setupchannels()
         self.triggerposchanged(5000)
         self.tot()
+        self.changegain()
         self.timechanged()
         self.timeslow()
         self.timefast()
@@ -1865,7 +1872,7 @@ class MainWindow(TemplateBaseClass):
             print("Warning - this board has older firmware than another being used!")
             self.firmwareversion = ver # find the minimum firmware being used
         self.adfreset(board)
-        setupboard(usbs[board], self.dopattern, self.dotwochannel, self.dooverrange)
+        setupboard(usbs[board], self.dopattern, self.dotwochannel, self.dooverrange, self.basevoltage==200)
         for c in range(self.num_chan_per_board):
             setchanacdc(usbs[board], c, 0, self.dooversample[board])
             setchanimpedance(usbs[board], c, 0, self.dooversample[board])
