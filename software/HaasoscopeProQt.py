@@ -138,7 +138,7 @@ class MainWindow(TemplateBaseClass):
     downsamplezoom = 1
     triggerlevel = 127
     triggerdelta = 1
-    triggerpos = int(expect_samples * 128 / 256)
+    triggerpos = 500
     triggertimethresh = 0
     triggerchan = [0] * num_board
     hline = 0
@@ -291,7 +291,7 @@ class MainWindow(TemplateBaseClass):
         QMessageBox.about(
             self,  # Parent widget (optional, but good practice)
             "Haasoscope Pro Qt, by DrAndyHaas",  # Title of the About dialog
-            "A PyQt5 application for the Haasoscope Pro\n\nVersion 29.10"  # Text content
+            "A PyQt5 application for the Haasoscope Pro\n\nVersion 29.11"  # Text content
         )
 
     def dopanandzoom(self):
@@ -827,7 +827,7 @@ class MainWindow(TemplateBaseClass):
     def depth(self):
         self.expect_samples = self.ui.depthBox.value()
         self.setupchannels()
-        #self.triggerposchanged(self.ui.thresholdPos.value())
+        self.triggerposchanged(5000)
         self.tot()
         self.timechanged()
 
