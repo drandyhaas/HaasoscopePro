@@ -686,7 +686,7 @@ class MainWindow(TemplateBaseClass):
             self.dophase(board, plloutnum2, (self.plljustresetdir[board] == 1), pllnum=0, quiet=True)  # adjust phase of plloutnum
         elif self.plljustreset[board]==-1:
             if debugphase: print("plljustreset for board",board,"is",self.plljustreset[board])
-            print("bad clkstr per phase step:",self.phasenbad[board])
+            print("clkstr per phase step:",self.phasenbad[board])
             startofzeros, lengthofzeros = find_longest_zero_stretch(self.phasenbad[board], True)
             print("good phase starts at",startofzeros, "and goes for", lengthofzeros,"steps")
             if lengthofzeros<4:
