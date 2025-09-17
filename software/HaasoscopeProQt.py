@@ -291,7 +291,7 @@ class MainWindow(TemplateBaseClass):
         QMessageBox.about(
             self,  # Parent widget (optional, but good practice)
             "Haasoscope Pro Qt, by DrAndyHaas",  # Title of the About dialog
-            "A PyQt5 application for the Haasoscope Pro\n\nVersion 29.09"  # Text content
+            "A PyQt5 application for the Haasoscope Pro\n\nVersion 29.10"  # Text content
         )
 
     def dopanandzoom(self):

@@ -138,7 +138,7 @@
          <number>0</number>
         </property>
         <property name="maximum">
-         <number>10000</number>
+         <number>9900</number>
         </property>
         <property name="pageStep">
          <number>1</number>
