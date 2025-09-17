@@ -291,7 +291,7 @@ class MainWindow(TemplateBaseClass):
         QMessageBox.about(
             self,  # Parent widget (optional, but good practice)
             "Haasoscope Pro Qt, by DrAndyHaas",  # Title of the About dialog
-            "A PyQt5 application for the Haasoscope Pro\n\nVersion 29.08"  # Text content
+            "A PyQt5 application for the Haasoscope Pro\n\nVersion 29.09"  # Text content
         )
 
     def dopanandzoom(self):
@@ -787,7 +787,8 @@ class MainWindow(TemplateBaseClass):
             for board in range(self.num_board): self.sendtriggerinfo(board)
 
     def triggerposchanged(self, value):
-        self.triggerpos = int(self.expect_samples * value / 100)
+        self.triggerpos = int(self.expect_samples * value / 10000.)
+        #print("trigposchanged", self.expect_samples * value / 10000.)
         for board in range(self.num_board): self.sendtriggerinfo(board)
         self.drawtriggerlines()
 
@@ -1814,8 +1815,9 @@ class MainWindow(TemplateBaseClass):
         for usb in usbs: self.telldownsample(usb, 0)
 
     def on_vline_dragged(self, line):
-        t = (line.value() / (4 * 10 * (self.downsamplefactor / self.nsunits / self.samplerate)) - 1.0) * 100./self.expect_samples
-        self.ui.thresholdPos.setValue(int(round(t,2)))
+        t = (line.value() / (4 * 10 * (self.downsamplefactor / self.nsunits / self.samplerate)) - 1.0) * 10000./self.expect_samples
+        #print("on_vline_dragged",t)
+        self.ui.thresholdPos.setValue(ceil(t))
         self.drawtriggerlines()
 
     def on_hline_dragged(self, line):
