@@ -37,6 +37,10 @@ for b in range(len(usbs)):
     version(usbs[b])
     version(usbs[b])
     version(usbs[b])
+    index = str(usbs[b].serial).find("_v1.")
+    if index > -1:
+        usbs[b].beta = float(str(usbs[b].serial)[index + 2:index + 6])
+        print("Special beta device:", usbs[b].beta)
 time.sleep(.1) # wait for clocks to lock
 usbs = orderusbs(usbs)
 tellfirstandlast(usbs)
@@ -291,7 +295,7 @@ class MainWindow(TemplateBaseClass):
         QMessageBox.about(
             self,  # Parent widget (optional, but good practice)
             "Haasoscope Pro Qt, by DrAndyHaas",  # Title of the About dialog
-            "A PyQt5 application for the Haasoscope Pro\n\nVersion 29.12"  # Text content
+            "A PyQt5 application for the Haasoscope Pro\n\nVersion 29.13"  # Text content
         )
 
     def dopanandzoom(self):
@@ -420,6 +424,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.ohmCheck.setChecked(self.mohm[self.activexychannel])
         self.ui.tenxCheck.setChecked(self.tenx[self.activexychannel]==10)
         self.ui.attCheck.setChecked(self.att[self.activexychannel])
+        if usbs[self.activeboard].beta < 1.2: self.ui.attCheck.setText("5x attenuation")
+        else: self.ui.attCheck.setText("800 MHz antialias")
         self.ui.Auxout_comboBox.setCurrentIndex(self.auxoutval[self.activeboard])
         self.ui.offsetBox.setValue(self.offset[self.activexychannel])
         self.ui.gainBox.setValue(self.gain[self.activexychannel])

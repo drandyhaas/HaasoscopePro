@@ -29,6 +29,7 @@ class UsbFt232hSync245mode:
             self.device_type = device_type
             self.device_name = device_name
             self.serial = serial
+            self.beta = 1000.0
             self._usb = usb
             self._recv_timeout = 250
             self._send_timeout = 2000
