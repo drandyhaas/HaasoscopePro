@@ -424,8 +424,14 @@ class MainWindow(TemplateBaseClass):
         self.ui.ohmCheck.setChecked(self.mohm[self.activexychannel])
         self.ui.tenxCheck.setChecked(self.tenx[self.activexychannel]==10)
         self.ui.attCheck.setChecked(self.att[self.activexychannel])
-        if usbs[self.activeboard].beta < 1.2: self.ui.attCheck.setText("5x attenuation")
-        else: self.ui.attCheck.setText("800 MHz antialias")
+        if usbs[self.activeboard].beta < 1.2:
+            self.ui.attCheck.setText("5x attenuation")
+            self.ui.Auxout_comboBox.setEnabled(False)
+            self.ui.extsmatrigCheck.setEnabled(False)
+        else:
+            self.ui.attCheck.setText("800 MHz antialias")
+            self.ui.Auxout_comboBox.setEnabled(True)
+            self.ui.extsmatrigCheck.setEnabled(True)
         self.ui.Auxout_comboBox.setCurrentIndex(self.auxoutval[self.activeboard])
         self.ui.offsetBox.setValue(self.offset[self.activexychannel])
         self.ui.gainBox.setValue(self.gain[self.activexychannel])
