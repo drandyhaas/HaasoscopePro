@@ -736,17 +736,22 @@ class MainWindow(TemplateBaseClass):
 
     def wheelEvent(self, event): # QWheelEvent
         if hasattr(event, "angleDelta"):
-            if event.angleDelta().y() > 0:
-                self.ui.gainBox.setValue(self.ui.gainBox.value()+1)
-            else:
-                self.ui.gainBox.setValue(self.ui.gainBox.value()-1)
+            pass
 
     def keyPressEvent(self, event):
-        if event.key() == QtCore.Qt.Key_Up: self.ui.offsetBox.stepUp()
-        if event.key() == QtCore.Qt.Key_Down: self.ui.offsetBox.stepDown()
+        modifiers = QtWidgets.QApplication.keyboardModifiers()
+        if event.key() == QtCore.Qt.Key_Up:
+            if modifiers & QtCore.Qt.ShiftModifier:
+                self.ui.gainBox.setValue(self.ui.gainBox.value() + 1)
+            else:
+                self.ui.offsetBox.stepUp()
+        if event.key() == QtCore.Qt.Key_Down:
+            if modifiers & QtCore.Qt.ShiftModifier:
+                self.ui.gainBox.setValue(self.ui.gainBox.value() - 1)
+            else:
+                self.ui.offsetBox.stepDown()
         if event.key() == QtCore.Qt.Key_Left: self.timefast()
         if event.key() == QtCore.Qt.Key_Right: self.timeslow()
-        # modifiers = QtWidgets.QApplication.keyboardModifiers()
 
     def exttrig(self, value):
         board = self.ui.boardBox.value()
