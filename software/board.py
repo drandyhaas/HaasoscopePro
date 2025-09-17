@@ -43,7 +43,7 @@ def swapinputs(usb,doswap,insetup=False):
         spicommand(usb, "CAL_EN", 0x00, 0x61, 0x01, False)  # enable calibration
         spicommand(usb, "LVDS_EN", 0x02, 0x00, 0x01, False)  # enable LVDS interface
 
-def setupboard(usb, dopattern, twochannel, dooverrange):
+def setupboard(usb, dopattern, twochannel, dooverrange, do1v=False):
     setfan(usb, 1)
 
     spimode(usb, 0)
@@ -75,7 +75,6 @@ def setupboard(usb, dopattern, twochannel, dooverrange):
     tad=0
     spicommand(usb, "TAD", 0x02, 0xB6, tad, False)  # adjust TAD (time of ADC relative to clk)
 
-    do1v=False
     if do1v:
         spicommand2(usb, "FS_RANGE A",0x00,0x30,0xff,0xff,False)  # adjust full scale ADC range 1V for input A
         spicommand2(usb, "FS_RANGE B",0x00,0x32,0xff,0xff,False)  # adjust full scale ADC range 1V for input B
