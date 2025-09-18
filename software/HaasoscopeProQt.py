@@ -89,7 +89,7 @@ class FFTWindow(FFTTemplateBaseClass):
 # Define main window class from template
 WindowTemplate, TemplateBaseClass = loadUiType(pwd+"/HaasoscopePro.ui")
 class MainWindow(TemplateBaseClass):
-
+    softwareversion = 29.14
     expect_samples = 100
     expect_samples_extra = 5 # enough to cover downsample shifting and toff shifting
     samplerate = 3.2  # freq in GHz
@@ -294,11 +294,9 @@ class MainWindow(TemplateBaseClass):
         self.show()
 
     def about(self):
-        QMessageBox.about(
-            self,  # Parent widget (optional, but good practice)
-            "Haasoscope Pro Qt, by DrAndyHaas",  # Title of the About dialog
-            "A PyQt5 application for the Haasoscope Pro\n\nVersion 29.13"  # Text content
-        )
+        QMessageBox.about( self, # Parent widget (optional, but good practice)
+            "Haasoscope Pro Qt, by DrAndyHaas", # Title of the About dialog
+            "A PyQt5 application for the Haasoscope Pro\n\nVersion "+str(self.softwareversion) )
 
     def dopanandzoom(self):
         if self.ui.actionPan_and_zoom.isChecked():
@@ -446,6 +444,8 @@ class MainWindow(TemplateBaseClass):
             self.rightaxis.setTextPen(color=self.linepens[self.activexychannel].color())
             self.rightaxis.setLabel(text="Voltage for board "+str(self.activeboard)+" channel "+str(self.selectedchannel), units='V')
             self.rightaxis.conversion_func = lambda val: val * self.VperD[self.activexychannel]
+            ts = round(2*5*self.VperD[self.activexychannel],1)
+            self.rightaxis.setTickSpacing(ts, 0.1*ts)
             self.rightaxis.update_function()
 
     def fft(self):
