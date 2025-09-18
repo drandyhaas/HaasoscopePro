@@ -89,7 +89,7 @@ class FFTWindow(FFTTemplateBaseClass):
 # Define main window class from template
 WindowTemplate, TemplateBaseClass = loadUiType(pwd+"/HaasoscopePro.ui")
 class MainWindow(TemplateBaseClass):
-    softwareversion = 29.14
+    softwareversion = 29.15
     expect_samples = 100
     expect_samples_extra = 5 # enough to cover downsample shifting and toff shifting
     samplerate = 3.2  # freq in GHz
@@ -266,6 +266,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionAbout.triggered.connect(self.about)
         self.ui.actionOversampling_mean_and_RMS.triggered.connect(self.do_meanrms_calibration)
         self.ui.actionPan_and_zoom.triggered.connect(self.dopanandzoom)
+        self.ui.rightaxisCheck.clicked.connect(self.dorightaxis)
         self.rightaxis = None
         self.dofft = False
         self.db = False
@@ -311,6 +312,9 @@ class MainWindow(TemplateBaseClass):
             if len(self.otherlines)>0:
                 self.otherlines[0].setMovable(True)
                 self.otherlines[1].setMovable(True)
+
+    def dorightaxis(self):
+        self.rightaxis.setVisible(self.ui.rightaxisCheck.isChecked())
 
     def persist(self):
         self.persist_time = 50*pow(2,self.ui.persistTbox.value())
@@ -1924,6 +1928,7 @@ if __name__ == '__main__': # calls setup_connection for each board, then init
         app.setWindowIcon(QIcon('icon.png'))
         win = MainWindow()
         win.setWindowTitle('Haasoscope Pro Qt')
+        print("Haasoscope Pro Qt, version",win.softwareversion)
         for usbi in range(len(usbs)):
             if not win.setup_connection(usbi):
                 print("Exiting now - failed setup_connections!")

@@ -806,8 +806,8 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>20</y>
-          <width>70</width>
+          <y>40</y>
+          <width>111</width>
           <height>17</height>
          </rect>
         </property>
@@ -824,7 +824,7 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>73</y>
+          <y>102</y>
           <width>61</width>
           <height>16</height>
          </rect>
@@ -835,14 +835,14 @@
          </font>
         </property>
         <property name="text">
-         <string>Fit frac.</string>
+         <string>Fit fraction</string>
         </property>
        </widget>
        <widget class="QSpinBox" name="fwfBox">
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>71</y>
+          <y>100</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -878,8 +878,8 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>40</y>
-          <width>71</width>
+          <y>60</y>
+          <width>111</width>
           <height>17</height>
          </rect>
         </property>
@@ -894,6 +894,27 @@
          <string>Wide</string>
         </property>
         <property name="checkable">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="rightaxisCheck">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>20</y>
+          <width>111</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="text">
+         <string>Voltage axis</string>
+        </property>
+        <property name="checked">
          <bool>true</bool>
         </property>
        </widget>
