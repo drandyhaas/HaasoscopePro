@@ -89,7 +89,7 @@ class FFTWindow(FFTTemplateBaseClass):
 # Define main window class from template
 WindowTemplate, TemplateBaseClass = loadUiType(pwd+"/HaasoscopePro.ui")
 class MainWindow(TemplateBaseClass):
-    softwareversion = 29.16
+    softwareversion = 29.17
     expect_samples = 100
     expect_samples_extra = 5 # enough to cover downsample shifting and toff shifting
     samplerate = 3.2  # freq in GHz
@@ -110,7 +110,8 @@ class MainWindow(TemplateBaseClass):
     dooverrange = False
     total_rx_len = 0
     time_start = time.time()
-    triggertype = 1
+    triggertype = [1] * num_board
+    fallingedge = [0] * num_board
     isrolling = 0
     isdrawing = False # for interlock with hspro socket thread
     selectedchannel = 0
@@ -248,7 +249,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.tenxCheck.stateChanged.connect(self.settenx)
         self.ui.chanonCheck.stateChanged.connect(self.chanon)
         self.ui.actionDrawing.triggered.connect(self.drawing)
-        self.ui.wideCheck.clicked.connect(self.wideline)
+        self.ui.linewidthBox.valueChanged.connect(self.wideline)
         self.ui.fwfBox.valueChanged.connect(self.fwf)
         self.ui.tadBox.valueChanged.connect(self.setTAD)
         self.ui.resampBox.valueChanged.connect(self.resamp)
@@ -336,11 +337,11 @@ class MainWindow(TemplateBaseClass):
                 #alpha = 0
             else:
                 # Calculate alpha based on age (linear fade)
-                alpha = int(255 * (1 - (age / self.persist_time)))
+                alpha = int(100 * (1 - (age / self.persist_time)))
                 pen = self.linepens[li]
                 color = pen.color()
                 color.setAlpha(alpha)
-                new_pen = pg.mkPen(color, width=pen.width())
+                new_pen = pg.mkPen(color, width=1)
                 item.setPen(new_pen)
 
     def recordtofile(self):
@@ -441,6 +442,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.offsetBox.setValue(self.offset[self.activexychannel])
         self.ui.gainBox.setValue(self.gain[self.activexychannel])
         self.ui.trigchan_comboBox.setCurrentIndex(self.triggerchan[self.activeboard] if self.dotwochannel else 0)
+        self.ui.risingfalling_comboBox.setCurrentIndex(self.fallingedge[self.activeboard])
         self.update_right_axis()
 
     def update_right_axis(self):
@@ -1021,11 +1023,11 @@ class MainWindow(TemplateBaseClass):
         self.ui.timebaseBox.setText("2^"+str(self.downsample))
 
     def risingfalling(self):
-        fallingedge = self.ui.risingfalling_comboBox.currentIndex()==1
-        if self.triggertype == 1:
-            if fallingedge: self.triggertype = 2
-        if self.triggertype == 2:
-            if not fallingedge: self.triggertype = 1
+        self.fallingedge[self.activeboard] = self.ui.risingfalling_comboBox.currentIndex()==1
+        if self.triggertype[self.activeboard] == 1:
+            if self.fallingedge[self.activeboard]: self.triggertype[self.activeboard] = 2
+        if self.triggertype[self.activeboard] == 2:
+            if not self.fallingedge[self.activeboard]: self.triggertype[self.activeboard] = 1
 
     def drawing(self):
         if self.ui.actionDrawing.isChecked():
@@ -1037,7 +1039,7 @@ class MainWindow(TemplateBaseClass):
 
     def wideline(self):
         for chan in range(self.num_board*self.num_chan_per_board):
-            self.linepens[chan].setWidth(3 if self.ui.wideCheck.checkState() == QtCore.Qt.Checked else 1)
+            self.linepens[chan].setWidth(self.ui.linewidthBox.value())
 
     def updateplot(self):
         if hasattr(self,"hsprosock"):
@@ -1052,8 +1054,8 @@ class MainWindow(TemplateBaseClass):
             s = np.clip(dt * 3., 0, 1)
             self.fps = self.fps * (1 - s) + (1.0 / dt) * s
         self.statuscounter = self.statuscounter + 1
-        if self.statuscounter % 20 == 0: self.ui.statusBar.showMessage("%0.2f fps, %d events, %0.2f Hz, %0.2f MB/s" % (
-            self.fps, self.nevents, self.lastrate, self.lastrate * self.lastsize / 1e6))
+        if self.statuscounter % 20 == 0: self.ui.statusBar.showMessage("%s, %0.2f fps, %d events, %0.2f Hz, %0.2f MB/s" % (
+            format_freq(self.samplerate*1e9/(1 if self.highresval else self.downsamplefactor), "S/s"), self.fps, self.nevents, self.lastrate, self.lastrate * self.lastsize / 1e6))
         if not gotevent: return
         if self.dorecordtofile:
             self.recordeventtofile()
@@ -1095,8 +1097,8 @@ class MainWindow(TemplateBaseClass):
                         xc = xdatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
                         # print("xc size start end", xc.size, xc[0], xc[-1], "and vline at", self.vline)
                         yc = ydatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
-                        fallingedge = self.ui.risingfalling_comboBox.currentIndex() == 1
-                        if fallingedge: yc = -yc
+                        board = li//4
+                        if self.fallingedge[board]: yc = -yc
                         if xc.size > 1:
                             distcorrtemp = find_crossing_distance(yc, self.hline, self.vline, xc[0], xc[1] - xc[0])
                             if distcorrtemp is not None and abs(distcorrtemp) < self.distcorrtol*self.downsamplefactor:
@@ -1108,7 +1110,11 @@ class MainWindow(TemplateBaseClass):
                     if len(self.persist_lines) >= self.max_persist_lines:
                         oldest_item, _, _ = self.persist_lines[0]
                         self.ui.plot.removeItem(oldest_item)
-                    persist_item = self.ui.plot.plot(xdatanew, ydatanew, pen=self.linepens[li], skipFiniteCheck=True, connect="finite")
+                    pen = self.linepens[li]
+                    color = pen.color()
+                    color.setAlpha(int(100./255))
+                    new_pen = pg.mkPen(color, width=1)
+                    persist_item = self.ui.plot.plot(xdatanew, ydatanew, pen=new_pen, skipFiniteCheck=True, connect="finite")
                     self.persist_lines.append((persist_item, time.time(), li))
 
         if self.dofft and hasattr(self.fftui,"fftfreqplot_xdata"):
@@ -1209,7 +1215,7 @@ class MainWindow(TemplateBaseClass):
 
     # sets trigger on a board, and sees whether an event is ready to be read out (and then if so calculates sample_triggered)
     def getchannels(self, board):
-        tt = self.triggertype
+        tt = self.triggertype[board]
         if self.doexttrig[board] > 0:
             if self.doexttrigecho[board]: tt = 30
             else: tt = 3
@@ -1430,8 +1436,7 @@ class MainWindow(TemplateBaseClass):
                 xc = thed[0][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
                 #print("xc size start end", xc.size, xc[0], xc[-1], "and vline at", self.vline)
                 yc = thed[1][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
-                fallingedge = self.ui.risingfalling_comboBox.currentIndex() == 1
-                if fallingedge: yc = -yc
+                if self.fallingedge[board]: yc = -yc
                 if xc.size>1:
                     distcorrtemp = find_crossing_distance(yc, self.hline, self.vline, xc[0], xc[1] - xc[0])
             if distcorrtemp is not None and abs(distcorrtemp) < self.distcorrtol*self.downsamplefactor:
@@ -1484,8 +1489,7 @@ class MainWindow(TemplateBaseClass):
                 fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
                 xc = targety[0][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]  # only fit in range
                 yc = targety[1][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]
-                fallingedge = self.ui.risingfalling_comboBox.currentIndex() == 1
-                if fallingedge:
+                if self.fallingedge[self.activeboard]:
                     p0 = [min(targety[1]), xc[xc.size//2], -2*self.nsunits, max(targety[1])] #initial guess
                 else:
                     p0 = [max(targety[1]), xc[xc.size//2], 2*self.nsunits, min(targety[1])] #initial guess
@@ -1512,7 +1516,7 @@ class MainWindow(TemplateBaseClass):
                             right = left+(top-bot)/slope
                             #print("right",right)
                             risetime = self.nsunits * 0.6 * (top-bot)/slope # from 20 - 80%
-                            if fallingedge: risetime*=-1
+                            if self.fallingedge[self.activeboard]: risetime*=-1
                             risetimeerr = self.nsunits * 0.6 * 4 * (top-bot) * perr[2] / (slope*slope) # 4 is fudge factor, since the error is often underestimated
                             thestr += "Risetime: " + str(risetime.round(2)) + "+-" + str(risetimeerr.round(2)) + " ns\n"
                             if self.ui.actionRisetime_fit_lines.isChecked():

@@ -98,6 +98,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Trigger voltage threshold</string>
+        </property>
         <property name="maximum">
          <number>255</number>
         </property>
@@ -133,6 +136,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Trigger time adjustment (amount to capture before vs after trigger time)</string>
         </property>
         <property name="minimum">
          <number>0</number>
@@ -221,6 +227,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Whether to enable the rolling 5 Hz auto trigger or not</string>
+        </property>
         <property name="text">
          <string>Normal</string>
         </property>
@@ -244,6 +253,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Run or stop</string>
         </property>
         <property name="text">
          <string>Run</string>
@@ -269,6 +281,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Single event capture or continuous</string>
+        </property>
         <property name="text">
          <string>Single</string>
         </property>
@@ -290,6 +305,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Go to slower timebase, averaging samples if Highres is enabled)</string>
+        </property>
         <property name="text">
          <string>Slower</string>
         </property>
@@ -307,6 +325,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Go to faster timebase</string>
         </property>
         <property name="text">
          <string>Faster</string>
@@ -464,6 +485,9 @@
            <height>21</height>
           </rect>
          </property>
+         <property name="toolTip">
+          <string>Whether to use rising or falling edge for this board's trigger</string>
+         </property>
          <property name="currentText">
           <string>Rising</string>
          </property>
@@ -492,6 +516,9 @@
            <width>81</width>
            <height>21</height>
           </rect>
+         </property>
+         <property name="toolTip">
+          <string>Which channel to trigger on for this board</string>
          </property>
          <property name="currentText">
           <string>Chan 0</string>
@@ -530,6 +557,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Timebase factor (power of 3.2 GS/s)</string>
         </property>
         <property name="text">
          <string>0</string>
@@ -571,7 +601,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Average samples at lower speeds</string>
+         <string>Average samples at lower timebases (time factor &gt; 0)</string>
         </property>
         <property name="text">
          <string>Highres</string>
@@ -737,7 +767,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>130</y>
+          <y>128</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -770,7 +800,7 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>132</y>
+          <y>130</y>
           <width>51</width>
           <height>20</height>
          </rect>
@@ -816,6 +846,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Whether to add markers to the samples</string>
+        </property>
         <property name="text">
          <string>Markers</string>
         </property>
@@ -853,7 +886,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>For risetime and calibration</string>
+         <string>Fraction of waveform to use for risetime and calibration calculations</string>
         </property>
         <property name="accelerated">
          <bool>true</bool>
@@ -871,32 +904,6 @@
          <number>20</number>
         </property>
        </widget>
-       <widget class="QCheckBox" name="wideCheck">
-        <property name="enabled">
-         <bool>true</bool>
-        </property>
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>60</y>
-          <width>111</width>
-          <height>17</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-          <italic>false</italic>
-          <strikeout>false</strikeout>
-         </font>
-        </property>
-        <property name="text">
-         <string>Wide</string>
-        </property>
-        <property name="checkable">
-         <bool>true</bool>
-        </property>
-       </widget>
        <widget class="QCheckBox" name="rightaxisCheck">
         <property name="geometry">
          <rect>
@@ -911,11 +918,65 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Whether to draw the right side axis for the selected channel</string>
+        </property>
         <property name="text">
          <string>Voltage axis</string>
         </property>
         <property name="checked">
          <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_23">
+        <property name="geometry">
+         <rect>
+          <x>70</x>
+          <y>130</y>
+          <width>61</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="text">
+         <string>Line width</string>
+        </property>
+       </widget>
+       <widget class="QSpinBox" name="linewidthBox">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>128</y>
+          <width>51</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Width of plot line (pixels)</string>
+        </property>
+        <property name="suffix">
+         <string/>
+        </property>
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>10</number>
+        </property>
+        <property name="singleStep">
+         <number>1</number>
+        </property>
+        <property name="value">
+         <number>1</number>
         </property>
        </widget>
       </widget>
@@ -953,6 +1014,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Selected channel on this board</string>
+        </property>
         <property name="maximum">
          <number>255</number>
         </property>
@@ -989,6 +1053,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Whether the signal is AC or DC coupled</string>
+        </property>
         <property name="text">
          <string>AC coupled</string>
         </property>
@@ -1013,6 +1080,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Whether the signal is to be terminated with 1 MOhm or 50 Ohm</string>
+        </property>
         <property name="text">
          <string>1 MOhm</string>
         </property>
@@ -1033,6 +1103,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Whether to draw this channel or not</string>
         </property>
         <property name="text">
          <string>Displayed</string>
@@ -1055,6 +1128,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Whether to do oversampling using this scope and the next one</string>
+        </property>
         <property name="text">
          <string>Oversampling</string>
         </property>
@@ -1075,6 +1151,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Show the FFT plot for the selected channel</string>
         </property>
         <property name="text">
          <string>Show FFT</string>
@@ -1111,6 +1190,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Voltage offset of this channel</string>
         </property>
         <property name="accelerated">
          <bool>true</bool>
@@ -1157,6 +1239,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Voltage gain of this channel</string>
+        </property>
         <property name="suffix">
          <string> dB</string>
         </property>
@@ -1187,6 +1272,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Whether to activate the filter</string>
+        </property>
         <property name="text">
          <string>800 MHz antialias</string>
         </property>
@@ -1207,6 +1295,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Selected board</string>
         </property>
         <property name="maximum">
          <number>0</number>
@@ -1246,6 +1337,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Whether a 10x probe is being used</string>
         </property>
         <property name="text">
          <string>10x probe</string>
@@ -1338,6 +1432,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Whether to interleave the oversampled samples</string>
+        </property>
         <property name="text">
          <string>Interleaved</string>
         </property>
@@ -1428,6 +1525,9 @@
           <height>22</height>
          </rect>
         </property>
+        <property name="toolTip">
+         <string>What signal to output on the Aux out SMA on the back</string>
+        </property>
         <property name="currentText">
          <string>Gnd</string>
         </property>
@@ -1473,7 +1573,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>50*2^x milliseconds</string>
+         <string>Time each line takes to fade out (50*2^x ms)</string>
         </property>
         <property name="accelerated">
          <bool>false</bool>
@@ -1550,6 +1650,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Whether to use both channels on each scope</string>
         </property>
         <property name="text">
          <string>Two channels</string>

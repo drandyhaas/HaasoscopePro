@@ -187,24 +187,22 @@ def find_fundamental_frequency_scipy(signal, sampling_rate):
 
     return fundamental_freq
 
-
-def format_freq(freq_hz):
+def format_freq(freq_hz, suffix="Hz"):
     """Formats a frequency in Hz to a string with appropriate units."""
     if freq_hz is None:
         return "N/A"
-
     if freq_hz < 1000:
         # Keep as Hz
-        return f"{freq_hz:.3f} Hz"
+        return f"{freq_hz:.3f} {suffix}"
     elif freq_hz < 1_000_000:
         # Convert to kHz
-        return f"{freq_hz / 1000:.3f} kHz"
+        return f"{freq_hz / 1000:.3f} k{suffix}"
     elif freq_hz < 1_000_000_000:
         # Convert to MHz
-        return f"{freq_hz / 1_000_000:.3f} MHz"
+        return f"{freq_hz / 1_000_000:.3f} M{suffix}"
     else:
         # Convert to GHz
-        return f"{freq_hz / 1_000_000_000:.3f} GHz"
+        return f"{freq_hz / 1_000_000_000:.3f} G{suffix}"
 
 def find_crossing_distance(y_data, y_threshold, x_start, x0=0.0, dx=1.0):
     """
