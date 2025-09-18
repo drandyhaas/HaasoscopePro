@@ -89,7 +89,7 @@ class FFTWindow(FFTTemplateBaseClass):
 # Define main window class from template
 WindowTemplate, TemplateBaseClass = loadUiType(pwd+"/HaasoscopePro.ui")
 class MainWindow(TemplateBaseClass):
-    softwareversion = 29.15
+    softwareversion = 29.16
     expect_samples = 100
     expect_samples_extra = 5 # enough to cover downsample shifting and toff shifting
     samplerate = 3.2  # freq in GHz
@@ -191,7 +191,7 @@ class MainWindow(TemplateBaseClass):
     distcorr = [0]*num_board
     totdistcorr = [0]*num_board
     distcorrtol = 2.0 # ns of max correction
-    distcorrsamp = 10 # num samples on each side of trig line to search for trig crossing
+    distcorrsamp = 50 # num samples on each side of trig line to search for trig crossing
     lvdstrigdelay = [0] * num_board
     lastlvdstrigdelay = [0] * num_board
     acdc = [False]*(num_board*num_chan_per_board)
@@ -267,6 +267,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionOversampling_mean_and_RMS.triggered.connect(self.do_meanrms_calibration)
         self.ui.actionPan_and_zoom.triggered.connect(self.dopanandzoom)
         self.ui.rightaxisCheck.clicked.connect(self.dorightaxis)
+        self.extratot = False
         self.rightaxis = None
         self.dofft = False
         self.db = False
@@ -1010,6 +1011,12 @@ class MainWindow(TemplateBaseClass):
         self.ui.plot.setRange(xRange=(self.min_x, self.max_x), padding=0.00)
         self.ui.plot.setRange(yRange=(self.min_y, self.max_y), padding=0.01)
         self.drawtriggerlines()
+        if self.downsample>=5:
+            if not self.extratot: self.ui.totBox.setValue(self.ui.totBox.value()+1)
+            self.extratot = True
+        else:
+            if self.extratot: self.ui.totBox.setValue(self.ui.totBox.value()-1)
+            self.extratot = False
         self.tot()
         self.ui.timebaseBox.setText("2^"+str(self.downsample))
 
