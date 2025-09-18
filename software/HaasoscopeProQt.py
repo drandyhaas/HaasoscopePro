@@ -734,9 +734,9 @@ class MainWindow(TemplateBaseClass):
             self.dodrawing = True
             self.plljustreset[board] = -10
 
-    def wheelEvent(self, event): # QWheelEvent
-        if hasattr(event, "angleDelta"):
-            pass
+    # def wheelEvent(self, event): # QWheelEvent
+    #     if hasattr(event, "angleDelta"):
+    #         pass
 
     def keyPressEvent(self, event):
         modifiers = QtWidgets.QApplication.keyboardModifiers()
@@ -1657,6 +1657,9 @@ class MainWindow(TemplateBaseClass):
             self.autocalibration(64,True, oldtoff)
 
     def do_meanrms_calibration(self):
+        if self.activeboard%2==1:
+            print("Select the even board number first!")
+            return
         c1 = self.activeboard * self.num_chan_per_board
         c = (self.activeboard + 1) * self.num_chan_per_board
         fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
