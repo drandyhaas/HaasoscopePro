@@ -757,8 +757,8 @@ class MainWindow(TemplateBaseClass):
                 self.ui.gainBox.setValue(self.ui.gainBox.value() - 1)
             else:
                 self.ui.offsetBox.stepDown()
-        if event.key() == QtCore.Qt.Key_Left: self.timefast()
-        if event.key() == QtCore.Qt.Key_Right: self.timeslow()
+        if event.key() == QtCore.Qt.Key_Left: self.timeslow()
+        if event.key() == QtCore.Qt.Key_Right: self.timefast()
 
     def exttrig(self, value):
         board = self.ui.boardBox.value()
