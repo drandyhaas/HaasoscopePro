@@ -1054,8 +1054,11 @@ class MainWindow(TemplateBaseClass):
             s = np.clip(dt * 3., 0, 1)
             self.fps = self.fps * (1 - s) + (1.0 / dt) * s
         self.statuscounter = self.statuscounter + 1
+        sradjust = 1e9
+        if self.dotwochannel: sradjust = 0.5e9
+        if self.dointerleaved[self.activeboard]: sradjust = 2e9
         if self.statuscounter % 20 == 0: self.ui.statusBar.showMessage("%s, %0.2f fps, %d events, %0.2f Hz, %0.2f MB/s" % (
-            format_freq(self.samplerate*1e9/(1 if self.highresval else self.downsamplefactor), "S/s"), self.fps, self.nevents, self.lastrate, self.lastrate * self.lastsize / 1e6))
+            format_freq(self.samplerate*sradjust/(1 if self.highresval else self.downsamplefactor), "S/s"), self.fps, self.nevents, self.lastrate, self.lastrate * self.lastsize / 1e6))
         if not gotevent: return
         if self.dorecordtofile:
             self.recordeventtofile()
