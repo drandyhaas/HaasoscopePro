@@ -472,6 +472,9 @@ class MainWindow(TemplateBaseClass):
         self.doresamp = value
 
     def twochan(self):
+        self.downsample = 0
+        self.timeslow()
+        self.timefast()
         self.dotwochannel = self.ui.twochanCheck.checkState() == QtCore.Qt.Checked
         if self.dorecordtofile:  # if writing, close and open new file, by calling recordtofile() twice, since the number of samples per event for each channel will change
             self.recordtofile()
@@ -487,6 +490,12 @@ class MainWindow(TemplateBaseClass):
         for usb in usbs: setupboard(usb,self.dopattern,self.dotwochannel,self.dooverrange,self.basevoltage==200)
         for usb in usbs: self.telldownsample(usb, self.downsample)
         self.timechanged()
+        self.selectchannel()
+        self.changegain()
+        self.changeoffset()
+        for i in range(1, self.num_board*self.num_chan_per_board): # all others set to 0
+            self.offset[i] = 0
+            self.gain[i] = 0
         if self.dotwochannel:
             self.ui.chanBox.setMaximum(self.num_chan_per_board - 1)
             self.ui.oversampCheck.setEnabled(False)
