@@ -89,7 +89,7 @@ class FFTWindow(FFTTemplateBaseClass):
 # Define main window class from template
 WindowTemplate, TemplateBaseClass = loadUiType(pwd+"/HaasoscopePro.ui")
 class MainWindow(TemplateBaseClass):
-    softwareversion = 29.17
+    softwareversion = 29.18
     expect_samples = 100
     expect_samples_extra = 5 # enough to cover downsample shifting and toff shifting
     samplerate = 3.2  # freq in GHz
@@ -943,11 +943,11 @@ class MainWindow(TemplateBaseClass):
         if self.downsample<0:
             self.downsamplezoom = pow(2, -self.downsample)
             self.ui.thresholdPos.setEnabled(False)
-            self.otherlines[0].setMovable(False)
+            #self.otherlines[0].setMovable(False)
         else:
             self.downsamplezoom = 1
             self.ui.thresholdPos.setEnabled(True)
-            self.otherlines[0].setMovable(True)
+            #self.otherlines[0].setMovable(True)
             for usb in usbs: self.telldownsample(usb, self.downsample)
         self.timechanged()
 
@@ -960,11 +960,11 @@ class MainWindow(TemplateBaseClass):
         if self.downsample<0:
             self.downsamplezoom = pow(2, -self.downsample)
             self.ui.thresholdPos.setEnabled(False)
-            self.otherlines[0].setMovable(False)
+            #self.otherlines[0].setMovable(False)
         else:
             self.downsamplezoom = 1
             self.ui.thresholdPos.setEnabled(True)
-            self.otherlines[0].setMovable(True)
+            #self.otherlines[0].setMovable(True)
             for usb in usbs: self.telldownsample(usb, self.downsample)
         self.timechanged()
 
@@ -996,20 +996,20 @@ class MainWindow(TemplateBaseClass):
         else:
             self.min_x = 0
 
-        if hasattr(self,"hsprosock"):
-            while self.hsprosock.issending: time.sleep(.001)
-        self.totdistcorr = [0]*self.num_board
-        if self.dotwochannel:
-            for c in range(self.num_chan_per_board * self.num_board):
-                self.xydata[c][0] = np.array([range(0, 2 * 10 * self.expect_samples)]) * (
-                            2 * self.downsamplefactor / self.nsunits / self.samplerate)
-        else:
-            for c in range(self.num_chan_per_board * self.num_board):
-                self.xydata[c][0] = np.array([range(0, 4 * 10 * self.expect_samples)]) * (
-                            1 * self.downsamplefactor / self.nsunits / self.samplerate)
-                if self.dointerleaved[c//2]:
-                    self.xydatainterleaved[c//2][0] = np.array([range(0, 2 * 4 * 10 * self.expect_samples)]) * (
-                            0.5 * self.downsamplefactor / self.nsunits / self.samplerate)
+            if hasattr(self,"hsprosock"):
+                while self.hsprosock.issending: time.sleep(.001)
+            self.totdistcorr = [0]*self.num_board
+            if self.dotwochannel:
+                for c in range(self.num_chan_per_board * self.num_board):
+                    self.xydata[c][0] = np.array([range(0, 2 * 10 * self.expect_samples)]) * (
+                                2 * self.downsamplefactor / self.nsunits / self.samplerate)
+            else:
+                for c in range(self.num_chan_per_board * self.num_board):
+                    self.xydata[c][0] = np.array([range(0, 4 * 10 * self.expect_samples)]) * (
+                                1 * self.downsamplefactor / self.nsunits / self.samplerate)
+                    if self.dointerleaved[c//2]:
+                        self.xydatainterleaved[c//2][0] = np.array([range(0, 2 * 4 * 10 * self.expect_samples)]) * (
+                                0.5 * self.downsamplefactor / self.nsunits / self.samplerate)
         self.ui.plot.setRange(xRange=(self.min_x, self.max_x), padding=0.00)
         self.ui.plot.setRange(yRange=(self.min_y, self.max_y), padding=0.01)
         self.drawtriggerlines()
@@ -1845,7 +1845,7 @@ class MainWindow(TemplateBaseClass):
         hoverpen = pg.mkPen(color="w", width=2.0, style=QtCore.Qt.DashLine)
         line = pg.InfiniteLine(pos=self.vline, angle=90, movable=True, pen=dashedpen, hoverPen=hoverpen)
         self.ui.plot.addItem(line)
-        line.sigPositionChanged.connect(self.on_vline_dragged)
+        line.sigDragged.connect(self.on_vline_dragged)
         self.otherlines.append(line)
 
         # horizontal trigger threshold line
@@ -1881,10 +1881,17 @@ class MainWindow(TemplateBaseClass):
         for usb in usbs: self.telldownsample(usb, 0)
 
     def on_vline_dragged(self, line):
-        t = (line.value() / (4 * 10 * (self.downsamplefactor / self.nsunits / self.samplerate)) - 1.0) * 10000./self.expect_samples
-        #print("on_vline_dragged",t)
-        self.ui.thresholdPos.setValue(ceil(t))
-        self.drawtriggerlines()
+        if self.downsamplezoom>1: # just pan left or right
+            self.max_x -= line.value() - self.vline
+            self.min_x -= line.value() - self.vline
+            #print("vline min max", self.vline, self.min_x, self.max_x)
+            self.ui.plot.setRange(xRange=(self.min_x, self.max_x), padding=0.00)
+            self.drawtriggerlines()
+        else: # actually adjust trigger position
+            t = (line.value() / (4 * 10 * (self.downsamplefactor / self.nsunits / self.samplerate)) - 1.0) * 10000./self.expect_samples
+            #print("on_vline_dragged",t)
+            self.ui.thresholdPos.setValue(ceil(t))
+            self.drawtriggerlines()
 
     def on_hline_dragged(self, line):
         t = line.value() / (self.yscale * 256) + 127
