@@ -493,7 +493,8 @@ class MainWindow(TemplateBaseClass):
         self.selectchannel()
         self.changegain()
         self.changeoffset()
-        for i in range(1, self.num_board*self.num_chan_per_board): # all others set to 0
+        for i in range(0, self.num_board*self.num_chan_per_board): # all others set to 0
+            if i==self.activexychannel: continue
             self.offset[i] = 0
             self.gain[i] = 0
         if self.dotwochannel:
