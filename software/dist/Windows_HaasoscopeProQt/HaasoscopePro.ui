@@ -2186,6 +2186,9 @@
    </property>
   </action>
   <action name="actionToggle_PLL_controls">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>PLL controls</string>
    </property>
