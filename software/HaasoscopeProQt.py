@@ -268,6 +268,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionOversampling_mean_and_RMS.triggered.connect(self.do_meanrms_calibration)
         self.ui.actionPan_and_zoom.triggered.connect(self.dopanandzoom)
         self.ui.rightaxisCheck.clicked.connect(self.dorightaxis)
+        self.avg_pen = pg.mkPen(color='w', width=1)
         self.extratot = False
         self.rightaxis = None
         self.dofft = False
@@ -412,6 +413,7 @@ class MainWindow(TemplateBaseClass):
         else:
             self.ui.extsmatrigCheck.setChecked(False)
             self.ui.exttrigCheck.setEnabled(True)
+        self.lines[self.activexychannel].setVisible(self.ui.chanonCheck.isChecked()) # set old channel back, if we were not drawing it because of persist avg
         self.selectedchannel = self.ui.chanBox.value()
         self.activexychannel = self.activeboard*self.num_chan_per_board + self.selectedchannel
         p = self.ui.chanColor.palette()
@@ -444,6 +446,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.trigchan_comboBox.setCurrentIndex(self.triggerchan[self.activeboard] if self.dotwochannel else 0)
         self.ui.risingfalling_comboBox.setCurrentIndex(self.fallingedge[self.activeboard])
         self.update_right_axis()
+        self.set_average_line_pen()
 
     def update_right_axis(self):
         if self.num_board>0:
@@ -526,6 +529,7 @@ class MainWindow(TemplateBaseClass):
             self.VperD[(self.activeboard+1)*2+self.selectedchannel] = v2
         self.ui.offsetBox.setValue(int(self.ui.offsetBox.value()*oldvperd/v2))
         v2 = round(1002*v2,0) # to get the numbers to round well
+        if v2 > 50: v2 = round(v2, -1) # round to nearset 10 mV if large
         if int(v2)==13: self.ui.VperD.setText(str(12.5)+" mV/div")
         else: self.ui.VperD.setText(str(int(v2))+" mV/div")
         if self.ui.gainBox.value()>24: self.ui.gainBox.setSingleStep(2)
@@ -801,9 +805,15 @@ class MainWindow(TemplateBaseClass):
                 # self.lines[li].setSymbolPen("black")
                 self.lines[li].setSymbolPen(self.linepens[li].color())
                 self.lines[li].setSymbolBrush(self.linepens[li].color())
+            self.average_line.setSymbol("o")
+            self.average_line.setSymbolSize(3)
+            self.average_line.setSymbolPen(self.avg_pen.color())
+            self.average_line.setSymbolBrush(self.avg_pen.color())
+
         else:
             for li in range(self.nlines):
                 self.lines[li].setSymbol(None)
+            self.average_line.setSymbol(None)
 
     def dostartstop(self):
         if self.paused:
@@ -873,6 +883,7 @@ class MainWindow(TemplateBaseClass):
         self.tot()
         self.changegain()
         self.timechanged()
+        self.downsample = 0
         self.timeslow()
         self.timefast()
 
@@ -1040,6 +1051,8 @@ class MainWindow(TemplateBaseClass):
     def wideline(self):
         for chan in range(self.num_board*self.num_chan_per_board):
             self.linepens[chan].setWidth(self.ui.linewidthBox.value())
+        self.avg_pen.setWidth(self.ui.linewidthBox.value())
+        self.average_line.setPen(self.avg_pen)
 
     def updateplot(self):
         if hasattr(self,"hsprosock"):
@@ -1070,7 +1083,7 @@ class MainWindow(TemplateBaseClass):
         for li in range(self.nlines):
             xdatanew, ydatanew = None, None
             if not self.dointerleaved[int(li/2)]:
-                if self.doresamp and self.downsample<0:
+                if self.doresamp and self.downsample<0 and not (li==self.activexychannel and self.persist_time>0 and not self.ui.persistlinesCheck.isChecked() and self.ui.persistavgCheck.isChecked()):
                     ydatanew, xdatanew = resample(self.xydata[li][1], len(self.xydata[li][0]) * self.doresamp, t=self.xydata[li][0])
                 else:
                     if self.persist_time>0: xdatanew, ydatanew = self.xydata[li][0].copy(), self.xydata[li][1].copy()
@@ -1082,20 +1095,17 @@ class MainWindow(TemplateBaseClass):
                     if self.ui.actionToggle_trig_stabilizer.isChecked():
                         self.xydatainterleaved[int(li/2)][0][0::2] = self.xydata[li][0]
                         self.xydatainterleaved[int(li/2)][0][1::2] = self.xydata[li+self.num_chan_per_board][0] + (1/2.)/3.2/self.nsunits
-                    if self.doresamp and self.downsample<0:
-                        xdatanew = np.linspace(self.xydatainterleaved[int(li/2)][0].min(), self.xydatainterleaved[int(li/2)][0].max(), len(self.xydatainterleaved[int(li/2)][0])*1) # first put them on a regular x spacing
-                        f_cubic = interp1d(self.xydatainterleaved[int(li/2)][0], self.xydatainterleaved[int(li/2)][1], kind='linear')
-                        ydatanew = f_cubic(xdatanew)
+                    xdatanew = np.linspace(self.xydatainterleaved[int(li/2)][0].min(), self.xydatainterleaved[int(li/2)][0].max(), len(self.xydatainterleaved[int(li/2)][0])*1) # first put them on a regular x spacing
+                    f_int = interp1d(self.xydatainterleaved[int(li/2)][0], self.xydatainterleaved[int(li/2)][1], kind='linear')
+                    ydatanew = f_int(xdatanew)
+                    if self.doresamp and self.downsample<0 and not (li==self.activexychannel and self.persist_time>0 and not self.ui.persistlinesCheck.isChecked() and self.ui.persistavgCheck.isChecked()):
                         ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * self.doresamp, t=xdatanew) # then resample
-                    else:
-                        if self.persist_time>0 or self.ui.actionToggle_trig_stabilizer.isChecked(): xdatanew, ydatanew = self.xydatainterleaved[int(li/2)][0].copy(),self.xydatainterleaved[int(li/2)][1].copy()
-                        else: xdatanew, ydatanew = self.xydatainterleaved[int(li/2)][0],self.xydatainterleaved[int(li/2)][1]
 
                     if self.ui.actionToggle_trig_stabilizer.isChecked(): # special stabilization for interleaved data (it's done on a copy, so we don't have to be careful
                         fitwidth = (self.max_x - self.min_x)
                         xc = xdatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
                         numsamp = self.distcorrsamp  # number of samples to use on each side of trigger time
-                        if self.doresamp and self.downsample<0: numsamp *= self.doresamp # adjust for extra samples from upsampling
+                        if self.doresamp: numsamp *= self.doresamp # adjust for extra samples from upsampling
                         fitwidth *= numsamp / max(2, xc.size)
                         xc = xdatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
                         # print("xc size start end", xc.size, xc[0], xc[-1], "and vline at", self.vline)
@@ -1107,19 +1117,24 @@ class MainWindow(TemplateBaseClass):
                             if distcorrtemp is not None and abs(distcorrtemp) < self.distcorrtol*self.downsamplefactor:
                                 xdatanew -= distcorrtemp
 
-            if xdatanew is not None and self.lines[li].isVisible():
+            if xdatanew is not None:
                 self.lines[li].setData(xdatanew, ydatanew)
-                if li==self.activexychannel and self.persist_time>0:
-                    if len(self.persist_lines) >= self.max_persist_lines:
-                        oldest_item, _, _ = self.persist_lines[0]
-                        self.ui.plot.removeItem(oldest_item)
-                    pen = self.linepens[li]
-                    color = pen.color()
-                    color.setAlpha(int(100./255))
-                    new_pen = pg.mkPen(color, width=1)
-                    persist_item = self.ui.plot.plot(xdatanew, ydatanew, pen=new_pen, skipFiniteCheck=True, connect="finite")
-                    self.persist_lines.append((persist_item, time.time(), li))
-
+                if li==self.activexychannel:
+                    if self.persist_time>0 and (self.ui.persistlinesCheck.isChecked() or self.ui.persistavgCheck.isChecked()):
+                        if len(self.persist_lines) >= self.max_persist_lines:
+                            oldest_item, _, _ = self.persist_lines[0]
+                            self.ui.plot.removeItem(oldest_item)
+                        pen = self.linepens[li]
+                        color = pen.color()
+                        color.setAlpha(int(100./255))
+                        new_pen = pg.mkPen(color, width=1)
+                        persist_item = self.ui.plot.plot(xdatanew, ydatanew, pen=new_pen, skipFiniteCheck=True, connect="finite")
+                        persist_item.setVisible(self.ui.persistlinesCheck.isChecked())
+                        self.persist_lines.append((persist_item, time.time(), li))
+                        self.lines[li].setVisible(self.ui.persistlinesCheck.isChecked())
+                    else:
+                        self.lines[li].setVisible(self.ui.chanonCheck.isChecked())
+        self.update_persist_average()
         if self.dofft and hasattr(self.fftui,"fftfreqplot_xdata"):
             self.fftui.fftline.setPen(self.linepens[self.activeboard * self.num_chan_per_board + self.selectedchannel])
             self.fftui.fftline.setData(self.fftui.fftfreqplot_xdata,self.fftui.fftfreqplot_ydata)
@@ -1139,6 +1154,38 @@ class MainWindow(TemplateBaseClass):
                 self.dofft = False
                 self.ui.fftCheck.setChecked(QtCore.Qt.Unchecked)
         app.processEvents()
+
+    def update_persist_average(self):
+        """Calculates and plots the average by first interpolating all lines."""
+        if len(self.persist_lines) < 2:
+            self.average_line.clear()
+            return
+
+        # --- 1. Define a Common X-Axis ---
+        # Find the min and max x-range across all visible lines
+        first_line = self.persist_lines[0][0]
+        min_x = first_line.xData.min()
+        max_x = first_line.xData.max()
+
+        for item, _, _ in self.persist_lines:
+            min_x = min(min_x, item.xData.min())
+            max_x = max(max_x, item.xData.max())
+
+        # Create the new, uniform x-axis
+        common_x_axis = np.linspace(min_x, max_x, self.expect_samples * 40 * (2 if self.dointerleaved[self.activeboard] else 1) )
+
+        # --- 2. Interpolate Each Line ---
+        resampled_y_values = []
+        for item, _, _ in self.persist_lines:
+            # Use np.interp to resample the line's y-data onto the common x-axis
+            interpolated_y = np.interp(common_x_axis, item.xData, item.yData)
+            resampled_y_values.append(interpolated_y)
+
+        # --- 3. Average and Plot ---
+        if resampled_y_values:
+            y_average = np.mean(resampled_y_values, axis=0)
+            if self.doresamp: y_average, common_x_axis = resample(y_average, len(common_x_axis) * self.doresamp, t=common_x_axis)
+            self.average_line.setData(common_x_axis, y_average)
 
     def recordeventtofile(self):
         time_s = str(time.time())
@@ -1469,6 +1516,7 @@ class MainWindow(TemplateBaseClass):
             #thestr += "Nbadclks A B C D:" + str(self.nbadclkA) + " " + str(self.nbadclkB) + " " + str(self.nbadclkC) + " " + str(self.nbadclkD) + str("\n")
             #thestr += "Nbadstrobes:" + str(self.nbadstr) + str("\n")
             #thestr += "Last clk:"+str(self.lastclk) + str("\n")
+            if self.ui.actionN_persist_lines.isChecked(): thestr += "N persist lines:"+str(len(self.persist_lines)) + str("\n")
             if self.ui.actionTemperatures.isChecked(): thestr += gettemps(usbs[self.activeboard]) + str("\n")
 
             thestr += "\nMeasurements for board "+str(self.activeboard)+" and chan "+str(self.selectedchannel)+":\n"
@@ -1485,10 +1533,13 @@ class MainWindow(TemplateBaseClass):
 
             for i in range(3): self.otherlines[2+i].setVisible(False) # assume we're not drawing the risetime fit line
             if self.ui.actionRisetime.isChecked():
-                if not self.dointerleaved[self.activeboard]:
-                    targety = self.xydata[self.activexychannel]
+                if self.persist_time>0 and len(self.persist_lines)>=2 and self.average_line.isVisible():
+                    targety = [self.average_line.xData, self.average_line.yData]
                 else:
-                    targety = self.xydatainterleaved[int(self.activeboard/2)]
+                    if not self.dointerleaved[self.activeboard]:
+                        targety = self.xydata[self.activexychannel]
+                    else:
+                        targety = self.xydatainterleaved[int(self.activeboard/2)]
                 fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
                 xc = targety[0][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]  # only fit in range
                 yc = targety[1][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]
@@ -1812,6 +1863,11 @@ class MainWindow(TemplateBaseClass):
             self.xydata = np.empty([int(self.num_chan_per_board * self.num_board), 2, 4 * 10 * self.expect_samples], dtype=float)
             self.xydatainterleaved = np.empty([int(self.num_chan_per_board * self.num_board), 2, 2 * 4 * 10 * self.expect_samples], dtype=float)
 
+    def set_average_line_pen(self):
+        if not self.ui.persistlinesCheck.isChecked(): self.avg_pen = self.linepens[self.activexychannel]
+        else: self.avg_pen = pg.mkPen(color='w', width=self.ui.linewidthBox.value())
+        self.average_line.setPen(self.avg_pen)
+
     def launch(self):
         self.nlines = self.num_chan_per_board * self.num_board
         chan=0
@@ -1838,6 +1894,13 @@ class MainWindow(TemplateBaseClass):
         if self.dotwochannel: self.ui.chanBox.setMaximum(self.num_chan_per_board - 1)
         else: self.ui.chanBox.setMaximum(0)
         self.ui.boardBox.setMaximum(self.num_board - 1)
+
+        # average of persist lines
+        self.average_line = self.ui.plot.plot(pen=self.avg_pen, name="persist average")
+        self.average_line.setVisible(self.ui.persistavgCheck.isChecked())
+        self.ui.persistavgCheck.clicked.connect(lambda: self.average_line.setVisible(self.ui.persistavgCheck.isChecked()))
+        self.ui.persistavgCheck.clicked.connect(self.set_average_line_pen)
+        self.ui.persistlinesCheck.clicked.connect(self.set_average_line_pen)
 
         # vertical trigger position line
         self.vline = 0.0

@@ -979,6 +979,51 @@
          <number>1</number>
         </property>
        </widget>
+       <widget class="QCheckBox" name="persistlinesCheck">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>60</y>
+          <width>111</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Whether to draw the persist lines</string>
+        </property>
+        <property name="text">
+         <string>Persist lines</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="persistavgCheck">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>80</y>
+          <width>111</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Whether to draw the average persist line</string>
+        </property>
+        <property name="text">
+         <string>Persist average</string>
+        </property>
+       </widget>
       </widget>
       <widget class="QGroupBox" name="channelgroupBox_4">
        <property name="geometry">
@@ -2124,6 +2169,7 @@
      <string>Measurements</string>
     </property>
     <addaction name="actionTrigger_thresh"/>
+    <addaction name="actionN_persist_lines"/>
     <addaction name="actionTemperatures"/>
     <addaction name="actionMean"/>
     <addaction name="actionRMS"/>
@@ -2358,6 +2404,14 @@
    </property>
    <property name="text">
     <string>Pan and zoom</string>
+   </property>
+  </action>
+  <action name="actionN_persist_lines">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>N persist lines</string>
    </property>
   </action>
  </widget>
