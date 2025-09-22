@@ -1882,10 +1882,11 @@ class MainWindow(TemplateBaseClass):
 
     def on_vline_dragged(self, line):
         if self.downsamplezoom>1: # just pan left or right
-            self.max_x -= line.value() - self.vline
-            self.min_x -= line.value() - self.vline
-            #print("vline min max", self.vline, self.min_x, self.max_x)
-            self.ui.plot.setRange(xRange=(self.min_x, self.max_x), padding=0.00)
+            if self.min_x < line.value() < self.max_x:
+                self.max_x -= line.value() - self.vline
+                self.min_x -= line.value() - self.vline
+                #print("vline min max", self.vline, self.min_x, self.max_x)
+                self.ui.plot.setRange(xRange=(self.min_x, self.max_x), padding=0.00)
             self.drawtriggerlines()
         else: # actually adjust trigger position
             t = (line.value() / (4 * 10 * (self.downsamplefactor / self.nsunits / self.samplerate)) - 1.0) * 10000./self.expect_samples
