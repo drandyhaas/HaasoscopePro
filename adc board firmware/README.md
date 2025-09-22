@@ -43,7 +43,7 @@ Plug in the USB blaster device, go to it in the device manager, and do Update dr
 
  - Power up the raspberry pi and log into it
  - Install openFPGALoader: https://github.com/trabucayre/openFPGALoader
- - For now you may still need the head version of the code and compile it yourself - there is a [small change I committed](https://github.com/trabucayre/openFPGALoader/pull/584) which may not be in releases yet
+ - For now you may still need the head version of the code and to compile it yourself - there is a [small change I committed](https://github.com/trabucayre/openFPGALoader/pull/584) which is only in release v1.0.0 onwards
 
 ### Connect things
 
