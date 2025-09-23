@@ -1120,21 +1120,20 @@ class MainWindow(TemplateBaseClass):
                     if self.doresamp and self.downsample<0:
                         ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * self.doresamp, t=xdatanew) # then resample
 
-                    if self.ui.actionToggle_trig_stabilizer.isChecked(): # special stabilization for interleaved data (it's done on a copy, so we don't have to be careful
-                        fitwidth = (self.max_x - self.min_x)
-                        xc = xdatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
-                        numsamp = self.distcorrsamp  # number of samples to use on each side of trigger time
-                        if self.doresamp: numsamp *= self.doresamp # adjust for extra samples from upsampling
-                        fitwidth *= numsamp / max(2, xc.size)
-                        xc = xdatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
-                        # print("xc size start end", xc.size, xc[0], xc[-1], "and vline at", self.vline)
-                        yc = ydatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
-                        board = li//4
-                        if self.fallingedge[board]: yc = -yc
-                        if xc.size > 1:
-                            distcorrtemp = find_crossing_distance(yc, self.hline, self.vline, xc[0], xc[1] - xc[0])
-                            if distcorrtemp is not None and abs(distcorrtemp) < self.distcorrtol*self.downsamplefactor:
-                                xdatanew -= distcorrtemp
+            if self.ui.actionToggle_extra_trig_stabilizer.isChecked() and not (self.dooversample[li//4] and li%4!=0 ) and ((li%4==0 and self.dointerleaved[int(li/2)]) or (self.doresamp and self.downsample<0)): # special stabilization for interleaved or resampled data (it's done on a copy, so we don't have to be careful
+                fitwidth = (self.max_x - self.min_x)
+                xc = xdatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
+                numsamp = self.distcorrsamp  # number of samples to use on each side of trigger time
+                if self.doresamp: numsamp *= self.doresamp # adjust for extra samples from upsampling
+                fitwidth *= numsamp / max(2, xc.size)
+                xc = xdatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
+                # print("xc size start end", xc.size, xc[0], xc[-1], "and vline at", self.vline)
+                yc = ydatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
+                if self.fallingedge[li//2]: yc = -yc
+                if xc.size > 1:
+                    distcorrtemp = find_crossing_distance(yc, self.hline, self.vline, xc[0], xc[1] - xc[0])
+                    if distcorrtemp is not None and abs(distcorrtemp) < self.distcorrtol*self.downsamplefactor:
+                        xdatanew -= distcorrtemp
 
             if xdatanew is not None:
                 self.lines[li].setData(xdatanew, ydatanew)
@@ -1750,7 +1749,7 @@ class MainWindow(TemplateBaseClass):
             return
         c1 = self.activeboard * self.num_chan_per_board
         c = (self.activeboard + 1) * self.num_chan_per_board
-        fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
+        fitwidth = (self.max_x - self.min_x) * 0.99 # self.fitwidthfraction
         yc = self.xydata[c][1][
                 (self.xydata[c][0] > self.vline - fitwidth) & (self.xydata[c][0] < self.vline + fitwidth)]
         yc1 = self.xydata[c1][1][
