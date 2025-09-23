@@ -1537,34 +1537,38 @@ class MainWindow(TemplateBaseClass):
             if self.ui.actionN_persist_lines.isChecked(): thestr += "N persist lines:"+str(len(self.persist_lines)) + str("\n")
             if self.ui.actionTemperatures.isChecked(): thestr += gettemps(usbs[self.activeboard]) + str("\n")
 
-            thestr += "\nMeasurements for board "+str(self.activeboard)+" and chan "+str(self.selectedchannel)+":\n"
-            if self.ui.actionMean.isChecked(): thestr += "Mean: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.mean(self.xydata[self.activexychannel][1]), 3) ) + " mV\n"
-            if self.ui.actionRMS.isChecked(): thestr += "RMS: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.std(self.xydata[self.activexychannel][1]), 3) ) + " mV\n"
-            if self.ui.actionMaximum.isChecked(): thestr += "Max: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.max(self.xydata[self.activexychannel][1]), 3) ) + " mV\n"
-            if self.ui.actionMinimum.isChecked(): thestr += "Min: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.min(self.xydata[self.activexychannel][1]), 3) ) + " mV\n"
-            if self.ui.actionVpp.isChecked(): thestr += "Vpp: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * (np.max(self.xydata[self.activexychannel][1]) - np.min(self.xydata[self.activexychannel][1])), 3) ) + " mV\n"
+            # which data to use for measurements
+            if self.persist_time>0 and len(self.persist_lines)>=2 and self.average_line.isVisible():
+                targetdata = [self.average_line.xData, self.average_line.yData]
+                targetdatastr = "from average for"
+            else:
+                if not self.dointerleaved[self.activeboard]:
+                    targetdata = self.xydata[self.activexychannel]
+                    targetdatastr = "for"
+                else:
+                    targetdata = self.xydatainterleaved[int(self.activeboard/2)]
+                    targetdatastr = "from interleaved"
+
+            thestr += "\nMeasurements "+targetdatastr+" board "+str(self.activeboard)+" and chan "+str(self.selectedchannel)+":\n"
+            if self.ui.actionMean.isChecked(): thestr += "Mean: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.mean(targetdata[1]), 3) ) + " mV\n"
+            if self.ui.actionRMS.isChecked(): thestr += "RMS: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.std(targetdata[1]), 3) ) + " mV\n"
+            if self.ui.actionMaximum.isChecked(): thestr += "Max: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.max(targetdata[1]), 3) ) + " mV\n"
+            if self.ui.actionMinimum.isChecked(): thestr += "Min: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.min(targetdata[1]), 3) ) + " mV\n"
+            if self.ui.actionVpp.isChecked(): thestr += "Vpp: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * (np.max(targetdata[1]) - np.min(targetdata[1])), 3) ) + " mV\n"
             if self.ui.actionFreq.isChecked():
                 sampling_rate = self.samplerate*1e9/self.downsamplefactor # Hz
                 if self.dotwochannel: sampling_rate /= 2
-                found_freq = find_fundamental_frequency_scipy(self.xydata[self.activexychannel][1], sampling_rate)
+                found_freq = find_fundamental_frequency_scipy(targetdata[1], sampling_rate)
                 thestr += "Freq: " + str(format_freq(found_freq)) + "\n"
-
             for i in range(3): self.otherlines[2+i].setVisible(False) # assume we're not drawing the risetime fit line
             if self.ui.actionRisetime.isChecked():
-                if self.persist_time>0 and len(self.persist_lines)>=2 and self.average_line.isVisible():
-                    targety = [self.average_line.xData, self.average_line.yData]
-                else:
-                    if not self.dointerleaved[self.activeboard]:
-                        targety = self.xydata[self.activexychannel]
-                    else:
-                        targety = self.xydatainterleaved[int(self.activeboard/2)]
                 fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
-                xc = targety[0][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]  # only fit in range
-                yc = targety[1][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]
+                xc = targetdata[0][(targetdata[0] > self.vline - fitwidth) & (targetdata[0] < self.vline + fitwidth)]  # only fit in range
+                yc = targetdata[1][(targetdata[0] > self.vline - fitwidth) & (targetdata[0] < self.vline + fitwidth)]
                 if self.fallingedge[self.activeboard]:
-                    p0 = [min(targety[1]), xc[xc.size//2], -2*self.nsunits, max(targety[1])] #initial guess
+                    p0 = [min(targetdata[1]), xc[xc.size//2], -2*self.nsunits, max(targetdata[1])] #initial guess
                 else:
-                    p0 = [max(targety[1]), xc[xc.size//2], 2*self.nsunits, min(targety[1])] #initial guess
+                    p0 = [max(targetdata[1]), xc[xc.size//2], 2*self.nsunits, min(targetdata[1])] #initial guess
                 if xc.size < 10: # require at least something to fit, otherwise we'll throw an error
                     thestr += "Risetime: fit range too small\n"
                 else:
