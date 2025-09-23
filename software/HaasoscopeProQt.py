@@ -325,6 +325,11 @@ class MainWindow(TemplateBaseClass):
         if self.persist_time>0: self.persist_timer.start(50) # ms
         self.ui.persistText.setText(str(self.persist_time/1000)+" s")
 
+    def clear_persist(self):
+        for item, creation_time, li in list(self.persist_lines):
+            self.ui.plot.removeItem(item)
+            self.persist_lines.remove((item, creation_time, li))
+
     def update_persist_effect(self):
         """Updates the alpha/transparency of the persistent lines."""
         if len(self.persist_lines)==0 and self.persist_time==0: self.persist_timer.stop()
@@ -446,6 +451,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.trigchan_comboBox.setCurrentIndex(self.triggerchan[self.activeboard] if self.dotwochannel else 0)
         self.ui.risingfalling_comboBox.setCurrentIndex(self.fallingedge[self.activeboard])
         self.update_right_axis()
+        self.clear_persist()
         self.set_average_line_pen()
 
     def update_right_axis(self):
@@ -587,8 +593,11 @@ class MainWindow(TemplateBaseClass):
     def chanon(self):
         if self.ui.chanonCheck.checkState() == QtCore.Qt.Checked:
             self.lines[self.activexychannel].setVisible(True)
+            if self.ui.persistavgCheck.isChecked(): self.average_line.setVisible(True)
         else:
             self.lines[self.activexychannel].setVisible(False)
+            self.average_line.setVisible(False)
+        self.set_average_line_pen()
 
     def setacdc(self):
         self.acdc[self.activexychannel] = self.ui.acdcCheck.checkState() == QtCore.Qt.Checked # remember it
@@ -1093,7 +1102,7 @@ class MainWindow(TemplateBaseClass):
         for li in range(self.nlines):
             xdatanew, ydatanew = None, None
             if not self.dointerleaved[int(li/2)]:
-                if self.doresamp and self.downsample<0 and not (li==self.activexychannel and self.persist_time>0 and not self.ui.persistlinesCheck.isChecked() and self.ui.persistavgCheck.isChecked()):
+                if self.doresamp and self.downsample<0:
                     ydatanew, xdatanew = resample(self.xydata[li][1], len(self.xydata[li][0]) * self.doresamp, t=self.xydata[li][0])
                 else:
                     if self.persist_time>0: xdatanew, ydatanew = self.xydata[li][0].copy(), self.xydata[li][1].copy()
@@ -1108,7 +1117,7 @@ class MainWindow(TemplateBaseClass):
                     xdatanew = np.linspace(self.xydatainterleaved[int(li/2)][0].min(), self.xydatainterleaved[int(li/2)][0].max(), len(self.xydatainterleaved[int(li/2)][0])*1) # first put them on a regular x spacing
                     f_int = interp1d(self.xydatainterleaved[int(li/2)][0], self.xydatainterleaved[int(li/2)][1], kind='linear')
                     ydatanew = f_int(xdatanew)
-                    if self.doresamp and self.downsample<0 and not (li==self.activexychannel and self.persist_time>0 and not self.ui.persistlinesCheck.isChecked() and self.ui.persistavgCheck.isChecked()):
+                    if self.doresamp and self.downsample<0:
                         ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * self.doresamp, t=xdatanew) # then resample
 
                     if self.ui.actionToggle_trig_stabilizer.isChecked(): # special stabilization for interleaved data (it's done on a copy, so we don't have to be careful
@@ -1130,7 +1139,7 @@ class MainWindow(TemplateBaseClass):
             if xdatanew is not None:
                 self.lines[li].setData(xdatanew, ydatanew)
                 if li==self.activexychannel:
-                    if self.persist_time>0 and (self.ui.persistlinesCheck.isChecked() or self.ui.persistavgCheck.isChecked()):
+                    if self.persist_time>0 and self.ui.chanonCheck.isChecked() and (self.ui.persistlinesCheck.isChecked() or self.ui.persistavgCheck.isChecked()):
                         if len(self.persist_lines) >= self.max_persist_lines:
                             oldest_item, _, _ = self.persist_lines[0]
                             self.ui.plot.removeItem(oldest_item)
@@ -1877,6 +1886,8 @@ class MainWindow(TemplateBaseClass):
         if not self.ui.persistlinesCheck.isChecked(): self.avg_pen = self.linepens[self.activexychannel]
         else: self.avg_pen = pg.mkPen(color='w', width=self.ui.linewidthBox.value())
         self.average_line.setPen(self.avg_pen)
+        for theline in range(len(self.persist_lines)): self.persist_lines[theline][0].setVisible(self.ui.persistlinesCheck.isChecked() and self.ui.chanonCheck.isChecked())
+        self.average_line.setVisible(self.ui.persistavgCheck.isChecked() and self.ui.chanonCheck.isChecked())
 
     def launch(self):
         self.nlines = self.num_chan_per_board * self.num_board
