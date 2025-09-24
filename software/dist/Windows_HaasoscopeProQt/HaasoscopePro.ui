@@ -49,7 +49,7 @@
          <x>0</x>
          <y>600</y>
          <width>400</width>
-         <height>221</height>
+         <height>400</height>
         </rect>
        </property>
        <property name="font">
@@ -586,30 +586,6 @@
        <property name="title">
         <string>Readout options</string>
        </property>
-       <widget class="QCheckBox" name="highresCheck">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>20</y>
-          <width>70</width>
-          <height>17</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>Average samples at lower timebases (time factor &gt; 0)</string>
-        </property>
-        <property name="text">
-         <string>Highres</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
        <widget class="QLabel" name="label_17">
         <property name="geometry">
          <rect>
@@ -813,6 +789,91 @@
         <property name="text">
          <string>Upsample</string>
         </property>
+       </widget>
+       <widget class="QLabel" name="label_24">
+        <property name="geometry">
+         <rect>
+          <x>90</x>
+          <y>20</y>
+          <width>41</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="text">
+         <string>LPF</string>
+        </property>
+       </widget>
+       <widget class="QComboBox" name="lpfBox">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>20</y>
+          <width>71</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Frequency of low pass filter applied (MHz)</string>
+        </property>
+        <property name="currentText">
+         <string>Off</string>
+        </property>
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <property name="maxVisibleItems">
+         <number>10</number>
+        </property>
+        <item>
+         <property name="text">
+          <string>Off</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>1</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>5</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>10</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>20</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>50</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>100</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>200</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>400</string>
+         </property>
+        </item>
        </widget>
       </widget>
       <widget class="QGroupBox" name="viewgroupBox">
@@ -1448,7 +1509,8 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Color of the currently selected channel, outlined if triggering</string>
+         <string>Color of the currently selected channel
+Outlined if triggering on this channel</string>
         </property>
         <property name="frameShape">
          <enum>QFrame::Box</enum>
@@ -2203,7 +2265,9 @@
      <bool>true</bool>
     </property>
     <addaction name="actionDrawing"/>
+    <addaction name="actionHigh_resolution"/>
     <addaction name="actionGrid"/>
+    <addaction name="actionLine_color"/>
     <addaction name="actionPan_and_zoom"/>
    </widget>
    <addaction name="menuFile"/>
@@ -2465,6 +2529,22 @@
    </property>
    <property name="toolTip">
     <string>Extra trigger stabilizer that runs after resampling or oversample interleaving</string>
+   </property>
+  </action>
+  <action name="actionHigh_resolution">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>High resolution</string>
+   </property>
+  </action>
+  <action name="actionLine_color">
+   <property name="text">
+    <string>Change line color</string>
    </property>
   </action>
  </widget>
