@@ -9,7 +9,7 @@ from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
 from PyQt5.QtGui import QPalette, QColor, QIcon
 from PyQt5.QtWidgets import QApplication, QMessageBox, QWidget, QPushButton, QFrame
 from scipy.optimize import curve_fit
-from scipy.signal import resample
+from scipy.signal import resample, butter, filtfilt
 from scipy.interpolate import interp1d
 import struct
 from usbs import *
@@ -89,7 +89,7 @@ class FFTWindow(FFTTemplateBaseClass):
 # Define main window class from template
 WindowTemplate, TemplateBaseClass = loadUiType(pwd+"/HaasoscopePro.ui")
 class MainWindow(TemplateBaseClass):
-    softwareversion = 29.20
+    softwareversion = 29.21
     expect_samples = 100
     expect_samples_extra = 5 # enough to cover downsample shifting and toff shifting
     samplerate = 3.2  # freq in GHz
@@ -225,7 +225,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.trigchan_comboBox.currentIndexChanged.connect(self.triggerchanchanged)
         self.ui.actionGrid.triggered.connect(self.grid)
         self.ui.markerCheck.stateChanged.connect(self.marker)
-        self.ui.highresCheck.stateChanged.connect(self.highres)
+        self.ui.actionHigh_resolution.triggered.connect(self.highres)
+        self.ui.lpfBox.currentIndexChanged.connect(self.lowpassfilter)
         self.ui.pllresetButton.clicked.connect(self.pllreset)
         self.ui.actionClock_reset.triggered.connect(self.adfreset)
         self.ui.upposButton0.clicked.connect(self.uppos)
@@ -269,6 +270,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionPan_and_zoom.triggered.connect(self.dopanandzoom)
         self.ui.rightaxisCheck.clicked.connect(self.dorightaxis)
         self.avg_pen = pg.mkPen(color='w', width=1)
+        self.lpf = 0
         self.extratot = False
         self.rightaxis = None
         self.dofft = False
@@ -315,6 +317,11 @@ class MainWindow(TemplateBaseClass):
             if len(self.otherlines)>0:
                 self.otherlines[0].setMovable(True)
                 self.otherlines[1].setMovable(True)
+
+    def lowpassfilter(self):
+        thetext = self.ui.lpfBox.currentText()
+        if thetext=="Off": self.lpf=0
+        else: self.lpf=int(thetext)
 
     def dorightaxis(self):
         self.rightaxis.setVisible(self.ui.rightaxisCheck.isChecked())
@@ -923,8 +930,8 @@ class MainWindow(TemplateBaseClass):
         self.getone = not self.getone
         self.ui.singleButton.setChecked(self.getone)
 
-    def highres(self, value):
-        self.highresval = value > 0
+    def highres(self):
+        self.highresval = self.ui.actionHigh_resolution.isChecked()
         # print("highres",self.highresval)
         for usb in usbs: self.telldownsample(usb, self.downsample)
 
@@ -1480,6 +1487,14 @@ class MainWindow(TemplateBaseClass):
                     nsamp = datasize - samp
                 if 0 < nsamp <= 40:
                     self.xydata[board * self.num_chan_per_board][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
+
+        if self.lpf>0:
+            sr = self.samplerate / (2 if self.dotwochannel else 1) / self.downsamplefactor
+            normal_cutoff = min(self.lpf*1e6 / (0.5*sr*1e9), 0.99) # can't be >=1, which would happen at lower sr
+            order = 5
+            fb, fa = butter(order, normal_cutoff, btype='low', analog=False) # Get the filter coefficients for a Butterworth filter
+            self.xydata[board * self.num_chan_per_board+0][1] = filtfilt(fb, fa, self.xydata[board * self.num_chan_per_board+0][1])
+            if self.dotwochannel: self.xydata[board * self.num_chan_per_board+1][1] = filtfilt(fb, fa, self.xydata[board * self.num_chan_per_board+1][1])
 
         if self.ui.actionToggle_trig_stabilizer.isChecked():
             if abs(self.totdistcorr[board]) > self.distcorrtol*self.downsamplefactor:
