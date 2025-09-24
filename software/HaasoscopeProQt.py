@@ -546,6 +546,7 @@ class MainWindow(TemplateBaseClass):
         db = self.ui.gainBox.value()
         v2 = (self.basevoltage/1000.)*self.tenx[self.activexychannel]/pow(10, db / 20.) # basevoltage V at 0 dB gain
         if self.dooversample[self.activeboard]: v2 *= 2.0
+        if not self.mohm[self.activeboard]: v2 /= 2.0
         oldvperd = self.VperD[self.activeboard*2+self.selectedchannel]
         self.VperD[self.activeboard*2+self.selectedchannel] = v2
         if self.dooversample[self.activeboard] and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
@@ -620,6 +621,8 @@ class MainWindow(TemplateBaseClass):
         self.mohm[self.activexychannel] = self.ui.ohmCheck.checkState() == QtCore.Qt.Checked # remember it
         setchanimpedance(usbs[self.activeboard], self.selectedchannel,
                          self.ui.ohmCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])  # will be True for 1M ohm, False for 50 ohm
+        self.changegain()
+        self.changeoffset()
 
     def setatt(self):
         self.att[self.activexychannel] = self.ui.attCheck.checkState() == QtCore.Qt.Checked # remember it
@@ -1127,7 +1130,7 @@ class MainWindow(TemplateBaseClass):
                     if self.doresamp and self.downsample<0:
                         ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * self.doresamp, t=xdatanew) # then resample
 
-            if self.ui.actionToggle_extra_trig_stabilizer.isChecked() and not (self.dooversample[li//4] and li%4!=0 ) and ((li%4==0 and self.dointerleaved[int(li/2)]) or (self.doresamp and self.downsample<0)): # special stabilization for interleaved or resampled data (it's done on a copy, so we don't have to be careful
+            if self.ui.actionToggle_extra_trig_stabilizer.isChecked() and not (self.dooversample[li//4] and li%4!=0): # special stabilization, not for oversampled data on channel +1 though
                 fitwidth = (self.max_x - self.min_x)
                 xc = xdatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
                 numsamp = self.distcorrsamp  # number of samples to use on each side of trigger time
