@@ -467,6 +467,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.gainBox.setValue(self.gain[self.activexychannel])
         self.ui.trigchan_comboBox.setCurrentIndex(self.triggerchan[self.activeboard] if self.dotwochannel else 0)
         self.ui.risingfalling_comboBox.setCurrentIndex(self.fallingedge[self.activeboard])
+        self.changegain()
+        self.changeoffset()
         self.update_right_axis()
         self.clear_persist()
         self.set_average_line_pen()
@@ -556,7 +558,7 @@ class MainWindow(TemplateBaseClass):
         db = self.ui.gainBox.value()
         v2 = (self.basevoltage/1000.)*self.tenx[self.activexychannel]/pow(10, db / 20.) # basevoltage V at 0 dB gain
         if self.dooversample[self.activeboard]: v2 *= 2.0
-        if not self.mohm[self.activeboard]: v2 /= 2.0
+        if not self.mohm[self.activexychannel]: v2 /= 2.0
         oldvperd = self.VperD[self.activeboard*2+self.selectedchannel]
         self.VperD[self.activeboard*2+self.selectedchannel] = v2
         if self.dooversample[self.activeboard] and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
