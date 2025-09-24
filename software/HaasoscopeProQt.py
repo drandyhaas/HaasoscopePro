@@ -2059,6 +2059,16 @@ if __name__ == '__main__': # calls setup_connection for each board, then init
     if standalone:
         app = QtWidgets.QApplication(sys.argv)
     try:
+        # The most common fix for grid misalignment
+        if sys.platform.startswith('win'):
+            import ctypes
+            print("On Windows, SetProcessDpiAwareness(True)")
+            ctypes.windll.shcore.SetProcessDpiAwareness(True)
+        # For all platforms, you can also try setting environment variables
+        QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
+        os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+        os.environ["QT_SCALE_FACTOR"] = "1"
+
         font = app.font()
         font.setPixelSize(11)
         app.setFont(font)
