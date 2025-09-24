@@ -793,10 +793,10 @@
        <widget class="QLabel" name="label_24">
         <property name="geometry">
          <rect>
-          <x>70</x>
+          <x>90</x>
           <y>20</y>
-          <width>61</width>
-          <height>16</height>
+          <width>41</width>
+          <height>20</height>
          </rect>
         </property>
         <property name="font">
@@ -805,7 +805,7 @@
          </font>
         </property>
         <property name="text">
-         <string>Low pass</string>
+         <string>LPF</string>
         </property>
        </widget>
        <widget class="QComboBox" name="lpfBox">
@@ -813,7 +813,7 @@
          <rect>
           <x>10</x>
           <y>20</y>
-          <width>51</width>
+          <width>71</width>
           <height>22</height>
          </rect>
         </property>
