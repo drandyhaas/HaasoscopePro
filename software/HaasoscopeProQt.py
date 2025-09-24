@@ -7,7 +7,7 @@ import pyqtgraph as pg
 import PyQt5
 from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
 from PyQt5.QtGui import QPalette, QColor, QIcon
-from PyQt5.QtWidgets import QApplication, QMessageBox, QWidget, QPushButton, QFrame
+from PyQt5.QtWidgets import QApplication, QMessageBox, QWidget, QPushButton, QFrame, QColorDialog
 from scipy.optimize import curve_fit
 from scipy.signal import resample, butter, filtfilt
 from scipy.interpolate import interp1d
@@ -269,6 +269,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionOversampling_mean_and_RMS.triggered.connect(self.do_meanrms_calibration)
         self.ui.actionPan_and_zoom.triggered.connect(self.dopanandzoom)
         self.ui.rightaxisCheck.clicked.connect(self.dorightaxis)
+        self.ui.actionLine_color.triggered.connect(self.chancolor)
         self.avg_pen = pg.mkPen(color='w', width=1)
         self.lpf = 0
         self.extratot = False
@@ -302,7 +303,16 @@ class MainWindow(TemplateBaseClass):
     def about(self):
         QMessageBox.about( self, # Parent widget (optional, but good practice)
             "Haasoscope Pro Qt, by DrAndyHaas", # Title of the About dialog
-            "A PyQt5 application for the Haasoscope Pro\n\nVersion "+str(self.softwareversion) )
+            "A PyQt5 application for the Haasoscope Pro\n\nVersion "+f"{self.softwareversion:.2f}" )
+
+    def chancolor(self):
+        thecolor = QColorDialog.getColor(self.linepens[self.activexychannel].color(), self, "Select a color for this channel")
+        if thecolor.isValid():
+            pen = pg.mkPen(color=thecolor) # width=2 slows drawing down
+            self.linepens[self.activexychannel]=pen
+            self.lines[self.activexychannel].setPen(pen)
+            self.selectchannel()
+            self.doleds()
 
     def dopanandzoom(self):
         if self.ui.actionPan_and_zoom.isChecked():
@@ -2055,7 +2065,7 @@ if __name__ == '__main__': # calls setup_connection for each board, then init
         app.setWindowIcon(QIcon('icon.png'))
         win = MainWindow()
         win.setWindowTitle('Haasoscope Pro Qt')
-        print("Haasoscope Pro Qt, version",win.softwareversion)
+        print("Haasoscope Pro Qt, version "+f"{win.softwareversion:.2f}")
         for usbi in range(len(usbs)):
             if not win.setup_connection(usbi):
                 print("Exiting now - failed setup_connections!")

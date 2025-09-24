@@ -1509,7 +1509,8 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Color of the currently selected channel, outlined if triggering</string>
+         <string>Color of the currently selected channel
+Outlined if triggering on this channel</string>
         </property>
         <property name="frameShape">
          <enum>QFrame::Box</enum>
@@ -2266,6 +2267,7 @@
     <addaction name="actionDrawing"/>
     <addaction name="actionHigh_resolution"/>
     <addaction name="actionGrid"/>
+    <addaction name="actionLine_color"/>
     <addaction name="actionPan_and_zoom"/>
    </widget>
    <addaction name="menuFile"/>
@@ -2538,6 +2540,11 @@
    </property>
    <property name="text">
     <string>High resolution</string>
+   </property>
+  </action>
+  <action name="actionLine_color">
+   <property name="text">
+    <string>Change line color</string>
    </property>
   </action>
  </widget>
