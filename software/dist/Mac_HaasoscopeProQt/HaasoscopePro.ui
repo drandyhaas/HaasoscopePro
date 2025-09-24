@@ -615,7 +615,7 @@
          <rect>
           <x>70</x>
           <y>73</y>
-          <width>51</width>
+          <width>61</width>
           <height>16</height>
          </rect>
         </property>
@@ -625,7 +625,7 @@
          </font>
         </property>
         <property name="text">
-         <string>F delay</string>
+         <string>Fine delay</string>
         </property>
        </widget>
        <widget class="QSpinBox" name="tadBox">
@@ -666,7 +666,7 @@
          <rect>
           <x>70</x>
           <y>49</y>
-          <width>51</width>
+          <width>61</width>
           <height>16</height>
          </rect>
         </property>
@@ -750,7 +750,7 @@
          <rect>
           <x>70</x>
           <y>102</y>
-          <width>51</width>
+          <width>61</width>
           <height>16</height>
          </rect>
         </property>
@@ -801,7 +801,7 @@
          <rect>
           <x>70</x>
           <y>130</y>
-          <width>51</width>
+          <width>61</width>
           <height>20</height>
          </rect>
         </property>
@@ -811,7 +811,7 @@
          </font>
         </property>
         <property name="text">
-         <string>Upsamp</string>
+         <string>Upsample</string>
         </property>
        </widget>
       </widget>
@@ -2135,6 +2135,9 @@
     <property name="title">
      <string>File</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <addaction name="actionRecord"/>
     <addaction name="actionTake_screenshot"/>
     <addaction name="separator"/>
@@ -2144,29 +2147,41 @@
     <property name="title">
      <string>Calibration</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <addaction name="actionDo_autocalibration"/>
     <addaction name="actionOversampling_mean_and_RMS"/>
    </widget>
-   <widget class="QMenu" name="menuOther">
+   <widget class="QMenu" name="menuAdvanced">
     <property name="title">
      <string>Advanced</string>
     </property>
-    <addaction name="separator"/>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <addaction name="actionForce_split"/>
     <addaction name="actionForce_switch_clocks"/>
     <addaction name="actionClock_reset"/>
     <addaction name="actionToggle_PLL_controls"/>
     <addaction name="actionToggle_trig_stabilizer"/>
+    <addaction name="actionToggle_extra_trig_stabilizer"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
      <string>Help</string>
+    </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
     </property>
     <addaction name="actionAbout"/>
    </widget>
    <widget class="QMenu" name="menuMeasurements">
     <property name="title">
      <string>Measurements</string>
+    </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
     </property>
     <addaction name="actionTrigger_thresh"/>
     <addaction name="actionN_persist_lines"/>
@@ -2184,6 +2199,9 @@
     <property name="title">
      <string>View</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <addaction name="actionDrawing"/>
     <addaction name="actionGrid"/>
     <addaction name="actionPan_and_zoom"/>
@@ -2192,7 +2210,7 @@
    <addaction name="menuCalibration"/>
    <addaction name="menuView"/>
    <addaction name="menuMeasurements"/>
-   <addaction name="menuOther"/>
+   <addaction name="menuAdvanced"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusBar">
@@ -2210,7 +2228,10 @@
   </action>
   <action name="actionDo_autocalibration">
    <property name="text">
-    <string>Oversampling alignment</string>
+    <string>Oversampling time alignment</string>
+   </property>
+   <property name="toolTip">
+    <string>Find the best delay and fine delay</string>
    </property>
   </action>
   <action name="actionUpdate_firmware">
@@ -2225,10 +2246,16 @@
    <property name="text">
     <string>Force split chan 1</string>
    </property>
+   <property name="toolTip">
+    <string>Force split chan 1 to also go to front SMA output</string>
+   </property>
   </action>
   <action name="actionForce_switch_clocks">
    <property name="text">
     <string>Force switch clocks</string>
+   </property>
+   <property name="toolTip">
+    <string>Force switch clocks between internal oscillator and external LVDS clock from another board (if available)</string>
    </property>
   </action>
   <action name="actionToggle_PLL_controls">
@@ -2237,6 +2264,9 @@
    </property>
    <property name="text">
     <string>PLL controls</string>
+   </property>
+   <property name="toolTip">
+    <string>PLL controls active or inactive</string>
    </property>
   </action>
   <action name="actionAbout">
@@ -2341,6 +2371,9 @@
    <property name="text">
     <string>Trigger stabilizer</string>
    </property>
+   <property name="toolTip">
+    <string>Trigger stabilizer based on linear fit between samples</string>
+   </property>
   </action>
   <action name="actionRisetime_fit_lines">
    <property name="checkable">
@@ -2370,6 +2403,9 @@
    <property name="text">
     <string>Clock reset</string>
    </property>
+   <property name="toolTip">
+    <string>Clock reset (ADF4350)</string>
+   </property>
   </action>
   <action name="actionGrid">
    <property name="checkable">
@@ -2397,6 +2433,9 @@
    <property name="text">
     <string>Oversampling mean and RMS</string>
    </property>
+   <property name="toolTip">
+    <string>Oversampling mean and RMS adjustment only</string>
+   </property>
   </action>
   <action name="actionPan_and_zoom">
    <property name="checkable">
@@ -2412,6 +2451,20 @@
    </property>
    <property name="text">
     <string>N persist lines</string>
+   </property>
+  </action>
+  <action name="actionToggle_extra_trig_stabilizer">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Extra trigger stabilizer</string>
+   </property>
+   <property name="toolTip">
+    <string>Extra trigger stabilizer that runs after resampling or oversample interleaving</string>
    </property>
   </action>
  </widget>
