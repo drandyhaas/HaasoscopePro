@@ -1549,6 +1549,9 @@ class MainWindow(TemplateBaseClass):
         self.isdrawing = False
 
         self.adjustclocks(board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr)
+        if self.plljustreset[board]==-10 and (nbadclkA > 0 or nbadclkB > 0 or nbadclkC > 0 or nbadclkD > 0 or nbadstr > 0):
+            print("Found a bad clock or strobe - triggering a PLL reset!")
+            self.pllreset(board)
         if board == self.activeboard:
             self.nbadclkA = nbadclkA
             self.nbadclkB = nbadclkB
