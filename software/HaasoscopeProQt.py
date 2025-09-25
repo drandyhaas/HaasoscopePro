@@ -6,7 +6,7 @@ from collections import deque
 import pyqtgraph as pg
 import PyQt5
 from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
-from PyQt5.QtGui import QPalette, QColor, QIcon
+from PyQt5.QtGui import QPalette, QColor, QIcon, QPen
 from PyQt5.QtWidgets import QApplication, QMessageBox, QWidget, QPushButton, QFrame, QColorDialog
 from scipy.optimize import curve_fit
 from scipy.signal import resample, butter, filtfilt
@@ -308,9 +308,7 @@ class MainWindow(TemplateBaseClass):
     def chancolor(self):
         thecolor = QColorDialog.getColor(self.linepens[self.activexychannel].color(), self, "Select a color for this channel")
         if thecolor.isValid():
-            pen = pg.mkPen(color=thecolor) # width=2 slows drawing down
-            self.linepens[self.activexychannel]=pen
-            self.lines[self.activexychannel].setPen(pen)
+            self.linepens[self.activexychannel].setColor(thecolor)
             self.selectchannel()
             self.doleds()
 
@@ -475,8 +473,10 @@ class MainWindow(TemplateBaseClass):
 
     def update_right_axis(self):
         if self.num_board>0:
-            self.rightaxis.setPen( self.linepens[self.activexychannel] )
-            self.rightaxis.setTextPen(color=self.linepens[self.activexychannel].color())
+            pen=QPen(self.linepens[self.activexychannel])
+            pen.setWidth(1)
+            self.rightaxis.setPen(pen)
+            self.rightaxis.setTextPen(color=pen.color())
             self.rightaxis.setLabel(text="Voltage for board "+str(self.activeboard)+" channel "+str(self.selectedchannel), units='V')
             self.rightaxis.conversion_func = lambda val: val * self.VperD[self.activexychannel]
             ts = round(2*5*self.VperD[self.activexychannel],1)
