@@ -37,6 +37,7 @@ def spicommand2(usb, name, first, second, third, fourth, read, cs=0, nbyte=3, qu
     if read:
         if not quiet:
             print("SPI read:\t" + name, "(", hex(first), hex(second), ")", hex(spires2[0]), hex(spires[0]))
+        return spires
     else:
         if not quiet:
             print("SPI write:\t" + name, "(", hex(first), hex(second), ")", hex(fourth), hex(third))

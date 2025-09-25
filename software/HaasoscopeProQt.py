@@ -769,7 +769,8 @@ class MainWindow(TemplateBaseClass):
             print("good phase starts at",startofzeros, "and goes for", lengthofzeros,"steps")
             if lengthofzeros<4:
                 print("Bad PLL calibration found! Check power connections?!")
-                self.dostartstop()
+                if not self.paused: self.dostartstop()
+                self.ui.runButton.setEnabled(False)
             else:
                 if startofzeros>=12: startofzeros-=12
                 n = startofzeros + lengthofzeros//2 + self.phaseoffset # amount to adjust clklvds and clklvdsout (positive)
@@ -1701,9 +1702,9 @@ class MainWindow(TemplateBaseClass):
             if ver>=29:
                 # now reset the board and exit the softare
                 reload_firmware(usbs[self.activeboard])
-                self.closeEvent()
-                print("Exiting software")
-                sys.exit(0)
+                print("Can exit software now, then restart it")
+                if not self.paused: self.dostartstop()
+                self.ui.runButton.setEnabled(False)
         else:
             print("not verified!!!")
             nbad=0
@@ -1879,8 +1880,10 @@ class MainWindow(TemplateBaseClass):
         self.hsprosock_t1.start()
 
     def close_socket(self):
-        self.hsprosock.runthethread = False
-        self.hsprosock_t1.join()
+        if hasattr(self,"hsprosock"):
+            print("Closing socket")
+            self.hsprosock.runthethread = False
+            self.hsprosock_t1.join()
 
     def doleds(self):
         for board in range(self.num_board):
@@ -2028,7 +2031,7 @@ class MainWindow(TemplateBaseClass):
             print("Warning - this board has older firmware than another being used!")
             self.firmwareversion = ver # find the minimum firmware being used
         self.adfreset(board)
-        setupboard(usbs[board], self.dopattern, self.dotwochannel, self.dooverrange, self.basevoltage==200)
+        if setupboard(usbs[board], self.dopattern, self.dotwochannel, self.dooverrange, self.basevoltage==200)>0: return 0
         for c in range(self.num_chan_per_board):
             setchanacdc(usbs[board], c, 0, self.dooversample[board])
             setchanimpedance(usbs[board], c, 0, self.dooversample[board])
@@ -2036,6 +2039,30 @@ class MainWindow(TemplateBaseClass):
         setsplit(usbs[board], False)
         self.pllreset(board)
         auxoutselector(usbs[board],0)
+
+        # Try toggling relays and test to see if the ADC temp measurement is affected - hack to check power supply
+        setfan(usbs[board], 0)
+        send_leds(usbs[board], 0, 0, 0, 0, 0, 0)
+        time.sleep(0.9)
+        oldtemp = gettemps(usbs[board],retadcval=True)
+        for c in range(self.num_chan_per_board):
+            setchanimpedance(usbs[board], c, 1, self.dooversample[board])
+            setchanatt(usbs[board], c, 1, self.dooversample[board])
+        setsplit(usbs[board], True)
+        setfan(usbs[board], 1)
+        send_leds(usbs[board], 255,255,255, 255,255,255)
+        time.sleep(0.1)
+        newtemp = gettemps(usbs[board], retadcval=True)
+        difftemp = newtemp-oldtemp
+        print("Temps: old new diff",round(oldtemp,2),round(newtemp,2),round(difftemp,2))
+        for c in range(self.num_chan_per_board):
+            setchanimpedance(usbs[board], c, 0, self.dooversample[board])
+            setchanatt(usbs[board], c, 0, self.dooversample[board])
+        setsplit(usbs[board], False)
+        if difftemp < -0.3: # if the "temperature" went down, power was likely bad
+            print("Bad power from board",board,"?!")
+            return 0
+
         return 1
 
     def closeEvent(self, event=None):
@@ -2074,7 +2101,6 @@ if __name__ == '__main__': # calls setup_connection for each board, then init
         os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
         os.environ["QT_SCALE_FACTOR"] = "1"
         app = QtWidgets.QApplication(sys.argv)
-    try:
         font = app.font()
         font.setPixelSize(11)
         app.setFont(font)
@@ -2082,19 +2108,25 @@ if __name__ == '__main__': # calls setup_connection for each board, then init
         win = MainWindow()
         win.setWindowTitle('Haasoscope Pro Qt')
         print("Haasoscope Pro Qt, version "+f"{win.softwareversion:.2f}")
-        for usbi in range(len(usbs)):
-            if not win.setup_connection(usbi):
-                print("Exiting now - failed setup_connections!")
-                cleanup(usbs[usbi])
-                sys.exit(1)
-        if not win.init():
-            print("Exiting now - failed init!")
-            for usbi in usbs: cleanup(usbi)
-            sys.exit(2)
-    except ftd2xx.DeviceError:
-        print("Device com failed!")
-        self.close_socket()
-    if standalone:
+        try:
+            goodsetup=True
+            for usbi in range(len(usbs)):
+                if not win.setup_connection(usbi):
+                    print("Failed to setup!")
+                    for usbj in usbs: cleanup(usbj)
+                    if not win.paused: win.dostartstop()
+                    win.ui.runButton.setEnabled(False)
+                    goodsetup=False
+            if not goodsetup or not win.init():
+                print("Failed initialization!")
+                for usbi in usbs: cleanup(usbi)
+                if not win.paused: win.dostartstop()
+                win.ui.runButton.setEnabled(False)
+        except ftd2xx.DeviceError:
+            print("Device com failed!")
+            if not win.paused: win.dostartstop()
+            win.ui.runButton.setEnabled(False)
+            win.close_socket()
         rv = app.exec_()
         sys.exit(rv)
     else:
