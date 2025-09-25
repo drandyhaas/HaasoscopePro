@@ -1569,9 +1569,11 @@ class MainWindow(TemplateBaseClass):
 
             # which data to use for measurements
             if self.persist_time>0 and len(self.persist_lines)>=2 and self.average_line.isVisible():
+                usingpersistdata=True
                 targetdata = [self.average_line.xData, self.average_line.yData]
                 targetdatastr = "from average for"
             else:
+                usingpersistdata=False
                 if not self.dointerleaved[self.activeboard]:
                     targetdata = self.xydata[self.activexychannel]
                     targetdatastr = "for"
@@ -1588,6 +1590,7 @@ class MainWindow(TemplateBaseClass):
             if self.ui.actionFreq.isChecked():
                 sampling_rate = self.samplerate*1e9/self.downsamplefactor # Hz
                 if self.dotwochannel: sampling_rate /= 2
+                if self.doresamp and usingpersistdata: sampling_rate*=self.doresamp
                 found_freq = find_fundamental_frequency_scipy(targetdata[1], sampling_rate)
                 thestr += "Freq: " + str(format_freq(found_freq)) + "\n"
             for i in range(3): self.otherlines[2+i].setVisible(False) # assume we're not drawing the risetime fit line
