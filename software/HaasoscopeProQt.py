@@ -1589,8 +1589,8 @@ class MainWindow(TemplateBaseClass):
             if self.ui.actionVpp.isChecked(): thestr += "Vpp: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * (np.max(targetdata[1]) - np.min(targetdata[1])), 3) ) + " mV\n"
             if self.ui.actionFreq.isChecked():
                 sampling_rate = self.samplerate*1e9/self.downsamplefactor # Hz
-                if self.dotwochannel: sampling_rate /= 2
                 if self.doresamp and usingpersistdata: sampling_rate*=self.doresamp
+                elif self.dotwochannel: sampling_rate /= 2
                 found_freq = find_fundamental_frequency_scipy(targetdata[1], sampling_rate)
                 thestr += "Freq: " + str(format_freq(found_freq)) + "\n"
             for i in range(3): self.otherlines[2+i].setVisible(False) # assume we're not drawing the risetime fit line
