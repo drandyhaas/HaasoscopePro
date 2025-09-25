@@ -1065,13 +1065,15 @@ class MainWindow(TemplateBaseClass):
         self.ui.plot.setRange(xRange=(self.min_x, self.max_x), padding=0.00)
         self.ui.plot.setRange(yRange=(self.min_y, self.max_y), padding=0.01)
         self.drawtriggerlines()
-        if self.downsample>=5:
-            if not self.extratot: self.ui.totBox.setValue(self.ui.totBox.value()+1)
-            self.extratot = True
-        else:
-            if self.extratot: self.ui.totBox.setValue(self.ui.totBox.value()-1)
-            self.extratot = False
-        self.tot()
+        doextratot = False
+        if doextratot:
+            if self.downsample>=5:
+                if not self.extratot: self.ui.totBox.setValue(self.ui.totBox.value()+1)
+                self.extratot = True
+            else:
+                if self.extratot: self.ui.totBox.setValue(self.ui.totBox.value()-1)
+                self.extratot = False
+            self.tot()
         self.ui.timebaseBox.setText("2^"+str(self.downsample))
 
     def risingfalling(self):
@@ -1154,7 +1156,7 @@ class MainWindow(TemplateBaseClass):
                 if self.fallingedge[li//2]: yc = -yc
                 if xc.size > 1:
                     distcorrtemp = find_crossing_distance(yc, self.hline, self.vline, xc[0], xc[1] - xc[0])
-                    if distcorrtemp is not None and abs(distcorrtemp) < self.distcorrtol*self.downsamplefactor:
+                    if distcorrtemp is not None and abs(distcorrtemp) < self.distcorrtol*self.downsamplefactor/self.nsunits:
                         xdatanew -= distcorrtemp
 
             if xdatanew is not None:
@@ -1537,7 +1539,7 @@ class MainWindow(TemplateBaseClass):
                 if self.fallingedge[board]: yc = -yc
                 if xc.size>1:
                     distcorrtemp = find_crossing_distance(yc, self.hline, self.vline, xc[0], xc[1] - xc[0])
-            if distcorrtemp is not None and abs(distcorrtemp) < self.distcorrtol*self.downsamplefactor:
+            if distcorrtemp is not None and abs(distcorrtemp) < self.distcorrtol*self.downsamplefactor/self.nsunits:
                 self.distcorr[board]=distcorrtemp
                 self.xydata[board * self.num_chan_per_board][0] -= self.distcorr[board]
                 if self.dotwochannel: self.xydata[board * self.num_chan_per_board + 1][0] -= self.distcorr[board]
