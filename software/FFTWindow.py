@@ -36,14 +36,9 @@ class FFTWindow(FFTTemplateBaseClass):
         self.ui.plot.hideButtons() # hides the little autoscale button in the lower left
         #self.ui.plot.setRange(xRange=(0.0, 1600.0))
         self.ui.plot.setBackground(QColor('black'))
-        c = (10, 10, 10)
-        self.fftpen = pg.mkPen(color=c) # width=2 slower
+        self.fftpen = pg.mkPen(color="w") # width=2 slower
         self.fftline = self.ui.plot.plot(pen=self.fftpen, name="fft_plot", skipFiniteCheck=True, connect="finite")
-        self.fftlastTime = time.time() - 10
-        self.fftyrange = 1
-        self.fftyrangelow = 1e-10
         self.dolog = False
-        self.newplot = True
 
     def take_screenshot(self):
         # Capture the entire FFT window
@@ -56,6 +51,5 @@ class FFTWindow(FFTTemplateBaseClass):
     def log_scale(self):
         self.dolog = self.ui.actionLog_scale.isChecked()
         self.ui.plot.setLogMode(x=False, y=self.dolog)
-        self.newplot = True
         if self.dolog: self.ui.plot.setLabel('left', 'log10 Amplitude')
         else: self.ui.plot.setLabel('left', 'Amplitude')

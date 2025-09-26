@@ -172,7 +172,7 @@ class DataProcessor:
 
         freq = (k / uspersample)[list(range(n // 2))] / n
         Y = np.fft.fft(y_data)[list(range(n // 2))] / n
-        Y[0] = 1e-9  # Suppress DC for plotting
+        Y[0] = 1e-3  # Suppress DC for plotting
 
         return freq, abs(Y)
 

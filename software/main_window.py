@@ -1,15 +1,12 @@
 # main_window.py
 
-import sys
-import time
+import sys, time, math, warnings
 import numpy as np
 import threading
 from scipy.signal import resample
 from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
 from PyQt5.QtWidgets import QMessageBox, QColorDialog, QFrame
 from PyQt5.QtGui import QPalette, QIcon
-import math
-import warnings
 
 # Import all the refactored components
 from scope_state import ScopeState
@@ -50,7 +47,13 @@ class MainWindow(TemplateBaseClass):
         # 5. Initialize network socket and other components
         self.hsprosock = None
         self.hsprosock_t1 = None
+
         self.fftui = None
+        self.fft_last_time = 0
+        self.fft_yrange_max = 0.1
+        self.fft_yrange_min = 1e-5
+        self.fft_new_plot = True
+
         self.setup_successful = False
 
         # 6. Setup timers for data acquisition and measurement updates
@@ -222,7 +225,7 @@ class MainWindow(TemplateBaseClass):
     # #########################################################################
 
     def update_plot_loop(self):
-        """Main acquisition loop, with full status bar reporting."""
+        """Main acquisition loop, with full status bar and FFT plot updates."""
         if self.hsprosock and self.hsprosock.issending:
             time.sleep(0.001)
             return
@@ -237,7 +240,6 @@ class MainWindow(TemplateBaseClass):
         s.nevents += 1
         s.lastsize = rx_len
 
-        # RESTORED: Logic to calculate event rate (Hz) and throughput (MB/s) periodically
         if s.nevents - s.oldnevents >= s.tinterval:
             now = time.time()
             elapsedtime = now - s.oldtime
@@ -262,13 +264,59 @@ class MainWindow(TemplateBaseClass):
             lines_vis = [line.isVisible() for line in self.plot_manager.lines]
             self.recorder.record_event(self.xydata, self.plot_manager.otherlines['vline'].value(), lines_vis)
 
-        # RESTORED: Full status message formatting
+        if s.dofft and self.fftui is not None and self.fftui.isVisible():
+            y_data = self.xydata[s.activexychannel][1]
+            freq_data_mhz, fft_y_data = self.processor.calculate_fft(y_data)
+
+            if len(freq_data_mhz) > 0:
+                self.fftui.fftline.setPen(self.plot_manager.linepens[s.activexychannel])
+                self.fftui.ui.plot.setTitle(f'FFT of board {s.activeboard} channel {s.selectedchannel}')
+
+                max_freq_mhz = np.max(freq_data_mhz)
+                if max_freq_mhz < 0.001:
+                    plot_x_data, xlabel = freq_data_mhz * 1e6, 'Frequency (Hz)'
+                elif max_freq_mhz < 1.0:
+                    plot_x_data, xlabel = freq_data_mhz * 1e3, 'Frequency (kHz)'
+                else:
+                    plot_x_data, xlabel = freq_data_mhz, 'Frequency (MHz)'
+
+                self.fftui.ui.plot.setLabel('bottom', xlabel)
+                self.fftui.fftline.setData(plot_x_data, fft_y_data)
+                self.fftui.ui.plot.enableAutoRange(axis='x')
+
+                self.fftui.ui.plot.enableAutoRange(axis='y', enable=False)
+
+                ydatamax = np.max(fft_y_data)
+                ydatamin = np.min(fft_y_data)
+                now = time.time()
+
+                time_elapsed = (now - self.fft_last_time) > 3.0
+                peak_exceeded = self.fft_yrange_max < ydatamax
+                floor_dropped = self.fft_yrange_min > ydatamin * 100
+
+                if self.fft_new_plot or time_elapsed or peak_exceeded or floor_dropped:
+                    self.fft_new_plot = False
+                    self.fft_last_time = now
+                    self.fft_yrange_max = ydatamax * 1.2
+                    # Ensure minimum is not zero for log scale
+                    self.fft_yrange_min = max(ydatamin, 1e-10)
+
+                    # NEW: Check if the FFT window is in log mode
+                    if hasattr(self.fftui, 'dolog') and self.fftui.dolog:
+                        # Set range for a logarithmic Y-axis
+                        self.fftui.ui.plot.setYRange(
+                            math.log(self.fft_yrange_min, 10),
+                            math.log(self.fft_yrange_max, 10)
+                        )
+                    else:
+                        # Set range for a linear Y-axis
+                        self.fftui.ui.plot.setYRange(0, self.fft_yrange_max)
+
         now = time.time()
         dt = now - self.last_time + 1e-9
         self.last_time = now
         self.fps = 1.0 / dt if self.fps is None else self.fps * 0.9 + (1.0 / dt) * 0.1
 
-        # Calculate effective sample rate based on current mode
         sradjust = 1e9
         if s.dointerleaved[s.activeboard]:
             sradjust = 2e9
@@ -276,14 +324,9 @@ class MainWindow(TemplateBaseClass):
             sradjust = 0.5e9
         effective_sr = s.samplerate * sradjust / (s.downsamplefactor if not s.highresval else 1)
 
-        # Build the complete status string
-        status_text = (
-            f"{format_freq(effective_sr, 'S/s')}, "
-            f"{self.fps:.2f} fps, "
-            f"{s.nevents} events, "
-            f"{s.lastrate:.2f} Hz, "
-            f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s"
-        )
+        status_text = (f"{format_freq(effective_sr, 'S/s')}, {self.fps:.2f} fps, "
+                       f"{s.nevents} events, {s.lastrate:.2f} Hz, "
+                       f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s")
         self.ui.statusBar.showMessage(status_text)
         self.state.isdrawing = False
 
@@ -626,14 +669,14 @@ class MainWindow(TemplateBaseClass):
     # #########################################################################
 
     def fft_clicked(self):
-        """Toggles the FFT window."""
+        """Toggles the FFT window and resets the plot range."""
         self.state.dofft = self.ui.fftCheck.isChecked()
         if self.state.dofft:
             if self.fftui is None or not self.fftui.isVisible():
                 self.fftui = FFTWindow()
-                self.fftui.setWindowTitle(
-                    f'Haasoscope Pro FFT of board {self.state.activeboard} channel {self.state.selectedchannel}')
+                self.fftui.setWindowTitle(f'Haasoscope Pro FFT of board {self.state.activeboard} channel {self.state.selectedchannel}')
                 self.fftui.show()
+                self.fft_new_plot = True # Flag to force a range update on the first frame
         else:
             if self.fftui:
                 self.fftui.close()
@@ -911,7 +954,7 @@ class MainWindow(TemplateBaseClass):
             s.toff = minshift // resamp + oldtoff - 1
             self.ui.ToffBox.setValue(s.toff)
 
-            # Convert the sub-sample shift into a hardware TAD value
+            # Convert the subsample shift into a hardware TAD value
             tadshift = round((138.4 * 2 / resamp) * (minshift % resamp), 1)
             tadshiftround = round(tadshift + 138.4)
             print(f"Optimal TAD value calculated to be ~{tadshiftround}")
