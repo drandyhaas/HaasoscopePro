@@ -19,6 +19,7 @@ from data_recorder import DataRecorder
 from FFTWindow import FFTWindow
 from SCPIsocket import hspro_socket
 from board import get_pwd, setupboard, gettemps
+import ftd2xx
 
 WindowTemplate, TemplateBaseClass = loadUiType(get_pwd() + "/HaasoscopePro.ui")
 class MainWindow(TemplateBaseClass):
@@ -305,7 +306,17 @@ class MainWindow(TemplateBaseClass):
             return
 
         self.state.isdrawing = True
-        raw_data_map, rx_len = self.controller.get_event()
+        try:
+            raw_data_map, rx_len = self.controller.get_event()
+        except ftd2xx.DeviceError as e:
+            # If a hardware communication error occurs, handle it gracefully.
+            title = "Hardware Communication Error"
+            message = (f"Lost communication with the device.\n\n"
+                       f"Details: {e}\n\n"
+                       "Please check the USB connection and restart the application.")
+            self.handle_critical_error(title, message)
+            # Stop this loop immediately since communication has failed.
+            return
         if not raw_data_map:
             self.state.isdrawing = False
             return
