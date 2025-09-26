@@ -11,6 +11,7 @@ class ScopeState:
         self.samplerate = 3.2  # GHz
         self.expect_samples = 100
         self.expect_samples_extra = 5
+        self.depth_before_pllreset = 100
         self.firmwareversion = -1
         self.basevoltage = 200
 

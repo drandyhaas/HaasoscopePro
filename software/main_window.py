@@ -223,6 +223,9 @@ class MainWindow(TemplateBaseClass):
         self.plot_manager.hline_dragged_signal.connect(self.on_hline_dragged)
         self.plot_manager.curve_clicked_signal.connect(self.on_curve_clicked)
 
+        # Connect the controller's error signal to our handler slot
+        self.controller.signals.critical_error_occurred.connect(self.handle_critical_error)
+
     def _update_channel_mode_ui(self):
         """
         A centralized function to synchronize all UI elements related to the
@@ -278,6 +281,13 @@ class MainWindow(TemplateBaseClass):
     # #########################################################################
     # ## Core Application Logic
     # #########################################################################
+
+    def _sync_depth_ui_from_state(self):
+        """Ensures the depthBox UI widget always matches the state.expect_samples."""
+        if self.ui.depthBox.value() != self.state.expect_samples:
+            self.ui.depthBox.blockSignals(True)
+            self.ui.depthBox.setValue(self.state.expect_samples)
+            self.ui.depthBox.blockSignals(False)
 
     def update_plot_loop(self):
         """Main acquisition loop, with full status bar and FFT plot updates."""
@@ -394,6 +404,9 @@ class MainWindow(TemplateBaseClass):
         self.ui.statusBar.showMessage(status_text)
         self.state.isdrawing = False
 
+        # Sync the Depth box UI with the state, in case it was changed by a PLL reset
+        self._sync_depth_ui_from_state()
+
         # If 'getone' (Single) mode is active, call dostartstop() immediately
         # after successfully processing one event. This will pause the acquisition.
         if self.state.getone:
@@ -470,6 +483,21 @@ class MainWindow(TemplateBaseClass):
                 self.xydata[c][0] = np.arange(self.xydata.shape[2]) * x_step1
             if hasattr(self, 'xydatainterleaved'):
                 self.xydatainterleaved[c][0] = np.arange(self.xydatainterleaved.shape[2]) * x_step2
+
+    def handle_critical_error(self, title, message):
+        """
+        This slot is called when the hardware controller signals an unrecoverable error.
+        It stops the acquisition and displays an error message to the user.
+        """
+        # 1. Stop the acquisition timer if it's running
+        if not self.state.paused:
+            self.dostartstop()
+
+        # 2. Disable the run button to prevent the user from restarting
+        self.ui.runButton.setEnabled(False)
+
+        # 3. Show the critical error message box
+        QMessageBox.critical(self, title, message)
 
     def closeEvent(self, event):
         print("Closing application...")

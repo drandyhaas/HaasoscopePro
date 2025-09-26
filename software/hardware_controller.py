@@ -4,7 +4,10 @@ import time
 import os
 from usbs import *
 from board import *
+from pyqtgraph.Qt import QtCore
 
+class HardwareControllerSignals(QtCore.QObject):
+    critical_error_occurred = QtCore.pyqtSignal(str, str) # title, message
 
 class HardwareController:
     """Handles all direct communication with the Haasoscope hardware."""
@@ -13,6 +16,7 @@ class HardwareController:
         self.usbs = usbs
         self.state = state
         self.num_board = len(usbs)
+        self.signals = HardwareControllerSignals()
 
     def setup_all_boards(self):
         success = True
@@ -96,6 +100,7 @@ class HardwareController:
         usb.recv(4)
         print(f"Pllreset sent to board {board_idx}")
         s = self.state
+        if all(x == -10 for x in s.plljustreset): s.depth_before_pllreset = s.expect_samples  # make sure we're the first board doing pllreset
         s.phasecs[board_idx] = [[0] * 5 for _ in range(4)]
         s.plljustreset[board_idx] = 0  # CRITICAL: This starts the calibration
         s.plljustresetdir[board_idx] = 1
@@ -130,7 +135,13 @@ class HardwareController:
             print(f"Found good phase range for board {board} starting at {start} for {length} steps.")
 
             if length < 4:
-                print(f"CRITICAL: Bad PLL calibration for board {board}! Check power/connections.")
+                error_title = "PLL Calibration Failed"
+                error_message = (f"Board {board} failed PLL calibration.\n\n"
+                                 "This is often a hardware or power supply issue. "
+                                 "Please check all connections and restart the application.")
+                # Emit the signal to notify the main window
+                self.signals.critical_error_occurred.emit(error_title, error_message)
+
                 s.plljustreset[board] = -10  # End calibration
                 return
 
@@ -142,7 +153,7 @@ class HardwareController:
             s.plljustreset[board] -= 1
 
         elif s.plljustreset[board] == -2:  # Second to last step
-            s.expect_samples = self.state.expect_samples  # Restore sample depth
+            s.expect_samples = s.depth_before_pllreset  # Restore the original sample depth
             s.plljustreset[board] -= 1
 
         elif s.plljustreset[board] == -3:  # Final step for the current board
