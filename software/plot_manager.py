@@ -129,7 +129,7 @@ class PlotManager(pg.QtCore.QObject):
         self.update_persist_average()
 
     def time_changed(self):
-        """Updates the x-axis range and units based on the timebase."""
+        """Updates the x-axis range and units, and handles zooming."""
         state = self.state
         max_x_ns = 4 * 10 * state.expect_samples * (state.downsamplefactor / state.samplerate)
 
@@ -142,11 +142,23 @@ class PlotManager(pg.QtCore.QObject):
         else:
             state.nsunits, state.units = 1, "ns"
 
-        state.max_x = max_x_ns / state.nsunits
-        state.min_x = 0
+        # Calculate the full x-axis range first
+        full_max_x = max_x_ns / state.nsunits
+
+        # NEW: Apply zoom logic if the zoom factor is greater than 1
+        if state.downsamplezoom > 1:
+            trigger_pos = self.otherlines['vline'].value()
+            trigger_frac = trigger_pos / full_max_x if full_max_x != 0 else 0.5
+
+            view_width = full_max_x / state.downsamplezoom
+            state.min_x = trigger_pos - (trigger_frac * view_width)
+            state.max_x = trigger_pos + ((1 - trigger_frac) * view_width)
+        else:
+            state.min_x = 0
+            state.max_x = full_max_x
 
         self.plot.setLabel('bottom', f"Time ({state.units})")
-        self.plot.setRange(xRange=(state.min_x, state.max_x), yRange=(state.min_y, state.max_y), padding=0.01)
+        self.plot.setRange(xRange=(state.min_x, state.max_x), yRange=(state.min_y, state.max_y), padding=0.00)
 
         self.draw_trigger_lines()
 

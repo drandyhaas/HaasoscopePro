@@ -16,7 +16,7 @@ class ScopeState:
 
         # Application State
         self.paused = True
-        self.isrolling = 0
+        self.isrolling = 1  # Start in Auto (rolling) mode
         self.getone = False
         self.dodrawing = True
         self.dofast = False
@@ -53,7 +53,7 @@ class ScopeState:
         # Triggering Parameters
         self.triggerlevel = 127
         self.triggerdelta = 1
-        self.triggerpos = 500
+        self.triggerpos = 50
         self.triggershift = 2
         self.triggertimethresh = 0
         self.toff = 50
@@ -61,6 +61,7 @@ class ScopeState:
         # Data Processing and Display Parameters
         self.downsample = 0
         self.downsamplefactor = 1
+        self.downsamplezoom = 1
         self.downsamplemerging = 1
         self.highresval = 1
         self.doresamp = 4

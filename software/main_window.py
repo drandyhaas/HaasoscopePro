@@ -14,7 +14,7 @@ import warnings
 # Import all the refactored components
 from scope_state import ScopeState
 from hardware_controller import HardwareController
-from data_processor import DataProcessor
+from data_processor import DataProcessor, format_freq
 from plot_manager import PlotManager
 from data_recorder import DataRecorder
 
@@ -66,7 +66,6 @@ class MainWindow(TemplateBaseClass):
                 self.ui.ToffBox.setValue(self.state.toff)
                 self.allocate_xy_data()
                 self.controller.set_rolling(self.state.isrolling)
-                self.ui.rollingButton.setChecked(self.state.isrolling)
                 self.select_channel()  # Updates UI and LEDs
                 self.time_changed()
                 self.open_socket()
@@ -91,7 +90,16 @@ class MainWindow(TemplateBaseClass):
         self.last_time = time.time()
         self.fps = None
 
+        # DEFER UI sync until after the constructor is finished and the event loop starts
+        QtCore.QTimer.singleShot(10, self._sync_initial_ui_state)
+
         self.show()
+
+    def _sync_initial_ui_state(self):
+        """A one-time function to sync the UI's visual state after the window has loaded."""
+        # This function is called just after the main event loop starts.
+        self.ui.rollingButton.setChecked(bool(self.state.isrolling))
+        self.ui.rollingButton.setText("Auto" if self.state.isrolling else "Normal")
 
     def show_no_hardware_error(self):
         """Displays a non-blocking warning message to the user."""
@@ -170,6 +178,28 @@ class MainWindow(TemplateBaseClass):
         self.plot_manager.vline_dragged_signal.connect(self.on_vline_dragged)
         self.plot_manager.hline_dragged_signal.connect(self.on_hline_dragged)
 
+    def _update_channel_mode_ui(self):
+        """
+        A centralized function to synchronize all UI elements related to the
+        channel mode (Single, Two Channel, Oversampling).
+        """
+        s = self.state
+
+        # Set the maximum value of the channel selector based on the two-channel state.
+        # This is the key fix for your issue.
+        if s.dotwochannel:
+            self.ui.chanBox.setMaximum(s.num_chan_per_board - 1)
+        else:
+            # If not in two-channel mode, force chanBox to 0 and set its maximum to 0.
+            if self.ui.chanBox.value() != 0:
+                self.ui.chanBox.setValue(0)
+            self.ui.chanBox.setMaximum(0)
+
+        # Also update the trigger channel dropdown
+        self.ui.trigchan_comboBox.setMaxVisibleItems(2 if s.dotwochannel else 1)
+        if not s.dotwochannel:
+            self.ui.trigchan_comboBox.setCurrentIndex(0)
+
     def open_socket(self):
         print("Starting SCPI socket thread...")
         self.hsprosock = hspro_socket()
@@ -178,7 +208,6 @@ class MainWindow(TemplateBaseClass):
         self.hsprosock_t1 = threading.Thread(target=self.hsprosock.open_socket, args=(10,))
         self.hsprosock_t1.start()
 
-    # ADD THE NEW METHOD HERE
     def close_socket(self):
         """Safely stops and joins the SCPI socket thread before exiting."""
         if self.hsprosock is not None:
@@ -193,7 +222,7 @@ class MainWindow(TemplateBaseClass):
     # #########################################################################
 
     def update_plot_loop(self):
-        """Main acquisition loop, now orchestrates the adjustclocks feedback."""
+        """Main acquisition loop, with full status bar reporting."""
         if self.hsprosock and self.hsprosock.issending:
             time.sleep(0.001)
             return
@@ -204,19 +233,25 @@ class MainWindow(TemplateBaseClass):
             self.state.isdrawing = False
             return
 
-        self.state.nevents += 1
-        self.state.lastsize = rx_len
+        s = self.state
+        s.nevents += 1
+        s.lastsize = rx_len
+
+        # RESTORED: Logic to calculate event rate (Hz) and throughput (MB/s) periodically
+        if s.nevents - s.oldnevents >= s.tinterval:
+            now = time.time()
+            elapsedtime = now - s.oldtime
+            s.oldtime = now
+            if elapsedtime > 0:
+                s.lastrate = round(s.tinterval / elapsedtime, 2)
+            s.oldnevents = s.nevents
 
         self.allocate_xy_data()
 
         for board_idx, raw_data in raw_data_map.items():
-            # DataProcessor now returns the bad clock counts
             nbadA, nbadB, nbadC, nbadD, nbadS = self.processor.process_board_data(raw_data, board_idx, self.xydata)
-
-            # Check if a PLL reset sequence is active for this board
-            if self.state.plljustreset[board_idx] > -10:
+            if s.plljustreset[board_idx] > -10:
                 self.controller.adjustclocks(board_idx, nbadA, nbadB, nbadC, nbadD, nbadS)
-            # If not in a reset sequence, check if a new one should be triggered
             elif (nbadA + nbadB + nbadC + nbadD + nbadS) > 0:
                 print(f"Bad clock/strobe detected on board {board_idx}. Triggering PLL reset.")
                 self.controller.pllreset(board_idx)
@@ -227,11 +262,29 @@ class MainWindow(TemplateBaseClass):
             lines_vis = [line.isVisible() for line in self.plot_manager.lines]
             self.recorder.record_event(self.xydata, self.plot_manager.otherlines['vline'].value(), lines_vis)
 
+        # RESTORED: Full status message formatting
         now = time.time()
         dt = now - self.last_time + 1e-9
         self.last_time = now
         self.fps = 1.0 / dt if self.fps is None else self.fps * 0.9 + (1.0 / dt) * 0.1
-        self.ui.statusBar.showMessage(f"{self.fps:.2f} fps, Event {self.state.nevents}")
+
+        # Calculate effective sample rate based on current mode
+        sradjust = 1e9
+        if s.dointerleaved[s.activeboard]:
+            sradjust = 2e9
+        elif s.dotwochannel:
+            sradjust = 0.5e9
+        effective_sr = s.samplerate * sradjust / (s.downsamplefactor if not s.highresval else 1)
+
+        # Build the complete status string
+        status_text = (
+            f"{format_freq(effective_sr, 'S/s')}, "
+            f"{self.fps:.2f} fps, "
+            f"{s.nevents} events, "
+            f"{s.lastrate:.2f} Hz, "
+            f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s"
+        )
+        self.ui.statusBar.showMessage(status_text)
         self.state.isdrawing = False
 
     def update_measurements_display(self):
@@ -279,6 +332,7 @@ class MainWindow(TemplateBaseClass):
     def time_changed(self):
         """Updates plot manager and recalculates x-axis arrays on timebase change."""
         self.plot_manager.time_changed()
+        self.ui.timebaseBox.setText(f"2^{self.state.downsample}")
         s = self.state
         x_step1 = (2 if s.dotwochannel else 1) * s.downsamplefactor / s.nsunits / s.samplerate
         x_step2 = 0.5 * s.downsamplefactor / s.nsunits / s.samplerate
@@ -334,6 +388,7 @@ class MainWindow(TemplateBaseClass):
         """Called when board or channel selector is changed."""
         self.state.activeboard = self.ui.boardBox.value()
         self.state.selectedchannel = self.ui.chanBox.value()
+        self._update_channel_mode_ui()
 
         # Update UI widgets to reflect the state of the newly selected channel
         s = self.state
@@ -380,11 +435,29 @@ class MainWindow(TemplateBaseClass):
 
     def time_fast(self):
         self.state.downsample -= 1
+
+        # Add zoom logic
+        if self.state.downsample < 0:
+            self.state.downsamplezoom = pow(2, -self.state.downsample)
+            self.ui.thresholdPos.setEnabled(False)
+        else:
+            self.state.downsamplezoom = 1
+            self.ui.thresholdPos.setEnabled(True)
+
         self.controller.tell_downsample_all(self.state.downsample)
         self.time_changed()
 
     def time_slow(self):
         self.state.downsample += 1
+
+        # Add zoom logic
+        if self.state.downsample < 0:
+            self.state.downsamplezoom = pow(2, -self.state.downsample)
+            self.ui.thresholdPos.setEnabled(False)
+        else:
+            self.state.downsamplezoom = 1
+            self.ui.thresholdPos.setEnabled(True)
+
         self.controller.tell_downsample_all(self.state.downsample)
         self.time_changed()
 
@@ -473,29 +546,21 @@ class MainWindow(TemplateBaseClass):
     def twochan_changed(self):
         """Switches between single and dual channel mode."""
         self.state.dotwochannel = self.ui.twochanCheck.isChecked()
+
         # Reconfigure hardware for the new mode
         for i in range(self.state.num_board):
             setupboard(self.controller.usbs[i], self.state.dopattern, self.state.dotwochannel, self.state.dooverrange,
                        self.state.basevoltage == 200)
             self.controller.tell_downsample(self.controller.usbs[i], self.state.downsample)
 
-        # The number of samples per event changes, so arrays and axes must be updated
         self.allocate_xy_data()
         self.time_changed()
+
+        # Call the centralized UI update function
+        self._update_channel_mode_ui()
+
+        # Update everything else for the currently selected channel
         self.select_channel()
-
-        # Update visibility of channel 2 UI elements
-        for c in range(self.state.num_board * self.state.num_chan_per_board):
-            if c % 2 == 1:  # Odd channels are the second channel on each board
-                self.plot_manager.lines[c].setVisible(self.state.dotwochannel)
-
-        if self.state.dotwochannel:
-            self.ui.chanBox.setMaximum(self.state.num_chan_per_board - 1)
-            self.ui.trigchan_comboBox.setMaxVisibleItems(2)
-        else:
-            self.ui.chanBox.setMaximum(0)
-            self.ui.trigchan_comboBox.setCurrentIndex(0)
-            self.ui.trigchan_comboBox.setMaxVisibleItems(1)
 
     def gain_changed(self):
         """Handles changes to the gain slider."""
@@ -654,9 +719,20 @@ class MainWindow(TemplateBaseClass):
         self.ui.singleButton.setChecked(self.state.getone)
 
     def rolling_clicked(self):
+        """Toggles rolling mode and updates the button's text and checked state."""
+        # Toggle the state
         self.state.isrolling = not self.state.isrolling
-        self.ui.rollingButton.setChecked(self.state.isrolling)
+
+        # Send the command to the hardware
         self.controller.set_rolling(self.state.isrolling)
+
+        # Explicitly update the button's appearance
+        if self.state.isrolling:
+            self.ui.rollingButton.setText("Auto")
+            self.ui.rollingButton.setChecked(True)
+        else:
+            self.ui.rollingButton.setText("Normal")
+            self.ui.rollingButton.setChecked(False)
 
     def drawing_toggled(self, checked):
         self.state.dodrawing = checked
