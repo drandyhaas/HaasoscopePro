@@ -193,7 +193,7 @@ class MainWindow(TemplateBaseClass):
     # #########################################################################
 
     def update_plot_loop(self):
-        """Main acquisition loop, called by a fast QTimer."""
+        """Main acquisition loop, now orchestrates the adjustclocks feedback."""
         if self.hsprosock and self.hsprosock.issending:
             time.sleep(0.001)
             return
@@ -210,7 +210,16 @@ class MainWindow(TemplateBaseClass):
         self.allocate_xy_data()
 
         for board_idx, raw_data in raw_data_map.items():
-            self.processor.process_board_data(raw_data, board_idx, self.xydata)
+            # DataProcessor now returns the bad clock counts
+            nbadA, nbadB, nbadC, nbadD, nbadS = self.processor.process_board_data(raw_data, board_idx, self.xydata)
+
+            # Check if a PLL reset sequence is active for this board
+            if self.state.plljustreset[board_idx] > -10:
+                self.controller.adjustclocks(board_idx, nbadA, nbadB, nbadC, nbadD, nbadS)
+            # If not in a reset sequence, check if a new one should be triggered
+            elif (nbadA + nbadB + nbadC + nbadD + nbadS) > 0:
+                print(f"Bad clock/strobe detected on board {board_idx}. Triggering PLL reset.")
+                self.controller.pllreset(board_idx)
 
         self.plot_manager.update_plots(self.xydata, self.xydatainterleaved)
 
@@ -521,16 +530,26 @@ class MainWindow(TemplateBaseClass):
         """Handles changes to the offset slider."""
         s = self.state
         s.offset[s.activexychannel] = self.ui.offsetBox.value()
-        self.controller.set_channel_offset(s.activeboard, s.selectedchannel, s.offset[s.activexychannel])
+
+        # UI layer calculates the scaling factor based on current state
+        scaling = 1000 * s.VperD[s.activexychannel] / 160.0
+        if s.acdc[s.activexychannel]:
+            scaling *= 245.0 / 160.0
+        final_scaling = scaling / s.tenx[s.activexychannel]
+
+        # Call the controller method with the required 'scaling' argument
+        self.controller.set_channel_offset(s.activeboard, s.selectedchannel, s.offset[s.activexychannel], final_scaling)
+
         # Also update the coupled board in oversampling mode
         if s.dooversample[s.activeboard] and s.activeboard % 2 == 0:
-            self.controller.set_channel_offset(s.activeboard + 1, s.selectedchannel, s.offset[s.activexychannel])
+            self.controller.set_channel_offset(s.activeboard + 1, s.selectedchannel, s.offset[s.activexychannel],
+                                               final_scaling)
             s.offset[s.activexychannel + s.num_chan_per_board] = s.offset[s.activexychannel]
 
-        # Update Voff text
-        scaling = 1000 * s.VperD[s.activexychannel] / 160
-        if s.acdc[s.activexychannel]: scaling *= 245 / 160
-        v_offset = scaling * 1.5 * s.offset[s.activexychannel]
+        # UI update logic remains here
+        v_offset = (scaling / (1000 * s.VperD[s.activexychannel] / 160.0)) * (
+                    1000 * s.VperD[s.activexychannel] / 160.0) * 1.5 * s.offset[s.activexychannel]
+        if s.acdc[s.activexychannel]: v_offset *= (160.0 / 245.0)
         self.ui.Voff.setText(f"{int(v_offset)} mV")
 
     def acdc_changed(self, checked):

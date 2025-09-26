@@ -6,7 +6,7 @@ import warnings
 import math
 from scipy.signal import resample, butter, filtfilt
 from scipy.optimize import curve_fit
-from utils import find_fundamental_frequency_scipy, format_freq, find_crossing_distance
+from utils import find_fundamental_frequency_scipy, format_freq, find_crossing_distance, fit_rise
 
 # #############################################################################
 # DataProcessor Class
@@ -18,6 +18,7 @@ class DataProcessor:
     def __init__(self, state):
         self.state = state
         self.nsubsamples = 50  # 10*4 (clks) + 8 (strs) + 2 (beef)
+        self.lastclk = -1
 
     def process_board_data(self, data, board_idx, xy_data_array):
         """
@@ -44,7 +45,25 @@ class DataProcessor:
 
         # Map the sequential ADC samples into the correct time-ordered array slots
         datasize = xy_data_array[board_idx * 2][1].size
+        nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr = 0, 0, 0, 0, 0
         for s in range(0, state.expect_samples + state.expect_samples_extra):
+
+            # Check clock and strobe validity
+            vals = unpackedsamples[s * self.nsubsamples + 40: s * self.nsubsamples + 50]
+            if vals[9] != -16657: print("Warning: Beef marker not found!")
+            if vals[8] != 0 or (self.lastclk != 341 and self.lastclk != 682):
+                for n in range(0, 8):
+                    val = vals[n]
+                    if n < 4:
+                        if val != 341 and val != 682:  # Expected clock patterns
+                            if n == 0: nbadclkA += 1
+                            if n == 1: nbadclkB += 1
+                            if n == 2: nbadclkC += 1
+                            if n == 3: nbadclkD += 1
+                        self.lastclk = val
+                    elif val not in {0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512}:  # Strobe should be one-hot
+                        nbadstr += 1
+
             if state.dotwochannel:
                 samp, nsamp, nstart = s * 20 - downsampleoffset - triggerphase, 20, 0
                 if samp < 0: nsamp, nstart, samp = 20 + samp, -samp, 0
@@ -68,7 +87,7 @@ class DataProcessor:
         self._apply_lpf(board_idx, xy_data_array)
         self._apply_trigger_stabilizer(board_idx, xy_data_array)
 
-        return xy_data_array
+        return nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr
 
     def _calculate_downsample_offset(self, sample_triggered, board_idx):
         """Calculates the total sample offset for data alignment."""

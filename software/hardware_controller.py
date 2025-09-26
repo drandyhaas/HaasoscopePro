@@ -57,17 +57,67 @@ class HardwareController:
             print(f"Adf pll locked for board {board_idx}")
 
     def pllreset(self, board_idx, from_button=False):
+        """Sends PLL reset and correctly updates the state to start the adjustclocks sequence."""
         usb = self.usbs[board_idx]
         usb.send(bytes([5, 99, 99, 99, 100, 100, 100, 100]))
         usb.recv(4)
         print(f"Pllreset sent to board {board_idx}")
-        self.state.phasecs[board_idx] = [[0, 0, 0, 0, 0] for _ in range(4)]
-        self.state.plljustreset[board_idx] = 0
-        self.state.plljustresetdir[board_idx] = 1
-        self.state.phasenbad[board_idx] = [0] * 12
+        s = self.state
+        s.phasecs[board_idx] = [[0] * 5 for _ in range(4)]
+        s.plljustreset[board_idx] = 0  # CRITICAL: This starts the calibration
+        s.plljustresetdir[board_idx] = 1
+        s.phasenbad[board_idx] = [0] * 12
         if from_button:
-            self.state.expect_samples = 1000
-            self.state.dodrawing = False
+            # When user presses the button, change depth and pause drawing
+            s.expect_samples = 1000
+            s.dodrawing = False
+
+    def adjustclocks(self, board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr):
+        """
+        The feedback loop that adjusts clock phases based on bad signal counts,
+        run immediately after a PLL reset.
+        """
+        s = self.state
+        plloutnum, plloutnum2 = 0, 1  # clklvds and clklvdsout
+
+        if 0 <= s.plljustreset[board] < 12:  # Phase sweep to find good range
+            nbad = nbadclkA + nbadclkB + nbadclkC + nbadclkD + nbadstr
+            s.phasenbad[board][s.plljustreset[board]] += nbad
+            self.do_phase(board, plloutnum, (s.plljustresetdir[board] == 1), pllnum=0, quiet=True)
+            self.do_phase(board, plloutnum2, (s.plljustresetdir[board] == 1), pllnum=0, quiet=True)
+            s.plljustreset[board] += s.plljustresetdir[board]
+
+        elif s.plljustreset[board] >= 12:  # Overshoot slightly to ensure we find the end of the good range
+            if s.plljustreset[board] == 15: s.plljustresetdir[board] = -1
+            s.plljustreset[board] += s.plljustresetdir[board]
+            self.do_phase(board, plloutnum, (s.plljustresetdir[board] == 1), pllnum=0, quiet=True)
+            self.do_phase(board, plloutnum2, (s.plljustresetdir[board] == 1), pllnum=0, quiet=True)
+
+        elif s.plljustreset[board] == -1:  # End of sweep, now analyze and set the optimal phase
+            print(f"Board {board} clkstr errors per phase step: {s.phasenbad[board]}")
+            start, length = find_longest_zero_stretch(s.phasenbad[board], True)
+            print(f"Found good phase range starting at {start} for {length} steps.")
+
+            if length < 4:
+                print(f"CRITICAL: Bad PLL calibration for board {board}! Check power/connections.")
+                s.plljustreset[board] = -10  # End calibration
+                return
+
+            # Go to the middle of the good range
+            n_steps = start + length // 2 + 1
+            for i in range(n_steps):
+                self.do_phase(board, plloutnum, 1, pllnum=0, quiet=(i != n_steps - 1))
+                self.do_phase(board, plloutnum2, 1, pllnum=0, quiet=(i != n_steps - 1))
+            s.plljustreset[board] -= 1
+
+        elif s.plljustreset[board] == -2:  # Second to last step
+            s.expect_samples = self.state.expect_samples  # Restore sample depth
+            s.plljustreset[board] -= 1
+
+        elif s.plljustreset[board] == -3:  # Final step, re-enable drawing
+            s.dodrawing = True
+            s.plljustreset[board] = -10  # End calibration sequence
+            print(f"PLL calibration for board {board} is complete.")
 
     def send_trigger_info_all(self):
         """Sends the current trigger info to all connected boards."""

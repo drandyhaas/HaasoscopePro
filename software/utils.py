@@ -18,6 +18,15 @@ def get_pwd():
     print("Current dir is "+pwd)
     return pwd
 
+def fit_rise(x, top, left, slope, bot):  # a function for fitting to find risetime
+    val = slope * (x - left) + bot # y=mx+b
+    inbottom = (x <= left)
+    val[inbottom] = bot
+    right = left + (top-bot)/slope
+    intop = ( x >= right )
+    val[intop] = top
+    return val
+
 def reverse_bits(byte):
     reversed_byte = 0
     for i in range(8):

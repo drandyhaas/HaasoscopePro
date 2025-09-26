@@ -193,15 +193,6 @@ def dooffset(usb, chan, val, scaling, doswap):
     spimode(usb, 0)
     return ret
 
-def fit_rise(x, top, left, slope, bot):  # a function for fitting to find risetime
-    val = slope * (x - left) + bot # y=mx+b
-    inbottom = (x <= left)
-    val[inbottom] = bot
-    right = left + (top-bot)/slope
-    intop = ( x >= right )
-    val[intop] = top
-    return val
-
 def clockswitch(usb, board, quiet):
     usb.send(bytes([7, 0, 0, 0, 99, 99, 99, 99]))
     usb.recv(4)
