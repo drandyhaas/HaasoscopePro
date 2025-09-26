@@ -32,6 +32,7 @@ class PlotManager(pg.QtCore.QObject):
         self.average_line = None
         self.right_axis = None
         self.nlines = state.num_board * state.num_chan_per_board
+        self.current_vline_pos = 0.0
 
         # Persistence attributes
         self.max_persist_lines = 16
@@ -167,9 +168,9 @@ class PlotManager(pg.QtCore.QObject):
         state = self.state
         vline_pos = 4 * 10 * (state.triggerpos + 1.0) * (state.downsamplefactor / state.nsunits / state.samplerate)
         self.otherlines['vline'].setValue(vline_pos)
-
         hline_pos = (state.triggerlevel - 127) * state.yscale * 256
         self.otherlines['hline'].setValue(hline_pos)
+        self.current_vline_pos = vline_pos
 
     ### Persistence Methods ###
     def set_persistence(self, value):

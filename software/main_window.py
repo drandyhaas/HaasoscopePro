@@ -415,9 +415,38 @@ class MainWindow(TemplateBaseClass):
         self.controller.do_leds(all_colors)
 
     def on_vline_dragged(self, value):
+        """
+        Handles dragging the vertical trigger line.
+        If zoomed in, it pans the view and manually constrains the drag to the window.
+        Otherwise, it adjusts the trigger position.
+        """
         s = self.state
-        t = (value / (4 * 10 * (s.downsamplefactor / s.nsunits / s.samplerate)) - 1.0) * 10000. / s.expect_samples
-        self.ui.thresholdPos.setValue(math.ceil(t))
+
+        if s.downsamplezoom > 1:  # Panning mode when zoomed in
+            # --- NEW CONSTRAINT LOGIC ---
+            # Manually clamp the line's proposed position to the visible x-axis range.
+            value = max(s.min_x, min(value, s.max_x))
+
+            # --- PANNING LOGIC ---
+            # Calculate how far the line was dragged from its last known central position
+            drag_delta = value - self.plot_manager.current_vline_pos
+
+            # Shift the view range by that amount
+            s.min_x -= drag_delta
+            s.max_x -= drag_delta
+            self.plot_manager.plot.setRange(xRange=(s.min_x, s.max_x), padding=0.00)
+
+            # Snap the trigger line back to its original (central) position within the new view
+            self.plot_manager.draw_trigger_lines()
+
+        else:  # Normal trigger adjust mode
+            t = (value / (4 * 10 * (s.downsamplefactor / s.nsunits / s.samplerate)) - 1.0) * 10000. / s.expect_samples
+
+            self.ui.thresholdPos.blockSignals(True)
+            self.ui.thresholdPos.setValue(math.ceil(t))
+            self.ui.thresholdPos.blockSignals(False)
+
+            self.trigger_pos_changed(self.ui.thresholdPos.value())
 
     def on_hline_dragged(self, value):
         t = value / (self.state.yscale * 256) + 127
@@ -435,30 +464,30 @@ class MainWindow(TemplateBaseClass):
 
     def time_fast(self):
         self.state.downsample -= 1
+        self.controller.tell_downsample_all(self.state.downsample)
 
-        # Add zoom logic
-        if self.state.downsample < 0:
+        is_zoomed = self.state.downsample < 0
+
+        if is_zoomed:
             self.state.downsamplezoom = pow(2, -self.state.downsample)
-            self.ui.thresholdPos.setEnabled(False)
         else:
             self.state.downsamplezoom = 1
-            self.ui.thresholdPos.setEnabled(True)
 
-        self.controller.tell_downsample_all(self.state.downsample)
+        self.ui.thresholdPos.setEnabled(not is_zoomed)
         self.time_changed()
 
     def time_slow(self):
         self.state.downsample += 1
+        self.controller.tell_downsample_all(self.state.downsample)
 
-        # Add zoom logic
-        if self.state.downsample < 0:
+        is_zoomed = self.state.downsample < 0
+
+        if is_zoomed:
             self.state.downsamplezoom = pow(2, -self.state.downsample)
-            self.ui.thresholdPos.setEnabled(False)
         else:
             self.state.downsamplezoom = 1
-            self.ui.thresholdPos.setEnabled(True)
 
-        self.controller.tell_downsample_all(self.state.downsample)
+        self.ui.thresholdPos.setEnabled(not is_zoomed)
         self.time_changed()
 
     def depth_changed(self):
