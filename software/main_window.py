@@ -414,21 +414,64 @@ class MainWindow(TemplateBaseClass):
         all_colors = [pen.color() for pen in self.plot_manager.linepens]
         self.controller.do_leds(all_colors)
 
-    def on_vline_dragged(self, value):
+    def trigger_pos_changed(self, value):
         """
-        Handles dragging the vertical trigger line.
-        If zoomed in, it pans the view and manually constrains the drag to the window.
-        Otherwise, it adjusts the trigger position.
+        Handles the trigger position slider.
+        If zoomed in, it pans the view with corrected sensitivity.
+        Otherwise, it adjusts the absolute trigger position.
         """
         s = self.state
 
         if s.downsamplezoom > 1:  # Panning mode when zoomed in
-            # --- NEW CONSTRAINT LOGIC ---
-            # Manually clamp the line's proposed position to the visible x-axis range.
+            # --- NEW SENSITIVITY-CORRECTED PANNING LOGIC ---
+
+            # Calculate the full data width and the current view width
+            full_width = 4 * 10 * s.expect_samples * (s.downsamplefactor / s.nsunits / s.samplerate)
+            view_width = full_width / s.downsamplezoom
+
+            # The true center is the actual trigger time
+            trigger_time_center = self.plot_manager.current_vline_pos
+
+            # The slider's deviation from its midpoint (5000) determines the pan distance.
+            # A full deflection pans by half a screen width, making it much less sensitive.
+            pan_fraction = (value - 5000.0) / 5000.0  # Range is -1.0 to 1.0
+            pan_offset = pan_fraction * (view_width / 2.0)
+
+            # The new center of the view is the trigger time plus the pan offset
+            new_view_center = trigger_time_center - pan_offset
+
+            # Calculate the new min/max for the view
+            s.min_x = new_view_center - (view_width / 2.0)
+            s.max_x = new_view_center + (view_width / 2.0)
+
+            # Clamp the view to the boundaries of the data [0, full_width]
+            if s.min_x < 0:
+                s.min_x = 0
+                s.max_x = view_width
+            if s.max_x > full_width:
+                s.max_x = full_width
+                s.min_x = full_width - view_width
+
+            # Apply the new panned range to the plot
+            self.plot_manager.plot.setRange(xRange=(s.min_x, s.max_x), padding=0.00)
+
+        else:  # Normal trigger adjust mode
+            s.triggerpos = int(s.expect_samples * value / 10000.)
+            self.controller.send_trigger_info_all()
+            self.plot_manager.draw_trigger_lines()
+
+    def on_vline_dragged(self, value):
+        """
+        Handles dragging the vertical trigger line.
+        If zoomed in, it pans the view and now syncs its position with the slider.
+        """
+        s = self.state
+
+        if s.downsamplezoom > 1:  # Panning mode when zoomed in
+            # Manually clamp the line's proposed position to the visible x-axis range
             value = max(s.min_x, min(value, s.max_x))
 
-            # --- PANNING LOGIC ---
-            # Calculate how far the line was dragged from its last known central position
+            # Calculate how far the line was dragged
             drag_delta = value - self.plot_manager.current_vline_pos
 
             # Shift the view range by that amount
@@ -436,16 +479,30 @@ class MainWindow(TemplateBaseClass):
             s.max_x -= drag_delta
             self.plot_manager.plot.setRange(xRange=(s.min_x, s.max_x), padding=0.00)
 
-            # Snap the trigger line back to its original (central) position within the new view
+            # Snap the trigger line back to its original (central) position
             self.plot_manager.draw_trigger_lines()
+
+            # NEW: Update the slider to reflect the new pan position
+            trigger_time_center = self.plot_manager.current_vline_pos
+            view_center = s.min_x + (s.max_x - s.min_x) / 2.0
+            pan_offset = view_center - trigger_time_center
+            view_width = s.max_x - s.min_x
+
+            if view_width > 0:
+                # Reverse the calculation to find the slider value
+                pan_fraction = pan_offset / (view_width / 2.0)
+                slider_value = 5000 - (pan_fraction * 5000)
+
+                # Update the slider without triggering its own signal
+                self.ui.thresholdPos.blockSignals(True)
+                self.ui.thresholdPos.setValue(int(slider_value))
+                self.ui.thresholdPos.blockSignals(False)
 
         else:  # Normal trigger adjust mode
             t = (value / (4 * 10 * (s.downsamplefactor / s.nsunits / s.samplerate)) - 1.0) * 10000. / s.expect_samples
-
             self.ui.thresholdPos.blockSignals(True)
             self.ui.thresholdPos.setValue(math.ceil(t))
             self.ui.thresholdPos.blockSignals(False)
-
             self.trigger_pos_changed(self.ui.thresholdPos.value())
 
     def on_hline_dragged(self, value):
@@ -454,11 +511,6 @@ class MainWindow(TemplateBaseClass):
 
     def trigger_level_changed(self, value):
         self.state.triggerlevel = value
-        self.controller.send_trigger_info_all()
-        self.plot_manager.draw_trigger_lines()
-
-    def trigger_pos_changed(self, value):
-        self.state.triggerpos = int(self.state.expect_samples * value / 10000.)
         self.controller.send_trigger_info_all()
         self.plot_manager.draw_trigger_lines()
 
@@ -473,8 +525,15 @@ class MainWindow(TemplateBaseClass):
         else:
             self.state.downsamplezoom = 1
 
-        self.ui.thresholdPos.setEnabled(not is_zoomed)
+        # Update the plot range and text box
         self.time_changed()
+
+        # NEW: If we are zoomed in, reset the pan slider to its center position.
+        if is_zoomed:
+            # Block signals to prevent this from triggering a pan action
+            self.ui.thresholdPos.blockSignals(True)
+            self.ui.thresholdPos.setValue(5000)
+            self.ui.thresholdPos.blockSignals(False)
 
     def time_slow(self):
         self.state.downsample += 1
@@ -487,8 +546,15 @@ class MainWindow(TemplateBaseClass):
         else:
             self.state.downsamplezoom = 1
 
-        self.ui.thresholdPos.setEnabled(not is_zoomed)
+        # Update the plot range and text box
         self.time_changed()
+
+        # NEW: If we are zoomed in, reset the pan slider to its center position.
+        if is_zoomed:
+            # Block signals to prevent this from triggering a pan action
+            self.ui.thresholdPos.blockSignals(True)
+            self.ui.thresholdPos.setValue(5000)
+            self.ui.thresholdPos.blockSignals(False)
 
     def depth_changed(self):
         self.state.expect_samples = self.ui.depthBox.value()
