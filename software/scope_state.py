@@ -22,6 +22,7 @@ class ScopeState:
         self.dofast = False
         self.dofft = False
         self.dopattern = 0
+        self.pll_reset_grace_period = 0
         self.dooverrange = False
         self.isdrawing = False
         self.dorecordtofile = False

@@ -44,6 +44,39 @@ class HardwareController:
         setsplit(usb, False)
         self.pllreset(board_idx)
         auxoutselector(usb, 0)
+
+        # --- RESTORED POWER SUPPLY HEALTH CHECK ---
+        print(f"  Performing power supply check for board {board_idx}...")
+        # Turn everything off to get a baseline reading
+        setfan(usb, 0)
+        send_leds(usb, 0, 0, 0, 0, 0, 0)
+        time.sleep(0.9)
+        oldtemp = gettemps(usb, retadcval=True)
+
+        # Turn everything on to maximize current draw
+        for c in range(self.state.num_chan_per_board):
+            setchanimpedance(usb, c, True, self.state.dooversample[board_idx])
+            setchanatt(usb, c, True, self.state.dooversample[board_idx])
+        setsplit(usb, True)
+        setfan(usb, 1)
+        send_leds(usb, 255, 255, 255, 255, 255, 255)
+        time.sleep(0.1)
+        newtemp = gettemps(usb, retadcval=True)
+
+        # Reset all channels back to their default state
+        for c in range(self.state.num_chan_per_board):
+            setchanimpedance(usb, c, False, self.state.dooversample[board_idx])
+            setchanatt(usb, c, False, self.state.dooversample[board_idx])
+        setsplit(usb, False)
+
+        # Check for a significant voltage drop (a large negative diff)
+        difftemp = newtemp - oldtemp
+        print(f"  ADC Temp/Voltage Check: Start={oldtemp:.2f}, Load={newtemp:.2f}, Diff={difftemp:.2f}")
+        if difftemp < -0.3:
+            print(f"  !! WARNING: Potential power supply issue on board {board_idx}. Voltage sag detected.")
+            return False  # Indicate that this board's setup failed
+        # --- END OF HEALTH CHECK ---
+
         return True
 
     def adfreset(self, board_idx):
@@ -67,10 +100,8 @@ class HardwareController:
         s.plljustreset[board_idx] = 0  # CRITICAL: This starts the calibration
         s.plljustresetdir[board_idx] = 1
         s.phasenbad[board_idx] = [0] * 12
-        if from_button:
-            # When user presses the button, change depth and pause drawing
-            s.expect_samples = 1000
-            s.dodrawing = False
+        s.expect_samples = 1000
+        s.dodrawing = False
 
     def adjustclocks(self, board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr):
         """

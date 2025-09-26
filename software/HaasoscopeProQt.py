@@ -21,22 +21,21 @@ if usbs:
     for b in range(len(usbs)):
         if len(usbs) > 1:
             clkout_ena(usbs[b], 1)  # Turn on lvdsout_clk for multi-board setups
+            time.sleep(0.1)  # Wait for clocks to lock after configuration
 
-    # Reading version multiple times seems to be a hardware quirk to ensure a stable read
-    version(usbs[b])
-    version(usbs[b])
-    version(usbs[b])
+        # Reading version multiple times seems to be a hardware quirk to ensure a stable read
+        version(usbs[b])
+        version(usbs[b])
+        version(usbs[b])
 
-    # Check for special beta device serial numbers
-    try:
-        index = str(usbs[b].serial).find("_v1.")
-        if index > -1:
-            usbs[b].beta = float(str(usbs[b].serial)[index + 2:index + 6])
-            print(f"Board {b} is a special beta device: v{usbs[b].beta}")
-    except Exception:
-        usbs[b].beta = 0.0  # Assign default if parsing fails
-
-time.sleep(0.1)  # Wait for clocks to lock after configuration
+        # Check for special beta device serial numbers
+        try:
+            index = str(usbs[b].serial).find("_v1.")
+            if index > -1:
+                usbs[b].beta = float(str(usbs[b].serial)[index + 2:index + 6])
+                print(f"Board {b} is a special beta device: v{usbs[b].beta}")
+        except Exception:
+            usbs[b].beta = 0.0  # Assign default if parsing fails
 
 usbs = orderusbs(usbs)
 if len(usbs) > 1:

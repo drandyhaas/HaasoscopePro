@@ -85,7 +85,7 @@ class hspro_socket:
                 self.s.bind((self.HOST, self.PORT))
                 self.s.listen()
                 self.s.settimeout(1)
-                print("Socket listening on",self.HOST,self.PORT)
+                #print("Socket listening on",self.HOST,self.PORT)
                 self.opened = True
                 self.connected = False
                 while self.runthethread and self.opened:

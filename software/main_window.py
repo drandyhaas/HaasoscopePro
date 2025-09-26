@@ -18,11 +18,9 @@ from data_recorder import DataRecorder
 # Import remaining dependencies
 from FFTWindow import FFTWindow
 from SCPIsocket import hspro_socket
-from board import get_pwd, setupboard  # Assuming get_pwd and other funcs are in board.py or usbs.py
+from board import get_pwd, setupboard, gettemps
 
 WindowTemplate, TemplateBaseClass = loadUiType(get_pwd() + "/HaasoscopePro.ui")
-
-
 class MainWindow(TemplateBaseClass):
     def __init__(self, usbs):
         super().__init__()
@@ -103,6 +101,34 @@ class MainWindow(TemplateBaseClass):
         # This function is called just after the main event loop starts.
         self.ui.rollingButton.setChecked(bool(self.state.isrolling))
         self.ui.rollingButton.setText("Auto" if self.state.isrolling else "Normal")
+        self.ui.actionPan_and_zoom.setChecked(False)
+        self.plot_manager.set_pan_and_zoom(False)
+
+    def _sync_all_channels_to_hardware(self):
+        """
+        Loops through all channels and sends their current state (gain, offset, etc.)
+        from the ScopeState object to the physical hardware. This is crucial
+        after a board reset command like setupboard().
+        """
+        s = self.state
+        for i in range(s.num_board * s.num_chan_per_board):
+            board_idx = i // s.num_chan_per_board
+            chan_idx = i % s.num_chan_per_board
+
+            # Re-apply Gain
+            self.controller.set_channel_gain(board_idx, chan_idx, s.gain[i])
+
+            # Re-apply Offset (requires re-calculating the scaling factor)
+            scaling = 1000 * s.VperD[i] / 160.0
+            if s.acdc[i]:
+                scaling *= 245.0 / 160.0
+            final_scaling = scaling / s.tenx[i]
+            self.controller.set_channel_offset(board_idx, chan_idx, s.offset[i], final_scaling)
+
+            # Re-apply other settings
+            self.controller.set_acdc(board_idx, chan_idx, s.acdc[i])
+            self.controller.set_mohm(board_idx, chan_idx, s.mohm[i])
+            self.controller.set_att(board_idx, chan_idx, s.att[i])
 
     def show_no_hardware_error(self):
         """Displays a non-blocking warning message to the user."""
@@ -162,6 +188,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.persistavgCheck.clicked.connect(self.set_average_line_pen)
         self.ui.persistlinesCheck.clicked.connect(self.set_average_line_pen)
         self.ui.actionLine_color.triggered.connect(self.change_channel_color)
+        self.ui.actionHigh_resolution.triggered.connect(self.high_resolution_toggled)
 
         # Advanced/Hardware controls
         self.ui.pllresetButton.clicked.connect(
@@ -280,10 +307,19 @@ class MainWindow(TemplateBaseClass):
         for board_idx, raw_data in raw_data_map.items():
             nbadA, nbadB, nbadC, nbadD, nbadS = self.processor.process_board_data(raw_data, board_idx, self.xydata)
             if s.plljustreset[board_idx] > -10:
+                # If a reset is already in progress, continue it.
                 self.controller.adjustclocks(board_idx, nbadA, nbadB, nbadC, nbadD, nbadS)
+            elif s.pll_reset_grace_period > 0:
+                # If in the grace period, ignore any bad clock signals.
+                pass
             elif (nbadA + nbadB + nbadC + nbadD + nbadS) > 0:
+                # If not in a reset and not in grace period, trigger a new reset on error.
                 print(f"Bad clock/strobe detected on board {board_idx}. Triggering PLL reset.")
                 self.controller.pllreset(board_idx)
+
+        # Decrement the grace period counter once per event, outside the board loop
+        if s.pll_reset_grace_period > 0:
+            s.pll_reset_grace_period -= 1
 
         self.plot_manager.update_plots(self.xydata, self.xydatainterleaved)
 
@@ -357,6 +393,11 @@ class MainWindow(TemplateBaseClass):
         self.ui.statusBar.showMessage(status_text)
         self.state.isdrawing = False
 
+        # If 'getone' (Single) mode is active, call dostartstop() immediately
+        # after successfully processing one event. This will pause the acquisition.
+        if self.state.getone:
+            self.dostartstop()
+
     def update_measurements_display(self):
         """Slow timer callback to update text-based measurements."""
         the_str = ""
@@ -364,6 +405,23 @@ class MainWindow(TemplateBaseClass):
             the_str += f"Recording to file {self.recorder.file_handle.name}\n"
 
         if self.state.dodrawing:
+            if self.ui.actionTemperatures.isChecked():
+                if self.state.num_board > 0:
+                    # Get the usb device for the currently active board from the controller
+                    active_usb = self.controller.usbs[self.state.activeboard]
+                    # The gettemps function is expected to return a pre-formatted string
+                    the_str += gettemps(active_usb) + "\n"
+
+            if self.ui.actionTrigger_thresh.isChecked():
+                # Get the threshold value directly from the plot manager's line object
+                hline_val = self.plot_manager.otherlines['hline'].value()
+                the_str += f"Trigger threshold: {hline_val:.3f} div\n"
+
+            if self.ui.actionN_persist_lines.isChecked():
+                # Get the number of lines from the plot manager's persistence deque
+                num_persist = len(self.plot_manager.persist_lines)
+                the_str += f"N persist lines: {num_persist}\n"
+
             if self.ui.persistavgCheck.isChecked() and self.plot_manager.average_line.isVisible():
                 target_x = self.plot_manager.average_line.xData
                 target_y = self.plot_manager.average_line.yData
@@ -506,6 +564,14 @@ class MainWindow(TemplateBaseClass):
             self.timer2.stop()
             self.state.paused = True
             self.ui.runButton.setChecked(False)
+
+    def high_resolution_toggled(self, checked):
+        """Toggles the hardware's high-resolution averaging mode."""
+        self.state.highresval = 1 if checked else 0
+
+        # The downsample command also sends the high-resolution setting,
+        # so we just need to re-send it to the hardware for all boards.
+        self.controller.tell_downsample_all(self.state.downsample)
 
     def select_channel(self):
         """Called when board or channel selector is changed."""
@@ -735,14 +801,44 @@ class MainWindow(TemplateBaseClass):
 
     def set_average_line_pen(self):
         """
-        Updates the appearance of the persistence average line based on UI settings.
-        This is called when the 'Channel On' or persistence checkboxes change.
+        Updates the appearance and visibility of the main trace, the average trace,
+        and the faint persistence traces based on UI settings.
         """
+        # First, tell the plot manager to update the pen style/color of the average line
         self.plot_manager.set_average_line_pen()
-        # The average line is only visible if both its own box and the main channel box are checked
-        self.plot_manager.average_line.setVisible(
-            self.ui.persistavgCheck.isChecked() and self.ui.chanonCheck.isChecked()
-        )
+
+        # Get the state of the relevant UI checkboxes
+        is_chan_on = self.ui.chanonCheck.isChecked()
+        show_persist_lines = self.ui.persistlinesCheck.isChecked()
+        show_persist_avg = self.ui.persistavgCheck.isChecked()
+
+        # Get the line objects from the plot manager
+        active_line = self.plot_manager.lines[self.state.activexychannel]
+        average_line = self.plot_manager.average_line
+
+        # If the main "Channel On" box is unchecked, everything for this channel is hidden.
+        if not is_chan_on:
+            active_line.setVisible(False)
+            average_line.setVisible(False)
+            for item, _, _ in self.plot_manager.persist_lines:
+                item.setVisible(False)
+            return
+
+        # --- VISIBILITY LOGIC WHEN CHANNEL IS ON ---
+
+        # 1. The average line's visibility is directly tied to its checkbox.
+        average_line.setVisible(show_persist_avg)
+
+        # 2. The faint persist lines' visibility is tied to their checkbox.
+        for item, _, _ in self.plot_manager.persist_lines:
+            item.setVisible(show_persist_lines)
+
+        # 3. THIS IS YOUR NEW RULE:
+        #    Hide the main trace ONLY if the average is on AND the faint lines are off.
+        if show_persist_avg and not show_persist_lines:
+            active_line.setVisible(False)
+        else:
+            active_line.setVisible(True)
 
     # #########################################################################
     # ## Slot Implementations (Callbacks for UI events)
@@ -765,19 +861,24 @@ class MainWindow(TemplateBaseClass):
         """Switches between single and dual channel mode."""
         self.state.dotwochannel = self.ui.twochanCheck.isChecked()
 
-        # Reconfigure hardware for the new mode
+        # 1. Reconfigure hardware (this resets settings on the board)
         for i in range(self.state.num_board):
             setupboard(self.controller.usbs[i], self.state.dopattern, self.state.dotwochannel, self.state.dooverrange,
                        self.state.basevoltage == 200)
             self.controller.tell_downsample(self.controller.usbs[i], self.state.downsample)
 
+        # 2. NEW: Re-apply all stored settings from the state back to the hardware
+        self._sync_all_channels_to_hardware()
+
+        # 3. NEW: Set a grace period of 5 events to ignore transient glitches
+        self.state.pll_reset_grace_period = 5
+
+        # 4. Update data arrays and plot axes
         self.allocate_xy_data()
         self.time_changed()
 
-        # Call the centralized UI update function
+        # 5. Update the UI
         self._update_channel_mode_ui()
-
-        # Update everything else for the currently selected channel
         self.select_channel()
 
     def gain_changed(self):
