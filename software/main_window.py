@@ -52,6 +52,7 @@ class MainWindow(TemplateBaseClass):
         self.fft_yrange_min = 1e-5
         self.fft_new_plot = True
 
+        self.ui.boardBox.setMaximum(self.state.num_board - 1)
         self.setup_successful = False
 
         # 6. Setup timers for data acquisition and measurement updates
@@ -504,7 +505,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.chanBox.setValue(channel)
         # select_channel is called automatically by the valueChanged signal
 
-    def toggle_pll_controls(self, checked):
+    def toggle_pll_controls(self):
         """Shows or hides the manual PLL adjustment buttons."""
         is_enabled = self.ui.pllBox.isEnabled()
         self.ui.pllBox.setEnabled(not is_enabled)
@@ -577,10 +578,26 @@ class MainWindow(TemplateBaseClass):
         """Called when board or channel selector is changed."""
         self.state.activeboard = self.ui.boardBox.value()
         self.state.selectedchannel = self.ui.chanBox.value()
+
+        # This handles channel selector limits and other mode-dependent UI
         self._update_channel_mode_ui()
 
-        # Update UI widgets to reflect the state of the newly selected channel
+        # Current state
         s = self.state
+
+        # Read the trigger state for the newly selected board
+        is_ext = bool(s.doexttrig[s.activeboard])
+        is_sma = bool(s.doextsmatrig[s.activeboard])
+
+        # Update the checked state of the boxes
+        self.ui.exttrigCheck.setChecked(is_ext)
+        self.ui.extsmatrigCheck.setChecked(is_sma)
+
+        # Ensure a box is disabled if the other trigger mode is active
+        self.ui.exttrigCheck.setEnabled(not is_sma)
+        self.ui.extsmatrigCheck.setEnabled(not is_ext)
+
+        # Update UI widgets to reflect the state of the newly selected channel
         self.ui.gainBox.setValue(s.gain[s.activexychannel])
         self.ui.offsetBox.setValue(s.offset[s.activexychannel])
         self.ui.acdcCheck.setChecked(s.acdc[s.activexychannel])
@@ -907,7 +924,7 @@ class MainWindow(TemplateBaseClass):
 
         v2_rounded = round(1002 * v2, 0)  # Rounding trick for clean numbers
         if v2_rounded > 50: v2_rounded = round(v2_rounded, -1)
-        self.ui.VperD.setText(f"{v2_rounded:.1f} mV/div")
+        self.ui.VperD.setText(f"{v2_rounded:.0f} mV/div")
         self.plot_manager.update_right_axis()
 
     def offset_changed(self):

@@ -1562,7 +1562,7 @@ Outlined if triggering on this channel</string>
          <string/>
         </property>
         <property name="text">
-         <string notr="true">160 mV/div</string>
+         <string notr="true">100 mV/div</string>
         </property>
         <property name="maxLength">
          <number>50</number>

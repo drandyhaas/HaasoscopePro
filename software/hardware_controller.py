@@ -127,7 +127,7 @@ class HardwareController:
         elif s.plljustreset[board] == -1:  # End of sweep, now analyze and set the optimal phase
             print(f"Board {board} clkstr errors per phase step: {s.phasenbad[board]}")
             start, length = find_longest_zero_stretch(s.phasenbad[board], True)
-            print(f"Found good phase range starting at {start} for {length} steps.")
+            print(f"Found good phase range for board {board} starting at {start} for {length} steps.")
 
             if length < 4:
                 print(f"CRITICAL: Bad PLL calibration for board {board}! Check power/connections.")
@@ -145,10 +145,17 @@ class HardwareController:
             s.expect_samples = self.state.expect_samples  # Restore sample depth
             s.plljustreset[board] -= 1
 
-        elif s.plljustreset[board] == -3:  # Final step, re-enable drawing
-            s.dodrawing = True
-            s.plljustreset[board] = -10  # End calibration sequence
+        elif s.plljustreset[board] == -3:  # Final step for the current board
+            # Mark this board as finished
+            s.plljustreset[board] = -10
             print(f"PLL calibration for board {board} is complete.")
+
+            # Check if ALL boards have finished their calibration sequences.
+            all_calibrations_finished = all(status == -10 for status in s.plljustreset)
+
+            # Only re-enable drawing if no other board is still calibrating.
+            if all_calibrations_finished:
+                s.dodrawing = True
 
     def send_trigger_info_all(self):
         """Sends the current trigger info to all connected boards."""
