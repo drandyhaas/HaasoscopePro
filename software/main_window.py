@@ -902,29 +902,44 @@ class MainWindow(TemplateBaseClass):
         """Handles changes to the gain slider."""
         s = self.state
         s.gain[s.activexychannel] = self.ui.gainBox.value()
+
         self.controller.set_channel_gain(s.activeboard, s.selectedchannel, s.gain[s.activexychannel])
-        # Also update the coupled board in oversampling mode
         if s.dooversample[s.activeboard] and s.activeboard % 2 == 0:
             self.controller.set_channel_gain(s.activeboard + 1, s.selectedchannel, s.gain[s.activexychannel])
             s.gain[s.activexychannel + s.num_chan_per_board] = s.gain[s.activexychannel]
 
-        # Update V/div text
+        # Calculate the base Volts per Division
         db = s.gain[s.activexychannel]
-        v2 = (s.basevoltage / 1000.) * s.tenx[s.activexychannel] / pow(10, db / 20.)
-        if s.dooversample[s.activeboard]: v2 *= 2.0
-        if not s.mohm[s.activexychannel]: v2 /= 2.0
+        v_per_div = (s.basevoltage / 1000.) * s.tenx[s.activexychannel] / pow(10, db / 20.)
+        if s.dooversample[s.activeboard]: v_per_div *= 2.0
+        if not s.mohm[s.activexychannel]: v_per_div /= 2.0
 
         oldvperd = s.VperD[s.activexychannel]
-        s.VperD[s.activexychannel] = v2
+        s.VperD[s.activexychannel] = v_per_div
         if s.dooversample[s.activeboard] and s.activeboard % 2 == 0:
-            s.VperD[s.activexychannel + s.num_chan_per_board] = v2
+            s.VperD[s.activexychannel + s.num_chan_per_board] = v_per_div
 
-        # Adjust offset to maintain same voltage offset
-        self.ui.offsetBox.setValue(int(self.ui.offsetBox.value() * oldvperd / v2))
+        if v_per_div != 0:
+            self.ui.offsetBox.setValue(int(self.ui.offsetBox.value() * oldvperd / v_per_div))
 
-        v2_rounded = round(1002 * v2, 0)  # Rounding trick for clean numbers
-        if v2_rounded > 50: v2_rounded = round(v2_rounded, -1)
-        self.ui.VperD.setText(f"{v2_rounded:.0f} mV/div")
+        # --- NEW CUSTOM ROUNDING AND FORMATTING LOGIC ---
+        mv_per_div = v_per_div * 1000.0
+
+        if mv_per_div > 50:
+            # If over 50 mV, round to the nearest whole number
+            final_val = round(mv_per_div)
+            display_text = f"{final_val:.0f} mV/div"
+        else:
+            # Otherwise, round to the nearest 0.5
+            final_val = round(mv_per_div * 2) / 2.0
+            display_text = f"{final_val:.1f} mV/div"
+
+        self.ui.VperD.setText(display_text)
+        # --- END OF NEW LOGIC ---
+
+        if self.ui.gainBox.value()>24: self.ui.gainBox.setSingleStep(2)
+        else: self.ui.gainBox.setSingleStep(6)
+
         self.plot_manager.update_right_axis()
 
     def offset_changed(self):
