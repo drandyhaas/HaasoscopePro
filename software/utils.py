@@ -1,9 +1,22 @@
-import time
+import time, sys
 import numpy as np
 from scipy.signal import find_peaks
 from scipy.fft import fft, fftfreq
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtWidgets
+
+def get_pwd():
+    # Look for special paths when double-clicking on the pre-made exe, so we can find the .ui files
+    path_string = sys.path[0]
+    pwd = path_string # it will be the current direct directory already if we are running from the command line
+    target = ["Mac_HaasoscopeProQt", "Windows_HaasoscopeProQt"]
+    for tar in target:
+        index = path_string.find(tar)
+        if index != -1: # The substring was found
+            index_with_target = index + len(tar)
+            pwd = path_string[:index_with_target]
+    print("Current dir is "+pwd)
+    return pwd
 
 def reverse_bits(byte):
     reversed_byte = 0
