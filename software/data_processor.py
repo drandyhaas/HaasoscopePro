@@ -85,7 +85,7 @@ class DataProcessor:
 
         # Apply post-processing steps
         self._apply_lpf(board_idx, xy_data_array)
-        self._apply_trigger_stabilizer(board_idx, xy_data_array)
+        self._apply_board_stabilizer(board_idx, xy_data_array)
 
         return nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr
 
@@ -121,42 +121,43 @@ class DataProcessor:
                 c2_idx = c1_idx + 1
                 xy_data_array[c2_idx][1] = filtfilt(fb, fa, xy_data_array[c2_idx][1])
 
-    def _apply_trigger_stabilizer(self, board_idx, xy_data_array):
-        """Applies sub-sample time shifting to stabilize the trigger point."""
-        state = self.state
-        vline_time = 4 * 10 * (state.triggerpos + 1.0) * (state.downsamplefactor / state.nsunits / state.samplerate)
+    def _apply_board_stabilizer(self, board_idx, xy_data_array):
+        """Applies board-level trigger stabilization."""
+        s = self.state
+        if not s.trig_stabilizer_enabled:
+            return
 
-        if abs(state.totdistcorr[board_idx]) > state.distcorrtol * state.downsamplefactor:
-            xy_data_array[board_idx * 2][0] += state.totdistcorr[board_idx]
-            if state.dotwochannel: xy_data_array[board_idx * 2 + 1][0] += state.totdistcorr[board_idx]
-            state.totdistcorr[board_idx] = 0
+        vline_time = 4 * 10 * (s.triggerpos + 1.0) * (s.downsamplefactor / s.nsunits / s.samplerate)
+        hline_pos = (s.triggerlevel - 127) * s.yscale * 256
+
+        # --- This is the Board-level alignment logic from the original drawchannels() ---
+        if abs(s.totdistcorr[board_idx]) > s.distcorrtol * s.downsamplefactor:
+            for i in range(s.num_chan_per_board):
+                xy_data_array[board_idx * s.num_chan_per_board + i][0] += s.totdistcorr[board_idx]
+            s.totdistcorr[board_idx] = 0
 
         distcorrtemp = None
-        if state.doexttrig[board_idx]:
-            if state.noextboard != -1: distcorrtemp = state.distcorr[state.noextboard]
-        else:  # Board is self-triggering, so calculate its own correction
-            chan_idx = board_idx * 2 + state.triggerchan[board_idx]
-            thed = xy_data_array[chan_idx]
+        if s.doexttrig[board_idx]:
+            if s.noextboard != -1: distcorrtemp = s.distcorr[s.noextboard]
+        else:
+            triggering_chan_idx = board_idx * s.num_chan_per_board + s.triggerchan[board_idx]
+            thed = xy_data_array[triggering_chan_idx]
 
-            fitwidth = (state.max_x - state.min_x)
+            fitwidth = (s.max_x - s.min_x)
             xc = thed[0][(thed[0] > vline_time - fitwidth) & (thed[0] < vline_time + fitwidth)]
             if xc.size > 2:
-                numsamp = state.distcorrsamp
-                fitwidth *= numsamp / xc.size
+                fitwidth *= s.distcorrsamp / xc.size
                 xc = thed[0][(thed[0] > vline_time - fitwidth) & (thed[0] < vline_time + fitwidth)]
                 yc = thed[1][(thed[0] > vline_time - fitwidth) & (thed[0] < vline_time + fitwidth)]
-
-                if state.fallingedge[board_idx]: yc = -yc
-
+                if s.fallingedge[board_idx]: yc = -yc
                 if xc.size > 1:
-                    hline = (state.triggerlevel - 127) * state.yscale * 256
-                    distcorrtemp = find_crossing_distance(yc, hline, vline_time, xc[0], xc[1] - xc[0])
+                    distcorrtemp = find_crossing_distance(yc, hline_pos, vline_time, xc[0], xc[1] - xc[0])
 
-        if distcorrtemp is not None and abs(distcorrtemp) < state.distcorrtol * state.downsamplefactor / state.nsunits:
-            state.distcorr[board_idx] = distcorrtemp
-            xy_data_array[board_idx * 2][0] -= state.distcorr[board_idx]
-            if state.dotwochannel: xy_data_array[board_idx * 2 + 1][0] -= state.distcorr[board_idx]
-            state.totdistcorr[board_idx] += state.distcorr[board_idx]
+        if distcorrtemp is not None and abs(distcorrtemp) < s.distcorrtol * s.downsamplefactor / s.nsunits:
+            s.distcorr[board_idx] = distcorrtemp
+            for i in range(s.num_chan_per_board):
+                xy_data_array[board_idx * s.num_chan_per_board + i][0] -= s.distcorr[board_idx]
+            s.totdistcorr[board_idx] += s.distcorr[board_idx]
 
     def calculate_fft(self, y_data):
         """Calculates the FFT for a given channel's y-data."""

@@ -94,6 +94,8 @@ class ScopeState:
         self.triggerautocalibration = [False] * self.num_board
         self.extrigboardstdcorrection = [1] * self.num_board
         self.extrigboardmeancorrection = [0] * self.num_board
+        self.trig_stabilizer_enabled = True
+        self.extra_trig_stabilizer_enabled = True
 
         # Performance metrics
         self.nevents = 0

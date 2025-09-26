@@ -10,6 +10,7 @@ import matplotlib.cm as cm
 from scipy.signal import resample
 from scipy.interpolate import interp1d
 from utils import add_secondary_axis
+from data_processor import find_crossing_distance
 
 # #############################################################################
 # PlotManager Class
@@ -104,37 +105,61 @@ class PlotManager(pg.QtCore.QObject):
         """Updates all visible waveform plots with new data."""
         if not self.state.dodrawing:
             return
+        s = self.state
 
         for li in range(self.nlines):
             xdatanew, ydatanew = None, None
-            if not self.state.dointerleaved[li // 2]:
+            # --- Interleaving and initial data setup ---
+            if not s.dointerleaved[li // 2]:
                 xdatanew, ydatanew = xy_data[li][0].copy(), xy_data[li][1].copy()
             else:
                 if li % 4 == 0:
-                    # Combine data from the two interleaved boards
                     primary_data = xy_data[li][1]
-                    secondary_data = xy_data[li + self.state.num_chan_per_board][1]
+                    secondary_data = xy_data[li + s.num_chan_per_board][1]
                     xydatainterleaved[li // 2][1][0::2] = primary_data
                     xydatainterleaved[li // 2][1][1::2] = secondary_data
 
-                    # Create a regularly spaced x-axis and interpolate
                     x_interleaved = xydatainterleaved[li // 2][0]
                     y_interleaved = xydatainterleaved[li // 2][1]
                     xdatanew = np.linspace(x_interleaved.min(), x_interleaved.max(), len(x_interleaved))
                     f_int = interp1d(x_interleaved, y_interleaved, kind='linear', bounds_error=False, fill_value=0.0)
                     ydatanew = f_int(xdatanew)
 
-            if xdatanew is not None:
-                # Resample for smooth zooming if enabled
-                if self.state.doresamp and self.state.downsample < 0:
-                    ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * self.state.doresamp, t=xdatanew)
+            if xdatanew is None: continue  # Skip if no data for this line (e.g., secondary interleaved line)
 
-                # Update the plot item
-                self.lines[li].setData(xdatanew, ydatanew)
+            # --- Resampling (if enabled) ---
+            if s.doresamp and s.downsample < 0:
+                ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * s.doresamp, t=xdatanew)
 
-                # Handle persistence for the active channel
-                if li == self.state.activexychannel and self.persist_time > 0 and self.ui.chanonCheck.isChecked():
-                    self._add_to_persistence(xdatanew, ydatanew, li)
+            # --- Per-Line Stabilizer (Correct Location) ---
+            if s.extra_trig_stabilizer_enabled:
+                is_oversample_secondary = s.dooversample[li // 4 * 2] and li % 4 != 0
+                if not is_oversample_secondary:
+                    vline_time = self.otherlines['vline'].value()
+                    hline_pos = (s.triggerlevel - 127) * s.yscale * 256
+
+                    fitwidth = (s.max_x - s.min_x)
+                    xc = xdatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]
+
+                    if xc.size > 2:
+                        numsamp = s.distcorrsamp
+                        if s.doresamp and s.downsample < 0: numsamp *= s.doresamp
+                        fitwidth *= numsamp / xc.size
+
+                        xc = xdatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]
+                        yc = ydatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]
+                        if s.fallingedge[li // 2]: yc = -yc
+
+                        if xc.size > 1:
+                            distcorrtemp = find_crossing_distance(yc, hline_pos, vline_time, xc[0], xc[1] - xc[0])
+                            if distcorrtemp is not None and abs(
+                                    distcorrtemp) < s.distcorrtol * s.downsamplefactor / s.nsunits:
+                                xdatanew -= distcorrtemp
+
+            # --- Final plotting and persistence ---
+            self.lines[li].setData(xdatanew, ydatanew)
+            if li == s.activexychannel and self.persist_time > 0 and self.ui.chanonCheck.isChecked():
+                self._add_to_persistence(xdatanew, ydatanew, li)
 
         self.update_persist_average()
 

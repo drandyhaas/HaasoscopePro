@@ -192,8 +192,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionHigh_resolution.triggered.connect(self.high_resolution_toggled)
 
         # Advanced/Hardware controls
-        self.ui.pllresetButton.clicked.connect(
-            lambda: self.controller.pllreset(self.state.activeboard, from_button=True))
+        self.ui.pllresetButton.clicked.connect(lambda: self.controller.pllreset(self.state.activeboard, from_button=True))
         self.ui.tadBox.valueChanged.connect(self.tad_changed)
         self.ui.ToffBox.valueChanged.connect(lambda val: setattr(self.state, 'toff', val))
         self.ui.Auxout_comboBox.currentIndexChanged.connect(self.auxout_changed)
@@ -217,6 +216,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionRecord.triggered.connect(self.toggle_recording)
         self.ui.actionUpdate_firmware.triggered.connect(self.update_firmware)
         self.ui.actionDo_autocalibration.triggered.connect(self.autocalibration)
+        self.ui.actionToggle_trig_stabilizer.triggered.connect(self.trig_stabilizer_toggled)
+        self.ui.actionToggle_extra_trig_stabilizer.triggered.connect(self.extra_trig_stabilizer_toggled)
 
         # Plot manager signals
         self.plot_manager.vline_dragged_signal.connect(self.on_vline_dragged)
@@ -288,6 +289,14 @@ class MainWindow(TemplateBaseClass):
             self.ui.depthBox.blockSignals(True)
             self.ui.depthBox.setValue(self.state.expect_samples)
             self.ui.depthBox.blockSignals(False)
+
+    def trig_stabilizer_toggled(self, checked):
+        """Updates the state for the board-level trigger stabilizer."""
+        self.state.trig_stabilizer_enabled = checked
+
+    def extra_trig_stabilizer_toggled(self, checked):
+        """Updates the state for the per-line trigger stabilizer."""
+        self.state.extra_trig_stabilizer_enabled = checked
 
     def update_plot_loop(self):
         """Main acquisition loop, with full status bar and FFT plot updates."""
