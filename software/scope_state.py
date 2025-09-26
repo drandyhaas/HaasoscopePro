@@ -1,0 +1,105 @@
+# scope_state.py
+
+class ScopeState:
+    """A class to hold the configuration and state of the oscilloscope application."""
+
+    def __init__(self, num_boards, num_chan_per_board):
+        # General and Hardware Configuration
+        self.softwareversion = 29.23
+        self.num_board = num_boards
+        self.num_chan_per_board = num_chan_per_board
+        self.samplerate = 3.2  # GHz
+        self.expect_samples = 100
+        self.expect_samples_extra = 5
+        self.firmwareversion = -1
+        self.basevoltage = 200
+
+        # Application State
+        self.paused = True
+        self.isrolling = 0
+        self.getone = False
+        self.dodrawing = True
+        self.dofast = False
+        self.dofft = False
+        self.dopattern = 0
+        self.dooverrange = False
+        self.isdrawing = False
+        self.dorecordtofile = False
+        self.outf = None
+        self.numrecordeventsperfile = 1000
+
+        # Board/Channel Specific States
+        self.activeboard = 0
+        self.selectedchannel = 0
+        self.dotwochannel = False
+        self.dointerleaved = [False] * self.num_board
+        self.dooversample = [False] * self.num_board
+        self.doexttrig = [0] * self.num_board
+        self.doextsmatrig = [0] * self.num_board
+        self.doexttrigecho = [False] * self.num_board
+        self.fallingedge = [0] * self.num_board
+        self.triggerchan = [0] * self.num_board
+        self.triggertype = [1] * self.num_board
+        self.acdc = [False] * (self.num_board * self.num_chan_per_board)
+        self.mohm = [False] * (self.num_board * self.num_chan_per_board)
+        self.att = [False] * (self.num_board * self.num_chan_per_board)
+        self.tenx = [1] * (self.num_board * self.num_chan_per_board)
+        self.offset = [0] * (self.num_board * self.num_chan_per_board)
+        self.gain = [0] * (self.num_board * self.num_chan_per_board)
+        self.VperD = [(self.basevoltage / 1000.)] * (self.num_board * self.num_chan_per_board)
+        self.auxoutval = [0] * self.num_board
+        self.tad = [0] * self.num_board
+
+        # Triggering Parameters
+        self.triggerlevel = 127
+        self.triggerdelta = 1
+        self.triggerpos = 500
+        self.triggershift = 2
+        self.triggertimethresh = 0
+        self.toff = 50
+
+        # Data Processing and Display Parameters
+        self.downsample = 0
+        self.downsamplefactor = 1
+        self.downsamplemerging = 1
+        self.highresval = 1
+        self.doresamp = 4
+        self.lpf = 0
+        self.fitwidthfraction = 0.2
+        self.yscale = 3.3 / 2.03 * 10 * 5 / 8 / pow(2, 12) / 16
+        self.nsunits = 1
+        self.units = "ns"
+        self.min_y, self.max_y = -5, 5
+        self.min_x, self.max_x = 0, 4 * 10 * self.expect_samples / self.samplerate
+
+        # Internal processing variables
+        self.sample_triggered = [0] * self.num_board
+        self.triggerphase = [0] * self.num_board
+        self.downsamplemergingcounter = [0] * self.num_board
+        self.distcorr = [0] * self.num_board
+        self.totdistcorr = [0] * self.num_board
+        self.distcorrtol = 2.0
+        self.distcorrsamp = 50
+        self.noextboard = -1
+        self.lvdstrigdelay = [0] * self.num_board
+        self.lastlvdstrigdelay = [0] * self.num_board
+        self.plljustreset = [-10] * self.num_board
+        self.plljustresetdir = [0] * self.num_board
+        self.phasenbad = [[0] * 12] * self.num_board
+        self.phasecs = [[([0] * 5) for _ in range(4)] for _ in range(self.num_board)]
+        self.extraphasefortad = [0] * self.num_board
+        self.triggerautocalibration = [False] * self.num_board
+        self.extrigboardstdcorrection = [1] * self.num_board
+        self.extrigboardmeancorrection = [0] * self.num_board
+
+        # Performance metrics
+        self.nevents = 0
+        self.oldnevents = 0
+        self.tinterval = 100.
+        self.oldtime = 0
+        self.lastrate = 0
+        self.lastsize = 0
+
+    @property
+    def activexychannel(self):
+        return self.activeboard * self.num_chan_per_board + self.selectedchannel

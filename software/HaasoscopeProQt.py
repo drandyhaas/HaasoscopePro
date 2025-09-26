@@ -1,66 +1,98 @@
-from MainWindow import *
+# HaasoscopeProQt.py
 
-usbs = connectdevices(100) # max of 100 devices
-#if len(usbs)==0: sys.exit(0)
-for b in range(len(usbs)):
-    if len(usbs) > 1: clkout_ena(usbs[b], 1) # turn on lvdsout_clk for boards
+import sys
+import os
+import time
+import ftd2xx
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import Qt
+
+# Import the new main window and necessary hardware functions
+from main_window import MainWindow
+from usbs import connectdevices, orderusbs, tellfirstandlast, version
+from board import clkout_ena, cleanup
+
+# --- Hardware Discovery and Initial Setup ---
+print("Searching for Haasoscope Pro boards...")
+usbs = connectdevices(100) # This will now return an empty list if none are found
+print(f"Found {len(usbs)} board(s). Performing initial configuration...")
+if usbs:
+    for b in range(len(usbs)):
+        if len(usbs) > 1:
+            clkout_ena(usbs[b], 1)  # Turn on lvdsout_clk for multi-board setups
+
+    # Reading version multiple times seems to be a hardware quirk to ensure a stable read
     version(usbs[b])
     version(usbs[b])
     version(usbs[b])
-    index = str(usbs[b].serial).find("_v1.")
-    if index > -1:
-        usbs[b].beta = float(str(usbs[b].serial)[index + 2:index + 6])
-        print("Special beta device:", usbs[b].beta)
-time.sleep(.1) # wait for clocks to lock
+
+    # Check for special beta device serial numbers
+    try:
+        index = str(usbs[b].serial).find("_v1.")
+        if index > -1:
+            usbs[b].beta = float(str(usbs[b].serial)[index + 2:index + 6])
+            print(f"Board {b} is a special beta device: v{usbs[b].beta}")
+    except Exception:
+        usbs[b].beta = 0.0  # Assign default if parsing fails
+
+time.sleep(0.1)  # Wait for clocks to lock after configuration
+
 usbs = orderusbs(usbs)
-tellfirstandlast(usbs)
+if len(usbs) > 1:
+    tellfirstandlast(usbs)
 
-if __name__ == '__main__': # calls setup_connection for each board, then init
+# --- Main Application Execution ---
+if __name__ == '__main__':
     print('Argument List:', str(sys.argv))
-    for a in sys.argv:
-        if a[0] == "-":
-            print(a)
     print("Python version", sys.version)
-    app = QtWidgets.QApplication.instance()
-    standalone = app is None
-    if standalone:
-        # The most common fix for grid misalignment
-        if sys.platform.startswith('win'):
-            import ctypes
-            print("On Windows, SetProcessDpiAwareness(True)")
+
+    # The most common fix for UI scaling and grid misalignment issues
+    if sys.platform.startswith('win'):
+        import ctypes
+
+        try:
             ctypes.windll.shcore.SetProcessDpiAwareness(True)
-        # For all platforms, you can also try setting environment variables
-        QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
-        os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
-        os.environ["QT_SCALE_FACTOR"] = "1"
-        app = QtWidgets.QApplication(sys.argv)
-        font = app.font()
-        font.setPixelSize(11)
-        app.setFont(font)
-        app.setWindowIcon(QIcon('icon.png'))
+            print("Windows: Set high DPI awareness.")
+        except Exception as e:
+            print(f"Could not set DPI awareness on Windows: {e}")
+
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+
+    app = QApplication(sys.argv)
+    font = app.font()
+    font.setPixelSize(11)
+    app.setFont(font)
+    app.setWindowIcon(QIcon('icon.png'))
+
+    win = None
+    try:
+        # MainWindow.__init__ now handles all setup. If it fails, it will
+        # set the `setup_successful` flag to False.
         win = MainWindow(usbs)
         win.setWindowTitle('Haasoscope Pro Qt')
-        print("Haasoscope Pro Qt, version "+f"{win.softwareversion:.2f}")
-        try:
-            goodsetup=True
-            for usbi in range(len(usbs)):
-                if not win.setup_connection(usbi):
-                    print("Failed to setup!")
-                    for usbj in usbs: cleanup(usbj)
-                    if not win.paused: win.dostartstop()
-                    win.ui.runButton.setEnabled(False)
-                    goodsetup=False
-            if not goodsetup or not win.init():
-                print("Failed initialization!")
-                for usbi in usbs: cleanup(usbi)
-                if not win.paused: win.dostartstop()
-                win.ui.runButton.setEnabled(False)
-        except ftd2xx.DeviceError:
-            print("Device com failed!")
-            if not win.paused: win.dostartstop()
-            win.ui.runButton.setEnabled(False)
-            win.close_socket()
+
+        if not win.setup_successful:
+            print("ERROR: Initialization failed. Please check hardware and power.")
+            # The window will still show, but the run button will be disabled.
+        else:
+            print("Initialization successful. Starting application.")
+
         rv = app.exec_()
         sys.exit(rv)
-    else:
-        print("Done, but Qt window still active!")
+
+    except ftd2xx.DeviceError as e:
+        print(f"FATAL: A hardware communication error occurred: {e}")
+        print("Please ensure the device is connected and drivers are installed correctly.")
+        if win:
+            # Cleanly shut down if the window was partially created
+            win.close_socket()
+            cleanup(usbs)
+        sys.exit(1)
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        # Perform cleanup in case of any other crash
+        if win:
+            win.close()  # This will trigger the closeEvent for cleanup
+        sys.exit(1)

@@ -79,13 +79,13 @@ class hspro_socket:
     opened = False
     connected = False
     def open_socket(self,arg1):
-        print('started socket with arg1',arg1)
+        #print('started socket with arg1',arg1)
         while self.runthethread:
             with (socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.s):
                 self.s.bind((self.HOST, self.PORT))
                 self.s.listen()
                 self.s.settimeout(1)
-                print("socket listening on",self.HOST,self.PORT)
+                print("Socket listening on",self.HOST,self.PORT)
                 self.opened = True
                 self.connected = False
                 while self.runthethread and self.opened:
