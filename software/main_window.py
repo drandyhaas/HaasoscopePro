@@ -169,6 +169,19 @@ class MainWindow(TemplateBaseClass):
         self.ui.tadBox.valueChanged.connect(self.tad_changed)
         self.ui.ToffBox.valueChanged.connect(lambda val: setattr(self.state, 'toff', val))
         self.ui.Auxout_comboBox.currentIndexChanged.connect(self.auxout_changed)
+        self.ui.actionToggle_PLL_controls.triggered.connect(self.toggle_pll_controls)
+        self.ui.upposButton0.clicked.connect(self.uppos)
+        self.ui.upposButton1.clicked.connect(self.uppos1)
+        self.ui.upposButton2.clicked.connect(self.uppos2)
+        self.ui.upposButton3.clicked.connect(self.uppos3)
+        self.ui.upposButton4.clicked.connect(self.uppos4)
+        self.ui.downposButton0.clicked.connect(self.downpos)
+        self.ui.downposButton1.clicked.connect(self.downpos1)
+        self.ui.downposButton2.clicked.connect(self.downpos2)
+        self.ui.downposButton3.clicked.connect(self.downpos3)
+        self.ui.downposButton4.clicked.connect(self.downpos4)
+        self.ui.actionForce_split.triggered.connect(self.force_split_toggled)
+        self.ui.actionForce_switch_clocks.triggered.connect(self.force_switch_clocks_triggered)
 
         # Menu actions
         self.ui.actionAbout.triggered.connect(self.about_dialog)
@@ -180,6 +193,7 @@ class MainWindow(TemplateBaseClass):
         # Plot manager signals
         self.plot_manager.vline_dragged_signal.connect(self.on_vline_dragged)
         self.plot_manager.hline_dragged_signal.connect(self.on_hline_dragged)
+        self.plot_manager.curve_clicked_signal.connect(self.on_curve_clicked)
 
     def _update_channel_mode_ui(self):
         """
@@ -188,20 +202,33 @@ class MainWindow(TemplateBaseClass):
         """
         s = self.state
 
-        # Set the maximum value of the channel selector based on the two-channel state.
-        # This is the key fix for your issue.
+        # --- NEW: Logic for Oversampling Checkbox ---
+        # Oversampling is only possible on an even-numbered board (0, 2, etc.),
+        # requires more than one board, and cannot be used in two-channel mode.
+        can_oversample = (s.num_board > 1 and s.activeboard % 2 == 0 and not s.dotwochannel)
+        self.ui.oversampCheck.setEnabled(can_oversample)
+        if not can_oversample and self.ui.oversampCheck.isChecked():
+            # If oversampling becomes invalid, uncheck the box automatically
+            self.ui.oversampCheck.setChecked(False)
+
+        # --- NEW: Logic for Trigger Channel Dropdown ---
+        # Get the model item for "Channel 1" (which is at index 1)
+        chan1_item = self.ui.trigchan_comboBox.model().item(1)
+        if chan1_item:
+            # Only enable the "Channel 1" option if two-channel mode is active
+            chan1_item.setEnabled(s.dotwochannel)
+
+        # If not in two-channel mode, ensure "Channel 0" is selected
+        if not s.dotwochannel and self.ui.trigchan_comboBox.currentIndex() == 1:
+            self.ui.trigchan_comboBox.setCurrentIndex(0)
+
+        # --- Existing logic for chanBox ---
         if s.dotwochannel:
             self.ui.chanBox.setMaximum(s.num_chan_per_board - 1)
         else:
-            # If not in two-channel mode, force chanBox to 0 and set its maximum to 0.
             if self.ui.chanBox.value() != 0:
                 self.ui.chanBox.setValue(0)
             self.ui.chanBox.setMaximum(0)
-
-        # Also update the trigger channel dropdown
-        self.ui.trigchan_comboBox.setMaxVisibleItems(2 if s.dotwochannel else 1)
-        if not s.dotwochannel:
-            self.ui.trigchan_comboBox.setCurrentIndex(0)
 
     def open_socket(self):
         print("Starting SCPI socket thread...")
@@ -410,6 +437,59 @@ class MainWindow(TemplateBaseClass):
                 self.ui.offsetBox.stepDown()
         if event.key() == QtCore.Qt.Key_Left: self.time_slow()
         if event.key() == QtCore.Qt.Key_Right: self.time_fast()
+
+    def on_curve_clicked(self, channel_index):
+        """Slot for when a waveform on the plot is clicked."""
+        board = channel_index // self.state.num_chan_per_board
+        channel = channel_index % self.state.num_chan_per_board
+        self.ui.boardBox.setValue(board)
+        self.ui.chanBox.setValue(channel)
+        # select_channel is called automatically by the valueChanged signal
+
+    def toggle_pll_controls(self, checked):
+        """Shows or hides the manual PLL adjustment buttons."""
+        is_enabled = self.ui.pllBox.isEnabled()
+        self.ui.pllBox.setEnabled(not is_enabled)
+        for i in range(5):
+            getattr(self.ui, f"upposButton{i}").setEnabled(not is_enabled)
+            getattr(self.ui, f"downposButton{i}").setEnabled(not is_enabled)
+
+    def force_split_toggled(self, checked):
+        self.controller.force_split(self.state.activeboard, checked)
+
+    def force_switch_clocks_triggered(self):
+        self.controller.force_switch_clocks(self.state.activeboard)
+
+    # Slots for all the PLL phase buttons
+    def uppos(self):
+        self.controller.do_phase(self.state.activeboard, 0, 1, self.ui.pllBox.value())
+
+    def uppos1(self):
+        self.controller.do_phase(self.state.activeboard, 1, 1, self.ui.pllBox.value())
+
+    def uppos2(self):
+        self.controller.do_phase(self.state.activeboard, 2, 1, self.ui.pllBox.value())
+
+    def uppos3(self):
+        self.controller.do_phase(self.state.activeboard, 3, 1, self.ui.pllBox.value())
+
+    def uppos4(self):
+        self.controller.do_phase(self.state.activeboard, 4, 1, self.ui.pllBox.value())
+
+    def downpos(self):
+        self.controller.do_phase(self.state.activeboard, 0, 0, self.ui.pllBox.value())
+
+    def downpos1(self):
+        self.controller.do_phase(self.state.activeboard, 1, 0, self.ui.pllBox.value())
+
+    def downpos2(self):
+        self.controller.do_phase(self.state.activeboard, 2, 0, self.ui.pllBox.value())
+
+    def downpos3(self):
+        self.controller.do_phase(self.state.activeboard, 3, 0, self.ui.pllBox.value())
+
+    def downpos4(self):
+        self.controller.do_phase(self.state.activeboard, 4, 0, self.ui.pllBox.value())
 
     # #########################################################################
     # ## Slot Implementations (Callbacks for UI events)

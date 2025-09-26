@@ -345,6 +345,14 @@ class HardwareController:
             print("Verification failed!")
             return False, "Verification failed!"
 
+    def force_split(self, board_idx, is_split):
+        """Directly commands the clock splitter state."""
+        setsplit(self.usbs[board_idx], is_split)
+
+    def force_switch_clocks(self, board_idx):
+        """Directly commands a clock switch."""
+        switchclock(self.usbs[board_idx], board_idx)
+
     def do_leds(self, channel_colors):
         """
         Calculates and sends the correct RGB values to the LEDs on each board

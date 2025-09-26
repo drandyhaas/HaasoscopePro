@@ -20,6 +20,7 @@ class PlotManager(pg.QtCore.QObject):
     # Signals to notify MainWindow of user interaction with the plot
     vline_dragged_signal = pg.QtCore.Signal(float)
     hline_dragged_signal = pg.QtCore.Signal(float)
+    curve_clicked_signal = pg.QtCore.Signal(int)
 
     def __init__(self, ui, state):
         super().__init__()
@@ -41,6 +42,12 @@ class PlotManager(pg.QtCore.QObject):
         self.persist_timer = QtCore.QTimer()
         self.persist_timer.timeout.connect(self.update_persist_effect)
 
+    def _create_click_handler(self, channel_index):
+        """Creates a unique click handler function that remembers the channel index."""
+        def handler(curve_item):
+            self.curve_clicked_signal.emit(channel_index)
+        return handler
+
     def setup_plots(self):
         """Initializes the plot area, lines, pens, and axes."""
         self.plot.setBackground(QColor('black'))
@@ -56,6 +63,8 @@ class PlotManager(pg.QtCore.QObject):
             c = QColor.fromRgbF(*colors[i])
             pen = pg.mkPen(color=c)
             line = self.plot.plot(pen=pen, name=f"Channel {i}", skipFiniteCheck=True, connect="finite")
+            line.curve.setClickable(True)
+            line.curve.sigClicked.connect(self._create_click_handler(i))
             self.lines.append(line)
             self.linepens.append(pen)
 
