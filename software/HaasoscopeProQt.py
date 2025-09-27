@@ -11,8 +11,7 @@ from PyQt5.QtCore import Qt
 # Import the new main window and necessary hardware functions
 from main_window import MainWindow
 from usbs import connectdevices, orderusbs, tellfirstandlast, version
-from utils import clkout_ena
-from board import cleanup
+from board import cleanup, clkout_ena
 
 # --- Hardware Discovery and Initial Setup ---
 print("Searching for Haasoscope Pro boards...")

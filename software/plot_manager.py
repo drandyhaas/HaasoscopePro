@@ -9,9 +9,35 @@ from collections import deque
 import matplotlib.cm as cm
 from scipy.signal import resample
 from scipy.interpolate import interp1d
-from utils import add_secondary_axis
 from data_processor import find_crossing_distance
 import math
+
+
+# #############################################################################
+# Plotting Helper Function (Moved from utils.py)
+# #############################################################################
+
+def add_secondary_axis(plot_item, conversion_func, **axis_args):
+    """Adds a secondary y-axis that is dynamically linked by a conversion function."""
+    proxy_view = pg.ViewBox()
+    axis = plot_item.getAxis('right')
+    plot_item.scene().addItem(proxy_view)
+    axis.linkToView(proxy_view)
+    proxy_view.setXLink(plot_item)
+    axis.setLabel(**axis_args)
+
+    def update_proxy_view():
+        proxy_view.setGeometry(plot_item.getViewBox().sceneBoundingRect())
+        main_yrange = plot_item.getViewBox().viewRange()[1]
+        proxy_range = [conversion_func(y) for y in main_yrange]
+        proxy_view.setYRange(*proxy_range, padding=0)
+
+    plot_item.getViewBox().sigResized.connect(update_proxy_view)
+    plot_item.getViewBox().sigYRangeChanged.connect(update_proxy_view)
+
+    axis.update_function = update_proxy_view
+    return axis
+
 
 # #############################################################################
 # PlotManager Class

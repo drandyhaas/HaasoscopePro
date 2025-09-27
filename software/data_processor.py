@@ -4,9 +4,99 @@ import numpy as np
 import struct
 import warnings
 import math
-from scipy.signal import resample, butter, filtfilt
+from scipy.signal import resample, butter, filtfilt, find_peaks
 from scipy.optimize import curve_fit
-from utils import find_fundamental_frequency_scipy, format_freq, find_crossing_distance, fit_rise
+from scipy.fft import fft, fftfreq
+
+
+# #############################################################################
+# Data Processing Helper Functions (Moved from utils.py)
+# #############################################################################
+
+def fit_rise(x: np.ndarray, top: float, left: float, slope: float, bot: float) -> np.ndarray:
+    """A clipped linear ramp function for fitting rising/falling edges."""
+    val = slope * (x - left) + bot
+    in_bottom = (x <= left)
+    val[in_bottom] = bot
+    if slope != 0:
+        right = left + (top - bot) / slope
+        in_top = (x >= right)
+        val[in_top] = top
+    return val
+
+
+def find_fundamental_frequency_scipy(signal: np.ndarray, sampling_rate: float) -> float:
+    """Finds the dominant frequency in a signal using FFT and SciPy's find_peaks."""
+    if len(signal) < 2 or sampling_rate <= 0:
+        return 0.0
+    n = len(signal)
+    fft_values = fft(signal)
+    frequencies = fftfreq(n, 1 / sampling_rate)
+
+    positive_mask = frequencies > 0
+    if not np.any(positive_mask):
+        return 0.0
+
+    positive_freqs = frequencies[positive_mask]
+    positive_mags = np.abs(fft_values[positive_mask])
+
+    if not positive_mags.any():
+        return 0.0
+
+    # Find peaks that are at least 25% of the max peak height to filter noise
+    peak_indices, _ = find_peaks(positive_mags, height=np.max(positive_mags) / 4)
+    if not peak_indices.any():
+        return 0.0
+
+    # The fundamental is assumed to be the lowest-frequency, significant peak
+    return positive_freqs[peak_indices[0]]
+
+
+def format_freq(freq_hz: float, suffix="Hz") -> str:
+    """Formats a frequency in Hz to a string with appropriate units."""
+    if freq_hz is None or freq_hz < 1.0:
+        return f"{freq_hz:.2f} {suffix}"
+    if freq_hz < 1000:
+        return f"{freq_hz:.3f} {suffix}"
+    elif freq_hz < 1_000_000:
+        return f"{freq_hz / 1000:.3f} k{suffix}"
+    elif freq_hz < 1_000_000_000:
+        return f"{freq_hz / 1_000_000:.3f} M{suffix}"
+    else:
+        return f"{freq_hz / 1_000_000_000:.3f} G{suffix}"
+
+
+def find_crossing_distance(y_data, y_threshold, x_ref, x0=0.0, dx=1.0):
+    """Calculates the horizontal distance from a reference x-position to the closest threshold crossing."""
+    # Find all indices where the data crosses the threshold
+    crossings = np.where(np.diff(np.sign(y_data - y_threshold)))[0]
+    if crossings.size == 0:
+        return None
+
+    # Linearly interpolate to find the exact x-intersection for all crossings
+    y1 = y_data[crossings]
+    y2 = y_data[crossings + 1]
+    x1 = x0 + crossings * dx
+
+    # Avoid division by zero
+    delta_y = y2 - y1
+    valid_crossings = delta_y != 0
+    if not np.any(valid_crossings):
+        return None
+
+    fraction = (y_threshold - y1[valid_crossings]) / delta_y[valid_crossings]
+    all_x_intersects = x1[valid_crossings] + fraction * dx
+
+    # Find the intersection point that is closest to the reference x_ref
+    closest_idx = np.argmin(np.abs(all_x_intersects - x_ref))
+    closest_x_intersect = all_x_intersects[closest_idx]
+
+    return closest_x_intersect - x_ref
+
+
+# #############################################################################
+# DataProcessor Class
+# #############################################################################
 
 class DataProcessor:
     """Handles processing of raw data from the hardware."""
