@@ -234,6 +234,7 @@ class MainWindow(TemplateBaseClass):
         channel mode (Single, Two Channel, Oversampling).
         """
         s = self.state
+        if s.num_board<1: return
 
         # 1. Determine the CHECKED state of the oversampling box.
         #    The box should remain checked if the PAIR is in oversampling mode,
@@ -248,7 +249,6 @@ class MainWindow(TemplateBaseClass):
         can_change_oversampling = (s.num_board > 1 and s.activeboard % 2 == 0 and not s.dotwochannel[s.activeboard])
         self.ui.oversampCheck.setEnabled(can_change_oversampling)
 
-        # --- NEW: Logic for Trigger Channel Dropdown ---
         # Get the model item for "Channel 1" (which is at index 1)
         chan1_item = self.ui.trigchan_comboBox.model().item(1)
         if chan1_item:
@@ -259,7 +259,7 @@ class MainWindow(TemplateBaseClass):
         if not s.dotwochannel[s.activeboard] and self.ui.trigchan_comboBox.currentIndex() == 1:
             self.ui.trigchan_comboBox.setCurrentIndex(0)
 
-        # --- Existing logic for chanBox ---
+        # Existing logic for chanBox
         if s.dotwochannel[s.activeboard]:
             self.ui.chanBox.setMaximum(s.num_chan_per_board - 1)
         else:
@@ -267,7 +267,7 @@ class MainWindow(TemplateBaseClass):
                 self.ui.chanBox.setValue(0)
             self.ui.chanBox.setMaximum(0)
 
-        # --- NEW: Loop through all boards to set plot line visibility ---
+        # Loop through all boards to set plot line visibility
         for board_idx in range(s.num_board):
             # The index of the second channel on this board
             ch1_idx = board_idx * s.num_chan_per_board + 1
@@ -647,17 +647,16 @@ class MainWindow(TemplateBaseClass):
 
     def select_channel(self):
         """Called when board or channel selector is changed."""
-        self.state.activeboard = self.ui.boardBox.value()
-        self.state.selectedchannel = self.ui.chanBox.value()
+        s = self.state
+        if s.num_board<1: return
+        s.activeboard = self.ui.boardBox.value()
+        s.selectedchannel = self.ui.chanBox.value()
 
         # Update the "Two Channel" checkbox to reflect the state of the newly selected board
         self.ui.twochanCheck.setChecked(self.state.dotwochannel[self.state.activeboard])
 
         # This handles channel selector limits and other mode-dependent UI
         self._update_channel_mode_ui()
-
-        # Current state
-        s = self.state
 
         # Read the trigger state for the newly selected board
         is_ext = bool(s.doexttrig[s.activeboard])
