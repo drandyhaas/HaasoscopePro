@@ -14,15 +14,9 @@
    <string>HaasoscopeQt FFT</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QGridLayout" name="gridLayout">
-    <item row="0" column="0" colspan="2">
-     <widget class="PlotWidget" name="plot">
-      <property name="font">
-       <font>
-        <family>Arial</family>
-       </font>
-      </property>
-     </widget>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="PlotWidget" name="plot" native="true"/>
     </item>
    </layout>
   </widget>
@@ -32,7 +26,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuFile">
@@ -46,15 +40,12 @@
      <string>View</string>
     </property>
     <addaction name="actionLog_scale"/>
+    <addaction name="actionPeak_hold"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
   </widget>
-  <widget class="QStatusBar" name="statusBar">
-   <property name="autoFillBackground">
-    <bool>false</bool>
-   </property>
-  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
   <action name="actionTake_screenshot">
    <property name="text">
     <string>Take screenshot</string>
@@ -68,12 +59,21 @@
     <string>Log scale</string>
    </property>
   </action>
+  <action name="actionPeak_hold">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Peak hold</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
    <class>PlotWidget</class>
-   <extends>QGraphicsView</extends>
+   <extends>QWidget</extends>
    <header>pyqtgraph</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources/>
