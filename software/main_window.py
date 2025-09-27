@@ -99,7 +99,8 @@ class MainWindow(TemplateBaseClass):
         """A one-time function to sync the UI's visual state after the window has loaded."""
         # This function is called just after the main event loop starts.
         self.ui.rollingButton.setChecked(bool(self.state.isrolling))
-        self.ui.rollingButton.setText("Auto" if self.state.isrolling else "Normal")
+        self.ui.rollingButton.setText(" Auto " if self.state.isrolling else " Normal ")
+        self.ui.runButton.setText(" Run ")
         self.ui.actionPan_and_zoom.setChecked(False)
         self.plot_manager.set_pan_and_zoom(False)
 
@@ -878,7 +879,7 @@ class MainWindow(TemplateBaseClass):
         reply = QMessageBox.question(self, 'Confirmation', f'Update firmware on board {board} to mine?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.No: return
-        self.dostartstop()  # Pause
+        if not self.state.paused: self.dostartstop()  # Pause
         success, message = self.controller.update_firmware(board)
         QMessageBox.information(self, "Firmware Update", message)
         if success: self.ui.runButton.setEnabled(False)
@@ -888,7 +889,7 @@ class MainWindow(TemplateBaseClass):
         reply = QMessageBox.question(self, 'Confirmation', f'Verify firmware on board {board} matches mine?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.No: return
-        self.dostartstop()  # Pause
+        if not self.state.paused: self.dostartstop()  # Pause
         success, message = self.controller.update_firmware(board, verify_only=True)
         QMessageBox.information(self, "Firmware Verify", message)
 
