@@ -11,7 +11,8 @@ from PyQt5.QtCore import Qt
 # Import the new main window and necessary hardware functions
 from main_window import MainWindow
 from usbs import connectdevices, orderusbs, tellfirstandlast, version
-from board import clkout_ena, cleanup
+from utils import clkout_ena
+from board import cleanup
 
 # --- Hardware Discovery and Initial Setup ---
 print("Searching for Haasoscope Pro boards...")
@@ -29,13 +30,11 @@ if usbs:
         version(usbs[b])
 
         # Check for special beta device serial numbers
-        try:
-            index = str(usbs[b].serial).find("_v1.")
-            if index > -1:
-                usbs[b].beta = float(str(usbs[b].serial)[index + 2:index + 6])
-                print(f"Board {b} is a special beta device: v{usbs[b].beta}")
-        except Exception:
-            usbs[b].beta = 0.0  # Assign default if parsing fails
+        usbs[b].beta = 0.0  # Assign default
+        index = str(usbs[b].serial).find("_v1.")
+        if index > -1:
+            usbs[b].beta = float(str(usbs[b].serial)[index + 2:index + 6])
+            print(f"Board {b} is a special beta device: v{usbs[b].beta}")
 
 usbs = orderusbs(usbs)
 if len(usbs) > 1:
@@ -89,9 +88,10 @@ if __name__ == '__main__':
             win.close_socket()
             cleanup(usbs)
         sys.exit(1)
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        # Perform cleanup in case of any other crash
-        if win:
-            win.close()  # This will trigger the closeEvent for cleanup
-        sys.exit(1)
+
+    # except Exception as e:
+    #     print(f"An unexpected error occurred: {e}")
+    #     # Perform cleanup in case of any other crash
+    #     if win:
+    #         win.close()  # This will trigger the closeEvent for cleanup
+    #     sys.exit(1)
