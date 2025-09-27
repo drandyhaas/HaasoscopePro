@@ -193,7 +193,7 @@ class PlotManager(pg.QtCore.QObject):
             state.max_x = full_max_x
 
         self.plot.setLabel('bottom', f"Time ({state.units})")
-        self.plot.setRange(xRange=(state.min_x, state.max_x), yRange=(state.min_y, state.max_y), padding=0.00)
+        self.plot.setRange(xRange=(state.min_x, state.max_x), yRange=(state.min_y, state.max_y), padding=0.01)
 
         self.draw_trigger_lines()
 
@@ -324,7 +324,7 @@ class PlotManager(pg.QtCore.QObject):
         active_pen.setWidth(1)
         self.right_axis.setPen(active_pen)
         self.right_axis.setTextPen(color=active_pen.color())
-        self.right_axis.setLabel(text=f"Voltage Ch {state.selectedchannel}", units='V')
+        self.right_axis.setLabel(text=f"Voltage for Board {state.activeboard} Channel {state.selectedchannel}", units='V')
         self.right_axis.conversion_func = lambda val: val * state.VperD[state.activexychannel]
 
         tick_span = round(2 * 5 * state.VperD[state.activexychannel], 1)

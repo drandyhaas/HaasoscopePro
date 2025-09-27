@@ -712,7 +712,7 @@ class MainWindow(TemplateBaseClass):
                 s.min_x = full_width - view_width
 
             # Apply the new panned range to the plot
-            self.plot_manager.plot.setRange(xRange=(s.min_x, s.max_x), padding=0.00)
+            self.plot_manager.plot.setRange(xRange=(s.min_x, s.max_x), padding=0.01)
 
         else:  # Normal trigger adjust mode
             s.triggerpos = int(s.expect_samples * value / 10000.)
@@ -736,7 +736,7 @@ class MainWindow(TemplateBaseClass):
             # Shift the view range by that amount
             s.min_x -= drag_delta
             s.max_x -= drag_delta
-            self.plot_manager.plot.setRange(xRange=(s.min_x, s.max_x), padding=0.00)
+            self.plot_manager.plot.setRange(xRange=(s.min_x, s.max_x), padding=0.01)
 
             # Snap the trigger line back to its original (central) position
             self.plot_manager.draw_trigger_lines()
