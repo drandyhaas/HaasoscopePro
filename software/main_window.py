@@ -384,12 +384,13 @@ class MainWindow(TemplateBaseClass):
             # Loop through all possible channels
             for ch_idx in range(self.state.num_board * self.state.num_chan_per_board):
                 ch_name = f"CH{ch_idx + 1}"
+                board_idx = ch_idx // self.state.num_chan_per_board
 
                 # Update FFT if this channel is enabled
                 if self.state.fft_enabled.get(ch_name, False):
                     is_active = (ch_name == active_channel_name)
                     y_data = self.xydata[ch_idx][1]
-                    freq, mag = self.processor.calculate_fft(y_data)
+                    freq, mag = self.processor.calculate_fft(y_data, board_idx)
 
                     if freq is not None and len(freq) > 0:
                         max_freq_mhz = np.max(freq)
@@ -401,7 +402,8 @@ class MainWindow(TemplateBaseClass):
                             plot_x_data, xlabel = freq, 'Frequency (MHz)'
 
                         title = f'FFT of {ch_name}'
-                        self.fftui.update_plot(ch_name, plot_x_data, mag, title, xlabel, is_active)
+                        pen = self.plot_manager.linepens[ch_idx]  # Get the correct pen
+                        self.fftui.update_plot(ch_name, plot_x_data, mag, pen, title, xlabel, is_active)
                 else:
                     self.fftui.clear_plot(ch_name)
         # --- END: Multi-channel FFT processing ---
@@ -975,9 +977,6 @@ class MainWindow(TemplateBaseClass):
 
         if self.fftui is None:
             self.fftui = FFTWindow()
-            # self.fftui.window_changed.connect(self.set_fft_window_function)
-            # self.fftui.averaging_changed.connect(self.set_fft_averaging)
-            # self.fftui.averaging_reset.connect(self.reset_fft_averaging)
 
         should_show = any(self.state.fft_enabled.values())
         if should_show:

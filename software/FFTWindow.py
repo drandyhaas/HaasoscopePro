@@ -45,13 +45,7 @@ class FFTWindow(FFTTemplateBaseClass):
         self.user_panned_zoomed = False
         self.plot.sigRangeChanged.connect(self.on_view_changed)
 
-        # --- Multi-channel Plot Line Management ---
-        self.channel_pens = {
-            'CH1': pg.mkPen(color='#00FFFF', width=1.5),
-            'CH2': pg.mkPen(color='#FF00FF', width=1.5),
-            'CH3': pg.mkPen(color='#00FF00', width=1.5),
-            'CH4': pg.mkPen(color='#FFFF00', width=1.5)
-        }
+        # --- Plot Item Management ---
         self.fft_lines = {}  # Holds plot items for each channel: {'CH1': PlotDataItem, ...}
 
         # --- Analysis Plot Items ---
@@ -104,14 +98,13 @@ class FFTWindow(FFTTemplateBaseClass):
             line_to_remove = self.fft_lines.pop(channel_name)
             self.plot.removeItem(line_to_remove)
 
-    def update_plot(self, channel_name, x_data, y_data, title_text, xlabel_text, is_active_channel):
+    def update_plot(self, channel_name, x_data, y_data, pen, title_text, xlabel_text, is_active_channel):
         """
         Public method to update a channel's FFT plot.
         Advanced features are linked to the active channel.
         """
         # --- Multi-channel Trace Update ---
         if channel_name not in self.fft_lines:
-            pen = self.channel_pens.get(channel_name, pg.mkPen('w'))
             self.fft_lines[channel_name] = self.plot.plot(pen=pen)
 
         self.fft_lines[channel_name].setData(x_data, y_data)

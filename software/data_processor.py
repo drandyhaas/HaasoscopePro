@@ -254,16 +254,16 @@ class DataProcessor:
                 xy_data_array[board_idx * s.num_chan_per_board + i][0] -= s.distcorr[board_idx]
             s.totdistcorr[board_idx] += s.distcorr[board_idx]
 
-    def calculate_fft(self, y_data):
+    def calculate_fft(self, y_data, board_idx):
         """Calculates the FFT for a given channel's y-data."""
         n = len(y_data)
         if n < 2: return np.array([]), np.array([])
         k = np.arange(n)
 
         uspersample = self.state.downsamplefactor / self.state.samplerate / 1000.
-        if self.state.dointerleaved[self.state.activeboard]:
+        if self.state.dointerleaved[board_idx]:
             uspersample /= 2
-        elif self.state.dotwochannel[self.state.activeboard]:
+        elif self.state.dotwochannel[board_idx]:
             uspersample *= 2
 
         freq = (k / uspersample)[list(range(n // 2))] / n
