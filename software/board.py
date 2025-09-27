@@ -1,293 +1,306 @@
-import time, math
-from spi import *
-from utils import *
-from adf435x_core import *
+"""
+Provides high-level functions for configuring the Haasoscope Pro hardware,
+including the ADC, PLL synthesizer, amplifiers, and other peripherals.
 
-def adf4350(usb, freq, phase, r_counter=1, divided=FeedbackSelect.Divider, ref_doubler=False, ref_div2=True, themuxout=False, quiet=True):
-    print('ADF4350 being set to %0.2f MHz' % freq)
-    INT, MOD, FRAC, output_divider, band_select_clock_divider = (calculate_regs(
-        device_type=DeviceType.ADF4350, freq=freq, ref_freq=50.0,
+This module acts as the primary hardware abstraction layer, using lower-level
+modules like `spi.py` to execute commands.
+"""
+
+import time
+import math
+from typing import Union
+
+# Import dependencies
+from spi import spicommand, spicommand2, set_spi_mode
+from utils import reverse_bits, inttobytes, getbit, binprint
+from adf435x_core import (
+    calculate_regs, make_regs, DeviceType, FeedbackSelect, BandSelectClockMode,
+    PDPolarity, ClkDivMode, MuxOut, LDPinMode
+)
+
+
+def adf4350(usb, freq: float, phase: Union[int, None], r_counter: int = 1,
+            divided: int = FeedbackSelect.Divider, ref_doubler: bool = False,
+            ref_div2: bool = True, themuxout: bool = False, quiet: bool = True):
+    """
+    Configures the ADF4350 PLL synthesizer for a specific frequency.
+
+    Args:
+        usb: The USB device handle.
+        freq (float): The target frequency in MHz.
+        phase (int | None): The desired phase value (1-4095), or None for no phase adjust.
+        r_counter (int): The R-counter divider value.
+        divided (int): The feedback source for the PLL (from FeedbackSelect class).
+        themuxout (bool): If True, routes a debug signal to the MUXOUT pin.
+        quiet (bool): If True, suppresses debug print statements.
+    """
+    if not quiet:
+        print(f'ADF4350: Configuring for {freq:.2f} MHz')
+
+    INT, MOD, FRAC, output_divider, band_select_clock_divider = calculate_regs(
+        device_type=DeviceType.ADF4350,
+        freq=freq,
+        ref_freq=50.0,
         band_select_clock_mode=BandSelectClockMode.Low,
         feedback_select=divided,
-        r_counter=r_counter,  # needed when using FeedbackSelect.Divider (needed for phase resync?!)
-        ref_doubler=ref_doubler, ref_div2=ref_div2, enable_gcd=True))
-    if not quiet: print("INT", INT, "MOD", MOD, "FRAC", FRAC, "outdiv", output_divider, "bandselclkdiv", band_select_clock_divider)
+        r_counter=r_counter,
+        ref_doubler=ref_doubler,
+        ref_div2=ref_div2,
+        enable_gcd=True
+    )
+    if not quiet:
+        print(f"ADF4350 params: INT={INT}, MOD={MOD}, FRAC={FRAC}, out_div={output_divider}")
+
     regs = make_regs(
-        INT=INT, MOD=MOD, FRAC=FRAC, output_divider=output_divider,
-        band_select_clock_divider=band_select_clock_divider, r_counter=r_counter, ref_doubler=ref_doubler,
+        device_type=DeviceType.ADF4350,
+        INT=INT, MOD=MOD, FRAC=FRAC,
+        output_divider=output_divider,
+        band_select_clock_divider=band_select_clock_divider,
+        r_counter=r_counter,
+        ref_doubler=ref_doubler,
         ref_div_2=ref_div2,
-        device_type=DeviceType.ADF4350, phase_value=phase, mux_out=themuxout, charge_pump_current=2.50,
-        feedback_select=divided, pd_polarity=PDPolarity.Positive, prescaler='4/5',
+        phase_value=phase,
+        mux_out=int(themuxout),  # Note: Original code uses bool as int for mux_out
+        charge_pump_current=2.50,
+        feedback_select=divided,
+        pd_polarity=PDPolarity.Positive,
+        prescaler='4/5',
         band_select_clock_mode=BandSelectClockMode.Low,
-        clk_div_mode=ClkDivMode.ResyncEnable, clock_divider_value=1000, csr=False,
-        aux_output_enable=False, aux_output_power=-4.0, output_enable=True, output_power=-4.0)  # (-4,-1,2,5)
-    # values can also be computed using free Analog Devices ADF435x Software:
-    # https://www.analog.com/en/resources/evaluation-hardware-and-software/evaluation-boards-kits/eval-adf4351.html#eb-relatedsoftware
+        clk_div_mode=ClkDivMode.ResyncEnable,
+        clock_divider_value=1000,
+        output_power=5
+    )
+
     set_spi_mode(usb, 0)
     for r in reversed(range(len(regs))):
-        # regs[2]=0x5004E42 #to override from ADF435x software
-        if not quiet: print("adf4350 reg", r, binprint(regs[r]), hex(regs[r]))
+        if not quiet:
+            print(f"ADF4350 Reg {r}: {hex(regs[r])}")
         fourbytes = inttobytes(regs[r])
-        # for i in range(4): print(binprint(fourbytes[i]))
-        spicommand(usb, "ADF4350 Reg " + str(r), fourbytes[3], fourbytes[2], fourbytes[1], False, fourth=fourbytes[0],
-                   cs=3, nbyte=4)  # was cs=2 on alpha board v1.11
+        spicommand(usb, f"ADF4350 Reg {r}", fourbytes[3], fourbytes[2], fourbytes[1], False,
+                   fourth=fourbytes[0], cs=3, nbyte=4)
     set_spi_mode(usb, 0)
 
-def swapinputs(usb,doswap,insetup=False):
-    if not insetup:
-        spicommand(usb, "LVDS_EN", 0x02, 0x00, 0x00, False)  # disable LVDS interface
-        spicommand(usb, "CAL_EN", 0x00, 0x61, 0x00, False)  # disable calibration
-    if doswap: spicommand(usb, "INPUT_MUX", 0x00, 0x60, 0x12, False)  # swap inputs
-    else: spicommand(usb, "INPUT_MUX", 0x00, 0x60, 0x01, False)  # unswap inputs
-    if not insetup:
-        spicommand(usb, "CAL_EN", 0x00, 0x61, 0x01, False)  # enable calibration
-        spicommand(usb, "LVDS_EN", 0x02, 0x00, 0x01, False)  # enable LVDS interface
 
-def setupboard(usb, dopattern, twochannel, dooverrange, do1v=False):
-    setfan(usb, 1)
-
+def setupboard(usb, dopattern: int, twochannel: bool, dooverrange: bool, do1v: bool = False) -> int:
+    """
+    Performs the initial configuration of the ADC and front-end amplifiers.
+    Returns 0 on success, non-zero on failure.
+    """
+    setfan(usb, True)
     set_spi_mode(usb, 0)
-    spicommand(usb, "DEVICE_CONFIG", 0x00, 0x02, 0x00, False)  # power up
-    # spicommand(usb, "DEVICE_CONFIG", 0x00, 0x02, 0x03, False) # power down
-    res = spicommand2(usb, "VENDOR", 0x00, 0x0c, 0x00, 0x00, True)
-    if res[0] != 0x51:
-        print("Bad read vendor from adc!")
+
+    # --- Power-up and Verification ---
+    spicommand(usb, "DEVICE_CONFIG", 0x00, 0x02, 0x00, False)  # Power up ADC
+    res = spicommand2(usb, "VENDOR_ID", 0x00, 0x0c, 0, 0, True)
+    if res is None or res[0] != 0x51:
+        print("Error: Could not read correct Vendor ID from ADC!")
         return 1
-    spicommand(usb, "LVDS_EN", 0x02, 0x00, 0x00, False)  # disable LVDS interface
-    spicommand(usb, "CAL_EN", 0x00, 0x61, 0x00, False)  # disable calibration
 
+    # --- ADC and LVDS Configuration ---
+    spicommand(usb, "LVDS_EN", 0x02, 0x00, 0x00, False)
+    spicommand(usb, "CAL_EN", 0x00, 0x61, 0x00, False)
     if twochannel:
-        spicommand(usb, "LMODE", 0x02, 0x01, 0x03, False)  # LVDS mode: aligned, demux, dual channel, 12-bit
-        # spicommand("LMODE", 0x02, 0x01, 0x01, False)  # LVDS mode: staggered, demux, dual channel, 12-bit
+        spicommand(usb, "LMODE", 0x02, 0x01, 0x03, False)  # Dual channel
     else:
-        spicommand(usb, "LMODE", 0x02, 0x01, 0x07, False)  # LVDS mode: aligned, demux, single channel, 12-bit
-        # spicommand(usb, "LMODE", 0x02, 0x01, 0x37, False)  # LVDS mode: aligned, demux, single channel, 8-bit
-        # spicommand(usb, "LMODE", 0x02, 0x01, 0x05, False)  # LVDS mode: staggered, demux, single channel, 12-bit
+        spicommand(usb, "LMODE", 0x02, 0x01, 0x07, False)  # Single channel
+    spicommand(usb, "LVDS_SWING", 0x00, 0x48, 0x00, False)  # High swing
+    spicommand(usb, "LCTRL", 0x02, 0x04, 0x0a, False)  # 2's complement
+    swapinputs(usb, False, insetup=True)  # Default to un-swapped inputs
+    spicommand(usb, "TAD", 0x02, 0xB6, 0, False)  # Default TAD (ADC timing)
 
-    spicommand(usb, "LVDS_SWING", 0x00, 0x48, 0x00, False)  # high swing mode
-    # spicommand(usb, "LVDS_SWING", 0x00, 0x48, 0x01, False)  #low swing mode
-
-    spicommand(usb, "LCTRL", 0x02, 0x04, 0x0a, False)  # use LSYNC_N (software), 2's complement
-    # spicommand(usb, "LCTRL", 0x02, 0x04, 0x08, False)  # use LSYNC_N (software), offset binary
-
-    swapinputs(usb,False, True)
-
-    # spicommand(usb, "TAD", 0x02, 0xB7, 0x01, False)  # invert clk
-    spicommand(usb, "TAD", 0x02, 0xB7, 0x00, False)  # don't invert clk
-
-    tad=0
-    spicommand(usb, "TAD", 0x02, 0xB6, tad, False)  # adjust TAD (time of ADC relative to clk)
-
+    # --- ADC Full-Scale Range ---
     if do1v:
-        spicommand2(usb, "FS_RANGE A",0x00,0x30,0xff,0xff,False)  # adjust full scale ADC range 1V for input A
-        spicommand2(usb, "FS_RANGE B",0x00,0x32,0xff,0xff,False)  # adjust full scale ADC range 1V for input B
+        spicommand2(usb, "FS_RANGE A", 0x00, 0x30, 0xff, 0xff, False)  # 1V range
+        spicommand2(usb, "FS_RANGE B", 0x00, 0x32, 0xff, 0xff, False)
     else:
-        spicommand2(usb, "FS_RANGE A",0x00,0x30,0xa0,0x00,False)  # adjust full scale ADC range 800mV for input A
-        spicommand2(usb, "FS_RANGE B",0x00,0x32,0xa0,0x00,False)  # adjust full scale ADC range 800mV for input B
+        spicommand2(usb, "FS_RANGE A", 0x00, 0x30, 0xa0, 0x00, False)  # 800mV range
+        spicommand2(usb, "FS_RANGE B", 0x00, 0x32, 0xa0, 0x00, False)
 
-    if dooverrange:
-        spicommand(usb, "OVR_CFG", 0x02, 0x13, 0x0f, False)  # overrange on
-        spicommand(usb, "OVR_T0", 0x02, 0x11, 0xf2, False)  # overrange threshold 0
-        spicommand(usb, "OVR_T1", 0x02, 0x12, 0xab, False)  # overrange threshold 1
-    else:
-        spicommand(usb, "OVR_CFG", 0x02, 0x13, 0x07, False)  # overrange off
+    # --- Finalization and Sync ---
+    spicommand(usb, "CAL_EN", 0x00, 0x61, 0x01, False)
+    spicommand(usb, "LVDS_EN", 0x02, 0x00, 0x01, False)
+    spicommand(usb, "LSYNC_N", 0x02, 0x03, 0x00, False)  # Assert LSYNC
+    spicommand(usb, "LSYNC_N", 0x02, 0x03, 0x01, False)  # De-assert LSYNC
 
-    if dopattern:
-        spicommand(usb, "PAT_SEL", 0x02, 0x05, 0x11, False)  # test pattern
-        usrval = 0x00
-        if dopattern==1:
-            spicommand2(usb, "UPAT0", 0x01, 0x80, usrval, usrval, False)  # set pattern sample 0
-            spicommand2(usb, "UPAT1", 0x01, 0x82, usrval, usrval+1, False)  # set pattern sample 1
-            spicommand2(usb, "UPAT2", 0x01, 0x84, usrval, usrval+2, False)  # set pattern sample 2
-            spicommand2(usb, "UPAT3", 0x01, 0x86, usrval, usrval+4, False)  # set pattern sample 3
-            spicommand2(usb, "UPAT4", 0x01, 0x88, usrval, usrval+8, False)  # set pattern sample 4
-            spicommand2(usb, "UPAT5", 0x01, 0x8a, usrval, usrval+16, False)  # set pattern sample 5
-            spicommand2(usb, "UPAT6", 0x01, 0x8c, usrval, usrval+32, False)  # set pattern sample 6
-            spicommand2(usb, "UPAT7", 0x01, 0x8e, usrval, usrval+64, False)  # set pattern sample 7
-        if dopattern==2:
-            spicommand2(usb, "UPAT0", 0x01, 0x80, usrval, usrval, False)  # set pattern sample 0
-            spicommand2(usb, "UPAT1", 0x01, 0x82, usrval+1, usrval, False)  # set pattern sample 1
-            spicommand2(usb, "UPAT2", 0x01, 0x84, usrval, usrval, False)  # set pattern sample 2
-            spicommand2(usb, "UPAT3", 0x01, 0x86, usrval+2, usrval, False)  # set pattern sample 3
-            spicommand2(usb, "UPAT4", 0x01, 0x88, usrval, usrval, False)  # set pattern sample 4
-            spicommand2(usb, "UPAT5", 0x01, 0x8a, usrval+3, usrval, False)  # set pattern sample 5
-            spicommand2(usb, "UPAT6", 0x01, 0x8c, usrval, usrval, False)  # set pattern sample 6
-            spicommand2(usb, "UPAT7", 0x01, 0x8e, usrval+4, usrval, False)  # set pattern sample 7
-        if dopattern==3:
-            spicommand2(usb, "UPAT0", 0x01, 0x80, usrval+0x00, usrval+0x00, False)  # set pattern sample 0
-            spicommand2(usb, "UPAT1", 0x01, 0x82, usrval+0x01, usrval+0x01, False)  # set pattern sample 1
-            spicommand2(usb, "UPAT2", 0x01, 0x84, usrval+0x01, usrval+0x03, False)  # set pattern sample 2
-            spicommand2(usb, "UPAT3", 0x01, 0x86, usrval+0x03, usrval+0x07, False)  # set pattern sample 3
-            spicommand2(usb, "UPAT4", 0x01, 0x88, usrval+0x03, usrval+0x0f, False)  # set pattern sample 4
-            spicommand2(usb, "UPAT5", 0x01, 0x8a, usrval+0x07, usrval+0x7f, False)  # set pattern sample 5
-            spicommand2(usb, "UPAT6", 0x01, 0x8c, usrval+0x07, usrval+0xff, False)  # set pattern sample 6
-            spicommand2(usb, "UPAT7", 0x01, 0x8e, usrval+0x08, usrval, False)  # set pattern sample 7
-        if dopattern==4:
-            spicommand2(usb, "UPAT0", 0x01, 0x80, usrval+0x00, usrval+0x00, False)  # set pattern sample 0
-            spicommand2(usb, "UPAT1", 0x01, 0x82, usrval+0x0f, usrval+0xff, False)  # set pattern sample 1
-            spicommand2(usb, "UPAT2", 0x01, 0x84, usrval+0x00, usrval+0x00, False)  # set pattern sample 2
-            spicommand2(usb, "UPAT3", 0x01, 0x86, usrval+0x0f, usrval+0xff, False)  # set pattern sample 3
-            spicommand2(usb, "UPAT4", 0x01, 0x88, usrval+0x00, usrval+0x00, False)  # set pattern sample 4
-            spicommand2(usb, "UPAT5", 0x01, 0x8a, usrval+0x0f, usrval+0xff, False)  # set pattern sample 5
-            spicommand2(usb, "UPAT6", 0x01, 0x8c, usrval+0x00, usrval+0x00, False)  # set pattern sample 6
-            spicommand2(usb, "UPAT7", 0x01, 0x8e, usrval+0x0f, usrval+0xff, False)  # set pattern sample 7
-        # spicommand(usb, "UPAT_CTRL", 0x01, 0x90, 0x0e, False)  # set lane pattern to user, invert a bit of B C D
-        spicommand(usb, "UPAT_CTRL", 0x01, 0x90, 0x00, False)  # set lane pattern to user
-    else:
-        spicommand(usb, "PAT_SEL", 0x02, 0x05, 0x02, False)  # normal ADC data
-        spicommand(usb, "UPAT_CTRL", 0x01, 0x90, 0x1e, False)  # set lane pattern to default
-
-    spicommand(usb, "CAL_EN", 0x00, 0x61, 0x01, False)  # enable calibration
-    spicommand(usb, "LVDS_EN", 0x02, 0x00, 0x01, False)  # enable LVDS interface
-    spicommand(usb, "LSYNC_N", 0x02, 0x03, 0x00, False)  # assert ~sync signal
-    spicommand(usb, "LSYNC_N", 0x02, 0x03, 0x01, False)  # deassert ~sync signal
-    # spicommand(usb, "CAL_SOFT_TRIG", 0x00, 0x6c, 0x00, False)
-    # spicommand(usb, "CAL_SOFT_TRIG", 0x00, 0x6c, 0x01, False)
-
-    set_spi_mode(usb, 0)
-    res = spicommand(usb, "Amp Rev ID", 0x00, 0x00, 0x00, True, cs=1, nbyte=2)
-    if res[0] != 0x03:
-        print("Bad read rev from amp 1!")
-        return 2
-    res = spicommand(usb, "Amp Prod ID", 0x01, 0x00, 0x00, True, cs=1, nbyte=2)
-    if res[0] != 0x00:
-        print("Bad read prod from amp 1!")
-        return 2
-    res = spicommand(usb, "Amp Rev ID", 0x00, 0x00, 0x00, True, cs=2, nbyte=2)
-    if res[0] != 0x03:
-        print("Bad read rev from amp 2!")
-        return 2
-    res = spicommand(usb, "Amp Prod ID", 0x01, 0x00, 0x00, True, cs=2, nbyte=2)
-    if res[0] != 0x00:
-        print("Bad read prod from amp 2!")
-        return 2
-
-    set_spi_mode(usb, 1)
+    # --- Front-End Initialization ---
+    set_spi_mode(usb, 1)  # Set SPI mode for DAC
     spicommand(usb, "DAC ref on", 0x38, 0xff, 0xff, False, cs=4)
     spicommand(usb, "DAC gain 1", 0x02, 0xff, 0xff, False, cs=4)
-    set_spi_mode(usb, 0)
-    dooffset(usb, 0, 0, 1,False)
+    set_spi_mode(usb, 0)  # Return to default SPI mode
+    dooffset(usb, 0, 0, 1, False)
     dooffset(usb, 1, 0, 1, False)
     setgain(usb, 0, 0, False)
     setgain(usb, 1, 0, False)
+
     return 0
 
-def setgain(usb, chan, value, doswap):
-    set_spi_mode(usb, 0)
-    # 00 to 20 is 26 to -6 dB, 0x1a is no gain
-    if doswap: chan = (chan+1) %2
-    if chan == 0: spicommand(usb, "Amp Gain 0", 0x02, 0x00, 26 - value, False, cs=2, nbyte=2, quiet=True)
-    if chan == 1: spicommand(usb, "Amp Gain 1", 0x02, 0x00, 26 - value, False, cs=1, nbyte=2, quiet=True)
 
-def dooffset(usb, chan, val, scaling, doswap):
+def setgain(usb, chan: int, value: int, doswap: bool):
+    """Sets the gain for one of the front-end variable gain amplifiers."""
+    set_spi_mode(usb, 0)
+    if doswap: chan = (chan + 1) % 2
+    cs = 2 if chan == 0 else 1
+    # 26 is 0dB gain. Value is dB, so 26-value is the register setting.
+    spicommand(usb, f"Amp Gain {chan}", 0x02, 0x00, 26 - value, False, cs=cs, nbyte=2, quiet=True)
+
+
+def dooffset(usb, chan: int, val: int, scaling: float, doswap: bool) -> bool:
+    """Sets the DC offset for a channel via the DAC."""
     set_spi_mode(usb, 1)
-    #if doswap: val= -val
-    dacval = int((pow(2, 16) - 1) * (val *scaling/ 2 + 500) / 1000)
-    #print("dacval is", dacval,"and doswap is",doswap,"and val is",val)
-    ret = False
+    dacval = int((pow(2, 16) - 1) * (val * scaling / 2 + 500) / 1000)
     if 0 < dacval < pow(2, 16):
-        ret = True
         if doswap: chan = (chan + 1) % 2
-        if chan == 1: spicommand(usb, "DAC 1 value", 0x18, dacval >> 8, dacval % 256, False, cs=4, quiet=True)
-        if chan == 0: spicommand(usb, "DAC 2 value", 0x19, dacval >> 8, dacval % 256, False, cs=4, quiet=True)
+        dac_addr = 0x19 if chan == 0 else 0x18
+        spicommand(usb, f"DAC {chan} value", dac_addr, dacval >> 8, dacval & 0xFF, False, cs=4, quiet=True)
+        set_spi_mode(usb, 0)
+        return True
     set_spi_mode(usb, 0)
-    return ret
+    return False
 
-def clockswitch(usb, board, quiet):
-    usb.send(bytes([7, 0, 0, 0, 99, 99, 99, 99]))
-    usb.recv(4)
-    return clockused(usb, board, quiet)
 
-def clockused(usb, board, quiet):
+def clockused(usb, board: int, quiet: bool) -> int:
+    """Checks if the board is locked to its internal clock (0) or an external clock (1)."""
     usb.send(bytes([2, 5, 0, 0, 99, 99, 99, 99]))
     clockinfo = usb.recv(4)
-    if not quiet: print("Clockinfo for board", board, binprint(clockinfo[1]), binprint(clockinfo[0]))
+    if not quiet: print(f"Clockinfo for board {board}: {binprint(clockinfo[1])} {binprint(clockinfo[0])}")
+
     if getbit(clockinfo[1], 1) and not getbit(clockinfo[1], 3):
-        if not quiet: print("Board", board, "locked to ext board")
+        if not quiet: print(f"Board {board} locked to external board")
         return 1
     else:
-        if not quiet: print("Board", board, "locked to internal clock")
+        if not quiet: print(f"Board {board} locked to internal clock")
         return 0
 
-def switchclock(usb, board):
-    clockswitch(usb, board, True)
-    clockswitch(usb, board, False)
 
-def setchanimpedance(usb, chan, onemeg, doswap):
+def switchclock(usb, board: int):
+    """Toggles the clock source and checks the new status."""
+    usb.send(bytes([7, 0, 0, 0, 99, 99, 99, 99]))
+    usb.recv(4)
+    return clockused(usb, board, quiet=False)
+
+
+def setchanimpedance(usb, chan: int, onemeg: bool, doswap: bool):
+    """Sets the input impedance for a channel (True for 1M Ohm, False for 50 Ohm)."""
     if doswap: chan = (chan + 1) % 2
-    if chan == 0: controlbit = 0
-    elif chan == 1: controlbit = 4
-    else: return
-    usb.send(bytes([10, controlbit, onemeg, 0, 0, 0, 0, 0]))
+    controlbit = 0 if chan == 0 else 4
+    usb.send(bytes([10, controlbit, int(onemeg), 0, 0, 0, 0, 0]))
     usb.recv(4)
-    #print("1M for chan", chan, onemeg)
 
-def setchanacdc(usb, chan, ac, doswap):
+
+def setchanacdc(usb, chan: int, ac: bool, doswap: bool):
+    """Sets the input coupling for a channel (True for AC, False for DC)."""
     if doswap: chan = (chan + 1) % 2
-    if chan == 0: controlbit = 1
-    elif chan == 1: controlbit = 5
-    else: return
-    usb.send(bytes([10, controlbit, not ac, 0, 0, 0, 0, 0]))
+    controlbit = 1 if chan == 0 else 5
+    usb.send(bytes([10, controlbit, int(not ac), 0, 0, 0, 0, 0]))
     usb.recv(4)
-    #print("AC for chan", chan, ac)
 
-def setchanatt(usb, chan, att, doswap):
+
+def setchanatt(usb, chan: int, att: bool, doswap: bool):
+    """Enables or disables the front-end attenuator/filter."""
     if doswap: chan = (chan + 1) % 2
-    if chan == 0: controlbit = 2
-    elif chan == 1: controlbit = 6
-    else: return
-    usb.send(bytes([10, controlbit, att, 0, 0, 0, 0, 0]))
+    controlbit = 2 if chan == 0 else 6
+    usb.send(bytes([10, controlbit, int(att), 0, 0, 0, 0, 0]))
     usb.recv(4)
-    #print("Att for chan", chan, att)
 
-def setsplit(usb, split):
-    controlbit = 7
-    usb.send(bytes([10, controlbit, split, 0, 0, 0, 0, 0]))
+
+def setsplit(usb, split: bool):
+    """Enables or disables the clock splitter for oversampling."""
+    usb.send(bytes([10, 7, int(split), 0, 0, 0, 0, 0]))
     usb.recv(4)
-    #print("Split", split)
 
-def boardinbits(usb):
-    usb.send(bytes([2, 1, 0, 100, 100, 100, 100, 100]))  # get board in
+
+def swapinputs(usb, doswap: bool, insetup: bool = False):
+    """Swaps the physical inputs for Channels A and B."""
+    if not insetup:
+        spicommand(usb, "LVDS_EN", 0x02, 0x00, 0x00, False)
+        spicommand(usb, "CAL_EN", 0x00, 0x61, 0x00, False)
+
+    spicommand(usb, "INPUT_MUX", 0x00, 0x60, 0x12 if doswap else 0x01, False)
+
+    if not insetup:
+        spicommand(usb, "CAL_EN", 0x00, 0x61, 0x01, False)
+        spicommand(usb, "LVDS_EN", 0x02, 0x00, 0x01, False)
+
+
+def boardinbits(usb) -> int:
+    """Reads the raw digital input status byte from the board (e.g., for PLL lock)."""
+    usb.send(bytes([2, 1, 0, 100, 100, 100, 100, 100]))
     res = usb.recv(4)
-    #print("Board in bits", res[0], binprint(res[0]))
-    return res[0]
+    return res[0] if res and len(res) >= 1 else 0
 
-def setfan(usb,fanon, quiet=True):
-    usb.send(bytes([2, 6, fanon, 100, 100, 100, 100, 100]))  # set / get fan status
+
+def setfan(usb, fanon: bool, quiet: bool = True):
+    """Turns the cooling fan on or off."""
+    usb.send(bytes([2, 6, int(fanon), 100, 100, 100, 100, 100]))
     res = usb.recv(4)
-    if not quiet: print("Set fan", fanon, "and it was",res[0])
+    if not quiet: print(f"Set fan {int(fanon)}, status was {res[0]}")
+
+
+def send_leds(usb, r1, g1, b1, r2, g2, b2):
+    """Sends RGB values to the two front-panel LEDs."""
+    rw, gw, bw = 0.3, 0.4, 0.2
+    r1, g1, b1 = reverse_bits(int(r1 * rw)), reverse_bits(int(g1 * gw)), reverse_bits(int(b1 * bw))
+    r2, g2, b2 = reverse_bits(int(r2 * rw)), reverse_bits(int(g2 * gw)), reverse_bits(int(b2 * bw))
+    # The LED controller requires two commands to latch the value
+    for _ in range(2):
+        usb.send(bytes([11, 1, g1, r1, b1, g2, r2, b2]));
+        usb.recv(4);
+        time.sleep(.001)
+        usb.send(bytes([11, 0, g1, r1, b1, g2, r2, b2]));
+        usb.recv(4);
+        time.sleep(.001)
+
+
+def auxoutselector(usb, val: int, doprint: bool = False):
+    """Selects the signal to route to the auxiliary SMA output."""
+    usb.send(bytes([2, 10, val, 0, 99, 99, 99, 99]))
+    res = usb.recv(4)
+    if doprint: print(f"auxoutselector now {val}, was {res[0]}")
+
+
+def clkout_ena(usb, en: bool, doprint: bool = True):
+    """Enables or disables the LVDS clock output for daisy-chaining boards."""
+    usb.send(bytes([2, 9, int(en), 0, 99, 99, 99, 99]))
+    res = usb.recv(4)
+    if doprint: print(f"clkout_ena now {int(en)}, was {res[0]}")
+
+
+def gettemps(usb, retadcval: bool = False, retTboard: bool = False) -> Union[str, float]:
+    """Reads temperatures from the ADC die and a board thermistor."""
+    set_spi_mode(usb, 0)
+
+    # Read ADC die temperature sensor
+    spicommand(usb, "ADC Temp Conv", 0x00, 0x00, 0, True, cs=6, nbyte=2, quiet=True)  # Dummy
+    slowdac1 = spicommand(usb, "ADC Temp Read", 0x00, 0x00, 0, True, cs=6, nbyte=2, quiet=True)
+    if not slowdac1 or len(slowdac1) < 2: return "Temp Read Error"
+
+    slowdac1_val = (256 * slowdac1[1] + slowdac1[0])
+    slowdac1_mv = slowdac1_val * 3300 / pow(2, 12) / 4.0
+    adc_temp = (750 - slowdac1_mv) / 1.5
+    if retadcval: return adc_temp
+
+    # Read board thermistor
+    spicommand(usb, "Board Temp Conv", 0x08, 0x00, 0, True, cs=6, nbyte=2, quiet=True)  # Dummy
+    slowdac2 = spicommand(usb, "Board Temp Read", 0x08, 0x00, 0, True, cs=6, nbyte=2, quiet=True)
+    if not slowdac2 or len(slowdac2) < 2: return "Temp Read Error"
+
+    slowdac2_mv = (256 * slowdac2[1] + slowdac2[0]) * 3300 / pow(2, 12) / 1.1
+    if slowdac2_mv == 0: return "Temp Read Error"
+
+    r_board = 10000 * (3300 / slowdac2_mv - 1)
+    if r_board <= 0: return "Temp Read Error"
+
+    # Steinhart-Hart equation for thermistor
+    t0, beta = 273.15 + 25, 3380.0
+    t_board = 1.0 / (1.0 / t0 - math.log(r_board / 10000.0) / beta) - 273.15 - 10
+    if retTboard: return t_board
+
+    return f"Temps (ADC, board): {adc_temp:.1f}\u00b0C, {t_board:.1f}\u00b0C"
+
 
 def cleanup(usb):
+    """Powers down the board safely."""
     set_spi_mode(usb, 0)
-    spicommand(usb, "DEVICE_CONFIG", 0x00, 0x02, 0x03, False)  # power down
-    setfan(usb,0)
-    send_leds(usb, 50,35,50,50,35,50)
-    return 1
-
-def getoverrange(usb):
-    if dooverrange:
-        usb.send(bytes([2, 2, 0, 100, 100, 100, 100, 100]))  # get overrange 0
-        res = usb.recv(4)
-        print("Overrange0", res[3], res[2], res[1], res[0])
-
-def gettemps(usb, retadcval=False, retTboard=False):
-    set_spi_mode(usb, 0)
-    spicommand(usb, "SlowDAC1", 0x00, 0x00, 0x00, True, cs=6, nbyte=2,
-               quiet=True)  # first conversion may be for old input
-    slowdac1 = spicommand(usb, "SlowDAC1", 0x00, 0x00, 0x00, True, cs=6, nbyte=2, quiet=True)
-    slowdac1amp = 4.0
-    slowdac1V = (256 * slowdac1[1] + slowdac1[0]) * 3300 / pow(2, 12) / slowdac1amp
-    adctemp = (750-slowdac1V)/1.5
-    if retadcval: return adctemp
-    spicommand(usb, "SlowDAC2", 0x08, 0x00, 0x00, True, cs=6, nbyte=2,
-               quiet=True)  # first conversion may be for old input
-    slowdac2 = spicommand(usb, "SlowDAC2", 0x08, 0x00, 0x00, True, cs=6, nbyte=2, quiet=True)
-    slowdac2amp = 1.1 # 2.0 on older board
-    slowdac2V = (256 * slowdac2[1] + slowdac2[0]) * 3300 / pow(2, 12) / slowdac2amp
-    Rboard = 10000*(3300/slowdac2V-1)
-    T0 = 273 + 25
-    beta = 3380 # for NCP18XH103F03RB
-    Tboard = 1/( 1/T0 - math.log(Rboard/10000)/beta ) - 273 - 10
-    if retTboard: return Tboard
-    return "Temps (ADC, board): "+str(round(adctemp, 1))+"\u00b0C, " + str(round(Tboard, 2))+"\u00b0C"
-
+    spicommand(usb, "DEVICE_CONFIG", 0x00, 0x02, 0x03, False)
+    setfan(usb, False)
+    send_leds(usb, 50, 35, 50, 50, 35, 50)

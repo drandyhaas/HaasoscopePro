@@ -5,6 +5,7 @@ import os
 from usbs import *
 from board import *
 from pyqtgraph.Qt import QtCore
+from utils import find_longest_zero_stretch
 
 class HardwareControllerSignals(QtCore.QObject):
     critical_error_occurred = QtCore.pyqtSignal(str, str) # title, message

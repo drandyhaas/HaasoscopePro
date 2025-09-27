@@ -18,7 +18,8 @@ from data_recorder import DataRecorder
 # Import remaining dependencies
 from FFTWindow import FFTWindow
 from SCPIsocket import hspro_socket
-from board import get_pwd, setupboard, gettemps
+from board import setupboard, gettemps
+from utils import get_pwd
 import ftd2xx
 
 WindowTemplate, TemplateBaseClass = loadUiType(get_pwd() + "/HaasoscopePro.ui")
@@ -1084,9 +1085,14 @@ class MainWindow(TemplateBaseClass):
         self.set_channel_frame()
 
     def extsmatrig_changed(self, checked):
+        """
+        Handles the 'External SMA Trigger' checkbox.
+        This only updates the internal state; no immediate hardware command is sent.
+        """
         board = self.state.activeboard
         self.state.doextsmatrig[board] = bool(checked)
-        self.controller.set_extsmatrig(board, bool(checked))
+
+        # Update the UI to prevent conflicting trigger sources from being selected
         self.ui.exttrigCheck.setEnabled(not bool(checked))
         self.set_channel_frame()
 
