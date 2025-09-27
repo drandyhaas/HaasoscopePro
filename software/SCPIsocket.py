@@ -1,156 +1,161 @@
 import socket
 import struct
-import random
-import math
 import time
-
-def split_bytearray(data, delimiter):
-    split_list = []
-    start = 0
-    while True:
-        try:
-            index = data.index(delimiter, start)
-            split_list.append(data[start:index])
-            start = index + len(delimiter)
-        except ValueError:
-            split_list.append(data[start:])
-            break
-    return split_list
+import math
+import numpy as np
 
 class hspro_socket:
-    hspro = None
+    """
+    Implements a TCP socket server for remote control of the Haasoscope.
 
-    #HOST = '127.0.0.1'  # Standard loopback interface address (localhost)
-    HOST = '0.0.0.0'    # Listen on all interfaces
-    PORT = 32001        # Port to listen on (non-privileged ports are > 1023)
+    This class runs in a separate thread and listens for SCPI-like commands
+    to query the oscilloscope's state and retrieve waveform data.
+    """
+    hspro = None  # This will be a reference to the main MainWindow instance
+    HOST = '0.0.0.0'  # Listen on all available network interfaces
+    PORT = 32001  # Port to listen on
 
-    eventnum = 1
-    numchan = 1
-    triggerpos = 0
-    wfms_per_s = 100.0
-    memdepth = 40 * 100 # for depth = 100
-    maxval = 5.0
-    clipping = 0
+    def __init__(self):
+        self.issending = False
 
     def data_seqnum(self):
-        return self.eventnum.to_bytes(4,"little")
+        return self.hspro.state.nevents.to_bytes(4, "little")
+
     def data_numchan(self):
-        if self.hspro.dotwochannel: self.numchan = self.hspro.num_board * 2
-        else: self.numchan = self.hspro.num_board
-        return self.numchan.to_bytes(2,"little")
+        s = self.hspro.state
+        numchan = s.num_board * 2 if s.dotwochannel else s.num_board
+        return numchan.to_bytes(2, "little")
+
     def data_fspersample(self):
-        fspersample = int(312500 * self.hspro.downsamplefactor)
-        return fspersample.to_bytes(8,"little")
+        fspersample = int(312500 * self.hspro.state.downsamplefactor)
+        return fspersample.to_bytes(8, "little")
+
     def data_triggerpos(self):
-        return self.triggerpos.to_bytes(8,"little")
+        # Trigger position in femtoseconds
+        triggerpos_fs = int(self.hspro.plot_manager.current_vline_pos * 1e6)
+        return triggerpos_fs.to_bytes(8, "little")
+
     def data_wfms_per_s(self):
-        return struct.pack('d', self.wfms_per_s)
+        return struct.pack('d', self.hspro.state.lastrate)
 
-    issending = False
-    def data_channel(self,chan): # TODO: implement for interleaved samples? (Or does ngscopeclient take care of that?)
-        res = bytearray([chan]) # channel index
-        hsprochan = chan
-        if not self.hspro.dotwochannel: hsprochan*=2 # we use just every other channel in single-channel mode
-        board = hsprochan//2
+    def data_channel(self, chan_index):
+        s = self.hspro.state
+
+        # In single-channel mode, we only serve the even-numbered channels
+        hspro_chan_index = chan_index * 2 if not s.dotwochannel else chan_index
+        board = hspro_chan_index // s.num_chan_per_board
+
+        memdepth = self.hspro.xydata[hspro_chan_index][1].size
+        scale = s.max_y / pow(2, 15)
         offset = 0.0
-        trigphase = -self.hspro.totdistcorr[board]*1e6*self.hspro.nsunits # convert to fs from ns
-        if self.hspro.dotwochannel: trigphase /= 2.0
-        memdepth = self.hspro.xydata[hsprochan][1].size
-        if memdepth < self.memdepth: self.memdepth = memdepth
-        res += self.memdepth.to_bytes(8,"little")
-        scale = self.maxval/pow(2,15)
-        res += struct.pack('f', scale) # scale
-        res += struct.pack('f', offset) # offset
-        res += struct.pack('f', trigphase) # trigphase
-        res += bytearray([self.clipping]) # clipping?
+        trigphase = -s.totdistcorr[board] * 1e6 * s.nsunits  # convert to fs
+        if s.dotwochannel:
+            trigphase /= 2.0
 
-        #these are the samples, 16-bit signed
-        for thesamp in range(self.memdepth):
-            val = self.hspro.xydata[hsprochan][1][thesamp] / scale
-            if math.isinf(val) or math.isnan(val): scaledval=0
-            else: scaledval = int(val)
-            if scaledval<-32767: scaledval=-32767
-            if scaledval>32767: scaledval=32767
-            res+=scaledval.to_bytes(2, byteorder='little', signed=True)
-        self.memdepth = memdepth # update at the end in case it's changed
+        res = bytearray([chan_index])
+        res += memdepth.to_bytes(8, "little")
+        res += struct.pack('f', scale)
+        res += struct.pack('f', offset)
+        res += struct.pack('f', trigphase)
+        res += bytearray([0])  # Clipping
+
+        # Package the waveform samples as 16-bit signed integers
+        waveform_data = self.hspro.xydata[hspro_chan_index][1] / scale
+        waveform_data = np.clip(waveform_data, -32767, 32767).astype(np.int16)
+        res += waveform_data.tobytes()
+
         return res
 
-    runthethread = True
-    opened = False
-    connected = False
-    def open_socket(self,arg1):
-        #print('started socket with arg1',arg1)
+    def open_socket(self, arg1):
+        """The main server loop that listens for connections and commands."""
+        self.runthethread = True
         while self.runthethread:
-            with (socket.socket(socket.AF_INET, socket.SOCK_STREAM) as self.s):
-                self.s.bind((self.HOST, self.PORT))
-                self.s.listen()
-                self.s.settimeout(1)
-                #print("Socket listening on",self.HOST,self.PORT)
-                self.opened = True
-                self.connected = False
-                while self.runthethread and self.opened:
-                    try:
-                        conn, addr = self.s.accept()
+            try:
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                    s.bind((self.HOST, self.PORT))
+                    s.listen()
+                    s.settimeout(1.0)  # Timeout to check runthethread flag
+                    print(f"SCPI socket listening on {self.HOST}:{self.PORT}")
+
+                    conn = None
+                    while self.runthethread and conn is None:
+                        try:
+                            conn, addr = s.accept()
+                        except socket.timeout:
+                            continue
+
+                    if conn:
                         with conn:
-                            print(f"Connected by {addr}")
-                            while self.runthethread and self.opened:
-                                self.connected = True
+                            print(f"SCPI: Connected by {addr}")
+                            while self.runthethread:
                                 data = conn.recv(1024)
                                 if not data:
-                                    self.s.close()
-                                    self.opened = False
-                                #print("Got data:",data)
-                                commands = split_bytearray(data, b'\n')
-                                #print(commands)
-                                for com in commands:
-                                    if com == b'': continue # empty from end of line
-                                    elif com == b'K':
-                                        #print("Got command: Get event")
-                                        while self.hspro.isdrawing:
-                                            time.sleep(.001)
-                                            self.issending = False
-                                        self.issending = True
-                                        conn.sendall(self.data_seqnum())
-                                        conn.sendall(self.data_numchan())
-                                        conn.sendall(self.data_fspersample())
-                                        conn.sendall(self.data_triggerpos())
-                                        conn.sendall(self.data_wfms_per_s())
-                                        for c in range(self.numchan): conn.sendall(self.data_channel(c))
-                                        self.issending = False
-                                    else:
-                                        if com==b'*IDN?':
-                                            print("Got command: IDN")
-                                            conn.sendall(b"DrAndyHaas,HaasoscopePro,v1,2025,\n")
-                                        elif com==b'RATES?':
-                                            print("Got command: Rates")
-                                            rate = str(3.2e9/self.hspro.downsamplefactor) + ","
-                                            rate += str(1.0e9) + "," # ngscopeclient crashes without this?!
-                                            rate += "\n"
-                                            conn.sendall(bytes(rate,'utf-8'))
-                                        elif com==b'DEPTHS?':
-                                            print("Got command: Depths")
-                                            depth = str(self.hspro.expect_samples * 40)+",\n"
-                                            conn.sendall(bytes(depth,'utf-8'))
-                                        elif com == b'START':
-                                            print("Got command: Start")
-                                            if self.hspro.getone: self.hspro.ui.singleButton.clicked.emit()
-                                            if self.hspro.paused: self.hspro.ui.runButton.clicked.emit()
-                                        elif com == b'STOP':
-                                            print("Got command: Stop")
-                                            if not self.hspro.paused: self.hspro.ui.runButton.clicked.emit()
-                                        elif com == b'SINGLE':
-                                            print("Got command: Single")
-                                            if not self.hspro.getone: self.hspro.ui.singleButton.clicked.emit()
-                                            if self.hspro.paused: self.hspro.ui.runButton.clicked.emit()
-                                        elif com == b'FORCE':
-                                            print("Got command: Force")
-                                            if not self.hspro.isrolling: self.hspro.ui.rollingButton.clicked.emit()
-                                            if not self.hspro.getone: self.hspro.ui.singleButton.clicked.emit()
-                                            if self.hspro.paused: self.hspro.ui.runButton.clicked.emit()
-                                        #else: print("Got command:", com)
-                    except socket.timeout:
-                        pass
-                    except ConnectionResetError:
-                        print("Got remote connection error")
-                        self.opened = False
-                        pass
+                                    break  # Client disconnected
+                                self.handle_commands(conn, data)
+            except (ConnectionResetError, BrokenPipeError):
+                print("SCPI: Connection closed by remote host.")
+            except OSError as e:
+                print(f"SCPI socket error: {e}. Retrying in 5 seconds.")
+                time.sleep(5)
+            except Exception as e:
+                print(f"An unexpected SCPI error occurred: {e}")
+                time.sleep(5)
+        print("SCPI socket thread has terminated.")
+
+    def handle_commands(self, conn, data):
+        """Parses and executes commands received from the client."""
+        commands = data.strip().split(b'\n')
+        for com in commands:
+            com_str = com.decode('utf-8', errors='ignore').strip().upper()
+            if not com_str: continue
+            s = self.hspro.state
+            #print(f"SCPI Command: {com_str}")
+            if com_str == 'K':
+                while s.isdrawing: time.sleep(0.001)
+                self.issending = True
+
+                num_channels_val = s.num_board * 2 if s.dotwochannel else s.num_board
+                num_channels_bytes = num_channels_val.to_bytes(2, "little")
+
+                payload = bytearray()
+                payload += self.data_seqnum()
+                payload += num_channels_bytes
+                payload += self.data_fspersample()
+                payload += self.data_triggerpos()
+                payload += self.data_wfms_per_s()
+                for c in range(num_channels_val):
+                    payload += self.data_channel(c)
+                conn.sendall(payload)
+
+                self.issending = False
+                s.nevents += 1
+
+            elif com_str == '*IDN?':
+                conn.sendall(b"DrAndyHaas,HaasoscopePro,v1.0,2025\n")
+
+            elif com_str == 'RATES?':
+                # CORRECTED: Added the trailing comma before the newline
+                rate = f"{3.2e9 / s.downsamplefactor},{1.0e9},\n"
+                conn.sendall(rate.encode('utf-8'))
+
+            elif com_str == 'DEPTHS?':
+                # This format was already correct
+                depth = f"{s.expect_samples * 40},\n"
+                conn.sendall(depth.encode('utf-8'))
+
+            elif com_str == 'START':
+                if s.getone: self.hspro.single_clicked()
+                if s.paused: self.hspro.dostartstop()
+
+            elif com_str == 'STOP':
+                if not s.paused: self.hspro.dostartstop()
+
+            elif com_str == 'SINGLE':
+                if not s.getone: self.hspro.single_clicked()
+                if s.paused: self.hspro.dostartstop()
+
+            elif com_str == 'FORCE':
+                if not s.isrolling: self.hspro.rolling_clicked()
+                if not s.getone: self.hspro.single_clicked()
+                if s.paused: self.hspro.dostartstop()
