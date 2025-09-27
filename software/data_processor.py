@@ -40,6 +40,15 @@ class DataProcessor:
         unpackedsamples = struct.unpack('<' + 'h' * (len(data) // 2), data)
         npunpackedsamples = np.array(unpackedsamples, dtype='float') * state.yscale
 
+        # If this board is the secondary in an oversampling pair (e.g., board 1, 3, etc.),
+        # apply the correction factors calculated from its primary partner (e.g., board 0, 2).
+        if state.dooversample[board_idx] and board_idx % 2 == 1:
+            primary_board_idx = board_idx - 1
+            # Additive mean correction
+            npunpackedsamples += state.extrigboardmeancorrection[primary_board_idx]
+            # Multiplicative RMS (standard deviation) correction
+            npunpackedsamples *= state.extrigboardstdcorrection[primary_board_idx]
+
         # Calculate the total sample offset based on trigger position and hardware delays
         downsampleoffset = self._calculate_downsample_offset(sample_triggered, board_idx)
 

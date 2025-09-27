@@ -217,6 +217,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionRecord.triggered.connect(self.toggle_recording)
         self.ui.actionUpdate_firmware.triggered.connect(self.update_firmware)
         self.ui.actionDo_autocalibration.triggered.connect(self.autocalibration)
+        self.ui.actionOversampling_mean_and_RMS.triggered.connect(self.do_meanrms_calibration)
         self.ui.actionToggle_trig_stabilizer.triggered.connect(self.trig_stabilizer_toggled)
         self.ui.actionToggle_extra_trig_stabilizer.triggered.connect(self.extra_trig_stabilizer_toggled)
 
@@ -235,14 +236,18 @@ class MainWindow(TemplateBaseClass):
         """
         s = self.state
 
-        # --- NEW: Logic for Oversampling Checkbox ---
-        # Oversampling is only possible on an even-numbered board (0, 2, etc.),
-        # requires more than one board, and cannot be used in two-channel mode.
-        can_oversample = (s.num_board > 1 and s.activeboard % 2 == 0 and not s.dotwochannel)
-        self.ui.oversampCheck.setEnabled(can_oversample)
-        if not can_oversample and self.ui.oversampCheck.isChecked():
-            # If oversampling becomes invalid, uncheck the box automatically
-            self.ui.oversampCheck.setChecked(False)
+        # 1. Determine the CHECKED state of the oversampling box.
+        #    The box should remain checked if the PAIR is in oversampling mode,
+        #    regardless of which board in the pair is currently selected.
+        primary_board_of_pair = (s.activeboard // 2) * 2
+        is_pair_oversampling = s.dooversample[primary_board_of_pair]
+        self.ui.oversampCheck.setChecked(is_pair_oversampling)
+
+        # 2. Determine the ENABLED state of the oversampling box.
+        #    The user should only be able to CHANGE the oversampling setting
+        #    when the primary (even) board of a pair is selected.
+        can_change_oversampling = (s.num_board > 1 and s.activeboard % 2 == 0 and not s.dotwochannel)
+        self.ui.oversampCheck.setEnabled(can_change_oversampling)
 
         # --- NEW: Logic for Trigger Channel Dropdown ---
         # Get the model item for "Channel 1" (which is at index 1)
@@ -1248,9 +1253,10 @@ class MainWindow(TemplateBaseClass):
         """Calculates and applies DC offset and amplitude (RMS) corrections between two boards."""
         s = self.state
         if s.activeboard % 2 == 1:
-            print("Error: Please select the even-numbered board of a pair (e.g., 0, 2).")
+            print("Error: Please select the even-numbered board of a pair (e.g., 0, 2) to calibrate.")
             return
 
+        # c1 is the primary board (e.g. board 0), c2 is the secondary (e.g. board 1)
         c1_idx = s.activeboard * s.num_chan_per_board
         c2_idx = (s.activeboard + 1) * s.num_chan_per_board
 
@@ -1267,14 +1273,20 @@ class MainWindow(TemplateBaseClass):
             print("Mean/RMS calibration failed: no data in window.")
             return
 
-        # Calculate mean and standard deviation
-        mean1, std1 = np.mean(yc1), np.std(yc1)
-        mean2, std2 = np.mean(yc2), np.std(yc2)
+        # Calculate mean and standard deviation for each channel
+        mean_primary = np.mean(yc1)
+        std_primary = np.std(yc1)
+        mean_secondary = np.mean(yc2)
+        std_secondary = np.std(yc2)
 
-        # Update state with the correction factors (these are used by the DataProcessor)
-        s.extrigboardmeancorrection[s.activeboard] += mean2 - mean1
-        if std2 > 0:
-            s.extrigboardstdcorrection[s.activeboard] *= std1 / std2
+        # --- CORRECTED CALCULATION LOGIC ---
+        # The correction to ADD to the secondary data is (primary - secondary)
+        s.extrigboardmeancorrection[s.activeboard] += (mean_primary - mean_secondary)
 
-        print(
-            f"Calculated corrections: Mean={s.extrigboardmeancorrection[s.activeboard]:.4f}, Std={s.extrigboardstdcorrection[s.activeboard]:.4f}")
+        # The correction to MULTIPLY the secondary data by is (primary / secondary)
+        if std_secondary > 0:
+            s.extrigboardstdcorrection[s.activeboard] *= (std_primary / std_secondary)
+
+        print(f"Updated corrections to be applied to board {s.activeboard + 1}: "
+              f"Mean+={s.extrigboardmeancorrection[s.activeboard]:.4f}, "
+              f"Std*={s.extrigboardstdcorrection[s.activeboard]:.4f}")
