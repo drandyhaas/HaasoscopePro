@@ -125,7 +125,7 @@ class PlotManager(pg.QtCore.QObject):
                 text='Voltage', units='V', color="w"
             )
             self.right_axis.setWidth(w=40)
-
+            self.right_axis.setVisible(True)
         self.time_changed()
 
     def update_plots(self, xy_data, xydatainterleaved):
