@@ -41,6 +41,7 @@
     </property>
     <addaction name="actionLog_scale"/>
     <addaction name="actionPeak_hold"/>
+    <addaction name="actionShow_peak_labels"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuView"/>
@@ -65,6 +66,14 @@
    </property>
    <property name="text">
     <string>Peak hold</string>
+   </property>
+  </action>
+  <action name="actionShow_peak_labels">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show peak labels</string>
    </property>
   </action>
  </widget>
