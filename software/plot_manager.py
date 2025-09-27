@@ -11,6 +11,7 @@ from scipy.signal import resample
 from scipy.interpolate import interp1d
 from utils import add_secondary_axis
 from data_processor import find_crossing_distance
+import math
 
 # #############################################################################
 # PlotManager Class
@@ -206,7 +207,7 @@ class PlotManager(pg.QtCore.QObject):
         self.otherlines['hline'].setValue(hline_pos)
         self.current_vline_pos = vline_pos
 
-    ### Persistence Methods ###
+    # Persistence Methods
     def set_persistence(self, value):
         self.persist_time = 50 * pow(2, value) if value > 0 else 0
         if self.persist_time > 0:
@@ -281,7 +282,7 @@ class PlotManager(pg.QtCore.QObject):
         self.persist_lines.clear()
         self.average_line.clear()
 
-    ### UI Control Methods ###
+    # UI Control Methods
     def set_line_width(self, width):
         for pen in self.linepens:
             pen.setWidth(width)
@@ -337,3 +338,40 @@ class PlotManager(pg.QtCore.QObject):
         else:
             pen = self.linepens[self.state.activexychannel]
         self.average_line.setPen(pen)
+
+    def update_risetime_fit_lines(self, fit_results):
+        """Draws or hides the risetime fit visualization lines."""
+        # Always hide the lines by default
+        for i in range(3):
+            self.otherlines[f'fit_{i}'].setVisible(False)
+
+        # Only proceed if the user wants to see the lines and a valid fit exists
+        if not self.ui.actionRisetime_fit_lines.isChecked() or fit_results is None:
+            return
+
+        try:
+            popt, pcov, xc = fit_results['popt'], fit_results['pcov'], fit_results['xc']
+            risetime_err = fit_results['risetime_err']
+
+            # If the fit error is infinite, the fit is unreliable, so don't draw
+            if abs(risetime_err) == math.inf:
+                return
+
+            top, left, slope, bot = popt[0], popt[1], popt[2], popt[3]
+            if slope == 0: return
+
+            right = left + (top - bot) / slope
+
+            # Set data for the three line segments
+            self.otherlines['fit_0'].setData([right, xc[-1]], [top, top])  # Top line
+            self.otherlines['fit_1'].setData([left, right], [bot, top])  # Sloped line
+            self.otherlines['fit_2'].setData([xc[0], left], [bot, bot])  # Bottom line
+
+            # Make all three segments visible
+            for i in range(3):
+                self.otherlines[f'fit_{i}'].setVisible(True)
+
+        except (KeyError, IndexError):
+            # Fail silently if the fit_results dictionary is malformed
+            pass
+

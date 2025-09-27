@@ -185,10 +185,9 @@ class DataProcessor:
         Y[0] = 1e-3  # Suppress DC for plotting
 
         return freq, abs(Y)
-
-    def calculate_measurements(self, x_data, y_data, vline):
-        """Calculates all requested measurements (Mean, RMS, Vpp, Freq, Risetime)."""
-        if len(y_data) < 2: return {}
+    def calculate_measurements(self, x_data, y_data, vline, do_risetime_calc=False):
+        """Calculates all requested measurements and returns fit results if requested."""
+        if len(y_data) < 2: return {}, None
         state = self.state
         VperD = state.VperD[state.activexychannel]
 
@@ -200,40 +199,41 @@ class DataProcessor:
             "Vpp": f"{1000 * VperD * (np.max(y_data) - np.min(y_data)):.3f} mV"
         }
 
-        # Frequency Calculation
         sampling_rate = (state.samplerate * 1e9) / state.downsamplefactor
         if state.dotwochannel: sampling_rate /= 2
         found_freq = find_fundamental_frequency_scipy(y_data, sampling_rate)
         measurements["Freq"] = format_freq(found_freq)
 
-        # Risetime Calculation
-        fitwidth = (state.max_x - state.min_x) * state.fitwidthfraction
-        xc = x_data[(x_data > vline - fitwidth) & (x_data < vline + fitwidth)]
-        yc = y_data[(x_data > vline - fitwidth) & (x_data < vline + fitwidth)]
+        # Initialize fit results to None
+        fit_results = None
 
-        if xc.size < 10:
-            measurements["Risetime"] = "Fit range too small"
-        else:
-            p0 = [np.max(yc), xc[xc.size // 2], 2 * state.nsunits, np.min(yc)]
-            if state.fallingedge[state.activeboard]: p0[2] *= -1
+        if do_risetime_calc:
+            fitwidth = (state.max_x - state.min_x) * state.fitwidthfraction
+            xc = x_data[(x_data > vline - fitwidth) & (x_data < vline + fitwidth)]
+            yc = y_data[(x_data > vline - fitwidth) & (x_data < vline + fitwidth)]
 
-            with warnings.catch_warnings():
-                try:
-                    warnings.simplefilter("ignore")
-                    p0[1] -= (p0[0] - p0[3]) / p0[2] / 2
-                    popt, pcov = curve_fit(fit_rise, xc, yc, p0)
-                    perr = np.sqrt(np.diag(pcov))
+            if xc.size < 10:
+                measurements["Risetime"] = "Fit range too small"
+            else:
+                p0 = [np.max(yc), xc[xc.size // 2], 2 * state.nsunits, np.min(yc)]
+                if state.fallingedge[state.activeboard]: p0[2] *= -1
 
-                    top, slope, bot = popt[0], popt[2], popt[3]
-                    risetime = state.nsunits * 0.6 * (top - bot) / slope
-                    if state.fallingedge[state.activeboard]: risetime *= -1
+                with warnings.catch_warnings():
+                    try:
+                        warnings.simplefilter("ignore")
+                        p0[1] -= (p0[0] - p0[3]) / p0[2] / 2
+                        popt, pcov = curve_fit(fit_rise, xc, yc, p0=p0)
+                        perr = np.sqrt(np.diag(pcov))
 
-                    risetimeerr = state.nsunits * 0.6 * 4 * (top - bot) * perr[2] / (slope * slope)
-                    if abs(risetimeerr) != math.inf:
-                        measurements["Risetime"] = f"{risetime:.2f} \u00B1 {risetimeerr:.2f} ns"
-                    else:
-                        measurements["Risetime"] = "Fit unstable"
-                except RuntimeError:
-                    measurements["Risetime"] = "Fit failed"
+                        top, slope, bot = popt[0], popt[2], popt[3]
+                        risetime = state.nsunits * 0.6 * abs(top - bot) / slope
+                        risetimeerr = state.nsunits * 0.6 * 4 * abs(top - bot) * perr[2] / (slope * slope)
 
-        return measurements
+                        measurements["Risetime"] = f"{abs(risetime):.2f} \u00B1 {abs(risetimeerr):.2f} ns"
+                        # Package the raw results to be returned
+                        fit_results = {'popt': popt, 'pcov': pcov, 'xc': xc, 'risetime_err': risetimeerr}
+
+                    except (RuntimeError, ValueError):
+                        measurements["Risetime"] = "Fit failed"
+
+        return measurements, fit_results

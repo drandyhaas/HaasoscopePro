@@ -193,7 +193,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionHigh_resolution.triggered.connect(self.high_resolution_toggled)
 
         # Advanced/Hardware controls
-        self.ui.pllresetButton.clicked.connect(lambda: self.controller.pllreset(self.state.activeboard, from_button=True))
+        self.ui.pllresetButton.clicked.connect(lambda: self.controller.pllreset(self.state.activeboard))
         self.ui.tadBox.valueChanged.connect(self.tad_changed)
         self.ui.ToffBox.valueChanged.connect(lambda val: setattr(self.state, 'toff', val))
         self.ui.Auxout_comboBox.currentIndexChanged.connect(self.auxout_changed)
@@ -444,12 +444,6 @@ class MainWindow(TemplateBaseClass):
             the_str += f"Recording to file {self.recorder.file_handle.name}\n"
 
         if self.state.dodrawing:
-            if self.ui.actionTemperatures.isChecked():
-                if self.state.num_board > 0:
-                    # Get the usb device for the currently active board from the controller
-                    active_usb = self.controller.usbs[self.state.activeboard]
-                    # The gettemps function is expected to return a pre-formatted string
-                    the_str += gettemps(active_usb) + "\n"
 
             if self.ui.actionTrigger_thresh.isChecked():
                 # Get the threshold value directly from the plot manager's line object
@@ -461,28 +455,43 @@ class MainWindow(TemplateBaseClass):
                 num_persist = len(self.plot_manager.persist_lines)
                 the_str += f"N persist lines: {num_persist}\n"
 
+            if self.ui.actionTemperatures.isChecked():
+                if self.state.num_board > 0:
+                    # Get the usb device for the currently active board from the controller
+                    active_usb = self.controller.usbs[self.state.activeboard]
+                    # The gettemps function is expected to return a pre-formatted string
+                    the_str += gettemps(active_usb) + "\n"
+
+            target_x, target_y, source_str, fit_results = None, None, "", None
             if self.ui.persistavgCheck.isChecked() and self.plot_manager.average_line.isVisible():
                 target_x = self.plot_manager.average_line.xData
                 target_y = self.plot_manager.average_line.yData
                 source_str = "from average"
-            else:
+            elif hasattr(self, 'xydata'):
                 target_x = self.xydata[self.state.activexychannel][0]
                 target_y = self.xydata[self.state.activexychannel][1]
-                source_str = ""
 
-            the_str += f"\nMeasurements {source_str} for board {self.state.activeboard} ch {self.state.selectedchannel}:\n"
+            if target_x is not None and target_y is not None and len(target_y) > 0:
+                the_str += f"\nMeasurements {source_str} for board {self.state.activeboard} ch {self.state.selectedchannel}:\n"
 
-            vline_val = self.plot_manager.otherlines['vline'].value()
-            measurements = self.processor.calculate_measurements(target_x, target_y, vline_val)
+                vline_val = self.plot_manager.otherlines['vline'].value()
 
-            # Format results for display
-            if self.ui.actionMean.isChecked(): the_str += f"Mean: {measurements.get('Mean', 'N/A')}\n"
-            if self.ui.actionRMS.isChecked(): the_str += f"RMS: {measurements.get('RMS', 'N/A')}\n"
-            if self.ui.actionVpp.isChecked(): the_str += f"Vpp: {measurements.get('Vpp', 'N/A')}\n"
-            if self.ui.actionFreq.isChecked(): the_str += f"Freq: {measurements.get('Freq', 'N/A')}\n"
-            if self.ui.actionRisetime.isChecked(): the_str += f"Risetime: {measurements.get('Risetime', 'N/A')}\n"
+                # Get both the text results and the raw fit data from the processor
+                measurements, fit_results = self.processor.calculate_measurements(
+                    target_x, target_y, vline_val, do_risetime_calc=self.ui.actionRisetime.isChecked()
+                )
 
-        self.ui.textBrowser.setText(the_str)
+                # Update the text browser
+                if self.ui.actionMean.isChecked(): the_str += f"Mean: {measurements.get('Mean', 'N/A')}\n"
+                if self.ui.actionRMS.isChecked(): the_str += f"RMS: {measurements.get('RMS', 'N/A')}\n"
+                if self.ui.actionVpp.isChecked(): the_str += f"Vpp: {measurements.get('Vpp', 'N/A')}\n"
+                if self.ui.actionFreq.isChecked(): the_str += f"Freq: {measurements.get('Freq', 'N/A')}\n"
+                if self.ui.actionRisetime.isChecked(): the_str += f"Risetime: {measurements.get('Risetime', 'N/A')}\n"
+
+            self.ui.textBrowser.setText(the_str)
+
+            # Tell the plot manager to update the fit lines with the latest results
+            self.plot_manager.update_risetime_fit_lines(fit_results)
 
     def allocate_xy_data(self):
         """Creates or re-sizes the numpy arrays for storing waveform data."""

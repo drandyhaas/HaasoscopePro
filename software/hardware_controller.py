@@ -93,7 +93,7 @@ class HardwareController:
         else:
             print(f"Adf pll locked for board {board_idx}")
 
-    def pllreset(self, board_idx, from_button=False):
+    def pllreset(self, board_idx):
         """Sends PLL reset and correctly updates the state to start the adjustclocks sequence."""
         usb = self.usbs[board_idx]
         usb.send(bytes([5, 99, 99, 99, 100, 100, 100, 100]))
