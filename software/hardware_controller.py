@@ -53,7 +53,7 @@ class HardwareController:
         # --- RESTORED POWER SUPPLY HEALTH CHECK ---
         print(f"  Performing power supply check for board {board_idx}...")
         # Turn everything off to get a baseline reading
-        setfan(usb, 0)
+        setfan(usb, False)
         send_leds(usb, 0, 0, 0, 0, 0, 0)
         time.sleep(0.9)
         oldtemp = gettemps(usb, retadcval=True)
@@ -63,7 +63,7 @@ class HardwareController:
             setchanimpedance(usb, c, True, self.state.dooversample[board_idx])
             setchanatt(usb, c, True, self.state.dooversample[board_idx])
         setsplit(usb, True)
-        setfan(usb, 1)
+        setfan(usb, True)
         send_leds(usb, 255, 255, 255, 255, 255, 255)
         time.sleep(0.1)
         newtemp = gettemps(usb, retadcval=True)
@@ -196,6 +196,7 @@ class HardwareController:
 
     def tell_downsample(self, usb, ds):
         state = self.state
+        merging = 1
         if ds < 0: ds = 0
         if ds == 0:
             merging = 1
@@ -371,7 +372,7 @@ class HardwareController:
                 return False, "Firmware file not found."
 
         starttime = time.time()
-        for i in range(self.num_board): clkout_ena(self.usbs[i], 0)
+        for i in range(self.num_board): clkout_ena(self.usbs[i], False)
 
         if not verify_only:
             print("Erasing flash...")
@@ -390,8 +391,11 @@ class HardwareController:
 
         if writtenbytes == readbytes:
             print("Verified!")
-            reload_firmware(self.usbs[board_idx])
-            return True, f"Verified! Update took {time.time() - starttime:.3f}s. Restart software."
+            if verify_only:
+                return True, f"Verified! Update took {time.time() - starttime:.3f}s."
+            else:
+                reload_firmware(self.usbs[board_idx])
+                return True, f"Verified! Update took {time.time() - starttime:.3f}s. Restart software."
         else:
             print("Verification failed!")
             return False, "Verification failed!"

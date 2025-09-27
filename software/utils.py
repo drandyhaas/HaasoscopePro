@@ -18,7 +18,6 @@ def get_pwd() -> str:
         if index != -1:
             pwd = path_string[:index + len(target)]
             break
-    print(f"Current dir is {pwd}")
     return pwd
 
 

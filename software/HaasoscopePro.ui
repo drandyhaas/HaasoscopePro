@@ -2203,6 +2203,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionRecord"/>
     <addaction name="actionTake_screenshot"/>
     <addaction name="separator"/>
+    <addaction name="actionVerify_firmware"/>
     <addaction name="actionUpdate_firmware"/>
    </widget>
    <widget class="QMenu" name="menuCalibration">
@@ -2545,6 +2546,11 @@ Outlined if triggering on this channel</string>
   <action name="actionLine_color">
    <property name="text">
     <string>Change line color</string>
+   </property>
+  </action>
+  <action name="actionVerify_firmware">
+   <property name="text">
+    <string>Verify firmware</string>
    </property>
   </action>
  </widget>

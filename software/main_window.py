@@ -22,7 +22,9 @@ from board import setupboard, gettemps
 from utils import get_pwd
 import ftd2xx
 
-WindowTemplate, TemplateBaseClass = loadUiType(get_pwd() + "/HaasoscopePro.ui")
+pwd = get_pwd()
+print(f"Current dir is {pwd}")
+WindowTemplate, TemplateBaseClass = loadUiType(pwd + "/HaasoscopePro.ui")
 class MainWindow(TemplateBaseClass):
     def __init__(self, usbs):
         super().__init__()
@@ -210,6 +212,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionAbout.triggered.connect(self.about_dialog)
         self.ui.actionTake_screenshot.triggered.connect(self.take_screenshot)
         self.ui.actionRecord.triggered.connect(self.toggle_recording)
+        self.ui.actionVerify_firmware.triggered.connect(self.verify_firmware)
         self.ui.actionUpdate_firmware.triggered.connect(self.update_firmware)
         self.ui.actionDo_autocalibration.triggered.connect(self.autocalibration)
         self.ui.actionOversampling_mean_and_RMS.triggered.connect(self.do_meanrms_calibration)
