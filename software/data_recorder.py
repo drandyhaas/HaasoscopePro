@@ -16,7 +16,7 @@ class DataRecorder:
         try:
             self.file_handle = open(fname, "wt")
             header = "Event #, Time (s), Channel, Trigger time (ns), Sample period (ns), # samples"
-            num_samples = (2 if self.state.dotwochannel else 4) * 10 * self.state.expect_samples
+            num_samples = 4 * 10 * self.state.expect_samples
             sample_headers = "".join([f", Sample {s}" for s in range(num_samples)])
             self.file_handle.write(header + sample_headers + "\n")
             self.is_recording = True

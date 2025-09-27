@@ -135,19 +135,41 @@ class PlotManager(pg.QtCore.QObject):
         s = self.state
 
         for li in range(self.nlines):
+            board_idx = li // s.num_chan_per_board
             xdatanew, ydatanew = None, None
-            # --- Interleaving and initial data setup ---
-            if not s.dointerleaved[li // 2]:
-                xdatanew, ydatanew = xy_data[li][0].copy(), xy_data[li][1].copy()
+
+            # --- LOGIC FOR NON-INTERLEAVED BOARDS ---
+            if not s.dointerleaved[board_idx]:
+                x_data_full = xy_data[li][0]
+                y_data_full = xy_data[li][1]
+
+                # Check the mode for the board this line belongs to
+                if s.dotwochannel[board_idx]:
+                    # For two-channel boards, we have half the samples.
+                    # We need to plot these samples across the full time axis.
+                    num_valid_samples = xy_data.shape[2] // 2
+                    y_to_plot = y_data_full[:num_valid_samples]
+
+                    # Create a new, correctly spaced time axis for this smaller dataset.
+                    # It starts at the same time and ends at the same time.
+                    x_to_plot = np.linspace(x_data_full[0], x_data_full[-1], num_valid_samples)
+                    xdatanew, ydatanew = x_to_plot, y_to_plot
+                else:
+                    # For single-channel boards, use the data as is.
+                    xdatanew, ydatanew = x_data_full, y_data_full
+
+            # --- LOGIC FOR INTERLEAVED BOARDS ---
             else:
                 if li % 4 == 0:
                     primary_data = xy_data[li][1]
                     secondary_data = xy_data[li + s.num_chan_per_board][1]
-                    xydatainterleaved[li // 2][1][0::2] = primary_data
-                    xydatainterleaved[li // 2][1][1::2] = secondary_data
+                    xydatainterleaved[board_idx][1][0::2] = primary_data
+                    xydatainterleaved[board_idx][1][1::2] = secondary_data
 
-                    x_interleaved = xydatainterleaved[li // 2][0]
-                    y_interleaved = xydatainterleaved[li // 2][1]
+                    x_interleaved = xydatainterleaved[board_idx][0]
+                    y_interleaved = xydatainterleaved[board_idx][1]
+
+                    # Interpolate to create a smooth, high-density trace
                     xdatanew = np.linspace(x_interleaved.min(), x_interleaved.max(), len(x_interleaved))
                     f_int = interp1d(x_interleaved, y_interleaved, kind='linear', bounds_error=False, fill_value=0.0)
                     ydatanew = f_int(xdatanew)

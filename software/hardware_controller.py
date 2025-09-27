@@ -27,8 +27,7 @@ class HardwareController:
                 success = False
         if success:
             self.use_ext_trigs()
-            for usb in self.usbs:
-                self.tell_downsample(usb, self.state.downsample)
+            self.tell_downsample_all(self.state.downsample)
         return success
 
     def setup_connection(self, board_idx, usb):
@@ -39,7 +38,7 @@ class HardwareController:
             print("Warning - this board has older firmware than another being used!")
             self.state.firmwareversion = ver
         self.adfreset(board_idx)
-        if setupboard(usb, self.state.dopattern, self.state.dotwochannel, self.state.dooverrange,
+        if setupboard(usb, self.state.dopattern, self.state.dotwochannel[board_idx], self.state.dooverrange,
                       self.state.basevoltage == 200) > 0:
             return False
         for c in range(self.state.num_chan_per_board):
@@ -177,13 +176,13 @@ class HardwareController:
     def tell_downsample_all(self, ds):
         """Sends the current downsample setting to all connected boards."""
         for i in range(self.num_board):
-            self.tell_downsample(self.usbs[i], ds)
+            self.tell_downsample(self.usbs[i], ds, i)
 
     def send_trigger_info(self, board_idx):
         state = self.state
         triggerpos = state.triggerpos + state.triggershift
         if state.doexttrig[board_idx]:
-            factor = 2 if state.dotwochannel else 1
+            factor = 2 if state.dotwochannel[board_idx] else 1
             triggerpos += int(8 * state.lvdstrigdelay[board_idx] / 40 / state.downsamplefactor / factor)
 
         self.usbs[board_idx].send(bytes([8, state.triggerlevel + 1, state.triggerdelta,
@@ -194,7 +193,7 @@ class HardwareController:
         self.usbs[board_idx].send(bytes([2, 7] + inttobytes(prelengthtotake) + [0, 0]))
         self.usbs[board_idx].recv(4)
 
-    def tell_downsample(self, usb, ds):
+    def tell_downsample(self, usb, ds, board):
         state = self.state
         merging = 1
         if ds < 0: ds = 0
@@ -205,14 +204,14 @@ class HardwareController:
         elif ds == 2:
             ds, merging = 0, 4
         elif ds == 3:
-            ds, merging = 0, 8 if not state.dotwochannel else 10
+            ds, merging = 0, 8 if not state.dotwochannel[board] else 10
         elif ds == 4:
             ds, merging = 0, 20
-        elif not state.dotwochannel and ds == 5:
+        elif not state.dotwochannel[board] and ds == 5:
             ds, merging = 0, 40
-        elif not state.dotwochannel and ds > 5:
+        elif not state.dotwochannel[board] and ds > 5:
             ds, merging = ds - 5, 40
-        elif state.dotwochannel and ds > 4:
+        elif state.dotwochannel[board] and ds > 4:
             ds, merging = ds - 4, 20
 
         state.downsamplemerging = merging
@@ -309,12 +308,13 @@ class HardwareController:
         elif state.doextsmatrig[board_idx] > 0:
             tt = 5
 
-        self.usbs[board_idx].send(
-            bytes([1, tt, state.dotwochannel + 2 * state.dooversample[board_idx], 99] + inttobytes(
-                state.expect_samples + state.expect_samples_extra - state.triggerpos + 1)))
+        is_two_channel = state.dotwochannel[board_idx]
+
+        self.usbs[board_idx].send(bytes([1, tt, is_two_channel + 2 * state.dooversample[board_idx], 99] +
+                                       inttobytes(state.expect_samples + state.expect_samples_extra - state.triggerpos + 1)))
         triggercounter = self.usbs[board_idx].recv(4)
 
-        if triggercounter[0] == 251:
+        if triggercounter[0] == 251: # Event ready
             state.sample_triggered[board_idx] = triggercounter[1]
             return True
         return False
@@ -426,7 +426,7 @@ class HardwareController:
             # Default for channel 1 LED is off
             r2, g2, b2 = 0, 0, 0
 
-            if state.dotwochannel:
+            if state.dotwochannel[board]:
                 # In two-channel mode, get the color for channel 1
                 c2_idx = c1_idx + 1
                 col2 = channel_colors[c2_idx]

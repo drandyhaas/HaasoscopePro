@@ -23,7 +23,7 @@ class hspro_socket:
 
     def data_numchan(self):
         s = self.hspro.state
-        numchan = s.num_board * 2 if s.dotwochannel else s.num_board
+        numchan = s.num_board * s.num_chan_per_board
         return numchan.to_bytes(2, "little")
 
     def data_fspersample(self):
@@ -42,14 +42,14 @@ class hspro_socket:
         s = self.hspro.state
 
         # In single-channel mode, we only serve the even-numbered channels
-        hspro_chan_index = chan_index * 2 if not s.dotwochannel else chan_index
+        hspro_chan_index = chan_index
         board = hspro_chan_index // s.num_chan_per_board
 
         memdepth = self.hspro.xydata[hspro_chan_index][1].size
         scale = s.max_y / pow(2, 15)
         offset = 0.0
         trigphase = -s.totdistcorr[board] * 1e6 * s.nsunits  # convert to fs
-        if s.dotwochannel:
+        if s.dotwochannel[board]:
             trigphase /= 2.0
 
         res = bytearray([chan_index])
@@ -115,13 +115,13 @@ class hspro_socket:
                 while s.isdrawing: time.sleep(0.001)
                 self.issending = True
 
-                num_channels_val = s.num_board * 2 if s.dotwochannel else s.num_board
+                num_channels_val = s.num_board * s.num_chan_per_board
                 num_channels_bytes = num_channels_val.to_bytes(2, "little")
 
                 payload = bytearray()
                 payload += self.data_seqnum()
                 payload += num_channels_bytes
-                payload += self.data_fspersample()
+                payload += self.data_fspersample() # TODO: adjust for two-channel mode somehow
                 payload += self.data_triggerpos()
                 payload += self.data_wfms_per_s()
                 for c in range(num_channels_val):

@@ -120,7 +120,7 @@ class DataProcessor:
             state.triggerphase[board_idx] = state.triggerphase[board_to_use]
 
         sample_triggered = state.sample_triggered[board_idx]
-        triggerphase = state.triggerphase[board_idx] // (2 if state.dotwochannel else 1)
+        triggerphase = state.triggerphase[board_idx] // (2 if state.dotwochannel[board_idx] else 1)
 
         # Unpack raw 16-bit integers and scale to plotting units
         unpackedsamples = struct.unpack('<' + 'h' * (len(data) // 2), data)
@@ -159,24 +159,24 @@ class DataProcessor:
                     elif val not in {0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512}:  # Strobe should be one-hot
                         nbadstr += 1
 
-            if state.dotwochannel:
+            # CORRECTED: Use the per-board state to decide how to unpack data
+            if state.dotwochannel[board_idx]:
                 samp, nsamp, nstart = s * 20 - downsampleoffset - triggerphase, 20, 0
                 if samp < 0: nsamp, nstart, samp = 20 + samp, -samp, 0
                 if samp + nsamp >= datasize: nsamp = datasize - samp
                 if 0 < nsamp <= 20:
                     c1_idx, c2_idx = board_idx * 2, board_idx * 2 + 1
-                    xy_data_array[c1_idx][1][samp:samp + nsamp] = npunpackedsamples[
-                                                                  s * self.nsubsamples + 20 + nstart: s * self.nsubsamples + 20 + nstart + nsamp]
-                    xy_data_array[c2_idx][1][samp:samp + nsamp] = npunpackedsamples[
-                                                                  s * self.nsubsamples + nstart: s * self.nsubsamples + nstart + nsamp]
-            else:  # Single channel mode
+                    xy_data_array[c1_idx][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+20+nstart: s*self.nsubsamples+20+nstart+nsamp]
+                    xy_data_array[c2_idx][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart: s*self.nsubsamples+nstart+nsamp]
+            else:
+                # Note: The data array is always allocated for 40 samples for simplicity.
+                # For single-channel boards, we only fill the first channel's array.
                 samp, nsamp, nstart = s * 40 - downsampleoffset - triggerphase, 40, 0
                 if samp < 0: nsamp, nstart, samp = 40 + samp, -samp, 0
                 if samp + nsamp >= datasize: nsamp = datasize - samp
                 if 0 < nsamp <= 40:
                     c_idx = board_idx * 2
-                    xy_data_array[c_idx][1][samp:samp + nsamp] = npunpackedsamples[
-                                                                 s * self.nsubsamples + nstart: s * self.nsubsamples + nstart + nsamp]
+                    xy_data_array[c_idx][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart: s*self.nsubsamples+nstart+nsamp]
 
         # Apply post-processing steps
         self._apply_lpf(board_idx, xy_data_array)
@@ -190,11 +190,11 @@ class DataProcessor:
         offset = 2 * (sample_triggered + (state.downsamplemergingcounter[
                                               board_idx] - 1) % state.downsamplemerging * 10) // state.downsamplemerging
         offset += 20 * state.triggershift
-        if not state.dotwochannel:
+        if not state.dotwochannel[board_idx]:
             offset *= 2
 
         if state.doexttrig[board_idx]:
-            factor = 2 if state.dotwochannel else 1
+            factor = 2 if state.dotwochannel[board_idx] else 1
             offset -= int(state.toff / state.downsamplefactor / factor) + int(
                 8 * state.lvdstrigdelay[board_idx] / state.downsamplefactor / factor) % 40
 
@@ -204,7 +204,7 @@ class DataProcessor:
         """Applies a digital low-pass filter if configured."""
         state = self.state
         if state.lpf > 0:
-            sr = state.samplerate / (2 if state.dotwochannel else 1) / state.downsamplefactor
+            sr = state.samplerate / (2 if state.dotwochannel[board_idx] else 1) / state.downsamplefactor
             nyquist = 0.5 * sr * 1e9
             normal_cutoff = min(state.lpf * 1e6 / nyquist, 0.99)
 
@@ -212,7 +212,7 @@ class DataProcessor:
 
             c1_idx = board_idx * 2
             xy_data_array[c1_idx][1] = filtfilt(fb, fa, xy_data_array[c1_idx][1])
-            if state.dotwochannel:
+            if state.dotwochannel[board_idx]:
                 c2_idx = c1_idx + 1
                 xy_data_array[c2_idx][1] = filtfilt(fb, fa, xy_data_array[c2_idx][1])
 
@@ -263,7 +263,7 @@ class DataProcessor:
         uspersample = self.state.downsamplefactor / self.state.samplerate / 1000.
         if self.state.dointerleaved[self.state.activeboard]:
             uspersample /= 2
-        elif self.state.dotwochannel:
+        elif self.state.dotwochannel[self.state.activeboard]:
             uspersample *= 2
 
         freq = (k / uspersample)[list(range(n // 2))] / n
@@ -287,7 +287,7 @@ class DataProcessor:
         }
 
         sampling_rate = (state.samplerate * 1e9) / state.downsamplefactor
-        if state.dotwochannel: sampling_rate /= 2
+        if state.dotwochannel[state.activeboard]: sampling_rate /= 2
         found_freq = find_fundamental_frequency_scipy(y_data, sampling_rate)
         measurements["Freq"] = format_freq(found_freq)
 

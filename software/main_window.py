@@ -103,31 +103,32 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionPan_and_zoom.setChecked(False)
         self.plot_manager.set_pan_and_zoom(False)
 
-    def _sync_all_channels_to_hardware(self):
+    def _sync_board_settings_to_hardware(self, board_idx):
         """
-        Loops through all channels and sends their current state (gain, offset, etc.)
-        from the ScopeState object to the physical hardware. This is crucial
-        after a board reset command like setupboard().
+        Re-applies all stored state settings (gain, offset, etc.) for a specific
+        board to the physical hardware. Called after a disruptive mode change.
         """
         s = self.state
-        for i in range(s.num_board * s.num_chan_per_board):
-            board_idx = i // s.num_chan_per_board
-            chan_idx = i % s.num_chan_per_board
+        #print(f"Re-syncing hardware settings for board {board_idx}...")
+
+        # Sync settings for both channels on this board
+        for chan_on_board in range(s.num_chan_per_board):
+            global_chan_idx = board_idx * s.num_chan_per_board + chan_on_board
 
             # Re-apply Gain
-            self.controller.set_channel_gain(board_idx, chan_idx, s.gain[i])
+            self.controller.set_channel_gain(board_idx, chan_on_board, s.gain[global_chan_idx])
 
-            # Re-apply Offset (requires re-calculating the scaling factor)
-            scaling = 1000 * s.VperD[i] / 160.0
-            if s.acdc[i]:
+            # Re-apply Offset (this requires calculating the scaling factor)
+            scaling = 1000 * s.VperD[global_chan_idx] / 160.0
+            if s.acdc[global_chan_idx]:
                 scaling *= 245.0 / 160.0
-            final_scaling = scaling / s.tenx[i]
-            self.controller.set_channel_offset(board_idx, chan_idx, s.offset[i], final_scaling)
+            final_scaling = scaling / s.tenx[global_chan_idx]
+            self.controller.set_channel_offset(board_idx, chan_on_board, s.offset[global_chan_idx], final_scaling)
 
-            # Re-apply other settings
-            self.controller.set_acdc(board_idx, chan_idx, s.acdc[i])
-            self.controller.set_mohm(board_idx, chan_idx, s.mohm[i])
-            self.controller.set_att(board_idx, chan_idx, s.att[i])
+            # Re-apply AC/DC, Impedance, and Attenuation
+            self.controller.set_acdc(board_idx, chan_on_board, s.acdc[global_chan_idx])
+            self.controller.set_mohm(board_idx, chan_on_board, s.mohm[global_chan_idx])
+            self.controller.set_att(board_idx, chan_on_board, s.att[global_chan_idx])
 
     def show_no_hardware_error(self):
         """Displays a non-blocking warning message to the user."""
@@ -244,7 +245,7 @@ class MainWindow(TemplateBaseClass):
         # 2. Determine the ENABLED state of the oversampling box.
         #    The user should only be able to CHANGE the oversampling setting
         #    when the primary (even) board of a pair is selected.
-        can_change_oversampling = (s.num_board > 1 and s.activeboard % 2 == 0 and not s.dotwochannel)
+        can_change_oversampling = (s.num_board > 1 and s.activeboard % 2 == 0 and not s.dotwochannel[s.activeboard])
         self.ui.oversampCheck.setEnabled(can_change_oversampling)
 
         # --- NEW: Logic for Trigger Channel Dropdown ---
@@ -252,19 +253,33 @@ class MainWindow(TemplateBaseClass):
         chan1_item = self.ui.trigchan_comboBox.model().item(1)
         if chan1_item:
             # Only enable the "Channel 1" option if two-channel mode is active
-            chan1_item.setEnabled(s.dotwochannel)
+            chan1_item.setEnabled(s.dotwochannel[s.activeboard])
 
         # If not in two-channel mode, ensure "Channel 0" is selected
-        if not s.dotwochannel and self.ui.trigchan_comboBox.currentIndex() == 1:
+        if not s.dotwochannel[s.activeboard] and self.ui.trigchan_comboBox.currentIndex() == 1:
             self.ui.trigchan_comboBox.setCurrentIndex(0)
 
         # --- Existing logic for chanBox ---
-        if s.dotwochannel:
+        if s.dotwochannel[s.activeboard]:
             self.ui.chanBox.setMaximum(s.num_chan_per_board - 1)
         else:
             if self.ui.chanBox.value() != 0:
                 self.ui.chanBox.setValue(0)
             self.ui.chanBox.setMaximum(0)
+
+        # --- NEW: Loop through all boards to set plot line visibility ---
+        for board_idx in range(s.num_board):
+            # The index of the second channel on this board
+            ch1_idx = board_idx * s.num_chan_per_board + 1
+
+            # Determine if the second channel should be visible
+            is_ch1_visible = s.dotwochannel[board_idx]
+
+            self.plot_manager.lines[ch1_idx].setVisible(is_ch1_visible)
+
+            # If hiding the channel, also clear its data to remove the stale trace
+            if not is_ch1_visible:
+                self.plot_manager.lines[ch1_idx].clear()
 
     def open_socket(self):
         print("Starting SCPI socket thread...")
@@ -386,7 +401,7 @@ class MainWindow(TemplateBaseClass):
         sradjust = 1e9
         if s.dointerleaved[s.activeboard]:
             sradjust = 2e9
-        elif s.dotwochannel:
+        elif s.dotwochannel[s.activeboard]:
             sradjust = 0.5e9
         effective_sr = s.samplerate * sradjust / (s.downsamplefactor if not s.highresval else 1)
 
@@ -464,9 +479,15 @@ class MainWindow(TemplateBaseClass):
         """Creates or re-sizes the numpy arrays for storing waveform data."""
         s = self.state
         num_ch = s.num_chan_per_board * s.num_board
-        shape = (num_ch, 2, (2 if s.dotwochannel else 4) * 10 * s.expect_samples)
-        ishape = (num_ch, 2, 2 * 4 * 10 * s.expect_samples)
 
+        # ALWAYS allocate for the maximum number of samples (single-channel mode).
+        # The DataProcessor will handle filling it correctly for each board's mode.
+        num_samples = 4 * 10 * s.expect_samples
+        shape = (num_ch, 2, num_samples)
+
+        ishape = (num_ch, 2, 2 * num_samples)  # For interleaved data
+
+        # Avoid re-allocating if the shape hasn't changed
         if not hasattr(self, 'xydata') or self.xydata.shape != shape:
             self.xydata = np.zeros(shape, dtype=float)
             self.xydatainterleaved = np.zeros(ishape, dtype=float)
@@ -475,15 +496,36 @@ class MainWindow(TemplateBaseClass):
     def time_changed(self):
         """Updates plot manager and recalculates x-axis arrays on timebase change."""
         self.plot_manager.time_changed()
-        self.ui.timebaseBox.setText(f"2^{self.state.downsample}")
         s = self.state
-        x_step1 = (2 if s.dotwochannel else 1) * s.downsamplefactor / s.nsunits / s.samplerate
+
+        # --- Calculate and display the time per division ---
+        # Get the total time span shown on the screen
+        time_span = s.max_x - s.min_x
+        # Divide by 10 (for the 10 horizontal divisions on the grid)
+        time_per_div = time_span / 10.0
+        # Format the string with appropriate precision and the current units
+        if time_per_div < 10:
+            display_text = f"{time_per_div:.2f} {s.units}/div"
+        else:
+            display_text = f"{time_per_div:.1f} {s.units}/div"
+        self.ui.timebaseBox.setText(display_text)
+        # self.ui.timebaseBox.setText(f"2^{self.state.downsample}")
+
+        # The time step per sample in the xydata array is now CONSTANT,
+        # corresponding to the highest density mode (single-channel).
+        x_step1 = 1 * s.downsamplefactor / s.nsunits / s.samplerate
         x_step2 = 0.5 * s.downsamplefactor / s.nsunits / s.samplerate
-        for c in range(s.num_chan_per_board * s.num_board):
-            if hasattr(self, 'xydata'):
-                self.xydata[c][0] = np.arange(self.xydata.shape[2]) * x_step1
-            if hasattr(self, 'xydatainterleaved'):
-                self.xydatainterleaved[c][0] = np.arange(self.xydatainterleaved.shape[2]) * x_step2
+
+        # This logic populates the x-axis (time) for each channel's data array
+        if hasattr(self, 'xydata'):
+            time_axis = np.arange(self.xydata.shape[2]) * x_step1
+            for c in range(s.num_chan_per_board * s.num_board):
+                self.xydata[c][0] = time_axis
+
+        if hasattr(self, 'xydatainterleaved'):
+            interleaved_time_axis = np.arange(self.xydatainterleaved.shape[2]) * x_step2
+            for c in range(s.num_chan_per_board * s.num_board):
+                self.xydatainterleaved[c][0] = interleaved_time_axis
 
     def handle_critical_error(self, title, message):
         """
@@ -607,6 +649,9 @@ class MainWindow(TemplateBaseClass):
         """Called when board or channel selector is changed."""
         self.state.activeboard = self.ui.boardBox.value()
         self.state.selectedchannel = self.ui.chanBox.value()
+
+        # Update the "Two Channel" checkbox to reflect the state of the newly selected board
+        self.ui.twochanCheck.setChecked(self.state.dotwochannel[self.state.activeboard])
 
         # This handles channel selector limits and other mode-dependent UI
         self._update_channel_mode_ui()
@@ -754,11 +799,14 @@ class MainWindow(TemplateBaseClass):
         self.plot_manager.draw_trigger_lines()
 
     def time_fast(self):
+        if self.state.downsample < -10:
+            #print("Maximum zoom level reached.")
+            self.ui.timefastButton.setEnabled(False)
+
         self.state.downsample -= 1
         self.controller.tell_downsample_all(self.state.downsample)
 
         is_zoomed = self.state.downsample < 0
-
         if is_zoomed:
             self.state.downsamplezoom = pow(2, -self.state.downsample)
         else:
@@ -775,6 +823,7 @@ class MainWindow(TemplateBaseClass):
             self.ui.thresholdPos.blockSignals(False)
 
     def time_slow(self):
+        self.ui.timefastButton.setEnabled(True)
         self.state.downsample += 1
         self.controller.tell_downsample_all(self.state.downsample)
 
@@ -917,26 +966,27 @@ class MainWindow(TemplateBaseClass):
                 self.fftui.close()
 
     def twochan_changed(self):
-        """Switches between single and dual channel mode."""
-        self.state.dotwochannel = self.ui.twochanCheck.isChecked()
+        """Switches between single and dual channel mode FOR THE ACTIVE BOARD."""
+        s = self.state
+        is_two_channel = self.ui.twochanCheck.isChecked()
+        active_board = s.activeboard
 
-        # 1. Reconfigure hardware (this resets settings on the board)
-        for i in range(self.state.num_board):
-            setupboard(self.controller.usbs[i], self.state.dopattern, self.state.dotwochannel, self.state.dooverrange,
-                       self.state.basevoltage == 200)
-            self.controller.tell_downsample(self.controller.usbs[i], self.state.downsample)
+        # 1. Update the state for the active board ONLY
+        s.dotwochannel[active_board] = is_two_channel
 
-        # 2. NEW: Re-apply all stored settings from the state back to the hardware
-        self._sync_all_channels_to_hardware()
+        # 2. Reconfigure the hardware for the active board. This can reset settings.
+        setupboard(self.controller.usbs[active_board], s.dopattern, is_two_channel, s.dooverrange, s.basevoltage == 200)
+        self.controller.tell_downsample(self.controller.usbs[active_board], s.downsample, active_board)
 
-        # 3. NEW: Set a grace period of 5 events to ignore transient glitches
-        self.state.pll_reset_grace_period = 5
+        # 3. Re-apply all stored settings for the active board back to the hardware
+        self._sync_board_settings_to_hardware(active_board)
 
-        # 4. Update data arrays and plot axes
+        # 4. Set a grace period to prevent false PLL resets during the switch
+        s.pll_reset_grace_period = 5
+
+        # 5. Update the rest of the application
         self.allocate_xy_data()
         self.time_changed()
-
-        # 5. Update the UI
         self._update_channel_mode_ui()
         self.select_channel()
 
@@ -1273,7 +1323,6 @@ class MainWindow(TemplateBaseClass):
         mean_secondary = np.mean(yc2)
         std_secondary = np.std(yc2)
 
-        # --- CORRECTED CALCULATION LOGIC ---
         # The correction to ADD to the secondary data is (primary - secondary)
         s.extrigboardmeancorrection[s.activeboard] += (mean_primary - mean_secondary)
 

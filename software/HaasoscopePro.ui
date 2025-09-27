@@ -159,8 +159,8 @@
        <widget class="QLabel" name="label_2">
         <property name="geometry">
          <rect>
-          <x>10</x>
-          <y>353</y>
+          <x>30</x>
+          <y>360</y>
           <width>71</width>
           <height>16</height>
          </rect>
@@ -171,7 +171,7 @@
          </font>
         </property>
         <property name="text">
-         <string>Time factor</string>
+         <string>Time scale</string>
         </property>
        </widget>
        <widget class="QLabel" name="label_3">
@@ -294,8 +294,8 @@
        <widget class="QPushButton" name="timeslowButton">
         <property name="geometry">
          <rect>
-          <x>70</x>
-          <y>370</y>
+          <x>110</x>
+          <y>380</y>
           <width>61</width>
           <height>21</height>
          </rect>
@@ -315,8 +315,8 @@
        <widget class="QPushButton" name="timefastButton">
         <property name="geometry">
          <rect>
-          <x>140</x>
-          <y>370</y>
+          <x>110</x>
+          <y>360</y>
           <width>61</width>
           <height>21</height>
          </rect>
@@ -548,8 +548,8 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>372</y>
-          <width>51</width>
+          <y>380</y>
+          <width>91</width>
           <height>20</height>
          </rect>
         </property>

@@ -33,7 +33,7 @@ class ScopeState:
         # Board/Channel Specific States
         self.activeboard = 0
         self.selectedchannel = 0
-        self.dotwochannel = False
+        self.dotwochannel = [False] * self.num_board # Now a per-board list
         self.dointerleaved = [False] * self.num_board
         self.dooversample = [False] * self.num_board
         self.doexttrig = [0] * self.num_board
