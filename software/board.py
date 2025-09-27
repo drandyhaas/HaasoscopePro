@@ -27,7 +27,7 @@ def clkout_ena(usb, en: bool, doprint: bool = True):
     usb.send(bytes([2, 9, int(en), 0, 99, 99, 99, 99]))
     res = usb.recv(4)
     if doprint:
-        print(f"clkout_ena now {int(en)}, was {res[0]}")
+        print(f"Clock out now {int(en)}, was {res[0]}")
 
 def flash_erase(usb, doprint: bool = False):
     """Sends the command to bulk erase the configuration flash."""
