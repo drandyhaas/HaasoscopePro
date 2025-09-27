@@ -23,7 +23,7 @@ def adf4350(usb, freq, phase, r_counter=1, divided=FeedbackSelect.Divider, ref_d
         aux_output_enable=False, aux_output_power=-4.0, output_enable=True, output_power=-4.0)  # (-4,-1,2,5)
     # values can also be computed using free Analog Devices ADF435x Software:
     # https://www.analog.com/en/resources/evaluation-hardware-and-software/evaluation-boards-kits/eval-adf4351.html#eb-relatedsoftware
-    spimode(usb, 0)
+    set_spi_mode(usb, 0)
     for r in reversed(range(len(regs))):
         # regs[2]=0x5004E42 #to override from ADF435x software
         if not quiet: print("adf4350 reg", r, binprint(regs[r]), hex(regs[r]))
@@ -31,7 +31,7 @@ def adf4350(usb, freq, phase, r_counter=1, divided=FeedbackSelect.Divider, ref_d
         # for i in range(4): print(binprint(fourbytes[i]))
         spicommand(usb, "ADF4350 Reg " + str(r), fourbytes[3], fourbytes[2], fourbytes[1], False, fourth=fourbytes[0],
                    cs=3, nbyte=4)  # was cs=2 on alpha board v1.11
-    spimode(usb, 0)
+    set_spi_mode(usb, 0)
 
 def swapinputs(usb,doswap,insetup=False):
     if not insetup:
@@ -46,7 +46,7 @@ def swapinputs(usb,doswap,insetup=False):
 def setupboard(usb, dopattern, twochannel, dooverrange, do1v=False):
     setfan(usb, 1)
 
-    spimode(usb, 0)
+    set_spi_mode(usb, 0)
     spicommand(usb, "DEVICE_CONFIG", 0x00, 0x02, 0x00, False)  # power up
     # spicommand(usb, "DEVICE_CONFIG", 0x00, 0x02, 0x03, False) # power down
     res = spicommand2(usb, "VENDOR", 0x00, 0x0c, 0x00, 0x00, True)
@@ -144,7 +144,7 @@ def setupboard(usb, dopattern, twochannel, dooverrange, do1v=False):
     # spicommand(usb, "CAL_SOFT_TRIG", 0x00, 0x6c, 0x00, False)
     # spicommand(usb, "CAL_SOFT_TRIG", 0x00, 0x6c, 0x01, False)
 
-    spimode(usb, 0)
+    set_spi_mode(usb, 0)
     res = spicommand(usb, "Amp Rev ID", 0x00, 0x00, 0x00, True, cs=1, nbyte=2)
     if res[0] != 0x03:
         print("Bad read rev from amp 1!")
@@ -162,10 +162,10 @@ def setupboard(usb, dopattern, twochannel, dooverrange, do1v=False):
         print("Bad read prod from amp 2!")
         return 2
 
-    spimode(usb, 1)
+    set_spi_mode(usb, 1)
     spicommand(usb, "DAC ref on", 0x38, 0xff, 0xff, False, cs=4)
     spicommand(usb, "DAC gain 1", 0x02, 0xff, 0xff, False, cs=4)
-    spimode(usb, 0)
+    set_spi_mode(usb, 0)
     dooffset(usb, 0, 0, 1,False)
     dooffset(usb, 1, 0, 1, False)
     setgain(usb, 0, 0, False)
@@ -173,14 +173,14 @@ def setupboard(usb, dopattern, twochannel, dooverrange, do1v=False):
     return 0
 
 def setgain(usb, chan, value, doswap):
-    spimode(usb, 0)
+    set_spi_mode(usb, 0)
     # 00 to 20 is 26 to -6 dB, 0x1a is no gain
     if doswap: chan = (chan+1) %2
     if chan == 0: spicommand(usb, "Amp Gain 0", 0x02, 0x00, 26 - value, False, cs=2, nbyte=2, quiet=True)
     if chan == 1: spicommand(usb, "Amp Gain 1", 0x02, 0x00, 26 - value, False, cs=1, nbyte=2, quiet=True)
 
 def dooffset(usb, chan, val, scaling, doswap):
-    spimode(usb, 1)
+    set_spi_mode(usb, 1)
     #if doswap: val= -val
     dacval = int((pow(2, 16) - 1) * (val *scaling/ 2 + 500) / 1000)
     #print("dacval is", dacval,"and doswap is",doswap,"and val is",val)
@@ -190,7 +190,7 @@ def dooffset(usb, chan, val, scaling, doswap):
         if doswap: chan = (chan + 1) % 2
         if chan == 1: spicommand(usb, "DAC 1 value", 0x18, dacval >> 8, dacval % 256, False, cs=4, quiet=True)
         if chan == 0: spicommand(usb, "DAC 2 value", 0x19, dacval >> 8, dacval % 256, False, cs=4, quiet=True)
-    spimode(usb, 0)
+    set_spi_mode(usb, 0)
     return ret
 
 def clockswitch(usb, board, quiet):
@@ -258,7 +258,7 @@ def setfan(usb,fanon, quiet=True):
     if not quiet: print("Set fan", fanon, "and it was",res[0])
 
 def cleanup(usb):
-    spimode(usb, 0)
+    set_spi_mode(usb, 0)
     spicommand(usb, "DEVICE_CONFIG", 0x00, 0x02, 0x03, False)  # power down
     setfan(usb,0)
     send_leds(usb, 50,35,50,50,35,50)
@@ -271,7 +271,7 @@ def getoverrange(usb):
         print("Overrange0", res[3], res[2], res[1], res[0])
 
 def gettemps(usb, retadcval=False, retTboard=False):
-    spimode(usb, 0)
+    set_spi_mode(usb, 0)
     spicommand(usb, "SlowDAC1", 0x00, 0x00, 0x00, True, cs=6, nbyte=2,
                quiet=True)  # first conversion may be for old input
     slowdac1 = spicommand(usb, "SlowDAC1", 0x00, 0x00, 0x00, True, cs=6, nbyte=2, quiet=True)
