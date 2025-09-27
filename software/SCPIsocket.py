@@ -28,6 +28,7 @@ class DataSocket:
 
     def data_fspersample(self):
         fspersample = int(312500 * self.hspro.state.downsamplefactor)
+        if self.hspro.state.dotwochannel[0]: fspersample*=2 # NOTE: taking timescale from the first board only - seems to need to be the same for all channels :(
         return fspersample.to_bytes(8, "little")
 
     def data_triggerpos(self):
@@ -40,17 +41,12 @@ class DataSocket:
 
     def data_channel(self, chan_index):
         s = self.hspro.state
-
-        # In single-channel mode, we only serve the even-numbered channels
         hspro_chan_index = chan_index
         board = hspro_chan_index // s.num_chan_per_board
-
         memdepth = self.hspro.xydata[hspro_chan_index][1].size
         scale = s.max_y / pow(2, 15)
         offset = 0.0
         trigphase = -s.totdistcorr[board] * 1e6 * s.nsunits  # convert to fs
-        if s.dotwochannel[board]:
-            trigphase /= 2.0
 
         res = bytearray([chan_index])
         res += memdepth.to_bytes(8, "little")
@@ -61,9 +57,11 @@ class DataSocket:
 
         # Package the waveform samples as 16-bit signed integers
         waveform_data = self.hspro.xydata[hspro_chan_index][1] / scale
+        if self.hspro.state.dotwochannel[board]: # set second half to 0 since it's stale old data from single channel mode
+            midpoint = len(waveform_data) // 2
+            waveform_data[midpoint:] = 0
         waveform_data = np.clip(waveform_data, -32767, 32767).astype(np.int16)
         res += waveform_data.tobytes()
-
         return res
 
     def open_socket(self, arg1):
@@ -121,7 +119,7 @@ class DataSocket:
                 payload = bytearray()
                 payload += self.data_seqnum()
                 payload += num_channels_bytes
-                payload += self.data_fspersample() # TODO: adjust for two-channel mode somehow
+                payload += self.data_fspersample()
                 payload += self.data_triggerpos()
                 payload += self.data_wfms_per_s()
                 for c in range(num_channels_val):
