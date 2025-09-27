@@ -17,7 +17,7 @@ from data_recorder import DataRecorder
 
 # Import remaining dependencies
 from FFTWindow import FFTWindow
-from SCPIsocket import hspro_socket
+from SCPIsocket import DataSocket
 from board import setupboard, gettemps
 from utils import get_pwd
 import ftd2xx
@@ -47,8 +47,8 @@ class MainWindow(TemplateBaseClass):
         self._connect_signals()
 
         # 5. Initialize network socket and other components
-        self.hsprosock = None
-        self.hsprosock_t1 = None
+        self.socket = None
+        self.socket_thread = None
         self.fftui = None
         self.ui.boardBox.setMaximum(self.state.num_board - 1)
         self.setup_successful = False
@@ -283,20 +283,20 @@ class MainWindow(TemplateBaseClass):
 
     def open_socket(self):
         print("Starting SCPI socket thread...")
-        self.hsprosock = hspro_socket()
-        self.hsprosock.hspro = self
-        self.hsprosock.runthethread = True
-        self.hsprosock_t1 = threading.Thread(target=self.hsprosock.open_socket, args=(10,))
-        self.hsprosock_t1.start()
+        self.socket = DataSocket()
+        self.socket.hspro = self
+        self.socket.runthethread = True
+        self.socket_thread = threading.Thread(target=self.socket.open_socket, args=(10,))
+        self.socket_thread.start()
 
     def close_socket(self):
         """Safely stops and joins the SCPI socket thread before exiting."""
-        if self.hsprosock is not None:
+        if self.socket is not None:
             print("Closing SCPI socket...")
-            self.hsprosock.runthethread = False
+            self.socket.runthethread = False
             # Check if the thread is alive before trying to join it
-            if self.hsprosock_t1 and self.hsprosock_t1.is_alive():
-                self.hsprosock_t1.join()
+            if self.socket_thread and self.socket_thread.is_alive():
+                self.socket_thread.join()
 
     # #########################################################################
     # ## Core Application Logic
@@ -319,7 +319,7 @@ class MainWindow(TemplateBaseClass):
 
     def update_plot_loop(self):
         """Main acquisition loop, with full status bar and FFT plot updates."""
-        if self.hsprosock and self.hsprosock.issending:
+        if self.socket and self.socket.issending:
             time.sleep(0.001)
             return
 

@@ -4,7 +4,7 @@ import time
 import math
 import numpy as np
 
-class hspro_socket:
+class DataSocket:
     """
     Implements a TCP socket server for remote control of the Haasoscope.
 
