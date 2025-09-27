@@ -21,7 +21,6 @@ class ScopeState:
         self.getone = False
         self.dodrawing = True
         self.dofast = False
-        self.dofft = False
         self.dopattern = 0
         self.pll_reset_grace_period = 0
         self.dooverrange = False
@@ -104,6 +103,9 @@ class ScopeState:
         self.oldtime = 0
         self.lastrate = 0
         self.lastsize = 0
+
+        # FFT display state dictionary, mapping channel name to boolean
+        self.fft_enabled = {} # e.g., {"CH1": False, "CH2": True, ...}
 
     @property
     def activexychannel(self):

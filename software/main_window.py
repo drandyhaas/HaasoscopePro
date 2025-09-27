@@ -184,7 +184,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.lpfBox.currentIndexChanged.connect(self.lpf_changed)
         self.ui.resampBox.valueChanged.connect(lambda val: setattr(self.state, 'doresamp', val))
         self.ui.fwfBox.valueChanged.connect(lambda val: setattr(self.state, 'fitwidthfraction', val / 100.))
-        self.ui.fftCheck.clicked.connect(self.fft_clicked)
+        self.ui.fftCheck.stateChanged.connect(self.fft_clicked)
         self.ui.persistTbox.valueChanged.connect(self.plot_manager.set_persistence)
         self.ui.persistavgCheck.clicked.connect(self.set_average_line_pen)
         self.ui.persistlinesCheck.clicked.connect(self.set_average_line_pen)
@@ -377,22 +377,34 @@ class MainWindow(TemplateBaseClass):
             lines_vis = [line.isVisible() for line in self.plot_manager.lines]
             self.recorder.record_event(self.xydata, self.plot_manager.otherlines['vline'].value(), lines_vis)
 
-        if s.dofft and self.fftui is not None and self.fftui.isVisible():
-            y_data = self.xydata[s.activexychannel][1]
-            freq_data_mhz, fft_y_data = self.processor.calculate_fft(y_data)
+        # --- START: Multi-channel FFT processing ---
+        if self.fftui and self.fftui.isVisible():
+            active_channel_name = f"CH{self.state.activexychannel + 1}"
 
-            if len(freq_data_mhz) > 0:
-                max_freq_mhz = np.max(freq_data_mhz)
-                if max_freq_mhz < 0.001:
-                    plot_x_data, xlabel = freq_data_mhz * 1e6, 'Frequency (Hz)'
-                elif max_freq_mhz < 1.0:
-                    plot_x_data, xlabel = freq_data_mhz * 1e3, 'Frequency (kHz)'
+            # Loop through all possible channels
+            for ch_idx in range(self.state.num_board * self.state.num_chan_per_board):
+                ch_name = f"CH{ch_idx + 1}"
+
+                # Update FFT if this channel is enabled
+                if self.state.fft_enabled.get(ch_name, False):
+                    is_active = (ch_name == active_channel_name)
+                    y_data = self.xydata[ch_idx][1]
+                    freq, mag = self.processor.calculate_fft(y_data)
+
+                    if freq is not None and len(freq) > 0:
+                        max_freq_mhz = np.max(freq)
+                        if max_freq_mhz < 0.001:
+                            plot_x_data, xlabel = freq * 1e6, 'Frequency (Hz)'
+                        elif max_freq_mhz < 1.0:
+                            plot_x_data, xlabel = freq * 1e3, 'Frequency (kHz)'
+                        else:
+                            plot_x_data, xlabel = freq, 'Frequency (MHz)'
+
+                        title = f'FFT of {ch_name}'
+                        self.fftui.update_plot(ch_name, plot_x_data, mag, title, xlabel, is_active)
                 else:
-                    plot_x_data, xlabel = freq_data_mhz, 'Frequency (MHz)'
-
-                pen = self.plot_manager.linepens[s.activexychannel]
-                title = f'FFT of board {s.activeboard} channel {s.selectedchannel}'
-                self.fftui.update_plot(plot_x_data, fft_y_data, pen, title, xlabel)
+                    self.fftui.clear_plot(ch_name)
+        # --- END: Multi-channel FFT processing ---
 
         now = time.time()
         dt = now - self.last_time + 1e-9
@@ -652,6 +664,9 @@ class MainWindow(TemplateBaseClass):
         if s.num_board<1: return
         s.activeboard = self.ui.boardBox.value()
         s.selectedchannel = self.ui.chanBox.value()
+
+        # This now correctly calls the method to update the checkbox
+        self.update_fft_checkbox_state()
 
         # Update the "Two Channel" checkbox to reflect the state of the newly selected board
         self.ui.twochanCheck.setChecked(self.state.dotwochannel[self.state.activeboard])
@@ -953,17 +968,32 @@ class MainWindow(TemplateBaseClass):
     # #########################################################################
 
     def fft_clicked(self):
-        """Toggles the FFT window and resets the plot range."""
-        self.state.dofft = self.ui.fftCheck.isChecked()
-        if self.state.dofft:
-            if self.fftui is None or not self.fftui.isVisible():
-                self.fftui = FFTWindow()
-                self.fftui.setWindowTitle(f'Haasoscope Pro FFT of board {self.state.activeboard} channel {self.state.selectedchannel}')
-                self.fftui.show()
-                self.fft_new_plot = True # Flag to force a range update on the first frame
+        """Toggles the FFT window state for the active channel."""
+        active_channel_name = f"CH{self.state.activexychannel + 1}"
+        is_checked = self.ui.fftCheck.isChecked()
+        self.state.fft_enabled[active_channel_name] = is_checked
+
+        if self.fftui is None:
+            self.fftui = FFTWindow()
+            # self.fftui.window_changed.connect(self.set_fft_window_function)
+            # self.fftui.averaging_changed.connect(self.set_fft_averaging)
+            # self.fftui.averaging_reset.connect(self.reset_fft_averaging)
+
+        should_show = any(self.state.fft_enabled.values())
+        if should_show:
+            self.fftui.show()
         else:
-            if self.fftui:
-                self.fftui.close()
+            self.fftui.hide()
+
+    def update_fft_checkbox_state(self):
+        """Updates the 'FFT' checkbox to reflect the state of the active channel."""
+        active_channel_name = f"CH{self.state.activexychannel + 1}"
+        if active_channel_name not in self.state.fft_enabled:
+            self.state.fft_enabled[active_channel_name] = False
+
+        self.ui.fftCheck.blockSignals(True)
+        self.ui.fftCheck.setChecked(self.state.fft_enabled[active_channel_name])
+        self.ui.fftCheck.blockSignals(False)
 
     def twochan_changed(self):
         """Switches between single and dual channel mode FOR THE ACTIVE BOARD."""
@@ -1029,8 +1059,10 @@ class MainWindow(TemplateBaseClass):
         self.ui.VperD.setText(display_text)
         # --- END OF NEW LOGIC ---
 
-        if self.ui.gainBox.value()>24: self.ui.gainBox.setSingleStep(2)
-        else: self.ui.gainBox.setSingleStep(6)
+        if self.ui.gainBox.value() > 24:
+            self.ui.gainBox.setSingleStep(2)
+        else:
+            self.ui.gainBox.setSingleStep(6)
 
         self.plot_manager.update_right_axis()
 

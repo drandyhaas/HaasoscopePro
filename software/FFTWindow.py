@@ -45,17 +45,24 @@ class FFTWindow(FFTTemplateBaseClass):
         self.user_panned_zoomed = False
         self.plot.sigRangeChanged.connect(self.on_view_changed)
 
-        # Create the plot line items
-        self.fft_line = self.plot.plot(pen=pg.mkPen(color="w"), name="fft_plot")
-        self.peak_hold_line = self.plot.plot(pen=pg.mkPen(color=(255, 255, 0, 150), width=1))  # Darker yellow, width 1
+        # --- Multi-channel Plot Line Management ---
+        self.channel_pens = {
+            'CH1': pg.mkPen(color='#00FFFF', width=1.5),
+            'CH2': pg.mkPen(color='#FF00FF', width=1.5),
+            'CH3': pg.mkPen(color='#00FF00', width=1.5),
+            'CH4': pg.mkPen(color='#FFFF00', width=1.5)
+        }
+        self.fft_lines = {}  # Holds plot items for each channel: {'CH1': PlotDataItem, ...}
 
-        self.dolog = False
-        self.peak_hold_enabled = True  # <-- Set Peak Hold ON by default
-        self.peak_hold_data = None
-        self.show_labels_enabled = True  # <-- Set Peak Labels ON by default
+        # --- Analysis Plot Items ---
+        self.peak_hold_line = self.plot.plot(pen=pg.mkPen(color=(255, 255, 0, 150), width=1))
         self.peak_text_labels = []
 
-        # Sync the UI menu to reflect the new defaults
+        # --- State Variables ---
+        self.dolog = False
+        self.peak_hold_enabled = True
+        self.peak_hold_data = None
+        self.show_labels_enabled = True
         self.ui.actionPeak_hold.setChecked(True)
         self.ui.actionShow_peak_labels.setChecked(True)
 
@@ -91,66 +98,71 @@ class FFTWindow(FFTTemplateBaseClass):
         if not self.show_labels_enabled:
             self.clear_peak_labels()
 
-    def update_plot(self, x_data, y_data, pen, title_text, xlabel_text):
+    def clear_plot(self, channel_name):
+        """Removes a specific channel's trace from the plot."""
+        if channel_name in self.fft_lines:
+            line_to_remove = self.fft_lines.pop(channel_name)
+            self.plot.removeItem(line_to_remove)
+
+    def update_plot(self, channel_name, x_data, y_data, title_text, xlabel_text, is_active_channel):
         """
-        Public method called by the main window to update the FFT plot with new data.
+        Public method to update a channel's FFT plot.
+        Advanced features are linked to the active channel.
         """
-        self.fft_line.setData(x_data, y_data)
-        self.fft_line.setPen(pen)
+        # --- Multi-channel Trace Update ---
+        if channel_name not in self.fft_lines:
+            pen = self.channel_pens.get(channel_name, pg.mkPen('w'))
+            self.fft_lines[channel_name] = self.plot.plot(pen=pen)
+
+        self.fft_lines[channel_name].setData(x_data, y_data)
+
         self.plot.setTitle(title_text)
         self.plot.setLabel('bottom', xlabel_text)
 
         if not self.user_panned_zoomed:
             self.plot.enableAutoRange(axis='x')
 
-        self.clear_peak_labels()
+        # All analysis is performed only on the active channel's data
+        if is_active_channel:
+            self.clear_peak_labels()
 
-        if self.peak_hold_enabled:
-            if self.peak_hold_data is None or len(self.peak_hold_data) != len(y_data):
-                self.peak_hold_data = y_data.copy()
+            # --- Peak Hold Logic ---
+            if self.peak_hold_enabled:
+                if self.peak_hold_data is None or len(self.peak_hold_data) != len(y_data):
+                    self.peak_hold_data = y_data.copy()
+                else:
+                    self.peak_hold_data = np.maximum(self.peak_hold_data, y_data)
+                self.peak_hold_line.setData(x_data, self.peak_hold_data)
+
+                # --- Peak Label Logic ---
+                if self.show_labels_enabled and len(x_data) > 0:
+                    min_freq_dist = (x_data[-1] - x_data[0]) * 0.05
+                    peaks, _ = find_peaks(self.peak_hold_data, height=np.max(self.peak_hold_data) * 0.1)
+                    if len(peaks) > 0:
+                        peak_amplitudes = self.peak_hold_data[peaks]
+                        sorted_peak_indices = peaks[np.argsort(peak_amplitudes)[::-1]]
+                        labeled_peak_freqs = []
+                        for peak_idx in sorted_peak_indices:
+                            if len(labeled_peak_freqs) >= 10: break
+                            current_peak_freq = x_data[peak_idx]
+                            is_far_enough = all(abs(current_peak_freq - f) > min_freq_dist for f in labeled_peak_freqs)
+                            if is_far_enough:
+                                peak_amp = self.peak_hold_data[peak_idx]
+                                text_item = pg.TextItem(text=f"{current_peak_freq:.2f}", color=(255, 255, 0),
+                                                        anchor=(0.5, 1.5))
+                                text_item.setPos(current_peak_freq, peak_amp)
+                                self.plot.addItem(text_item)
+                                self.peak_text_labels.append(text_item)
+                                labeled_peak_freqs.append(current_peak_freq)
             else:
-                self.peak_hold_data = np.maximum(self.peak_hold_data, y_data)
+                self.peak_hold_line.clear()  # If peak hold is off, ensure line is clear
 
-            self.peak_hold_line.setData(x_data, self.peak_hold_data)
-
-            if self.show_labels_enabled and len(x_data) > 0:
-                min_freq_dist = (x_data[-1] - x_data[0]) * 0.05
-
-                peaks, _ = find_peaks(self.peak_hold_data, height=np.max(self.peak_hold_data) * 0.1)
-
-                if len(peaks) > 0:
-                    peak_amplitudes = self.peak_hold_data[peaks]
-                    sorted_peak_indices = peaks[np.argsort(peak_amplitudes)[::-1]]
-
-                    labeled_peak_freqs = []
-
-                    for peak_idx in sorted_peak_indices:
-                        if len(labeled_peak_freqs) >= 25: # limit on number of peaks labeled
-                            break
-
-                        current_peak_freq = x_data[peak_idx]
-
-                        is_far_enough = True
-                        for labeled_freq in labeled_peak_freqs:
-                            if abs(current_peak_freq - labeled_freq) < min_freq_dist:
-                                is_far_enough = False
-                                break
-
-                        if is_far_enough:
-                            peak_amp = self.peak_hold_data[peak_idx]
-                            label_text = f"{current_peak_freq:.2f}"
-                            text_item = pg.TextItem(text=label_text, color=(255, 255, 0), anchor=(0.5, 1.5))  # Yellow
-                            text_item.setPos(current_peak_freq, peak_amp)
-                            self.plot.addItem(text_item)
-                            self.peak_text_labels.append(text_item)
-                            labeled_peak_freqs.append(current_peak_freq)
-
+        # --- Y-Axis Ranging ---
         self.plot.enableAutoRange(axis='y', enable=False)
-        if len(y_data) == 0:
-            return
+        if len(y_data) == 0: return
 
         ydatamax = np.max(y_data)
-        if self.peak_hold_enabled and self.peak_hold_data is not None:
+        if self.peak_hold_enabled and self.peak_hold_data is not None and is_active_channel:
             ydatamax = np.max(self.peak_hold_data)
 
         ydatamin = np.min(y_data)
