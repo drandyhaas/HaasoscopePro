@@ -669,6 +669,10 @@ class MainWindow(TemplateBaseClass):
         self.ui.chanonCheck.setChecked(self.plot_manager.lines[s.activexychannel].isVisible())
         self.ui.tadBox.setValue(s.tad[s.activeboard])
 
+        # Update rising/falling trigger
+        is_falling = s.fallingedge[s.activeboard]
+        self.ui.risingfalling_comboBox.setCurrentIndex(int(is_falling))
+
         # Update channel color preview box in the UI
         p = self.ui.chanColor.palette()
         p.setColor(QPalette.Base, self.plot_manager.linepens[s.activexychannel].color())
