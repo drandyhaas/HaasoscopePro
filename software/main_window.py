@@ -715,6 +715,10 @@ class MainWindow(TemplateBaseClass):
         all_colors = [pen.color() for pen in self.plot_manager.linepens]
         self.controller.do_leds(all_colors)
 
+        # NEW: Reset FFT analysis when channel changes
+        if self.fftui:
+            self.fftui.reset_analysis_state()
+
     def trigger_pos_changed(self, value):
         """
         Handles the trigger position slider.
@@ -838,6 +842,10 @@ class MainWindow(TemplateBaseClass):
             self.ui.thresholdPos.blockSignals(True)
             self.ui.thresholdPos.setValue(5000)
             self.ui.thresholdPos.blockSignals(False)
+        
+        # NEW: Reset FFT analysis when time scale changes
+        if self.fftui:
+            self.fftui.reset_analysis_state()
 
     def time_slow(self):
         self.ui.timefastButton.setEnabled(True)
@@ -860,6 +868,10 @@ class MainWindow(TemplateBaseClass):
             self.ui.thresholdPos.blockSignals(True)
             self.ui.thresholdPos.setValue(5000)
             self.ui.thresholdPos.blockSignals(False)
+
+        # NEW: Reset FFT analysis when time scale changes
+        if self.fftui:
+            self.fftui.reset_analysis_state()
 
     def depth_changed(self):
         self.state.expect_samples = self.ui.depthBox.value()

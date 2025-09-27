@@ -66,6 +66,12 @@ class FFTWindow(FFTTemplateBaseClass):
         self.yrange_min = 1e-5
         self.new_plot = True
 
+    def reset_analysis_state(self):
+        """Resets all analysis data for a clean start."""
+        self.peak_hold_data = None
+        self.peak_hold_line.clear()
+        self.clear_peak_labels()
+
     def on_view_changed(self):
         """Signal handler for when the user manually pans or zooms."""
         self.user_panned_zoomed = True
