@@ -46,13 +46,7 @@ class MainWindow(TemplateBaseClass):
         # 5. Initialize network socket and other components
         self.hsprosock = None
         self.hsprosock_t1 = None
-
         self.fftui = None
-        self.fft_last_time = 0
-        self.fft_yrange_max = 0.1
-        self.fft_yrange_min = 1e-5
-        self.fft_new_plot = True
-
         self.ui.boardBox.setMaximum(self.state.num_board - 1)
         self.setup_successful = False
 
@@ -368,9 +362,6 @@ class MainWindow(TemplateBaseClass):
             freq_data_mhz, fft_y_data = self.processor.calculate_fft(y_data)
 
             if len(freq_data_mhz) > 0:
-                self.fftui.fftline.setPen(self.plot_manager.linepens[s.activexychannel])
-                self.fftui.ui.plot.setTitle(f'FFT of board {s.activeboard} channel {s.selectedchannel}')
-
                 max_freq_mhz = np.max(freq_data_mhz)
                 if max_freq_mhz < 0.001:
                     plot_x_data, xlabel = freq_data_mhz * 1e6, 'Frequency (Hz)'
@@ -379,37 +370,9 @@ class MainWindow(TemplateBaseClass):
                 else:
                     plot_x_data, xlabel = freq_data_mhz, 'Frequency (MHz)'
 
-                self.fftui.ui.plot.setLabel('bottom', xlabel)
-                self.fftui.fftline.setData(plot_x_data, fft_y_data)
-                self.fftui.ui.plot.enableAutoRange(axis='x')
-
-                self.fftui.ui.plot.enableAutoRange(axis='y', enable=False)
-
-                ydatamax = np.max(fft_y_data)
-                ydatamin = np.min(fft_y_data)
-                now = time.time()
-
-                time_elapsed = (now - self.fft_last_time) > 3.0
-                peak_exceeded = self.fft_yrange_max < ydatamax
-                floor_dropped = self.fft_yrange_min > ydatamin * 100
-
-                if self.fft_new_plot or time_elapsed or peak_exceeded or floor_dropped:
-                    self.fft_new_plot = False
-                    self.fft_last_time = now
-                    self.fft_yrange_max = ydatamax * 1.2
-                    # Ensure minimum is not zero for log scale
-                    self.fft_yrange_min = max(ydatamin, 1e-10)
-
-                    # NEW: Check if the FFT window is in log mode
-                    if hasattr(self.fftui, 'dolog') and self.fftui.dolog:
-                        # Set range for a logarithmic Y-axis
-                        self.fftui.ui.plot.setYRange(
-                            math.log(self.fft_yrange_min, 10),
-                            math.log(self.fft_yrange_max, 10)
-                        )
-                    else:
-                        # Set range for a linear Y-axis
-                        self.fftui.ui.plot.setYRange(0, self.fft_yrange_max)
+                pen = self.plot_manager.linepens[s.activexychannel]
+                title = f'FFT of board {s.activeboard} channel {s.selectedchannel}'
+                self.fftui.update_plot(plot_x_data, fft_y_data, pen, title, xlabel)
 
         now = time.time()
         dt = now - self.last_time + 1e-9

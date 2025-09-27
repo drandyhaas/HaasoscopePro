@@ -1,47 +1,91 @@
-import math
-import os.path
-import numpy as np
-import sys, time, warnings
-from collections import deque
-import pyqtgraph as pg
-import PyQt5
-from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
-from PyQt5.QtGui import QPalette, QColor, QIcon, QPen
-from PyQt5.QtWidgets import QApplication, QMessageBox, QWidget, QPushButton, QFrame, QColorDialog
-from scipy.optimize import curve_fit
-from scipy.signal import resample, butter, filtfilt
-from scipy.interpolate import interp1d
-import struct
-from usbs import *
-from board import *
-from SCPIsocket import hspro_socket
+import time
 from datetime import datetime
-import threading
-import matplotlib.cm as cm
+from math import log
+import numpy as np
+import pyqtgraph as pg
+from pyqtgraph.Qt import QtWidgets, loadUiType
+from PyQt5.QtGui import QColor
+from utils import get_pwd
 
-# Define fft window class from template
-FFTWindowTemplate, FFTTemplateBaseClass = loadUiType(get_pwd()+"/HaasoscopeProFFT.ui")
+# Load the UI template for the FFT Window
+FFTWindowTemplate, FFTTemplateBaseClass = loadUiType(get_pwd() + "/HaasoscopeProFFT.ui")
 class FFTWindow(FFTTemplateBaseClass):
+    """
+    A self-contained window for displaying FFT plots.
+
+    This class manages its own plot items and updates. The main application
+    interacts with it by calling the `update_plot` method.
+    """
+
     def __init__(self):
-        FFTTemplateBaseClass.__init__(self)
+        super().__init__()
         self.ui = FFTWindowTemplate()
         self.ui.setupUi(self)
+
+        # Connect internal actions
         self.ui.actionTake_screenshot.triggered.connect(self.take_screenshot)
         self.ui.actionLog_scale.triggered.connect(self.log_scale)
-        self.ui.plot.setLabel('bottom', 'Frequency (MHz)')
-        self.ui.plot.setLabel('left', 'Amplitude')
-        self.ui.plot.showGrid(x=True, y=True, alpha=.8)
-        self.ui.plot.setMenuEnabled(False) # disables the right-click menu
-        self.ui.plot.setMouseEnabled(x=False, y=False) # disables pan and zoom
-        self.ui.plot.hideButtons() # hides the little autoscale button in the lower left
-        #self.ui.plot.setRange(xRange=(0.0, 1600.0))
-        self.ui.plot.setBackground(QColor('black'))
-        self.fftpen = pg.mkPen(color="w") # width=2 slower
-        self.fftline = self.ui.plot.plot(pen=self.fftpen, name="fft_plot", skipFiniteCheck=True, connect="finite")
+
+        # Configure the plot widget
+        self.plot = self.ui.plot
+        self.plot.setLabel('bottom', 'Frequency (MHz)')
+        self.plot.setLabel('left', 'Amplitude')
+        self.plot.showGrid(x=True, y=True, alpha=.8)
+        self.plot.setMenuEnabled(False)
+        self.plot.setMouseEnabled(x=True, y=True)  # Allow user to pan/zoom the FFT
+        self.plot.setBackground(QColor('black'))
+
+        # Create the plot line item
+        self.fft_line = self.plot.plot(pen=pg.mkPen(color="w"), name="fft_plot")
         self.dolog = False
 
+        # State variables for stable auto-ranging of the Y-axis
+        self.last_time = 0
+        self.yrange_max = 0.1
+        self.yrange_min = 1e-5
+        self.new_plot = True
+
+    def update_plot(self, x_data, y_data, pen, title_text, xlabel_text):
+        """
+        Public method called by the main window to update the FFT plot with new data.
+        This method handles all internal plot updates, including stable auto-ranging.
+        """
+        # Set the plot data, pen, and labels
+        self.fft_line.setData(x_data, y_data)
+        self.fft_line.setPen(pen)
+        self.plot.setTitle(title_text)
+        self.plot.setLabel('bottom', xlabel_text)
+        self.plot.enableAutoRange(axis='x')
+
+        # Use stable, manual auto-ranging for the Y-axis
+        self.plot.enableAutoRange(axis='y', enable=False)
+
+        # Ensure y_data is not empty before finding min/max
+        if len(y_data) == 0:
+            return
+
+        ydatamax = np.max(y_data)
+        ydatamin = np.min(y_data)
+        now = time.time()
+
+        # Define conditions for when to update the Y-range
+        time_elapsed = (now - self.last_time) > 3.0
+        peak_exceeded = self.yrange_max < ydatamax
+        floor_dropped = self.yrange_min > ydatamin * 100
+
+        if self.new_plot or time_elapsed or peak_exceeded or floor_dropped:
+            self.new_plot = False
+            self.last_time = now
+            self.yrange_max = ydatamax * 1.2
+            self.yrange_min = max(ydatamin, 1e-10)  # Avoid log(0)
+
+            if self.dolog:
+                self.plot.setYRange(log(self.yrange_min, 10), log(self.yrange_max, 10))
+            else:
+                self.plot.setYRange(0, self.yrange_max)
+
     def take_screenshot(self):
-        # Capture the entire FFT window
+        """Captures the FFT window and saves it to a timestamped PNG file."""
         pixmap = self.grab()
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         filename = f"HaasoscopePro_FFT_{timestamp}.png"
@@ -49,7 +93,8 @@ class FFTWindow(FFTTemplateBaseClass):
         print(f"Screenshot saved as {filename}")
 
     def log_scale(self):
+        """Toggles the Y-axis between linear and logarithmic scales."""
         self.dolog = self.ui.actionLog_scale.isChecked()
-        self.ui.plot.setLogMode(x=False, y=self.dolog)
-        if self.dolog: self.ui.plot.setLabel('left', 'log10 Amplitude')
-        else: self.ui.plot.setLabel('left', 'Amplitude')
+        self.plot.setLogMode(x=False, y=self.dolog)
+        self.plot.setLabel('left', 'log10 Amplitude' if self.dolog else 'Amplitude')
+        self.new_plot = True  # Force a Y-range rescale on the next update

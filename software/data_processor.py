@@ -8,10 +8,6 @@ from scipy.signal import resample, butter, filtfilt
 from scipy.optimize import curve_fit
 from utils import find_fundamental_frequency_scipy, format_freq, find_crossing_distance, fit_rise
 
-# #############################################################################
-# DataProcessor Class
-# #############################################################################
-
 class DataProcessor:
     """Handles processing of raw data from the hardware."""
 
@@ -178,13 +174,14 @@ class DataProcessor:
         if self.state.dointerleaved[self.state.activeboard]:
             uspersample /= 2
         elif self.state.dotwochannel:
-            uspersample /= 2
+            uspersample *= 2
 
         freq = (k / uspersample)[list(range(n // 2))] / n
         Y = np.fft.fft(y_data)[list(range(n // 2))] / n
         Y[0] = 1e-3  # Suppress DC for plotting
 
         return freq, abs(Y)
+
     def calculate_measurements(self, x_data, y_data, vline, do_risetime_calc=False):
         """Calculates all requested measurements and returns fit results if requested."""
         if len(y_data) < 2: return {}, None
