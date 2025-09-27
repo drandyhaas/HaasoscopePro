@@ -361,7 +361,7 @@ class HardwareController:
         if not quiet: print(
             f"phase for pllnum {pllnum} plloutnum {plloutnum} on board {board} now {self.state.phasecs[board][pllnum][plloutnum]}")
 
-    def update_firmware(self, board_idx):
+    def update_firmware(self, board_idx, verify_only = False):
         print(f"Starting firmware update on board {board_idx}...")
         firmwarepath = "../adc board firmware/output_files/coincidence_auto.rpd"
         if not os.path.exists(firmwarepath):
@@ -373,14 +373,15 @@ class HardwareController:
         starttime = time.time()
         for i in range(self.num_board): clkout_ena(self.usbs[i], 0)
 
-        print("Erasing flash...")
-        flash_erase(self.usbs[board_idx])
-        while flash_busy(self.usbs[board_idx], doprint=False) > 0: time.sleep(.1)
-        print(f"Erase took {time.time() - starttime:.3f} seconds.")
+        if not verify_only:
+            print("Erasing flash...")
+            flash_erase(self.usbs[board_idx])
+            while flash_busy(self.usbs[board_idx], doprint=False) > 0: time.sleep(.1)
+            print(f"Erase took {time.time() - starttime:.3f} seconds.")
 
-        print("Writing firmware...")
-        writtenbytes = flash_writeall_from_file(self.usbs[board_idx], firmwarepath, dowrite=True)
-        print(f"Write took {time.time() - starttime:.3f} seconds total.")
+        if not verify_only: print("Writing firmware...")
+        writtenbytes = flash_writeall_from_file(self.usbs[board_idx], firmwarepath, do_write=(not verify_only))
+        if not verify_only: print(f"Write took {time.time() - starttime:.3f} seconds total.")
 
         print("Verifying write...")
         readbytes = flash_readall(self.usbs[board_idx])

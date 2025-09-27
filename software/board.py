@@ -136,39 +136,37 @@ def flash_read(usb, byte3: int, byte2: int, byte1: int, do_receive: bool = True)
 
 
 def flash_readall(usb) -> bytearray:
-    """
-    Reads the entire contents of the flash memory. This is a slow operation.
-
-    Returns:
-        A bytearray containing the flash contents.
-    """
+    """Reads the entire contents of the flash memory. This is a slow operation."""
     read_bytes = bytearray()
-    # Assuming a total size that is a multiple of 256*256 for chunking
-    # This example reads ~1.2MB, matching the original code's apparent target size
     total_size = 1191788
-    num_blocks = (total_size // 65536) + 1
+    block_size = 65536  # 256 * 256
+    num_blocks = (total_size + block_size - 1) // block_size  # Ceiling division
 
     for k in range(num_blocks):
         print(f"Reading flash block {k + 1}/{num_blocks}...")
-        # Send all read commands for the block first
-        for j in range(256):
-            for i in range(256):
-                current_addr = k * 65536 + j * 256 + i
-                if current_addr < total_size:
-                    flash_read(usb, k, j, i, do_receive=False)
 
-        # Receive all responses for the block in one chunk
-        res = usb.recv(256 * 256 * 4)
-        if len(res) == 256 * 256 * 4:
-            for j in range(256):
-                for i in range(256):
-                    current_addr = k * 65536 + j * 256 + i
-                    if current_addr < total_size:
-                        byte_index = j * 256 * 4 + i * 4
-                        out_byte = reverse_bits(res[byte_index])
-                        read_bytes.append(out_byte)
+        # Determine how many bytes to read in this specific block
+        bytes_so_far = k * block_size
+        bytes_remaining_in_file = total_size - bytes_so_far
+        reads_this_block = min(block_size, bytes_remaining_in_file)
+
+        # Send all read commands for the block first
+        for addr_in_block in range(reads_this_block):
+            j = addr_in_block // 256
+            i = addr_in_block % 256
+            flash_read(usb, k, j, i, do_receive=False)
+
+        # Receive the exact number of expected bytes for this block
+        bytes_to_expect = reads_this_block * 4
+        res = usb.recv(bytes_to_expect)
+
+        if len(res) == bytes_to_expect:
+            # Process the received bytes
+            for byte_index in range(0, len(res), 4):
+                out_byte = reverse_bits(res[byte_index])
+                read_bytes.append(out_byte)
         else:
-            print(f"Flash readall timeout on block {k + 1}. Received {len(res)} bytes.")
+            print(f"Flash readall timeout on block {k + 1}. Expected {bytes_to_expect}, received {len(res)}.")
             break  # Stop if a read fails
 
     return read_bytes
@@ -398,11 +396,11 @@ def send_leds(usb, r1, g1, b1, r2, g2, b2):
     r2, g2, b2 = reverse_bits(int(r2 * rw)), reverse_bits(int(g2 * gw)), reverse_bits(int(b2 * bw))
     # The LED controller requires two commands to latch the value
     for _ in range(2):
-        usb.send(bytes([11, 1, g1, r1, b1, g2, r2, b2]));
-        usb.recv(4);
+        usb.send(bytes([11, 1, g1, r1, b1, g2, r2, b2]))
+        usb.recv(4)
         time.sleep(.001)
-        usb.send(bytes([11, 0, g1, r1, b1, g2, r2, b2]));
-        usb.recv(4);
+        usb.send(bytes([11, 0, g1, r1, b1, g2, r2, b2]))
+        usb.recv(4)
         time.sleep(.001)
 
 

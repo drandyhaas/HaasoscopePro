@@ -824,13 +824,22 @@ class MainWindow(TemplateBaseClass):
 
     def update_firmware(self):
         board = self.state.activeboard
-        reply = QMessageBox.question(self, 'Confirmation', f'Update firmware on board {board}?',
+        reply = QMessageBox.question(self, 'Confirmation', f'Update firmware on board {board} to mine?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.No: return
         self.dostartstop()  # Pause
         success, message = self.controller.update_firmware(board)
         QMessageBox.information(self, "Firmware Update", message)
         if success: self.ui.runButton.setEnabled(False)
+
+    def verify_firmware(self):
+        board = self.state.activeboard
+        reply = QMessageBox.question(self, 'Confirmation', f'Verify firmware on board {board} matches mine?',
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.No: return
+        self.dostartstop()  # Pause
+        success, message = self.controller.update_firmware(board, verify_only=True)
+        QMessageBox.information(self, "Firmware Verify", message)
 
     def set_channel_frame(self):
         s = self.state
