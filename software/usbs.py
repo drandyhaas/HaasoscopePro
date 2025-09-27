@@ -1,107 +1,141 @@
-import time
+"""
+Handles the discovery, connection, and ordering of HaasoscopePro USB devices.
 
-import ftd2xx, sys
+The key function, `orderusbs`, implements a daisy-chain discovery algorithm
+to determine the physical order of the connected boards.
+"""
+import ftd2xx
+from typing import List
 from USB_FT232H import UsbFt232hSync245mode
-from utils import *
+from utils import getbit
 
-def version(usb, quiet=True):
-    usb.send(bytes([2, 0, 100, 100, 100, 100, 100, 100]))  # get version
+
+def version(usb: UsbFt232hSync245mode, quiet: bool = True) -> int:
+    """Reads the firmware version from a connected board."""
+    usb.send(bytes([2, 0, 100, 100, 100, 100, 100, 100]))
     res = usb.recv(4)
-    ver = int.from_bytes(res,"little")
-    if len(res)==4 and not quiet: print("Firmware version", ver)
+    if len(res) < 4: return -1
+    ver = int.from_bytes(res, "little")
+    if not quiet:
+        print(f"Firmware version: {ver}")
     return ver
 
-def connectdevices(nmax=100):
+
+def connectdevices(nmax: int = 100) -> List[UsbFt232hSync245mode]:
+    """
+    Scans for and connects to all available HaasoscopePro boards.
+
+    Args:
+        nmax (int): The maximum number of devices to connect.
+
+    Returns:
+        A list of connected UsbFt232hSync245mode objects.
+    """
     usbs = []
     try:
-        ftds = ftd2xx.listDevices()
-        if ftds is not None:
-            print("Found",len(ftds),"devices:", ftds)
-            for ftdserial in ftds:
-                #print("FTD serial:",ftdserial)
-                if not ftdserial.startswith(b'FT'): continue
-                if len(usbs)==nmax: continue # only connect up to nmax devices
-                usbdevice = UsbFt232hSync245mode('FTX232H', 'HaasoscopePro USB2', ftdserial)
-                if usbdevice.good:
-                    # if usbdevice.serial != b"FT9M1UIT": continue
-                    # if usbdevice.serial != b"FT9LYZXP": continue
-                    usbs.append(usbdevice)
-                    print("Connected USB device", usbdevice.serial)
-            print("Connected", len(usbs), "devices")
-        else:
-            print("Found no devices")
+        devices = ftd2xx.listDevices()
+        if devices is None:
+            print("No FTDI devices found.")
+            return []
+
+        print(f"Found {len(devices)} FTDI devices: {devices}")
+        for serial_bytes in devices:
+            if len(usbs) >= nmax:
+                break
+            # Attempt to connect only to devices with a standard FTDI serial
+            if serial_bytes and serial_bytes.startswith(b'FT'):
+                usb_device = UsbFt232hSync245mode('HaasoscopePro USB2', serial_bytes)
+                if usb_device.good:
+                    usbs.append(usb_device)
     except ftd2xx.DeviceError as e:
-        print(f"Failed to communicate with the FTDI device:",e)
+        print(f"Error listing FTDI devices: {e}")
+
+    print(f"Successfully connected to {len(usbs)} HaasoscopePro boards.")
     return usbs
 
-def findnextboard(currentboard,firstboard,usbs):
-    for board in range(len(usbs)):
-        if board == currentboard: print("setting lvds spare out high for board",board)
-        else: print("setting lvds spare out low for board", board)
-        usbs[board].send(bytes([2, 5, board == currentboard, 0, 99, 99, 99, 99])) # get lvdsin_spare info, and set spare lvds output high for only the current board
-        usbs[board].recv(4) # have to read it out, even though we don't care
-    nextboard=-1
-    for board in range(len(usbs)): # see which board now has seen a signal from the current board
-        if board == firstboard: continue # that one has no lvds input, so is unreliable, plus we already know it's not the next board
-        usbs[board].send(bytes([2, 5, board == currentboard, 0, 99, 99, 99, 99]))
-        res = usbs[board].recv(4)
-        spare = getbit(res[2],0)
-        print("lvds spare in for board",board,"is",spare)
-        if spare==1:
-            if nextboard==-1:
-                nextboard=board
-            else:
-                print("We already found the next board to be",nextboard,"for board",currentboard,"but it is also",board,"?!")
-                sys.exit(0)
-    if nextboard==-1:
-        print("Didn't find a next board for board",currentboard,"!")
-        sys.exit(0)
-    return nextboard
 
-def orderusbs(usbs):
-    newusbs=[]
-    for board in range(len(usbs)):
-        print("Checking board",board)
-        oldbytes(usbs[board])
-        version(usbs[board])
-        usbs[board].send(bytes([2, 5, 0, 0, 99, 99, 99, 99]))  # get clock info
-        usbs[board].recv(4)
-        usbs[board].send(bytes([2, 5, 0, 0, 99, 99, 99, 99]))  # get clock info again, fixes a glitch on Mac (?)
-        res = usbs[board].recv(4)
-        if len(res)<4:
-            print("Couldn't get lvds info from board",board,"!")
-            sys.exit(0)
-        if getbit(res[1],3):
-            print("Board",board,"has no ext clock")
-            if len(newusbs)>0:
-                print("Found a second device with no external clock in! Make sure there's a sync cable between all devices, from in to out.")
-                sys.exit(0)
-            else:
-                print("Board",board,"is the first board")
-                newusbs.append(board)
-    if len(newusbs)==0:
-        print("Didn't find a first board with no external clock!")
-        #sys.exit(0)
-    else:
-        while len(newusbs)<len(usbs):
-            nextboard = findnextboard(newusbs[-1],newusbs[0],usbs)
-            print("Found next board to be board",nextboard)
-            newusbs.append(nextboard)
-    newusbcons=[]
-    for u in range(len(newusbs)):
-        newusbcons.append(usbs[newusbs[u]])
-    return newusbcons
+def _find_next_board_in_chain(current_board_idx: int, first_board_idx: int, usbs: list) -> int:
+    """Helper to find the next board in the daisy chain by toggling a signal."""
+    # Set the spare LVDS output high ONLY on the current board
+    for i, usb in enumerate(usbs):
+        is_current = (i == current_board_idx)
+        usb.send(bytes([2, 5, is_current, 0, 99, 99, 99, 99]))
+        usb.recv(4)  # Dummy read
 
-def tellfirstandlast(usbs):
-    for usb in usbs:
-        if usb==usbs[0]:
-            firstlast = 1
-            #print("firstlast==1")
-        elif usb==usbs[-1]:
-            firstlast = 2
-            #print("firstlast==2")
+    next_board_idx = -1
+    for i, usb in enumerate(usbs):
+        if i == first_board_idx: continue  # The first board's input is unterminated
+
+        usb.send(bytes([2, 5, (i == current_board_idx), 0, 99, 99, 99, 99]))
+        res = usb.recv(4)
+        if len(res) < 4: continue
+
+        spare_in_is_high = getbit(res[2], 0)
+        if spare_in_is_high:
+            if next_board_idx != -1:
+                raise RuntimeError(
+                    f"Board ordering failed: Multiple boards detected a signal from board {current_board_idx}.")
+            next_board_idx = i
+
+    if next_board_idx == -1:
+        raise RuntimeError(f"Board ordering failed: Could not find the next board after board {current_board_idx}.")
+
+    return next_board_idx
+
+
+def orderusbs(usbs: List[UsbFt232hSync245mode]) -> List[UsbFt232hSync245mode]:
+    """
+    Determines the physical daisy-chain order of the connected boards.
+
+    The first board is identified as the one with no external clock input.
+    Subsequent boards are found by activating a signal on the last known board
+    and polling the others to see which one received it.
+
+    Returns:
+        A new list of UsbFt232hSync245mode objects, sorted in their physical order.
+    """
+    if len(usbs) <= 1:
+        return usbs
+
+    first_board_idx = -1
+    for i, usb in enumerate(usbs):
+        usb.send(bytes([2, 5, 0, 0, 99, 99, 99, 99]))  # Get clock info
+        res = usb.recv(4)
+        if len(res) < 4:
+            raise RuntimeError(f"Board ordering failed: Could not get LVDS info from board index {i}.")
+
+        # The first board in the chain has no external clock, so this bit will be high.
+        if getbit(res[1], 3):
+            if first_board_idx != -1:
+                raise RuntimeError("Board ordering failed: Found two boards with no external clock. Check sync cables.")
+            first_board_idx = i
+            print(f"Identified board index {i} (Serial: {usb.serial.decode()}) as the first in the chain.")
+
+    if first_board_idx == -1:
+        raise RuntimeError("Board ordering failed: Could not find the first board. Check sync cables.")
+
+    ordered_indices = [first_board_idx]
+    while len(ordered_indices) < len(usbs):
+        last_found_idx = ordered_indices[-1]
+        next_idx = _find_next_board_in_chain(last_found_idx, first_board_idx, usbs)
+        print(f"Found board index {next_idx} (Serial: {usbs[next_idx].serial.decode()}) is next.")
+        ordered_indices.append(next_idx)
+
+    # Create the new, ordered list of usb objects
+    return [usbs[i] for i in ordered_indices]
+
+
+def tellfirstandlast(usbs: List[UsbFt232hSync245mode]):
+    """Informs each board if it is the first or last in the chain for termination purposes."""
+    if not usbs: return
+
+    for i, usb in enumerate(usbs):
+        if i == 0:
+            firstlast = 1  # First board
+        elif i == len(usbs) - 1:
+            firstlast = 2  # Last board
         else:
-            firstlast = 0
-            #print("firstlast==0")
-        usb.send(bytes([2, 14, firstlast, 0, 99, 99, 99, 99]))  # tell it if it's first or last or neither
+            firstlast = 0  # Middle board
+
+        usb.send(bytes([2, 14, firstlast, 0, 99, 99, 99, 99]))
         usb.recv(4)
