@@ -79,6 +79,11 @@ class MainWindow(TemplateBaseClass):
                 self.dostartstop()  # Start acquisition
                 self.setup_successful = True
             else:
+                # This block runs if setup_all_boards fails for any reason.
+                # Check if it was specifically a power issue.
+                if not self.controller.initial_power_ok:
+                    self.ui.actionUpdate_firmware.setEnabled(False)
+                    self.ui.actionVerify_firmware.setEnabled(False)
                 self.ui.runButton.setEnabled(False)
 
         else:  # Handle the case where no boards were found

@@ -18,12 +18,14 @@ class HardwareController:
         self.state = state
         self.num_board = len(usbs)
         self.signals = HardwareControllerSignals()
+        self.initial_power_ok = True
 
     def setup_all_boards(self):
         success = True
         for i, usb in enumerate(self.usbs):
             if not self.setup_connection(i, usb):
                 print(f"FATAL: Failed to set up board {i}")
+                self.initial_power_ok = False
                 success = False
         if success:
             self.use_ext_trigs()
@@ -143,6 +145,7 @@ class HardwareController:
                 self.signals.critical_error_occurred.emit(error_title, error_message)
 
                 s.plljustreset[board] = -10  # End calibration
+                self.initial_power_ok = False
                 return
 
             # Go to the middle of the good range
