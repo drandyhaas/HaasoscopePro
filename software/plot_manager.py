@@ -224,13 +224,14 @@ class PlotManager(pg.QtCore.QObject):
     def update_reference_plot(self, channel_index, x_data, y_data):
         """Sets the data for a channel's reference waveform."""
         if 0 <= channel_index < len(self.reference_lines):
-            self.reference_lines[channel_index].setData(x_data, y_data)
+            ref_line = self.reference_lines[channel_index]
+            ref_line.setData(x_data, y_data)
+            ref_line.setVisible(True)
 
-    def toggle_reference_visibility(self, visible):
-        """Toggles the visibility of all reference waveforms that have data."""
-        for line in self.reference_lines:
-            if line.xData is not None: # Only show lines that have been set
-                line.setVisible(visible)
+    def hide_reference_plot(self, channel_index):
+        """Hides a specific reference plot."""
+        if 0 <= channel_index < len(self.reference_lines):
+            self.reference_lines[channel_index].setVisible(False)
 
     def time_changed(self):
         """Updates the x-axis range and units, and handles zooming."""

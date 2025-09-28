@@ -105,7 +105,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionTake_Reference = QAction('Take Reference from Active Channel', self)
         self.reference_menu.addAction(self.ui.actionTake_Reference)
 
-        self.ui.actionShow_Reference = QAction('Show Reference', self, checkable=True)
+        self.ui.actionShow_Reference = QAction('Show Reference(s)', self, checkable=True)
         self.ui.actionShow_Reference.setChecked(True)
         self.reference_menu.addAction(self.ui.actionShow_Reference)
 
@@ -571,15 +571,17 @@ class MainWindow(TemplateBaseClass):
             for c in range(s.num_chan_per_board * s.num_board):
                 self.xydatainterleaved[c][0] = interleaved_time_axis
 
-        # --- Update any stored reference waveforms with the new time scaling ---
-        show_refs = self.ui.actionShow_Reference.isChecked()
-        self.plot_manager.toggle_reference_visibility(show_refs)
-
-        if show_refs:
-            for channel_index, data in self.reference_data.items():
-                # Scale the stored nanosecond data to the current display units
+        # --- Update reference waveforms with new scaling and visibility ---
+        show_refs_is_checked = self.ui.actionShow_Reference.isChecked()
+        for i in range(self.plot_manager.nlines):
+            if i in self.reference_data and show_refs_is_checked:
+                # This channel has a reference and it should be visible
+                data = self.reference_data[i]
                 x_display = data['x_ns'] / s.nsunits
-                self.plot_manager.update_reference_plot(channel_index, x_display, data['y'])
+                self.plot_manager.update_reference_plot(i, x_display, data['y'])
+            else:
+                # This channel either has no reference or refs are turned off
+                self.plot_manager.hide_reference_plot(i)
 
     def handle_critical_error(self, title, message):
         """
