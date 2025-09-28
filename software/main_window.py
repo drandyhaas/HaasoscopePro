@@ -389,8 +389,28 @@ class MainWindow(TemplateBaseClass):
                 # Update FFT if this channel is enabled
                 if self.state.fft_enabled.get(ch_name, False):
                     is_active = (ch_name == active_channel_name)
-                    y_data = self.xydata[ch_idx][1]
-                    freq, mag = self.processor.calculate_fft(y_data, board_idx)
+
+                    # --- START: New logic to create a consistent analysis window ---
+                    # Always use the time window corresponding to the un-zoomed view (downsample=0)
+                    # This ensures FFTs and measurements are consistent regardless of visual zoom.
+                    uspersample_base = 1 / s.samplerate / 1000.
+                    if s.dointerleaved[board_idx]:
+                        uspersample_base *= 2
+                    elif s.dotwochannel[board_idx]:
+                        uspersample_base /= 2
+
+                    analysis_max_x = 4 * 10 * s.expect_samples * uspersample_base * 1000 / s.nsunits
+                    analysis_min_x = 0
+
+                    x_full = self.xydata[ch_idx][0]
+                    y_full = self.xydata[ch_idx][1]
+                    analysis_indices = np.where((x_full > analysis_min_x) & (x_full < analysis_max_x))
+                    y_data_for_analysis = y_full[analysis_indices]
+                    x_data_for_analysis = x_full[analysis_indices]
+                    # --- END: New logic ---
+
+                    # Pass the correct board_idx to get the right sample rate
+                    freq, mag = self.processor.calculate_fft(y_data_for_analysis, board_idx)
 
                     if freq is not None and len(freq) > 0:
                         max_freq_mhz = np.max(freq)
@@ -459,21 +479,33 @@ class MainWindow(TemplateBaseClass):
                     # The gettemps function is expected to return a pre-formatted string
                     the_str += gettemps(active_usb) + "\n"
 
-            target_x, target_y, source_str, fit_results = None, None, "", None
+            source_str, fit_results = "", None
             if self.ui.persistavgCheck.isChecked() and self.plot_manager.average_line.isVisible():
                 target_x = self.plot_manager.average_line.xData
                 target_y = self.plot_manager.average_line.yData
                 source_str = "from average"
             elif hasattr(self, 'xydata'):
-                target_x = self.xydata[self.state.activexychannel][0]
-                target_y = self.xydata[self.state.activexychannel][1]
+                # --- START: Apply same consistent analysis window to measurements ---
+                s = self.state
+                active_board_idx = self.state.activexychannel // s.num_chan_per_board
+                uspersample_base = 1 / s.samplerate / 1000.
+                if s.dointerleaved[active_board_idx]:
+                    uspersample_base *= 2
+                elif s.dotwochannel[active_board_idx]:
+                    uspersample_base /= 2
 
-            if target_x is not None and target_y is not None and len(target_y) > 0:
+                analysis_max_x = 4 * 10 * s.expect_samples * uspersample_base * 1000 / s.nsunits
+                analysis_min_x = 0
+
+                x_full = self.xydata[self.state.activexychannel][0]
+                y_full = self.xydata[self.state.activexychannel][1]
+                analysis_indices = np.where((x_full > analysis_min_x) & (x_full < analysis_max_x))
+                target_y = y_full[analysis_indices]
+                target_x = x_full[analysis_indices]
+                # --- END: Apply same consistent analysis window ---
+
                 the_str += f"\nMeasurements {source_str} for board {self.state.activeboard} ch {self.state.selectedchannel}:\n"
-
                 vline_val = self.plot_manager.otherlines['vline'].value()
-
-                # Get both the text results and the raw fit data from the processor
                 measurements, fit_results = self.processor.calculate_measurements(
                     target_x, target_y, vline_val, do_risetime_calc=self.ui.actionRisetime.isChecked()
                 )
