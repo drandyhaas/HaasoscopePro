@@ -772,6 +772,12 @@ class MainWindow(TemplateBaseClass):
         # Update XY menu item based on whether the active board is in two-channel mode
         self.ui.actionXY_plot.setEnabled(self.state.dotwochannel[self.state.activeboard])
 
+        # If we are in XY mode but switched to a board that is not in two-channel mode, exit XY mode
+        if self.state.xy_mode and not self.state.dotwochannel[self.state.activeboard]:
+            self.ui.actionXY_Plot.setChecked(False)
+            self.plot_manager.toggle_xy_view(False, self.state.activeboard)
+
+
         # If in XY mode, update the pen color to match the new active board's CH1
         if self.state.xy_mode:
             ch0_index = self.state.activeboard * self.state.num_chan_per_board + 0
