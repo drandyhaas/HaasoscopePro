@@ -40,7 +40,6 @@ class MainWindow(TemplateBaseClass):
         # 2. Setup UI from template
         self.ui = WindowTemplate()
         self.ui.setupUi(self)
-        self._create_menus() # Create the new Reference menu
 
         # 3. Initialize UI/Plot manager
         self.plot_manager = PlotManager(self.ui, self.state)
@@ -97,22 +96,6 @@ class MainWindow(TemplateBaseClass):
         QtCore.QTimer.singleShot(10, self._sync_initial_ui_state)
 
         self.show()
-
-    def _create_menus(self):
-        """Create and add the new 'Reference' menu to the menu bar."""
-        self.reference_menu = self.ui.menubar.addMenu('Reference')
-
-        self.ui.actionTake_Reference = QAction('Take Reference from Active Channel', self)
-        self.reference_menu.addAction(self.ui.actionTake_Reference)
-
-        self.ui.actionShow_Reference = QAction('Show Reference(s)', self, checkable=True)
-        self.ui.actionShow_Reference.setChecked(True)
-        self.reference_menu.addAction(self.ui.actionShow_Reference)
-
-        # Create and add the 'View' menu for XY plot option
-        self.view_menu = self.ui.menubar.addMenu('View')
-        self.ui.actionXY_Plot = QAction('XY Plot', self, checkable=True)
-        self.view_menu.addAction(self.ui.actionXY_Plot)
 
     def _sync_initial_ui_state(self):
         """A one-time function to sync the UI's visual state after the window has loaded."""
@@ -250,7 +233,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionShow_Reference.triggered.connect(self.toggle_reference_waveform_visibility)
 
         # View menu actions
-        self.ui.actionXY_Plot.triggered.connect(self.toggle_xy_view_slot)
+        self.ui.actionXY_plot.triggered.connect(self.toggle_xy_view_slot)
 
         # Connect the controller's error signal to our handler slot
         self.controller.signals.critical_error_occurred.connect(self.handle_critical_error)

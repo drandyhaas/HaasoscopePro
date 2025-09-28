@@ -2268,13 +2268,22 @@ Outlined if triggering on this channel</string>
     <addaction name="actionDrawing"/>
     <addaction name="actionHigh_resolution"/>
     <addaction name="actionGrid"/>
+    <addaction name="actionXY_plot"/>
     <addaction name="actionLine_color"/>
     <addaction name="actionPan_and_zoom"/>
+   </widget>
+   <widget class="QMenu" name="menuReference">
+    <property name="title">
+     <string>Reference</string>
+    </property>
+    <addaction name="actionTake_Reference"/>
+    <addaction name="actionShow_Reference"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
    <addaction name="menuView"/>
    <addaction name="menuMeasurements"/>
+   <addaction name="menuReference"/>
    <addaction name="menuAdvanced"/>
    <addaction name="menuHelp"/>
   </widget>
@@ -2551,6 +2560,33 @@ Outlined if triggering on this channel</string>
   <action name="actionVerify_firmware">
    <property name="text">
     <string>Verify firmware</string>
+   </property>
+  </action>
+  <action name="actionXY_plot">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>XY plot</string>
+   </property>
+  </action>
+  <action name="actionTake_Reference">
+   <property name="text">
+    <string>Take reference</string>
+   </property>
+  </action>
+  <action name="actionShow_Reference">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show reference(s)</string>
    </property>
   </action>
  </widget>

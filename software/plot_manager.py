@@ -128,7 +128,7 @@ class PlotManager(pg.QtCore.QObject):
         self.average_line.setVisible(self.ui.persistavgCheck.isChecked())
 
         # XY plot line (initially hidden)
-        self.xy_line = self.plot.plot(pen=pg.mkPen(color='cyan'), name="XY_Plot", skipFiniteCheck=True, connect="finite")
+        self.xy_line = self.plot.plot(pen=pg.mkPen(color="w"), name="XY_Plot", skipFiniteCheck=True, connect="finite")
         self.xy_line.setVisible(False)
 
         # Secondary Y-Axis
