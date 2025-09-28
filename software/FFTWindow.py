@@ -67,6 +67,9 @@ class FFTWindow(FFTTemplateBaseClass):
         self.yrange_min = 1e-5
         self.new_plot = True
 
+        self.active_channel_name = ""
+        self.channel_data_cache = {} # To store {channel_name: (x, y)}
+
     def reset_analysis_state(self):
         """Resets all analysis data for a clean start."""
         self.peak_hold_data = None
@@ -120,6 +123,7 @@ class FFTWindow(FFTTemplateBaseClass):
             self.fft_lines[channel_name] = self.plot.plot(pen=pen)
 
         self.fft_lines[channel_name].setData(x_data, y_data)
+        self.channel_data_cache[channel_name] = (x_data, y_data) # Cache the data
 
         self.plot.setTitle(title_text)
         self.plot.setLabel('bottom', xlabel_text)
@@ -133,6 +137,7 @@ class FFTWindow(FFTTemplateBaseClass):
 
         # All analysis is performed only on the active channel's data
         if is_active_channel:
+            self.active_channel_name = channel_name
             self.clear_peak_labels()
 
             # --- Peak Hold Logic ---
@@ -178,6 +183,21 @@ class FFTWindow(FFTTemplateBaseClass):
                                 labeled_peak_freqs.append(current_peak_freq)
             else:
                 self.peak_hold_line.clear()  # If peak hold is off, ensure line is clear
+
+
+            # --- START: New logic to scale other traces ---
+            if self.active_channel_name in self.channel_data_cache:
+                _, active_y = self.channel_data_cache[self.active_channel_name]
+                active_avg = np.mean(active_y)
+
+                for name, line in self.fft_lines.items():
+                    if name != self.active_channel_name and name in self.channel_data_cache:
+                        other_x, other_y = self.channel_data_cache[name]
+                        other_avg = np.mean(other_y)
+                        if other_avg > 0: # Avoid division by zero
+                            scale_factor = active_avg / other_avg
+                            line.setData(other_x, other_y * scale_factor)
+            # --- END: New logic ---
 
         # --- Y-Axis Ranging ---
         self.plot.enableAutoRange(axis='y', enable=False)
