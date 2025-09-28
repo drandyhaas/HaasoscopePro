@@ -390,24 +390,10 @@ class MainWindow(TemplateBaseClass):
                 if self.state.fft_enabled.get(ch_name, False):
                     is_active = (ch_name == active_channel_name)
 
-                    # --- START: New logic to create a consistent analysis window ---
-                    # Always use the time window corresponding to the un-zoomed view (downsample=0)
-                    # This ensures FFTs and measurements are consistent regardless of visual zoom.
-                    uspersample_base = 1 / s.samplerate / 1000.
-                    if s.dointerleaved[board_idx]:
-                        uspersample_base *= 2
-                    elif s.dotwochannel[board_idx]:
-                        uspersample_base /= 2
-
-                    analysis_max_x = 4 * 10 * s.expect_samples * uspersample_base * 1000 / s.nsunits
-                    analysis_min_x = 0
-
-                    x_full = self.xydata[ch_idx][0]
                     y_full = self.xydata[ch_idx][1]
-                    analysis_indices = np.where((x_full > analysis_min_x) & (x_full < analysis_max_x))
-                    y_data_for_analysis = y_full[analysis_indices]
-                    x_data_for_analysis = x_full[analysis_indices]
-                    # --- END: New logic ---
+                    midpoint = len(y_full) // 2
+                    if s.dotwochannel[board_idx]: y_data_for_analysis = y_full[:midpoint]
+                    else: y_data_for_analysis = y_full
 
                     # Pass the correct board_idx to get the right sample rate
                     freq, mag = self.processor.calculate_fft(y_data_for_analysis, board_idx)
@@ -421,7 +407,7 @@ class MainWindow(TemplateBaseClass):
                         else:
                             plot_x_data, xlabel = freq, 'Frequency (MHz)'
 
-                        title = f'FFT of {ch_name}'
+                        title = f'FFT plot'
                         pen = self.plot_manager.linepens[ch_idx]  # Get the correct pen
                         self.fftui.update_plot(ch_name, plot_x_data, mag, pen, title, xlabel, is_active)
                 else:
@@ -485,29 +471,20 @@ class MainWindow(TemplateBaseClass):
                 target_y = self.plot_manager.average_line.yData
                 source_str = "from average"
             elif hasattr(self, 'xydata'):
-                # --- START: Apply same consistent analysis window to measurements ---
-                s = self.state
-                active_board_idx = self.state.activexychannel // s.num_chan_per_board
-                uspersample_base = 1 / s.samplerate / 1000.
-                if s.dointerleaved[active_board_idx]:
-                    uspersample_base *= 2
-                elif s.dotwochannel[active_board_idx]:
-                    uspersample_base /= 2
-
-                analysis_max_x = 4 * 10 * s.expect_samples * uspersample_base * 1000 / s.nsunits
-                analysis_min_x = 0
-
                 x_full = self.xydata[self.state.activexychannel][0]
                 y_full = self.xydata[self.state.activexychannel][1]
-                analysis_indices = np.where((x_full > analysis_min_x) & (x_full < analysis_max_x))
-                target_y = y_full[analysis_indices]
-                target_x = x_full[analysis_indices]
-                # --- END: Apply same consistent analysis window ---
+                midpoint = len(y_full) // 2
+                if self.state.dotwochannel[self.state.activeboard]:
+                    x_data_for_analysis = x_full[:midpoint]
+                    y_data_for_analysis = y_full[:midpoint]
+                else:
+                    x_data_for_analysis = x_full
+                    y_data_for_analysis = y_full
 
                 the_str += f"\nMeasurements {source_str} for board {self.state.activeboard} ch {self.state.selectedchannel}:\n"
                 vline_val = self.plot_manager.otherlines['vline'].value()
                 measurements, fit_results = self.processor.calculate_measurements(
-                    target_x, target_y, vline_val, do_risetime_calc=self.ui.actionRisetime.isChecked()
+                    x_data_for_analysis, y_data_for_analysis, vline_val, do_risetime_calc=self.ui.actionRisetime.isChecked()
                 )
 
                 # Update the text browser
