@@ -5,7 +5,7 @@ import numpy as np
 import threading
 from scipy.signal import resample
 from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
-from PyQt5.QtWidgets import QMessageBox, QColorDialog, QFrame
+from PyQt5.QtWidgets import QMessageBox, QColorDialog, QFrame, QAction
 from PyQt5.QtGui import QPalette, QIcon
 
 # Import all the refactored components
@@ -35,9 +35,12 @@ class MainWindow(TemplateBaseClass):
         self.processor = DataProcessor(self.state)
         self.recorder = DataRecorder(self.state)
 
+        self.reference_data = {} # Stores {channel_index: {'x_ns': array, 'y': array}}
+
         # 2. Setup UI from template
         self.ui = WindowTemplate()
         self.ui.setupUi(self)
+        self._create_menus() # Create the new Reference menu
 
         # 3. Initialize UI/Plot manager
         self.plot_manager = PlotManager(self.ui, self.state)
@@ -94,6 +97,17 @@ class MainWindow(TemplateBaseClass):
         QtCore.QTimer.singleShot(10, self._sync_initial_ui_state)
 
         self.show()
+
+    def _create_menus(self):
+        """Create and add the new 'Reference' menu to the menu bar."""
+        self.reference_menu = self.ui.menubar.addMenu('Reference')
+
+        self.ui.actionTake_Reference = QAction('Take Reference from Active Channel', self)
+        self.reference_menu.addAction(self.ui.actionTake_Reference)
+
+        self.ui.actionShow_Reference = QAction('Show Reference', self, checkable=True)
+        self.ui.actionShow_Reference.setChecked(True)
+        self.reference_menu.addAction(self.ui.actionShow_Reference)
 
     def _sync_initial_ui_state(self):
         """A one-time function to sync the UI's visual state after the window has loaded."""
@@ -225,6 +239,10 @@ class MainWindow(TemplateBaseClass):
         self.plot_manager.vline_dragged_signal.connect(self.on_vline_dragged)
         self.plot_manager.hline_dragged_signal.connect(self.on_hline_dragged)
         self.plot_manager.curve_clicked_signal.connect(self.on_curve_clicked)
+
+        # Reference menu actions
+        self.ui.actionTake_Reference.triggered.connect(self.take_reference_waveform)
+        self.ui.actionShow_Reference.triggered.connect(self.toggle_reference_waveform_visibility)
 
         # Connect the controller's error signal to our handler slot
         self.controller.signals.critical_error_occurred.connect(self.handle_critical_error)
@@ -552,6 +570,16 @@ class MainWindow(TemplateBaseClass):
             interleaved_time_axis = np.arange(self.xydatainterleaved.shape[2]) * x_step2
             for c in range(s.num_chan_per_board * s.num_board):
                 self.xydatainterleaved[c][0] = interleaved_time_axis
+
+        # --- Update any stored reference waveforms with the new time scaling ---
+        show_refs = self.ui.actionShow_Reference.isChecked()
+        self.plot_manager.toggle_reference_visibility(show_refs)
+
+        if show_refs:
+            for channel_index, data in self.reference_data.items():
+                # Scale the stored nanosecond data to the current display units
+                x_display = data['x_ns'] / s.nsunits
+                self.plot_manager.update_reference_plot(channel_index, x_display, data['y'])
 
     def handle_critical_error(self, title, message):
         """
@@ -991,6 +1019,31 @@ class MainWindow(TemplateBaseClass):
     # #########################################################################
     # ## Slot Implementations (Callbacks for UI events)
     # #########################################################################
+
+    def take_reference_waveform(self, checked):
+        """
+        Slot for 'Take Reference'. Captures the active waveform's data,
+        converts its time axis to absolute nanoseconds, and stores it.
+        """
+        s = self.state
+        active_channel = s.activexychannel
+        line = self.plot_manager.lines[active_channel]
+
+        if line.xData is not None and line.yData is not None:
+            # Convert the current x-axis data (which is in units of s.units)
+            # back to a canonical form (nanoseconds) for storage.
+            x_data_in_ns = line.xData * s.nsunits
+            y_data = np.copy(line.yData)  # Make a copy
+
+            self.reference_data[active_channel] = {'x_ns': x_data_in_ns, 'y': y_data}
+
+            # Trigger a redraw to show the new reference immediately
+            self.time_changed()
+
+    def toggle_reference_waveform_visibility(self):
+        """Slot for 'Show Reference'. Triggers a redraw to apply visibility."""
+        self.time_changed() # Re-running time_changed will handle the visibility flag
+
 
     def fft_clicked(self):
         """Toggles the FFT window state for the active channel."""

@@ -56,6 +56,7 @@ class PlotManager(pg.QtCore.QObject):
         self.state = state
         self.plot = self.ui.plot
         self.lines = []
+        self.reference_lines = []
         self.linepens = []
         self.otherlines = {}  # For trigger lines, fit lines etc.
         self.average_line = None
@@ -95,6 +96,14 @@ class PlotManager(pg.QtCore.QObject):
             line.curve.sigClicked.connect(self._create_click_handler(i))
             self.lines.append(line)
             self.linepens.append(pen)
+
+            # Add a corresponding reference line for each channel
+            ref_c = QColor(c)
+            ref_c.setAlphaF(0.5)
+            ref_pen = pg.mkPen(color=ref_c, width=pen.width())
+            ref_line = self.plot.plot(pen=ref_pen, name=f"Ref {i}", skipFiniteCheck=True, connect="finite")
+            ref_line.setVisible(False)
+            self.reference_lines.append(ref_line)
 
         # Trigger and fit lines
         dashedpen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
@@ -211,6 +220,17 @@ class PlotManager(pg.QtCore.QObject):
                 self._add_to_persistence(xdatanew, ydatanew, li)
 
         self.update_persist_average()
+
+    def update_reference_plot(self, channel_index, x_data, y_data):
+        """Sets the data for a channel's reference waveform."""
+        if 0 <= channel_index < len(self.reference_lines):
+            self.reference_lines[channel_index].setData(x_data, y_data)
+
+    def toggle_reference_visibility(self, visible):
+        """Toggles the visibility of all reference waveforms that have data."""
+        for line in self.reference_lines:
+            if line.xData is not None: # Only show lines that have been set
+                line.setVisible(visible)
 
     def time_changed(self):
         """Updates the x-axis range and units, and handles zooming."""
@@ -337,6 +357,8 @@ class PlotManager(pg.QtCore.QObject):
         # Manually trigger redraw for all lines
         for i, line in enumerate(self.lines):
             line.setPen(self.linepens[i])
+            ref_pen = self.reference_lines[i].opts['pen']
+            ref_pen.setWidth(width)
         self.set_average_line_pen()
 
     def set_grid(self, is_checked):
