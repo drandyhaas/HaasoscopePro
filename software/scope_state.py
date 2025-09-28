@@ -5,7 +5,7 @@ class ScopeState:
 
     def __init__(self, num_boards, num_chan_per_board):
         # General and Hardware Configuration
-        self.softwareversion = 29.30
+        self.softwareversion = 29.31
         self.num_board = num_boards
         self.num_chan_per_board = num_chan_per_board
         self.samplerate = 3.2  # GHz
