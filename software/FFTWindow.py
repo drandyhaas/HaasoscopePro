@@ -78,16 +78,19 @@ class FFTWindow(FFTTemplateBaseClass):
         self.active_channel_name = ""
         self.channel_data_cache = {} # To store {channel_name: (x, y)}
 
+        self.update_grace_period = 0 # Counter to ignore updates after a timescale change
+
     def reset_analysis_state(self):
         """Resets all analysis data for a clean start."""
         self.peak_hold_data = None
         self.peak_hold_line.clear()
         self.clear_peak_labels()
 
-    def reset_x_zoom(self):
+    def reset_for_timescale_change(self):
         """Allows the main window to reset the pan/zoom state."""
         self.user_panned_zoomed = False
         self.new_plot = True # Force a y-range update as well
+        self.update_grace_period = 2  # Ignore the next 2 frames to prevent glitches
 
     def on_view_changed(self):
         """Signal handler for when the user manually pans or zooms."""
@@ -147,6 +150,12 @@ class FFTWindow(FFTTemplateBaseClass):
         if is_active_channel:
             self.active_channel_name = channel_name
             self.clear_peak_labels()
+
+            # If in a grace period, skip peak hold update for this frame and decrement counter
+            if self.update_grace_period > 0:
+                self.update_grace_period -= 1
+                self.peak_hold_line.clear() # Ensure no stale line is drawn
+                return
 
             # --- Peak Hold Logic ---
             if self.peak_hold_enabled:

@@ -411,7 +411,7 @@ class MainWindow(TemplateBaseClass):
                     y_full = self.xydata[ch_idx][1]
                     midpoint = len(y_full) // 2
                     if s.dotwochannel[board_idx]: y_data_for_analysis = y_full[:midpoint]
-                    elif s.dointerleaved:
+                    elif s.dointerleaved[board_idx]:
                         y_data_for_analysis = self.xydatainterleaved[ch_idx][1]
                     else: y_data_for_analysis = y_full
 
@@ -885,7 +885,7 @@ class MainWindow(TemplateBaseClass):
             self.ui.thresholdPos.blockSignals(False)
         
         if self.fftui and not is_zoomed:
-            self.fftui.reset_x_zoom()
+            self.fftui.reset_for_timescale_change()
             self.fftui.reset_analysis_state()
 
     def time_slow(self):
@@ -911,7 +911,7 @@ class MainWindow(TemplateBaseClass):
             self.ui.thresholdPos.blockSignals(False)
 
         if self.fftui and not is_zoomed:
-            self.fftui.reset_x_zoom()
+            self.fftui.reset_for_timescale_change()
             self.fftui.reset_analysis_state()
 
     def depth_changed(self):
