@@ -226,30 +226,39 @@ class PlotManager(pg.QtCore.QObject):
 
         self.update_persist_average()
 
-    def toggle_xy_view(self, show_xy):
+    def toggle_xy_view(self, show_xy, board_num=0):
         """Switches between the time-domain view and the XY plot view."""
         self.state.xy_mode = show_xy
 
-        # Toggle visibility of all time-domain lines
-        for line in self.lines + self.reference_lines + list(self.otherlines.values()):
-            # Keep the average line's visibility tied to its checkbox
-            if line is not self.average_line:
-                line.setVisible(not show_xy)
-
-        # Handle average line and persistence lines separately
-        self.average_line.setVisible(not show_xy and self.ui.persistavgCheck.isChecked())
-        for item, _, _ in self.persist_lines:
-            item.setVisible(not show_xy and self.ui.persistlinesCheck.isChecked())
-
-        # Toggle visibility of the XY plot line
-        self.xy_line.setVisible(show_xy)
+        # Explicitly hide or show all time-domain related plots
+        is_time_domain_visible = not show_xy
+        for line in self.lines:
+            line.setVisible(is_time_domain_visible)
+        for line in self.reference_lines:
+            # Only show reference lines if they have data and we are in time domain
+            line.setVisible(is_time_domain_visible and line.xData is not None)
+        for key, line in self.otherlines.items():
+            line.setVisible(is_time_domain_visible)
+        # Also hide/show the right axis
+        if self.right_axis:
+            self.right_axis.setVisible(is_time_domain_visible)
+        self.average_line.setVisible(is_time_domain_visible and self.ui.persistavgCheck.isChecked())
 
         if show_xy:
-            self.plot.setLabel('bottom', "Channel 1 (V/div)")
-            self.plot.setLabel('left', "Channel 0 (V/div)")
+            self.plot.setLabel('bottom', f"Board {board_num} Ch 1 (V/div)")
+            self.plot.setLabel('left', f"Board {board_num} Ch 0 (V/div)")
             self.plot.setRange(xRange=(-5, 5), yRange=(-5, 5), padding=0.01)
         else:
             self.time_changed() # Restore time-domain view
+        
+        # Finally, set the visibility of the XY line itself
+        self.xy_line.setVisible(show_xy)
+
+    def set_xy_pen(self, pen):
+        """Sets the pen for the XY plot line."""
+        color = pen.color()
+        color.setAlphaF(0.5)
+        self.xy_line.setPen(color=color, width=pen.width())
 
     def update_reference_plot(self, channel_index, x_data, y_data):
         """Sets the data for a channel's reference waveform."""

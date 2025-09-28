@@ -235,6 +235,9 @@ class MainWindow(TemplateBaseClass):
         # View menu actions
         self.ui.actionXY_plot.triggered.connect(self.toggle_xy_view_slot)
 
+        # Plot manager signals
+        self.plot_manager.curve_clicked_signal.connect(self.on_curve_clicked)
+
         # Connect the controller's error signal to our handler slot
         self.controller.signals.critical_error_occurred.connect(self.handle_critical_error)
 
@@ -243,6 +246,10 @@ class MainWindow(TemplateBaseClass):
         A centralized function to synchronize all UI elements related to the
         channel mode (Single, Two Channel, Oversampling).
         """
+        # If in XY mode, do not alter the visibility of any time-domain plots.
+        if self.state.xy_mode:
+            return
+
         s = self.state
         if s.num_board<1: return
 
@@ -384,11 +391,16 @@ class MainWindow(TemplateBaseClass):
         if self.state.xy_mode:
             # For XY mode, we need to ensure the data lengths match.
             # We'll use the data from the first two channels of the active board.
-            ch0_index = self.state.activeboard * self.state.num_chan_per_board
-            ch1_index = ch0_index + 1
-            y_data_ch0 = self.xydata[ch0_index][1]
-            y_data_ch1 = self.xydata[ch1_index][1]
-            self.plot_manager.update_xy_plot(x_data=y_data_ch1, y_data=y_data_ch0)
+            board = self.state.activeboard
+            # Ensure channel 1 is enabled for two-channel mode to get data
+            if self.state.dotwochannel[board]:
+                ch0_index = board * self.state.num_chan_per_board
+                ch1_index = ch0_index + 1
+                # In two-channel mode, only the first half of the buffer is valid data
+                num_valid_samples = self.xydata.shape[2] // 2
+                y_data_ch0 = self.xydata[ch0_index][1][:num_valid_samples]
+                x_data_ch1 = self.xydata[ch1_index][1][:num_valid_samples]
+                self.plot_manager.update_xy_plot(x_data=x_data_ch1, y_data=y_data_ch0)
         else:
             self.plot_manager.update_plots(self.xydata, self.xydatainterleaved)
 
@@ -757,6 +769,15 @@ class MainWindow(TemplateBaseClass):
         all_colors = [pen.color() for pen in self.plot_manager.linepens]
         self.controller.do_leds(all_colors)
 
+        # Update XY menu item based on whether the active board is in two-channel mode
+        self.ui.actionXY_plot.setEnabled(self.state.dotwochannel[self.state.activeboard])
+
+        # If in XY mode, update the pen color to match the new active board's CH1
+        if self.state.xy_mode:
+            ch0_index = self.state.activeboard * self.state.num_chan_per_board + 0
+            new_pen = self.plot_manager.linepens[ch0_index]
+            self.plot_manager.set_xy_pen(new_pen)
+
         # NEW: Reset FFT analysis when channel changes
         if self.fftui:
             self.fftui.reset_analysis_state()
@@ -1023,9 +1044,15 @@ class MainWindow(TemplateBaseClass):
     # ## Slot Implementations (Callbacks for UI events)
     # #########################################################################
 
-    def toggle_xy_view_slot(self, checked):
+    def toggle_xy_view_slot(self, checked, board_num=0):
         """Slot for the 'XY Plot' menu action."""
-        self.plot_manager.toggle_xy_view(checked)
+        board = self.state.activeboard
+        if checked:
+            ch0_index = board * self.state.num_chan_per_board
+            pen = self.plot_manager.linepens[ch0_index]
+            self.plot_manager.set_xy_pen(pen)
+        self.plot_manager.toggle_xy_view(checked, board)
+
     def take_reference_waveform(self, checked):
         """
         Slot for 'Take Reference'. Captures the active waveform's data,
@@ -1095,6 +1122,12 @@ class MainWindow(TemplateBaseClass):
                 self.ui.fftCheck.setChecked(False) # Uncheck the main box
                 if self.fftui:
                     self.fftui.hide()
+
+        # If we are in XY mode and two-channel is turned off, exit XY mode
+        if s.xy_mode and not is_two_channel:
+            self.ui.actionXY_plot.setChecked(False)
+            self.plot_manager.toggle_xy_view(False, s.activeboard)
+
 
         # 1. Update the state for the active board ONLY
         s.dotwochannel[active_board] = is_two_channel
