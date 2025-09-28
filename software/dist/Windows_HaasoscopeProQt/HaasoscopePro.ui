@@ -159,8 +159,8 @@
        <widget class="QLabel" name="label_2">
         <property name="geometry">
          <rect>
-          <x>10</x>
-          <y>353</y>
+          <x>30</x>
+          <y>360</y>
           <width>71</width>
           <height>16</height>
          </rect>
@@ -171,7 +171,7 @@
          </font>
         </property>
         <property name="text">
-         <string>Time factor</string>
+         <string>Time scale</string>
         </property>
        </widget>
        <widget class="QLabel" name="label_3">
@@ -294,8 +294,8 @@
        <widget class="QPushButton" name="timeslowButton">
         <property name="geometry">
          <rect>
-          <x>70</x>
-          <y>370</y>
+          <x>110</x>
+          <y>380</y>
           <width>61</width>
           <height>21</height>
          </rect>
@@ -315,8 +315,8 @@
        <widget class="QPushButton" name="timefastButton">
         <property name="geometry">
          <rect>
-          <x>140</x>
-          <y>370</y>
+          <x>110</x>
+          <y>360</y>
           <width>61</width>
           <height>21</height>
          </rect>
@@ -548,8 +548,8 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>372</y>
-          <width>51</width>
+          <y>380</y>
+          <width>91</width>
           <height>20</height>
          </rect>
         </property>
@@ -1562,7 +1562,7 @@ Outlined if triggering on this channel</string>
          <string/>
         </property>
         <property name="text">
-         <string notr="true">160 mV/div</string>
+         <string notr="true">100 mV/div</string>
         </property>
         <property name="maxLength">
          <number>50</number>
@@ -2203,6 +2203,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionRecord"/>
     <addaction name="actionTake_screenshot"/>
     <addaction name="separator"/>
+    <addaction name="actionVerify_firmware"/>
     <addaction name="actionUpdate_firmware"/>
    </widget>
    <widget class="QMenu" name="menuCalibration">
@@ -2267,13 +2268,22 @@ Outlined if triggering on this channel</string>
     <addaction name="actionDrawing"/>
     <addaction name="actionHigh_resolution"/>
     <addaction name="actionGrid"/>
+    <addaction name="actionXY_Plot"/>
     <addaction name="actionLine_color"/>
     <addaction name="actionPan_and_zoom"/>
+   </widget>
+   <widget class="QMenu" name="menuReference">
+    <property name="title">
+     <string>Reference</string>
+    </property>
+    <addaction name="actionTake_Reference"/>
+    <addaction name="actionShow_Reference"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
    <addaction name="menuView"/>
    <addaction name="menuMeasurements"/>
+   <addaction name="menuReference"/>
    <addaction name="menuAdvanced"/>
    <addaction name="menuHelp"/>
   </widget>
@@ -2545,6 +2555,38 @@ Outlined if triggering on this channel</string>
   <action name="actionLine_color">
    <property name="text">
     <string>Change line color</string>
+   </property>
+  </action>
+  <action name="actionVerify_firmware">
+   <property name="text">
+    <string>Verify firmware</string>
+   </property>
+  </action>
+  <action name="actionXY_Plot">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>XY plot</string>
+   </property>
+  </action>
+  <action name="actionTake_Reference">
+   <property name="text">
+    <string>Take reference</string>
+   </property>
+  </action>
+  <action name="actionShow_Reference">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show reference(s)</string>
    </property>
   </action>
  </widget>
