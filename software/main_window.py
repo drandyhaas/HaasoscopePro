@@ -31,11 +31,10 @@ class MainWindow(TemplateBaseClass):
 
         # 1. Initialize core components
         self.state = ScopeState(num_boards=len(usbs), num_chan_per_board=2)
+        print(f"Haasoscope Pro Software Version: {self.state.softwareversion:.2f}")
         self.controller = HardwareController(usbs, self.state)
         self.processor = DataProcessor(self.state)
         self.recorder = DataRecorder(self.state)
-
-        self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
 
         # 2. Setup UI from template
         self.ui = WindowTemplate()
@@ -54,6 +53,7 @@ class MainWindow(TemplateBaseClass):
         self.fftui = None
         self.ui.boardBox.setMaximum(self.state.num_board - 1)
         self.setup_successful = False
+        self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
 
         # 6. Setup timers for data acquisition and measurement updates
         self.timer = QtCore.QTimer()
