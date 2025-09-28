@@ -159,7 +159,7 @@
        <widget class="QLabel" name="label_2">
         <property name="geometry">
          <rect>
-          <x>30</x>
+          <x>40</x>
           <y>360</y>
           <width>71</width>
           <height>16</height>
@@ -294,7 +294,7 @@
        <widget class="QPushButton" name="timeslowButton">
         <property name="geometry">
          <rect>
-          <x>110</x>
+          <x>130</x>
           <y>380</y>
           <width>61</width>
           <height>21</height>
@@ -315,7 +315,7 @@
        <widget class="QPushButton" name="timefastButton">
         <property name="geometry">
          <rect>
-          <x>110</x>
+          <x>130</x>
           <y>360</y>
           <width>61</width>
           <height>21</height>
@@ -543,11 +543,11 @@
        </widget>
        <widget class="QLineEdit" name="timebaseBox">
         <property name="enabled">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
         <property name="geometry">
          <rect>
-          <x>10</x>
+          <x>20</x>
           <y>380</y>
           <width>91</width>
           <height>20</height>
@@ -559,7 +559,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Timebase factor (power of 3.2 GS/s)</string>
+         <string>Time per &quot;division&quot; (1/10th of screen)</string>
         </property>
         <property name="text">
          <string>0</string>
@@ -692,7 +692,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>100</y>
+          <y>110</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -725,7 +725,7 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>102</y>
+          <y>112</y>
           <width>61</width>
           <height>16</height>
          </rect>
@@ -743,7 +743,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>128</y>
+          <y>138</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -776,7 +776,7 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>130</y>
+          <y>140</y>
           <width>61</width>
           <height>20</height>
          </rect>
@@ -918,7 +918,7 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>102</y>
+          <y>112</y>
           <width>61</width>
           <height>16</height>
          </rect>
@@ -936,7 +936,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>100</y>
+          <y>110</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -993,7 +993,7 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>130</y>
+          <y>140</y>
           <width>61</width>
           <height>20</height>
          </rect>
@@ -1011,7 +1011,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>128</y>
+          <y>138</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -2162,7 +2162,7 @@ Outlined if triggering on this channel</string>
         <property name="geometry">
          <rect>
           <x>20</x>
-          <y>130</y>
+          <y>140</y>
           <width>81</width>
           <height>23</height>
          </rect>
