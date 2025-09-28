@@ -586,10 +586,13 @@ class MainWindow(TemplateBaseClass):
         # Divide by 10 (for the 10 horizontal divisions on the grid)
         time_per_div = time_span / 10.0
         # Format the string with appropriate precision and the current units
-        if time_per_div < 10:
-            display_text = f"{time_per_div:.2f} {s.units}/div"
+
+        if time_per_div * s.nsunits < 1:
+            display_text = f"{1000*time_per_div:.1f} ps"
+        elif time_per_div < 10:
+            display_text = f"{time_per_div:.2f} {s.units}"
         else:
-            display_text = f"{time_per_div:.1f} {s.units}/div"
+            display_text = f"{time_per_div:.1f} {s.units}"
         self.ui.timebaseBox.setText(display_text)
         # self.ui.timebaseBox.setText(f"2^{self.state.downsample}")
 
