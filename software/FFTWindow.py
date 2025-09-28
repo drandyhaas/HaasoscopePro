@@ -136,7 +136,20 @@ class FFTWindow(FFTTemplateBaseClass):
                 # --- Peak Label Logic ---
                 if self.show_labels_enabled and len(x_data) > 0:
                     min_freq_dist = (x_data[-1] - x_data[0]) * 0.05
-                    peaks, _ = find_peaks(self.peak_hold_data, height=np.max(self.peak_hold_data) * 0.1)
+
+                    # Adapt peak finding strategy based on the y-axis scale
+                    if self.dolog:
+                        # On a log scale, find peaks that are significantly above the median
+                        log_data = np.log10(self.peak_hold_data + 1e-10)  # Add epsilon to avoid log(0)
+                        median_log = np.median(log_data)
+                        # A threshold of 1 means peaks must be at least 1 decade (10x) above the median
+                        peak_height_threshold = median_log + 1
+                        peaks, _ = find_peaks(log_data, height=peak_height_threshold)
+                    else:
+                        # On a linear scale, use a fraction of the max height
+                        peak_height_threshold = np.max(self.peak_hold_data) * 0.1
+                        peaks, _ = find_peaks(self.peak_hold_data, height=peak_height_threshold)
+
                     if len(peaks) > 0:
                         peak_amplitudes = self.peak_hold_data[peaks]
                         sorted_peak_indices = peaks[np.argsort(peak_amplitudes)[::-1]]
