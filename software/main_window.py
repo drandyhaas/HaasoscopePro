@@ -393,6 +393,8 @@ class MainWindow(TemplateBaseClass):
                     y_full = self.xydata[ch_idx][1]
                     midpoint = len(y_full) // 2
                     if s.dotwochannel[board_idx]: y_data_for_analysis = y_full[:midpoint]
+                    elif s.dointerleaved:
+                        y_data_for_analysis = self.xydatainterleaved[ch_idx][1]
                     else: y_data_for_analysis = y_full
 
                     # Pass the correct board_idx to get the right sample rate
@@ -1145,6 +1147,10 @@ class MainWindow(TemplateBaseClass):
         s = self.state
         s.att[s.activexychannel] = bool(checked)
         self.controller.set_att(s.activeboard, s.selectedchannel, s.att[s.activexychannel])
+        # Also set it for the other oversampling board
+        if s.dooversample[s.activeboard] and s.activeboard % 2 == 0:
+            s.att[s.activexychannel+s.num_chan_per_board] = bool(checked)
+            self.controller.set_att(s.activeboard+1, s.selectedchannel, s.att[s.activexychannel])
 
     def tenx_changed(self, checked):
         s = self.state
