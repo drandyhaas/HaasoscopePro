@@ -2120,7 +2120,6 @@ if __name__ == '__main__': # calls setup_connection for each board, then init
                     if not win.paused: win.dostartstop()
                     win.ui.runButton.setEnabled(False)
                     win.ui.actionUpdate_firmware.setEnabled(False)
-                    win.ui.actionVerify_firmware.setEnabled(False)
                     goodsetup=False
             if not goodsetup or not win.init():
                 print("Failed initialization!")
@@ -2128,13 +2127,11 @@ if __name__ == '__main__': # calls setup_connection for each board, then init
                 if not win.paused: win.dostartstop()
                 win.ui.runButton.setEnabled(False)
                 win.ui.actionUpdate_firmware.setEnabled(False)
-                win.ui.actionVerify_firmware.setEnabled(False)
         except ftd2xx.DeviceError:
             print("Device com failed!")
             if not win.paused: win.dostartstop()
             win.ui.runButton.setEnabled(False)
             win.ui.actionUpdate_firmware.setEnabled(False)
-            win.ui.actionVerify_firmware.setEnabled(False)
             win.close_socket()
         rv = app.exec_()
         sys.exit(rv)
