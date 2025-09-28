@@ -86,6 +86,24 @@ class MainWindow(TemplateBaseClass):
                     self.ui.actionVerify_firmware.setEnabled(False)
                 self.ui.runButton.setEnabled(False)
 
+            # --- Firmware Version Check (only if setup passed) ---
+            if self.setup_successful:
+                if self.state.firmwareversion < 29:
+                    if not self.state.paused: self.dostartstop()
+                    self.ui.runButton.setEnabled(False)
+                    QMessageBox.warning(self, "Firmware Update Required",
+                                        f"The firmware on a board is outdated.\n"
+                                        f"Firmware {self.state.firmwareversion} found but v29+ required\n\n"
+                                        "Please update to the latest firmware.\n"
+                                        "Data acquisition has been disabled.")
+
+                # This block runs if setup_all_boards fails for any reason.
+                # Check if it was specifically a power issue.
+                if not self.controller.initial_power_ok:
+                    self.ui.actionUpdate_firmware.setEnabled(False)
+                    self.ui.actionVerify_firmware.setEnabled(False)
+                self.ui.runButton.setEnabled(False)
+
         else:  # Handle the case where no boards were found
             print("WARNING: No Haasoscope Pro boards found. Running in offline mode.")
             self.ui.runButton.setEnabled(False)
