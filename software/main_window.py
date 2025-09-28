@@ -80,29 +80,21 @@ class MainWindow(TemplateBaseClass):
                 self.setup_successful = True
             else:
                 # This block runs if setup_all_boards fails for any reason.
-                # Check if it was specifically a power issue.
-                if not self.controller.initial_power_ok:
-                    self.ui.actionUpdate_firmware.setEnabled(False)
-                    self.ui.actionVerify_firmware.setEnabled(False)
+                self.ui.actionUpdate_firmware.setEnabled(False)
+                self.ui.actionVerify_firmware.setEnabled(False)
                 self.ui.runButton.setEnabled(False)
 
-            # --- Firmware Version Check (only if setup passed) ---
+            # Firmware Version Check (only if setup passed)
             if self.setup_successful:
-                if self.state.firmwareversion < 29:
+                req_firmware_ver = 28
+                if self.state.firmwareversion < req_firmware_ver:
                     if not self.state.paused: self.dostartstop()
                     self.ui.runButton.setEnabled(False)
                     QMessageBox.warning(self, "Firmware Update Required",
                                         f"The firmware on a board is outdated.\n"
-                                        f"Firmware {self.state.firmwareversion} found but v29+ required\n\n"
+                                        f"Firmware {self.state.firmwareversion} found but v{req_firmware_ver}+ required\n\n"
                                         "Please update to the latest firmware.\n"
                                         "Data acquisition has been disabled.")
-
-                # This block runs if setup_all_boards fails for any reason.
-                # Check if it was specifically a power issue.
-                if not self.controller.initial_power_ok:
-                    self.ui.actionUpdate_firmware.setEnabled(False)
-                    self.ui.actionVerify_firmware.setEnabled(False)
-                self.ui.runButton.setEnabled(False)
 
         else:  # Handle the case where no boards were found
             print("WARNING: No Haasoscope Pro boards found. Running in offline mode.")
@@ -381,6 +373,8 @@ class MainWindow(TemplateBaseClass):
                        f"Details: {e}\n\n"
                        "Please check the USB connection and restart the application.")
             self.handle_critical_error(title, message)
+            self.ui.actionUpdate_firmware.setEnabled(False)
+            self.ui.actionVerify_firmware.setEnabled(False)
             # Stop this loop immediately since communication has failed.
             return
         if not raw_data_map:
