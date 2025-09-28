@@ -407,7 +407,7 @@ class MainWindow(TemplateBaseClass):
                         else:
                             plot_x_data, xlabel = freq, 'Frequency (MHz)'
 
-                        title = f'FFT plot'
+                        title = f'Haasoscope Pro FFT Plot'
                         pen = self.plot_manager.linepens[ch_idx]  # Get the correct pen
                         self.fftui.update_plot(ch_name, plot_x_data, mag, pen, title, xlabel, is_active)
                 else:

@@ -143,7 +143,7 @@ class FFTWindow(FFTTemplateBaseClass):
                         log_data = np.log10(self.peak_hold_data + 1e-10)  # Add epsilon to avoid log(0)
                         median_log = np.median(log_data)
                         # A threshold of 1 means peaks must be at least 1 decade (10x) above the median
-                        peak_height_threshold = median_log + 1
+                        peak_height_threshold = median_log + 0.5
                         peaks, _ = find_peaks(log_data, height=peak_height_threshold)
                     else:
                         # On a linear scale, use a fraction of the max height
@@ -155,14 +155,14 @@ class FFTWindow(FFTTemplateBaseClass):
                         sorted_peak_indices = peaks[np.argsort(peak_amplitudes)[::-1]]
                         labeled_peak_freqs = []
                         for peak_idx in sorted_peak_indices:
-                            if len(labeled_peak_freqs) >= 10: break
+                            if len(labeled_peak_freqs) >= 20: break
                             current_peak_freq = x_data[peak_idx]
                             is_far_enough = all(abs(current_peak_freq - f) > min_freq_dist for f in labeled_peak_freqs)
                             if is_far_enough:
                                 peak_amp = self.peak_hold_data[peak_idx]
                                 text_item = pg.TextItem(text=f"{current_peak_freq:.2f}", color=(255, 255, 0),
                                                         anchor=(0.5, 1.5))
-                                text_item.setPos(current_peak_freq, peak_amp)
+                                text_item.setPos(current_peak_freq, np.log10(peak_amp) if self.dolog else peak_amp)
                                 self.plot.addItem(text_item)
                                 self.peak_text_labels.append(text_item)
                                 labeled_peak_freqs.append(current_peak_freq)
