@@ -68,6 +68,7 @@ class ScopeState:
         self.doresamp = 4
         self.lpf = 0
         self.xy_mode = False
+        self.skip_next_event = False
         self.fitwidthfraction = 0.2
         self.yscale = 3.3 / 2.03 * 10 * 5 / 8 / pow(2, 12) / 16
         self.nsunits = 1

@@ -340,6 +340,14 @@ class MainWindow(TemplateBaseClass):
             time.sleep(0.001)
             return
 
+        # If the flag is set, get and discard the next event to avoid glitches
+        if self.state.skip_next_event:
+            self.state.skip_next_event = False
+            try:
+                self.controller.get_event() # Fetch and discard
+            except ftd2xx.DeviceError:
+                pass # Ignore potential errors during this flush
+            return
         self.state.isdrawing = True
         try:
             raw_data_map, rx_len = self.controller.get_event()
@@ -1133,6 +1141,9 @@ class MainWindow(TemplateBaseClass):
         if s.xy_mode and not is_two_channel:
             self.ui.actionXY_Plot.setChecked(False)
             self.plot_manager.toggle_xy_view(False, s.activeboard)
+        
+        # The next event after a mode switch can be glitchy, so we'll skip it.
+        s.skip_next_event = True
 
 
         # 1. Update the state for the active board ONLY
