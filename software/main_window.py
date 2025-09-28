@@ -845,15 +845,15 @@ class MainWindow(TemplateBaseClass):
         # Update the plot range and text box
         self.time_changed()
 
-        # NEW: If we are zoomed in, reset the pan slider to its center position.
+        # If we are zoomed in, reset the pan slider to its center position.
         if is_zoomed:
             # Block signals to prevent this from triggering a pan action
             self.ui.thresholdPos.blockSignals(True)
             self.ui.thresholdPos.setValue(5000)
             self.ui.thresholdPos.blockSignals(False)
         
-        # NEW: Reset FFT analysis when time scale changes
-        if self.fftui:
+        if self.fftui and not is_zoomed:
+            self.fftui.reset_x_zoom()
             self.fftui.reset_analysis_state()
 
     def time_slow(self):
@@ -871,15 +871,15 @@ class MainWindow(TemplateBaseClass):
         # Update the plot range and text box
         self.time_changed()
 
-        # NEW: If we are zoomed in, reset the pan slider to its center position.
+        # If we are zoomed in, reset the pan slider to its center position.
         if is_zoomed:
             # Block signals to prevent this from triggering a pan action
             self.ui.thresholdPos.blockSignals(True)
             self.ui.thresholdPos.setValue(5000)
             self.ui.thresholdPos.blockSignals(False)
 
-        # NEW: Reset FFT analysis when time scale changes
-        if self.fftui:
+        if self.fftui and not is_zoomed:
+            self.fftui.reset_x_zoom()
             self.fftui.reset_analysis_state()
 
     def depth_changed(self):
@@ -1020,6 +1020,20 @@ class MainWindow(TemplateBaseClass):
         s = self.state
         is_two_channel = self.ui.twochanCheck.isChecked()
         active_board = s.activeboard
+
+        # If switching from two-channel to single-channel, disable FFT on the second channel
+        if s.dotwochannel[active_board] and not is_two_channel:
+            second_chan_index = active_board * s.num_chan_per_board + 1
+            second_chan_name = f"CH{second_chan_index + 1}"
+            s.fft_enabled[second_chan_name] = False
+            if self.fftui:
+                self.fftui.clear_plot(second_chan_name)
+            
+            # If no other channels have FFT enabled, hide the window
+            if not any(s.fft_enabled.values()):
+                self.ui.fftCheck.setChecked(False) # Uncheck the main box
+                if self.fftui:
+                    self.fftui.hide()
 
         # 1. Update the state for the active board ONLY
         s.dotwochannel[active_board] = is_two_channel

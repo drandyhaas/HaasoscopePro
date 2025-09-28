@@ -43,6 +43,7 @@ class FFTWindow(FFTTemplateBaseClass):
         self.plot.setBackground(QColor('black'))
 
         self.user_panned_zoomed = False
+        self.viewBox = self.plot.getViewBox()
         self.plot.sigRangeChanged.connect(self.on_view_changed)
 
         # --- Plot Item Management ---
@@ -71,6 +72,11 @@ class FFTWindow(FFTTemplateBaseClass):
         self.peak_hold_data = None
         self.peak_hold_line.clear()
         self.clear_peak_labels()
+
+    def reset_x_zoom(self):
+        """Allows the main window to reset the pan/zoom state."""
+        self.user_panned_zoomed = False
+        self.new_plot = True # Force a y-range update as well
 
     def on_view_changed(self):
         """Signal handler for when the user manually pans or zooms."""
@@ -117,6 +123,10 @@ class FFTWindow(FFTTemplateBaseClass):
 
         self.plot.setTitle(title_text)
         self.plot.setLabel('bottom', xlabel_text)
+
+        # Set the view limits to the data range to prevent panning/zooming beyond it
+        if x_data is not None and len(x_data) > 0:
+            self.viewBox.setLimits(xMin=np.min(x_data)-np.max(x_data)*0.02, xMax=np.max(x_data)*1.02)
 
         if not self.user_panned_zoomed:
             self.plot.enableAutoRange(axis='x')
