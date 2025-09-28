@@ -42,6 +42,14 @@ class FFTWindow(FFTTemplateBaseClass):
         self.plot.setMouseEnabled(x=True, y=False)  # Allow mouse pan/zoom on X axis ONLY
         self.plot.setBackground(QColor('black'))
 
+        # Add a Reset Button directly to the plot
+        self.reset_button = QtWidgets.QPushButton("Reset Peaks", self.plot)
+        self.reset_button.setStyleSheet("QPushButton { background-color: rgba(50, 50, 50, 150); color: white; border: 1px solid gray; padding: 4px; }")
+        self.reset_button.clicked.connect(self.reset_analysis_state)
+        # The button's position will be managed by the plot's layout automatically,
+        # typically placing it in a corner. We can adjust if needed.
+        # For explicit positioning, one would need to handle resize events.
+
         self.user_panned_zoomed = False
         self.viewBox = self.plot.getViewBox()
         self.plot.sigRangeChanged.connect(self.on_view_changed)
