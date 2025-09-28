@@ -57,6 +57,7 @@ class PlotManager(pg.QtCore.QObject):
         self.plot = self.ui.plot
         self.lines = []
         self.reference_lines = []
+        self.xy_line = None
         self.linepens = []
         self.otherlines = {}  # For trigger lines, fit lines etc.
         self.average_line = None
@@ -125,6 +126,10 @@ class PlotManager(pg.QtCore.QObject):
         # Persistence average line
         self.average_line = self.plot.plot(pen=pg.mkPen(color='w', width=1), name="persist_avg")
         self.average_line.setVisible(self.ui.persistavgCheck.isChecked())
+
+        # XY plot line (initially hidden)
+        self.xy_line = self.plot.plot(pen=pg.mkPen(color='cyan'), name="XY_Plot", skipFiniteCheck=True, connect="finite")
+        self.xy_line.setVisible(False)
 
         # Secondary Y-Axis
         if self.state.num_board > 0:
@@ -221,6 +226,31 @@ class PlotManager(pg.QtCore.QObject):
 
         self.update_persist_average()
 
+    def toggle_xy_view(self, show_xy):
+        """Switches between the time-domain view and the XY plot view."""
+        self.state.xy_mode = show_xy
+
+        # Toggle visibility of all time-domain lines
+        for line in self.lines + self.reference_lines + list(self.otherlines.values()):
+            # Keep the average line's visibility tied to its checkbox
+            if line is not self.average_line:
+                line.setVisible(not show_xy)
+
+        # Handle average line and persistence lines separately
+        self.average_line.setVisible(not show_xy and self.ui.persistavgCheck.isChecked())
+        for item, _, _ in self.persist_lines:
+            item.setVisible(not show_xy and self.ui.persistlinesCheck.isChecked())
+
+        # Toggle visibility of the XY plot line
+        self.xy_line.setVisible(show_xy)
+
+        if show_xy:
+            self.plot.setLabel('bottom', "Channel 1 (V/div)")
+            self.plot.setLabel('left', "Channel 0 (V/div)")
+            self.plot.setRange(xRange=(-5, 5), yRange=(-5, 5), padding=0.01)
+        else:
+            self.time_changed() # Restore time-domain view
+
     def update_reference_plot(self, channel_index, x_data, y_data):
         """Sets the data for a channel's reference waveform."""
         if 0 <= channel_index < len(self.reference_lines):
@@ -232,6 +262,11 @@ class PlotManager(pg.QtCore.QObject):
         """Hides a specific reference plot."""
         if 0 <= channel_index < len(self.reference_lines):
             self.reference_lines[channel_index].setVisible(False)
+
+    def update_xy_plot(self, x_data, y_data):
+        """Updates the XY plot with new data."""
+        if self.state.xy_mode:
+            self.xy_line.setData(x=x_data, y=y_data)
 
     def time_changed(self):
         """Updates the x-axis range and units, and handles zooming."""

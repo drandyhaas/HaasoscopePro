@@ -35,7 +35,7 @@ class MainWindow(TemplateBaseClass):
         self.processor = DataProcessor(self.state)
         self.recorder = DataRecorder(self.state)
 
-        self.reference_data = {} # Stores {channel_index: {'x_ns': array, 'y': array}}
+        self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
 
         # 2. Setup UI from template
         self.ui = WindowTemplate()
@@ -108,6 +108,11 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionShow_Reference = QAction('Show Reference(s)', self, checkable=True)
         self.ui.actionShow_Reference.setChecked(True)
         self.reference_menu.addAction(self.ui.actionShow_Reference)
+
+        # Create and add the 'View' menu for XY plot option
+        self.view_menu = self.ui.menubar.addMenu('View')
+        self.ui.actionXY_Plot = QAction('XY Plot', self, checkable=True)
+        self.view_menu.addAction(self.ui.actionXY_Plot)
 
     def _sync_initial_ui_state(self):
         """A one-time function to sync the UI's visual state after the window has loaded."""
@@ -243,6 +248,9 @@ class MainWindow(TemplateBaseClass):
         # Reference menu actions
         self.ui.actionTake_Reference.triggered.connect(self.take_reference_waveform)
         self.ui.actionShow_Reference.triggered.connect(self.toggle_reference_waveform_visibility)
+
+        # View menu actions
+        self.ui.actionXY_Plot.triggered.connect(self.toggle_xy_view_slot)
 
         # Connect the controller's error signal to our handler slot
         self.controller.signals.critical_error_occurred.connect(self.handle_critical_error)
@@ -389,7 +397,17 @@ class MainWindow(TemplateBaseClass):
         if s.pll_reset_grace_period > 0:
             s.pll_reset_grace_period -= 1
 
-        self.plot_manager.update_plots(self.xydata, self.xydatainterleaved)
+        # --- Plotting Logic: Switch between Time Domain and XY Mode ---
+        if self.state.xy_mode:
+            # For XY mode, we need to ensure the data lengths match.
+            # We'll use the data from the first two channels of the active board.
+            ch0_index = self.state.activeboard * self.state.num_chan_per_board
+            ch1_index = ch0_index + 1
+            y_data_ch0 = self.xydata[ch0_index][1]
+            y_data_ch1 = self.xydata[ch1_index][1]
+            self.plot_manager.update_xy_plot(x_data=y_data_ch1, y_data=y_data_ch0)
+        else:
+            self.plot_manager.update_plots(self.xydata, self.xydatainterleaved)
 
         if self.recorder.is_recording:
             lines_vis = [line.isVisible() for line in self.plot_manager.lines]
@@ -1022,6 +1040,9 @@ class MainWindow(TemplateBaseClass):
     # ## Slot Implementations (Callbacks for UI events)
     # #########################################################################
 
+    def toggle_xy_view_slot(self, checked):
+        """Slot for the 'XY Plot' menu action."""
+        self.plot_manager.toggle_xy_view(checked)
     def take_reference_waveform(self, checked):
         """
         Slot for 'Take Reference'. Captures the active waveform's data,
