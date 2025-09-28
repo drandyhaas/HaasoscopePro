@@ -2268,7 +2268,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionDrawing"/>
     <addaction name="actionHigh_resolution"/>
     <addaction name="actionGrid"/>
-    <addaction name="actionXY_plot"/>
+    <addaction name="actionXY_Plot"/>
     <addaction name="actionLine_color"/>
     <addaction name="actionPan_and_zoom"/>
    </widget>
@@ -2562,7 +2562,7 @@ Outlined if triggering on this channel</string>
     <string>Verify firmware</string>
    </property>
   </action>
-  <action name="actionXY_plot">
+  <action name="actionXY_Plot">
    <property name="checkable">
     <bool>true</bool>
    </property>

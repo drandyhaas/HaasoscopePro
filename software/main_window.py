@@ -233,7 +233,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionShow_Reference.triggered.connect(self.toggle_reference_waveform_visibility)
 
         # View menu actions
-        self.ui.actionXY_plot.triggered.connect(self.toggle_xy_view_slot)
+        self.ui.actionXY_Plot.triggered.connect(self.toggle_xy_view_slot)
 
         # Plot manager signals
         self.plot_manager.curve_clicked_signal.connect(self.on_curve_clicked)
@@ -770,7 +770,7 @@ class MainWindow(TemplateBaseClass):
         self.controller.do_leds(all_colors)
 
         # Update XY menu item based on whether the active board is in two-channel mode
-        self.ui.actionXY_plot.setEnabled(self.state.dotwochannel[self.state.activeboard])
+        self.ui.actionXY_Plot.setEnabled(self.state.dotwochannel[self.state.activeboard])
 
         # If we are in XY mode but switched to a board that is not in two-channel mode, exit XY mode
         if self.state.xy_mode and not self.state.dotwochannel[self.state.activeboard]:
@@ -1131,7 +1131,7 @@ class MainWindow(TemplateBaseClass):
 
         # If we are in XY mode and two-channel is turned off, exit XY mode
         if s.xy_mode and not is_two_channel:
-            self.ui.actionXY_plot.setChecked(False)
+            self.ui.actionXY_Plot.setChecked(False)
             self.plot_manager.toggle_xy_view(False, s.activeboard)
 
 
