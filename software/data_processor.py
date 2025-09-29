@@ -52,18 +52,23 @@ def find_fundamental_frequency_scipy(signal: np.ndarray, sampling_rate: float) -
     return positive_freqs[peak_indices[0]]
 
 
-def format_freq(freq_hz: float, suffix="Hz") -> str:
+def format_freq(freq_hz: float, suffix="Hz", dostr=True):
     """Formats a frequency in Hz to a string with appropriate units."""
     if freq_hz is None or freq_hz < 1.0:
-        return f"{freq_hz:.2f} {suffix}"
+        if dostr: return f"{freq_hz:.2f} {suffix}"
+        else: return freq_hz, "Hz"
     if freq_hz < 1000:
-        return f"{freq_hz:.3f} {suffix}"
+        if dostr: return f"{freq_hz:.3f} {suffix}"
+        else: return freq_hz, "Hz"
     elif freq_hz < 1_000_000:
-        return f"{freq_hz / 1000:.3f} k{suffix}"
+        if dostr: return f"{freq_hz / 1000:.3f} k{suffix}"
+        else: return freq_hz / 1000, "kHz"
     elif freq_hz < 1_000_000_000:
-        return f"{freq_hz / 1_000_000:.3f} M{suffix}"
+        if dostr: return f"{freq_hz / 1_000_000:.3f} M{suffix}"
+        else: return freq_hz / 1_000_000, "MHz"
     else:
-        return f"{freq_hz / 1_000_000_000:.3f} G{suffix}"
+        if dostr: return f"{freq_hz / 1_000_000_000:.3f} G{suffix}"
+        else: return freq_hz / 1_000_000_000, "GHz"
 
 
 def find_crossing_distance(y_data, y_threshold, x_ref, x0=0.0, dx=1.0):

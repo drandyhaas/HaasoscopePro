@@ -515,16 +515,18 @@ class MainWindow(TemplateBaseClass):
         """Slow timer callback to update measurements in the table view without clearing it."""
         active_measurements = set()
 
-        def _set_measurement(name, value):
+        def _set_measurement(name, value, unit=""):
             """Helper to add or update a measurement row in the table."""
             active_measurements.add(name)
             value = round(value,2)
+            if unit!="": unit = " ("+unit+")"
             if name in self.measurement_items:
                 # Update existing item's value
                 self.measurement_items[name][1].setText(str(value))
+                self.measurement_items[name][0].setText(name + unit)
             else:
                 # Add new row and store items
-                name_item = QStandardItem(name)
+                name_item = QStandardItem(name + unit)
                 value_item = QStandardItem(str(value))
                 self.measurement_model.appendRow([name_item, value_item])
                 self.measurement_items[name] = (name_item, value_item)
@@ -532,7 +534,7 @@ class MainWindow(TemplateBaseClass):
         if self.state.dodrawing:
             if self.ui.actionTrigger_thresh.isChecked():
                 hline_val = self.plot_manager.otherlines['hline'].value()
-                _set_measurement("Trig thresh (div)", hline_val)
+                _set_measurement("Trig threshold", hline_val, "div")
 
             if self.ui.actionN_persist_lines.isChecked():
                 num_persist = len(self.plot_manager.persist_lines)
@@ -542,13 +544,11 @@ class MainWindow(TemplateBaseClass):
                 if self.state.num_board > 0:
                     active_usb = self.controller.usbs[self.state.activeboard]
                     adctemp, boardtemp = gettemps(active_usb)
-                    _set_measurement("ADC \u00b0C", adctemp)
-                    _set_measurement("Board \u00b0C", boardtemp)
+                    _set_measurement("ADC temp", adctemp, "\u00b0C")
+                    _set_measurement("Board temp", boardtemp, "\u00b0C")
 
-            source_str = " (avg)" if self.ui.persistavgCheck.isChecked() and self.plot_manager.average_line.isVisible() else ""
-            
             if hasattr(self, 'xydata'):
-                x_full = self.xydata[self.state.activexychannel][0]
+                x_full = self.xydata[self.state.activexychannel][0] # TODO: use interleaved data when appropriate
                 y_full = self.xydata[self.state.activexychannel][1]
                 midpoint = len(y_full) // 2
                 
@@ -561,15 +561,18 @@ class MainWindow(TemplateBaseClass):
                         x_data_for_analysis, y_data_for_analysis, vline_val, do_risetime_calc=self.ui.actionRisetime.isChecked()
                     )
 
-                    if self.ui.actionMean.isChecked(): _set_measurement(f"Mean{source_str}", measurements.get('Mean', 0))
-                    if self.ui.actionRMS.isChecked(): _set_measurement(f"RMS{source_str}", measurements.get('RMS', 0))
-                    if self.ui.actionMinimum.isChecked(): _set_measurement(f"Min{source_str}", measurements.get('Min', 0))
-                    if self.ui.actionMaximum.isChecked(): _set_measurement(f"Max{source_str}", measurements.get('Max', 0))
-                    if self.ui.actionVpp.isChecked(): _set_measurement(f"Vpp{source_str}", measurements.get('Vpp', 0))
-                    if self.ui.actionFreq.isChecked(): _set_measurement(f"Freq{source_str}", measurements.get('Freq', 0))
+                    if self.ui.actionMean.isChecked(): _set_measurement("Mean", measurements.get('Mean', 0),"mV")
+                    if self.ui.actionRMS.isChecked(): _set_measurement("RMS", measurements.get('RMS', 0),"mV")
+                    if self.ui.actionMinimum.isChecked(): _set_measurement("Min", measurements.get('Min', 0), "mV")
+                    if self.ui.actionMaximum.isChecked(): _set_measurement("Max", measurements.get('Max', 0), "mV")
+                    if self.ui.actionVpp.isChecked(): _set_measurement("Vpp", measurements.get('Vpp', 0), "mV")
+                    if self.ui.actionFreq.isChecked():
+                        freq = measurements.get('Freq', 0)
+                        freq, unit = format_freq(freq, "Hz", False)
+                        _set_measurement("Freq", freq, unit)
                     if self.ui.actionRisetime.isChecked():
-                        _set_measurement(f"Risetime{source_str}", measurements.get('Risetime', 0))
-                        _set_measurement(f"Risetime error{source_str}", measurements.get('Risetime error', 0))
+                        _set_measurement("Risetime", measurements.get('Risetime', 0), "ns")
+                        _set_measurement("Risetime error", measurements.get('Risetime error', 0), "ns")
 
         # Remove stale measurements that are no longer selected
         stale_keys = list(self.measurement_items.keys() - active_measurements)
