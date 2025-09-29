@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1221</width>
-    <height>800</height>
+    <width>1225</width>
+    <height>895</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -47,9 +47,9 @@
        <property name="geometry">
         <rect>
          <x>0</x>
-         <y>600</y>
+         <y>705</y>
          <width>400</width>
-         <height>400</height>
+         <height>291</height>
         </rect>
        </property>
        <property name="font">
@@ -2180,6 +2180,19 @@ Outlined if triggering on this channel</string>
         </property>
        </widget>
       </widget>
+      <widget class="QTableView" name="tableView">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>600</y>
+         <width>400</width>
+         <height>100</height>
+        </rect>
+       </property>
+       <property name="alternatingRowColors">
+        <bool>true</bool>
+       </property>
+      </widget>
      </widget>
     </item>
    </layout>
@@ -2189,7 +2202,7 @@ Outlined if triggering on this channel</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1221</width>
+     <width>1225</width>
      <height>21</height>
     </rect>
    </property>
