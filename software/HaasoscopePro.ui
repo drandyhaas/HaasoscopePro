@@ -43,21 +43,6 @@
       <property name="frameShadow">
        <enum>QFrame::Raised</enum>
       </property>
-      <widget class="QTextBrowser" name="textBrowser">
-       <property name="geometry">
-        <rect>
-         <x>0</x>
-         <y>705</y>
-         <width>400</width>
-         <height>291</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <family>Arial</family>
-        </font>
-       </property>
-      </widget>
       <widget class="QGroupBox" name="groupBox_2">
        <property name="geometry">
         <rect>
@@ -2186,7 +2171,7 @@ Outlined if triggering on this channel</string>
          <x>0</x>
          <y>600</y>
          <width>400</width>
-         <height>100</height>
+         <height>231</height>
         </rect>
        </property>
        <property name="alternatingRowColors">
@@ -2537,7 +2522,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>N persist lines</string>
+    <string>Persist lines</string>
    </property>
   </action>
   <action name="actionToggle_extra_trig_stabilizer">
