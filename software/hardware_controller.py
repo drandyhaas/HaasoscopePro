@@ -55,7 +55,7 @@ class HardwareController:
         setfan(usb, False)
         send_leds(usb, 0, 0, 0, 0, 0, 0)
         time.sleep(0.9)
-        oldtemp = gettemps(usb, retadcval=True)
+        oldtemp, _ = gettemps(usb)
 
         # Turn everything on to maximize current draw
         for c in range(self.state.num_chan_per_board):
@@ -65,7 +65,7 @@ class HardwareController:
         setfan(usb, True)
         send_leds(usb, 255, 255, 255, 255, 255, 255)
         time.sleep(0.1)
-        newtemp = gettemps(usb, retadcval=True)
+        newtemp, _ = gettemps(usb)
 
         # Reset all channels back to their default state
         for c in range(self.state.num_chan_per_board):

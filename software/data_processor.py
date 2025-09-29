@@ -279,17 +279,17 @@ class DataProcessor:
         VperD = state.VperD[state.activexychannel]
 
         measurements = {
-            "Mean": f"{1000 * VperD * np.mean(y_data):.3f} mV",
-            "RMS": f"{1000 * VperD * np.std(y_data):.3f} mV",
-            "Max": f"{1000 * VperD * np.max(y_data):.3f} mV",
-            "Min": f"{1000 * VperD * np.min(y_data):.3f} mV",
-            "Vpp": f"{1000 * VperD * (np.max(y_data) - np.min(y_data)):.3f} mV"
+            "Mean": 1000 * VperD * np.mean(y_data),
+            "RMS": 1000 * VperD * np.std(y_data),
+            "Max": 1000 * VperD * np.max(y_data),
+            "Min": 1000 * VperD * np.min(y_data),
+            "Vpp": 1000 * VperD * (np.max(y_data) - np.min(y_data))
         }
 
         sampling_rate = (state.samplerate * 1e9) / state.downsamplefactor
         if state.dotwochannel[state.activeboard]: sampling_rate /= 2
         found_freq = find_fundamental_frequency_scipy(y_data, sampling_rate)
-        measurements["Freq"] = format_freq(found_freq)
+        measurements["Freq"] = found_freq
 
         # Initialize fit results to None
         fit_results = None
@@ -300,7 +300,7 @@ class DataProcessor:
             yc = y_data[(x_data > vline - fitwidth) & (x_data < vline + fitwidth)]
 
             if xc.size < 10:
-                measurements["Risetime"] = "Fit range too small"
+                measurements["Risetime"] = math.nan
             else:
                 p0 = [np.max(yc), xc[xc.size // 2], 2 * state.nsunits, np.min(yc)]
                 if state.fallingedge[state.activeboard]: p0[2] *= -1
@@ -316,11 +316,13 @@ class DataProcessor:
                         risetime = state.nsunits * 0.6 * abs(top - bot) / slope
                         risetimeerr = state.nsunits * 0.6 * 4 * abs(top - bot) * perr[2] / (slope * slope)
 
-                        measurements["Risetime"] = f"{abs(risetime):.2f} \u00B1 {abs(risetimeerr):.2f} ns"
+                        measurements["Risetime"] = risetime
+                        measurements["Risetime error"] = risetimeerr
                         # Package the raw results to be returned
                         fit_results = {'popt': popt, 'pcov': pcov, 'xc': xc, 'risetime_err': risetimeerr}
 
                     except (RuntimeError, ValueError):
-                        measurements["Risetime"] = "Fit failed"
+                        measurements["Risetime"] = math.nan
+                        measurements["Risetime error"] = math.nan
 
         return measurements, fit_results

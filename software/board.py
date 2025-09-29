@@ -404,7 +404,7 @@ def send_leds(usb, r1, g1, b1, r2, g2, b2):
         time.sleep(.001)
 
 
-def gettemps(usb, retadcval: bool = False, retTboard: bool = False) -> Union[str, float]:
+def gettemps(usb) -> [float, float]:
     """Reads temperatures from the ADC die and a board thermistor."""
     set_spi_mode(usb, 0)
 
@@ -416,7 +416,6 @@ def gettemps(usb, retadcval: bool = False, retTboard: bool = False) -> Union[str
     slowdac1_val = (256 * slowdac1[1] + slowdac1[0])
     slowdac1_mv = slowdac1_val * 3300 / pow(2, 12) / 4.0
     adc_temp = (750 - slowdac1_mv) / 1.5
-    if retadcval: return adc_temp
 
     # Read board thermistor
     spicommand(usb, "Board Temp Conv", 0x08, 0x00, 0, True, cs=6, nbyte=2, quiet=True)  # Dummy
@@ -432,10 +431,8 @@ def gettemps(usb, retadcval: bool = False, retTboard: bool = False) -> Union[str
     # Steinhart-Hart equation for thermistor
     t0, beta = 273.15 + 25, 3380.0
     t_board = 1.0 / (1.0 / t0 - math.log(r_board / 10000.0) / beta) - 273.15 - 10
-    if retTboard: return t_board
 
-    return f"Temps (ADC, board): {adc_temp:.1f}\u00b0C, {t_board:.1f}\u00b0C"
-
+    return [adc_temp, t_board]
 
 def cleanup(usb):
     """Powers down the board safely."""

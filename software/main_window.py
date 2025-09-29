@@ -118,6 +118,8 @@ class MainWindow(TemplateBaseClass):
         # DEFER UI sync until after the constructor is finished and the event loop starts
         QtCore.QTimer.singleShot(10, self._sync_initial_ui_state)
 
+        # Perform an initial adjustment of the table geometry
+        self._adjust_table_view_geometry()
         self.show()
 
     def _sync_initial_ui_state(self):
@@ -510,14 +512,12 @@ class MainWindow(TemplateBaseClass):
         
     def update_measurements_display(self):
         """Slow timer callback to update measurements in the table view without clearing it."""
-        self.ui.textBrowser.clear() # Clear old text display
-
         active_measurements = set()
-        fit_results = None
 
         def _set_measurement(name, value):
             """Helper to add or update a measurement row in the table."""
             active_measurements.add(name)
+            value = round(value,2)
             if name in self.measurement_items:
                 # Update existing item's value
                 self.measurement_items[name][1].setText(str(value))
@@ -528,27 +528,21 @@ class MainWindow(TemplateBaseClass):
                 self.measurement_model.appendRow([name_item, value_item])
                 self.measurement_items[name] = (name_item, value_item)
 
-        if self.recorder.is_recording:
-            _set_measurement("Recording", self.recorder.file_handle.name)
-
         if self.state.dodrawing:
             if self.ui.actionTrigger_thresh.isChecked():
                 hline_val = self.plot_manager.otherlines['hline'].value()
-                _set_measurement("Trigger threshold", f"{hline_val:.3f} div")
+                _set_measurement("Trig thresh (div)", hline_val)
 
             if self.ui.actionN_persist_lines.isChecked():
                 num_persist = len(self.plot_manager.persist_lines)
-                _set_measurement("N persist lines", str(num_persist))
+                _set_measurement("Persist lines", num_persist)
 
             if self.ui.actionTemperatures.isChecked():
                 if self.state.num_board > 0:
                     active_usb = self.controller.usbs[self.state.activeboard]
-                    temp_str = gettemps(active_usb).strip()
-                    parts = temp_str.split(',') 
-                    for part in parts:
-                        if ':' in part:
-                            key, value = part.split(':', 1)
-                            _set_measurement(key.strip(), value.strip())
+                    adctemp, boardtemp = gettemps(active_usb)
+                    _set_measurement("ADC \u00b0C", adctemp)
+                    _set_measurement("Board \u00b0C", boardtemp)
 
             source_str = " (avg)" if self.ui.persistavgCheck.isChecked() and self.plot_manager.average_line.isVisible() else ""
             
@@ -566,20 +560,60 @@ class MainWindow(TemplateBaseClass):
                         x_data_for_analysis, y_data_for_analysis, vline_val, do_risetime_calc=self.ui.actionRisetime.isChecked()
                     )
 
-                    if self.ui.actionMean.isChecked(): _set_measurement(f"Mean{source_str}", measurements.get('Mean', 'N/A'))
-                    if self.ui.actionRMS.isChecked(): _set_measurement(f"RMS{source_str}", measurements.get('RMS', 'N/A'))
-                    if self.ui.actionVpp.isChecked(): _set_measurement(f"Vpp{source_str}", measurements.get('Vpp', 'N/A'))
-                    if self.ui.actionFreq.isChecked(): _set_measurement(f"Freq{source_str}", measurements.get('Freq', 'N/A'))
-                    if self.ui.actionRisetime.isChecked(): _set_measurement(f"Risetime{source_str}", measurements.get('Risetime', 'N/A'))
+                    if self.ui.actionMean.isChecked(): _set_measurement(f"Mean{source_str}", measurements.get('Mean', 0))
+                    if self.ui.actionRMS.isChecked(): _set_measurement(f"RMS{source_str}", measurements.get('RMS', 0))
+                    if self.ui.actionMinimum.isChecked(): _set_measurement(f"Min{source_str}", measurements.get('Min', 0))
+                    if self.ui.actionMaximum.isChecked(): _set_measurement(f"Max{source_str}", measurements.get('Max', 0))
+                    if self.ui.actionVpp.isChecked(): _set_measurement(f"Vpp{source_str}", measurements.get('Vpp', 0))
+                    if self.ui.actionFreq.isChecked(): _set_measurement(f"Freq{source_str}", measurements.get('Freq', 0))
+                    if self.ui.actionRisetime.isChecked():
+                        _set_measurement(f"Risetime{source_str}", measurements.get('Risetime', 0))
+                        _set_measurement(f"Risetime error{source_str}", measurements.get('Risetime error', 0))
 
         # Remove stale measurements that are no longer selected
-        stale_keys = [key for key in self.measurement_items if key not in active_measurements]
-        rows_to_remove = sorted([self.measurement_items[key][0].row() for key in stale_keys], reverse=True)
-        for row in rows_to_remove:
-            if row >= 0:
-                self.measurement_model.removeRow(row)
+        stale_keys = list(self.measurement_items.keys() - active_measurements)
+
+        rows_to_remove = []
         for key in stale_keys:
-            self.plot_manager.update_risetime_fit_lines(fit_results)
+            # Find the item in the model by its text to avoid accessing a deleted C++ object
+            items = self.measurement_model.findItems(key)
+            if items:
+                rows_to_remove.append(items[0].row())
+
+        # Remove rows from the model, from bottom to top, to avoid index shifting issues
+        for row in sorted(list(set(rows_to_remove)), reverse=True):
+            self.measurement_model.removeRow(row)
+
+        # Now, clean up the tracking dictionary
+        for key in stale_keys:
+            if key in self.measurement_items:
+                del self.measurement_items[key]
+
+    def _adjust_table_view_geometry(self):
+        """Sets the table view geometry to fill the bottom of the side panel."""
+        frame_height = self.ui.frame.height()
+        table_top_y = 600  # The Y coordinate where the table should start
+        table_height = frame_height - table_top_y
+
+        # Ensure the height is not negative if the window is very short
+        if table_height < 50:
+            table_height = 50
+
+        # Also account for the frame's width
+        frame_width = self.ui.frame.width()
+
+        self.ui.tableView.setGeometry(
+            0,            # x
+            table_top_y,  # y
+            frame_width,  # width
+            table_height  # height
+        )
+
+    def resizeEvent(self, event):
+        """Handles window resize events to adjust the table view."""
+        super().resizeEvent(event)  # Call the parent's resize event
+        # Use a single shot timer to ensure the layout has settled before adjusting
+        QtCore.QTimer.singleShot(1, self._adjust_table_view_geometry)
 
     def allocate_xy_data(self):
         """Creates or re-sizes the numpy arrays for storing waveform data."""
