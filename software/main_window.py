@@ -60,6 +60,8 @@ class MainWindow(TemplateBaseClass):
         self.timer.timeout.connect(self.update_plot_loop)
         self.timer2 = QtCore.QTimer()
         self.timer2.timeout.connect(self.update_measurements_display)
+        self.status_timer = QtCore.QTimer()
+        self.status_timer.timeout.connect(self.update_status_bar)
 
         # 7. Run the main initialization and hardware setup sequence
         if self.state.num_board > 0:
@@ -477,17 +479,6 @@ class MainWindow(TemplateBaseClass):
         self.last_time = now
         self.fps = 1.0 / dt if self.fps is None else self.fps * 0.9 + (1.0 / dt) * 0.1
 
-        sradjust = 1e9
-        if s.dointerleaved[s.activeboard]:
-            sradjust = 2e9
-        elif s.dotwochannel[s.activeboard]:
-            sradjust = 0.5e9
-        effective_sr = s.samplerate * sradjust / (s.downsamplefactor if not s.highresval else 1)
-
-        status_text = (f"{format_freq(effective_sr, 'S/s')}, {self.fps:.2f} fps, "
-                       f"{s.nevents} events, {s.lastrate:.2f} Hz, "
-                       f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s")
-        self.ui.statusBar.showMessage(status_text)
         self.state.isdrawing = False
 
         # Sync the Depth box UI with the state, in case it was changed by a PLL reset
@@ -498,6 +489,19 @@ class MainWindow(TemplateBaseClass):
         if self.state.getone:
             self.dostartstop()
 
+    def update_status_bar(self):
+        """Updates the status bar text at a fixed rate (5 Hz)."""
+        s = self.state
+        if s.num_board < 1 or self.fps is None: return
+        sradjust = 1e9
+        if s.dointerleaved[s.activeboard]: sradjust = 2e9
+        elif s.dotwochannel[s.activeboard]: sradjust = 0.5e9
+        effective_sr = s.samplerate * sradjust / (s.downsamplefactor if not s.highresval else 1)
+        status_text = (f"{format_freq(effective_sr, 'S/s')}, {self.fps:.2f} fps, "
+                       f"{s.nevents} events, {s.lastrate:.2f} Hz, "
+                       f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s")
+        self.ui.statusBar.showMessage(status_text)
+        
     def update_measurements_display(self):
         """Slow timer callback to update text-based measurements."""
         the_str = ""
@@ -726,11 +730,13 @@ class MainWindow(TemplateBaseClass):
         if self.state.paused:
             self.timer.start(0)  # 0ms interval for fastest refresh
             self.timer2.start(1000)  # 1s interval for measurements
+            self.status_timer.start(200)  # Start status timer at 5 Hz
             self.state.paused = False
             self.ui.runButton.setChecked(True)
         else:
             self.timer.stop()
             self.timer2.stop()
+            #self.status_timer.stop() # Stop status timer
             self.state.paused = True
             self.ui.runButton.setChecked(False)
 
