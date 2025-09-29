@@ -6,7 +6,7 @@ import threading
 from scipy.signal import resample
 from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
 from PyQt5.QtWidgets import QMessageBox, QColorDialog, QFrame, QAction
-from PyQt5.QtGui import QPalette, QIcon
+from PyQt5.QtGui import QPalette, QIcon, QStandardItemModel, QStandardItem
 
 # Import all the refactored components
 from scope_state import ScopeState
@@ -52,6 +52,12 @@ class MainWindow(TemplateBaseClass):
         self.socket_thread = None
         self.fftui = None
         self.ui.boardBox.setMaximum(self.state.num_board - 1)
+
+        # Initialize the table model and item tracking
+        self.measurement_model = QStandardItemModel()
+        self.ui.tableView.setModel(self.measurement_model)
+        self.measurement_model.setHorizontalHeaderLabels(["Measurement", "Value"])
+        self.measurement_items = {} # To store references to QStandardItem objects
         self.setup_successful = False
         self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
 
@@ -503,62 +509,76 @@ class MainWindow(TemplateBaseClass):
         self.ui.statusBar.showMessage(status_text)
         
     def update_measurements_display(self):
-        """Slow timer callback to update text-based measurements."""
-        the_str = ""
+        """Slow timer callback to update measurements in the table view without clearing it."""
+        self.ui.textBrowser.clear() # Clear old text display
+
+        active_measurements = set()
+        fit_results = None
+
+        def _set_measurement(name, value):
+            """Helper to add or update a measurement row in the table."""
+            active_measurements.add(name)
+            if name in self.measurement_items:
+                # Update existing item's value
+                self.measurement_items[name][1].setText(str(value))
+            else:
+                # Add new row and store items
+                name_item = QStandardItem(name)
+                value_item = QStandardItem(str(value))
+                self.measurement_model.appendRow([name_item, value_item])
+                self.measurement_items[name] = (name_item, value_item)
+
         if self.recorder.is_recording:
-            the_str += f"Recording to file {self.recorder.file_handle.name}\n"
+            _set_measurement("Recording", self.recorder.file_handle.name)
 
         if self.state.dodrawing:
-
             if self.ui.actionTrigger_thresh.isChecked():
-                # Get the threshold value directly from the plot manager's line object
                 hline_val = self.plot_manager.otherlines['hline'].value()
-                the_str += f"Trigger threshold: {hline_val:.3f} div\n"
+                _set_measurement("Trigger threshold", f"{hline_val:.3f} div")
 
             if self.ui.actionN_persist_lines.isChecked():
-                # Get the number of lines from the plot manager's persistence deque
                 num_persist = len(self.plot_manager.persist_lines)
-                the_str += f"N persist lines: {num_persist}\n"
+                _set_measurement("N persist lines", str(num_persist))
 
             if self.ui.actionTemperatures.isChecked():
                 if self.state.num_board > 0:
-                    # Get the usb device for the currently active board from the controller
                     active_usb = self.controller.usbs[self.state.activeboard]
-                    # The gettemps function is expected to return a pre-formatted string
-                    the_str += gettemps(active_usb) + "\n"
+                    temp_str = gettemps(active_usb).strip()
+                    parts = temp_str.split(',') 
+                    for part in parts:
+                        if ':' in part:
+                            key, value = part.split(':', 1)
+                            _set_measurement(key.strip(), value.strip())
 
-            source_str, fit_results = "", None
-            if self.ui.persistavgCheck.isChecked() and self.plot_manager.average_line.isVisible():
-                target_x = self.plot_manager.average_line.xData
-                target_y = self.plot_manager.average_line.yData
-                source_str = "from average"
-            elif hasattr(self, 'xydata'):
+            source_str = " (avg)" if self.ui.persistavgCheck.isChecked() and self.plot_manager.average_line.isVisible() else ""
+            
+            if hasattr(self, 'xydata'):
                 x_full = self.xydata[self.state.activexychannel][0]
                 y_full = self.xydata[self.state.activexychannel][1]
                 midpoint = len(y_full) // 2
-                if self.state.dotwochannel[self.state.activeboard]:
-                    x_data_for_analysis = x_full[:midpoint]
-                    y_data_for_analysis = y_full[:midpoint]
-                else:
-                    x_data_for_analysis = x_full
-                    y_data_for_analysis = y_full
+                
+                x_data_for_analysis = x_full[:midpoint] if self.state.dotwochannel[self.state.activeboard] else x_full
+                y_data_for_analysis = y_full[:midpoint] if self.state.dotwochannel[self.state.activeboard] else y_full
+                
+                if y_data_for_analysis is not None and len(y_data_for_analysis) > 0:
+                    vline_val = self.plot_manager.otherlines['vline'].value()
+                    measurements, fit_results = self.processor.calculate_measurements(
+                        x_data_for_analysis, y_data_for_analysis, vline_val, do_risetime_calc=self.ui.actionRisetime.isChecked()
+                    )
 
-                the_str += f"\nMeasurements {source_str} for board {self.state.activeboard} ch {self.state.selectedchannel}:\n"
-                vline_val = self.plot_manager.otherlines['vline'].value()
-                measurements, fit_results = self.processor.calculate_measurements(
-                    x_data_for_analysis, y_data_for_analysis, vline_val, do_risetime_calc=self.ui.actionRisetime.isChecked()
-                )
+                    if self.ui.actionMean.isChecked(): _set_measurement(f"Mean{source_str}", measurements.get('Mean', 'N/A'))
+                    if self.ui.actionRMS.isChecked(): _set_measurement(f"RMS{source_str}", measurements.get('RMS', 'N/A'))
+                    if self.ui.actionVpp.isChecked(): _set_measurement(f"Vpp{source_str}", measurements.get('Vpp', 'N/A'))
+                    if self.ui.actionFreq.isChecked(): _set_measurement(f"Freq{source_str}", measurements.get('Freq', 'N/A'))
+                    if self.ui.actionRisetime.isChecked(): _set_measurement(f"Risetime{source_str}", measurements.get('Risetime', 'N/A'))
 
-                # Update the text browser
-                if self.ui.actionMean.isChecked(): the_str += f"Mean: {measurements.get('Mean', 'N/A')}\n"
-                if self.ui.actionRMS.isChecked(): the_str += f"RMS: {measurements.get('RMS', 'N/A')}\n"
-                if self.ui.actionVpp.isChecked(): the_str += f"Vpp: {measurements.get('Vpp', 'N/A')}\n"
-                if self.ui.actionFreq.isChecked(): the_str += f"Freq: {measurements.get('Freq', 'N/A')}\n"
-                if self.ui.actionRisetime.isChecked(): the_str += f"Risetime: {measurements.get('Risetime', 'N/A')}\n"
-
-            self.ui.textBrowser.setText(the_str)
-
-            # Tell the plot manager to update the fit lines with the latest results
+        # Remove stale measurements that are no longer selected
+        stale_keys = [key for key in self.measurement_items if key not in active_measurements]
+        rows_to_remove = sorted([self.measurement_items[key][0].row() for key in stale_keys], reverse=True)
+        for row in rows_to_remove:
+            if row >= 0:
+                self.measurement_model.removeRow(row)
+        for key in stale_keys:
             self.plot_manager.update_risetime_fit_lines(fit_results)
 
     def allocate_xy_data(self):
