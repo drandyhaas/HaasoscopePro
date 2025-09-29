@@ -4,7 +4,7 @@ import time
 import os
 from usbs import *
 from board import *
-from pyqtgraph.Qt import QtCore
+from PyQt6 import QtCore
 from utils import find_longest_zero_stretch
 
 class HardwareControllerSignals(QtCore.QObject):

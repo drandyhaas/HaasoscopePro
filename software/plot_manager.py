@@ -1,7 +1,7 @@
 # plot_manager.py
 
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtCore, QtWidgets
+from PyQt6 import QtCore, QtWidgets
 from PyQt6.QtWidgets import QMenu
 from PyQt6.QtGui import QAction, QColor, QPen
 import numpy as np

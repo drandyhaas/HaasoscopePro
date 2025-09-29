@@ -4,7 +4,7 @@ import sys, time, math, warnings
 import numpy as np
 import threading
 from scipy.signal import resample
-from pyqtgraph.Qt import QtCore, QtWidgets
+from PyQt6 import QtCore, QtWidgets
 from PyQt6 import uic
 from PyQt6.QtWidgets import QMainWindow, QMessageBox, QFileDialog, QFrame, QColorDialog
 from PyQt6.QtCore import QTimer, pyqtSignal, QObject, QThread, Qt
