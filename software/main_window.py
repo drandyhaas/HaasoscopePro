@@ -508,6 +508,7 @@ class MainWindow(TemplateBaseClass):
         status_text = (f"{format_freq(effective_sr, 'S/s')}, {self.fps:.2f} fps, "
                        f"{s.nevents} events, {s.lastrate:.2f} Hz, "
                        f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s")
+        if self.recorder.is_recording: status_text += ", Recording to "+str(self.recorder.file_handle.name)
         self.ui.statusBar.showMessage(status_text)
         
     def update_measurements_display(self):

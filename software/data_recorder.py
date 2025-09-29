@@ -1,7 +1,6 @@
 # data_recorder.py
 
 import time
-import numpy as np
 
 
 class DataRecorder:
@@ -9,47 +8,85 @@ class DataRecorder:
         self.state = state
         self.is_recording = False
         self.file_handle = None
+        self.event_count = 0
+        self.event_count_max = 1000
+        self.file_part = 0
+        self.base_filename = ""
 
     def start(self):
-        if self.is_recording: return
-        fname = "HaasoscopePro_out_" + time.strftime("%Y%m%d-%H%M%S") + ".csv"
-        try:
-            self.file_handle = open(fname, "wt")
-            header = "Event #, Time (s), Channel, Trigger time (ns), Sample period (ns), # samples"
-            num_samples = 4 * 10 * self.state.expect_samples
-            sample_headers = "".join([f", Sample {s}" for s in range(num_samples)])
-            self.file_handle.write(header + sample_headers + "\n")
-            self.is_recording = True
-            print(f"Recording started to {fname}")
-            return True
-        except IOError as e:
-            print(f"Error opening file for recording: {e}")
+        """Opens a new file for recording with a timestamp in its name."""
+        if self.is_recording:
+            print("Already recording.")
             return False
 
-    def stop(self):
-        if not self.is_recording: return
-        if self.file_handle:
+        # If this is the very first file, create a base timestamped name
+        if self.file_part == 0:
+            timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
+            self.base_filename = f"HaasoscopePro_data_{timestamp}"
+
+        self.file_part += 1
+        self.event_count = 0
+
+        try:
+            filename = f"{self.base_filename}_part_{self.file_part}.csv"
+            self.file_handle = open(filename, 'w')
+            self.is_recording = True
+            #print(f"Recording started to {filename}")
+            return True
+        except IOError as e:
+            self.is_recording = False
+            return False
+
+    def stop(self, reset=True):
+        """Closes the recording file if it's open."""
+        if self.is_recording and self.file_handle:
             self.file_handle.close()
-            self.file_handle = None
+            #print(f"Recording stopped. File {self.file_handle.name} closed.")
+        self.file_handle = None
         self.is_recording = False
-        print("Recording stopped.")
+        # Reset file part counter when recording is manually stopped
+        if reset: self.file_part = 0
 
-    def record_event(self, xydata, vline, lines_visibility):
-        if not self.is_recording: return
+    def record_event(self, xydata, vline_val, visible_lines):
+        """
+        Writes the data for the current event to the file in a CSV-like format.
+        Format: vline_pos, x0, y0, x1, y1, ..., xN, yN, on/off_ch1, on/off_ch2, ...
+        """
+        if not self.is_recording or self.file_handle is None:
+            return
 
-        time_s = str(time.time())
-        state = self.state
+        # Check if we need to roll over to a new file
+        if self.event_count >= self.event_count_max:
+            self.stop(reset=False)
+            self.start()  # This will open the next part
+            # After start(), self.is_recording will be True again if successful
 
-        for c in range(state.num_board * state.num_chan_per_board):
-            if lines_visibility[c]:
-                line = [
-                    str(state.nevents),
-                    time_s,
-                    str(c),
-                    str(vline * state.nsunits),
-                    str(state.downsamplefactor / state.samplerate),
-                    str(len(xydata[c][1]))
-                ]
-                self.file_handle.write(",".join(line) + ",")
-                xydata[c][1].tofile(self.file_handle, ",", format="%.3f")
-                self.file_handle.write("\n")
+        s = self.state
+        num_channels = s.num_board * s.num_chan_per_board
+        line_parts = [str(vline_val)]
+
+        # Determine the number of valid samples based on the mode of the first board
+        # This is a simplification; assumes all boards are in the same mode.
+        board_idx = 0
+        if s.dotwochannel[board_idx]:
+            num_samples = self.state.expect_samples * 20  # xydata.shape[2] // 2
+        else:
+            num_samples = self.state.expect_samples * 40  # xydata.shape[2]
+
+        for i in range(num_channels):
+            x_data = xydata[i][0][:num_samples]
+            y_data = xydata[i][1][:num_samples]
+
+            for x, y in zip(x_data, y_data):
+                line_parts.append(f"{x:.4f}")
+                line_parts.append(f"{y:.4f}")
+
+        # Append visibility status for each line
+        for is_visible in visible_lines:
+            if is_visible:
+                line_parts.append("on")
+            else:
+                line_parts.append("off")
+
+        self.file_handle.write(','.join(line_parts) + '\n')
+        self.event_count += 1
