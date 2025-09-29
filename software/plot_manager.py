@@ -2,7 +2,8 @@
 
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtWidgets
-from PyQt5.QtGui import QColor, QPen
+from PyQt6.QtWidgets import QMenu
+from PyQt6.QtGui import QAction, QColor, QPen
 import numpy as np
 import time
 from collections import deque
@@ -107,8 +108,8 @@ class PlotManager(pg.QtCore.QObject):
             self.reference_lines.append(ref_line)
 
         # Trigger and fit lines
-        dashedpen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
-        hoverpen = pg.mkPen(color="w", width=2.0, style=QtCore.Qt.DashLine)
+        dashedpen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.PenStyle.DashLine)
+        hoverpen = pg.mkPen(color="w", width=2.0, style=QtCore.Qt.PenStyle.DashLine)
         self.otherlines['vline'] = pg.InfiniteLine(pos=0.0, angle=90, movable=True, pen=dashedpen, hoverPen=hoverpen)
         self.otherlines['hline'] = pg.InfiniteLine(pos=0.0, angle=0, movable=True, pen=dashedpen, hoverPen=hoverpen)
         self.plot.addItem(self.otherlines['vline'])
@@ -117,7 +118,7 @@ class PlotManager(pg.QtCore.QObject):
         self.otherlines['hline'].sigPositionChanged.connect(self.on_hline_dragged)
 
         # Risetime fit lines (initially invisible)
-        fit_pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DotLine)
+        fit_pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.PenStyle.DotLine)
         for i in range(3):
             line = self.plot.plot([0], [0], pen=fit_pen, name=f"fitline_{i}")
             line.setVisible(False)

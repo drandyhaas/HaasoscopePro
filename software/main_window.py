@@ -4,9 +4,11 @@ import sys, time, math, warnings
 import numpy as np
 import threading
 from scipy.signal import resample
-from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
-from PyQt5.QtWidgets import QMessageBox, QColorDialog, QFrame, QAction
-from PyQt5.QtGui import QPalette, QIcon
+from pyqtgraph.Qt import QtCore, QtWidgets
+from PyQt6 import uic
+from PyQt6.QtWidgets import QMainWindow, QMessageBox, QFileDialog, QFrame, QColorDialog
+from PyQt6.QtCore import QTimer, pyqtSignal, QObject, QThread, Qt
+from PyQt6.QtGui import QAction, QPalette, QPen
 
 # Import all the refactored components
 from scope_state import ScopeState
@@ -22,32 +24,42 @@ from board import setupboard, gettemps
 from utils import get_pwd
 import ftd2xx
 
-pwd = get_pwd()
-print(f"Current dir is {pwd}")
-WindowTemplate, TemplateBaseClass = loadUiType(pwd + "/HaasoscopePro.ui")
-class MainWindow(TemplateBaseClass):
+
+# Define the main application window
+class MainWindow(QMainWindow):
+
     def __init__(self, usbs):
         super().__init__()
 
-        # 1. Initialize core components
+        pwd = get_pwd()
+        print(f"Current dir is {pwd}")
+        self.DEFAULT_UI_FILE = pwd + "/HaasoscopePro.ui"
+
+        # Load the UI file created in Qt Designer
+        try:
+            self.ui = uic.loadUi(self.DEFAULT_UI_FILE, self)
+        except FileNotFoundError:
+            self.show_critical_error(f"UI file '{self.DEFAULT_UI_FILE}' not found.")
+            return
+        except Exception as e:
+            self.show_critical_error(f"Error loading UI file: {e}")
+            return
+
+        # Initialize core components
         self.state = ScopeState(num_boards=len(usbs), num_chan_per_board=2)
         print(f"Haasoscope Pro Software Version: {self.state.softwareversion:.2f}")
         self.controller = HardwareController(usbs, self.state)
         self.processor = DataProcessor(self.state)
         self.recorder = DataRecorder(self.state)
 
-        # 2. Setup UI from template
-        self.ui = WindowTemplate()
-        self.ui.setupUi(self)
-
-        # 3. Initialize UI/Plot manager
+        # Initialize UI/Plot manager
         self.plot_manager = PlotManager(self.ui, self.state)
         self.plot_manager.setup_plots()
 
-        # 4. Connect all signals from UI widgets to slots in this class
+        # Connect all signals from UI widgets to slots in this class
         self._connect_signals()
 
-        # 5. Initialize network socket and other components
+        # Initialize network socket and other components
         self.socket = None
         self.socket_thread = None
         self.fftui = None
@@ -55,13 +67,13 @@ class MainWindow(TemplateBaseClass):
         self.setup_successful = False
         self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
 
-        # 6. Setup timers for data acquisition and measurement updates
+        # Setup timers for data acquisition and measurement updates
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update_plot_loop)
         self.timer2 = QtCore.QTimer()
         self.timer2.timeout.connect(self.update_measurements_display)
 
-        # 7. Run the main initialization and hardware setup sequence
+        # Run the main initialization and hardware setup sequence
         if self.state.num_board > 0:
             if self.controller.setup_all_boards():
                 self.controller.send_trigger_info_all()
@@ -652,18 +664,18 @@ class MainWindow(TemplateBaseClass):
 
     def keyPressEvent(self, event):
         modifiers = QtWidgets.QApplication.keyboardModifiers()
-        if event.key() == QtCore.Qt.Key_Up:
-            if modifiers & QtCore.Qt.ShiftModifier:
+        if event.key() == QtCore.Qt.Key.Key_Up:
+            if modifiers & QtCore.Qt.KeyboardModifier.ShiftModifier:
                 self.ui.gainBox.setValue(self.ui.gainBox.value() + 1)
             else:
                 self.ui.offsetBox.stepUp()
-        if event.key() == QtCore.Qt.Key_Down:
-            if modifiers & QtCore.Qt.ShiftModifier:
+        if event.key() == QtCore.Qt.Key.Key_Down:
+            if modifiers & QtCore.Qt.KeyboardModifier.ShiftModifier:
                 self.ui.gainBox.setValue(self.ui.gainBox.value() - 1)
             else:
                 self.ui.offsetBox.stepDown()
-        if event.key() == QtCore.Qt.Key_Left: self.time_slow()
-        if event.key() == QtCore.Qt.Key_Right: self.time_fast()
+        if event.key() == QtCore.Qt.Key.Key_Left: self.time_slow()
+        if event.key() == QtCore.Qt.Key.Key_Right: self.time_fast()
 
     def on_curve_clicked(self, channel_index):
         """Slot for when a waveform on the plot is clicked."""
@@ -786,7 +798,7 @@ class MainWindow(TemplateBaseClass):
 
         # Update channel color preview box in the UI
         p = self.ui.chanColor.palette()
-        p.setColor(QPalette.Base, self.plot_manager.linepens[s.activexychannel].color())
+        p.setColor(QPalette.ColorRole.Base, self.plot_manager.linepens[s.activexychannel].color())
         self.ui.chanColor.setPalette(p)
         self.set_channel_frame()
 
@@ -984,7 +996,7 @@ class MainWindow(TemplateBaseClass):
 
     def about_dialog(self):
         QMessageBox.about(self, "Haasoscope Pro Qt",
-                          f"A PyQt5 application for the Haasoscope Pro\n\nVersion {self.state.softwareversion:.2f}")
+                          f"A PyQt6 application for the Haasoscope Pro\n\nVersion {self.state.softwareversion:.2f}")
 
     def take_screenshot(self):
         pixmap = self.grab()
@@ -1003,8 +1015,8 @@ class MainWindow(TemplateBaseClass):
     def update_firmware(self):
         board = self.state.activeboard
         reply = QMessageBox.question(self, 'Confirmation', f'Update firmware on board {board} to mine?',
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if reply == QMessageBox.No: return
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.No: return
         if not self.state.paused: self.dostartstop()  # Pause
         success, message = self.controller.update_firmware(board)
         QMessageBox.information(self, "Firmware Update", message)
@@ -1013,8 +1025,8 @@ class MainWindow(TemplateBaseClass):
     def verify_firmware(self):
         board = self.state.activeboard
         reply = QMessageBox.question(self, 'Confirmation', f'Verify firmware on board {board} matches mine?',
-                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
-        if reply == QMessageBox.No: return
+                                     QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.No: return
         if not self.state.paused: self.dostartstop()  # Pause
         success, message = self.controller.update_firmware(board, verify_only=True)
         QMessageBox.information(self, "Firmware Verify", message)
@@ -1023,7 +1035,7 @@ class MainWindow(TemplateBaseClass):
         s = self.state
         is_trigger_channel = not (s.doexttrig[s.activeboard] or s.doextsmatrig[s.activeboard] or s.triggerchan[
             s.activeboard] != s.activexychannel % 2)
-        self.ui.chanColor.setFrameStyle(QFrame.Box if is_trigger_channel else QFrame.NoFrame)
+        self.ui.chanColor.setFrameStyle(QFrame.Shape.Box if is_trigger_channel else QFrame.Shape.NoFrame)
 
     def chanon_changed(self, checked):
         """Toggles the visibility of the currently selected channel's trace."""

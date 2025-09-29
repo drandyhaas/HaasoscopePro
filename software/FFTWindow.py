@@ -5,16 +5,15 @@ from datetime import datetime
 from math import log
 import numpy as np
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtWidgets, loadUiType
-from PyQt5.QtGui import QColor
+from pyqtgraph.Qt import QtWidgets
+from PyQt6 import uic
+from PyQt6.QtWidgets import QMainWindow
+from PyQt6.QtGui import QColor
 from scipy.signal import find_peaks
 from utils import get_pwd
 
-# Load the UI template for the FFT Window
-FFTWindowTemplate, FFTTemplateBaseClass = loadUiType(get_pwd() + "/HaasoscopeProFFT.ui")
 
-
-class FFTWindow(FFTTemplateBaseClass):
+class FFTWindow(QMainWindow):
     """
     A self-contained window for displaying FFT plots.
 
@@ -24,8 +23,20 @@ class FFTWindow(FFTTemplateBaseClass):
 
     def __init__(self):
         super().__init__()
-        self.ui = FFTWindowTemplate()
-        self.ui.setupUi(self)
+
+        pwd = get_pwd()
+        #print(f"Current dir is {pwd}")
+        self.DEFAULT_UI_FILE = pwd + "/HaasoscopeProFFT.ui"
+
+        # Load the UI file created in Qt Designer
+        try:
+            self.ui = uic.loadUi(self.DEFAULT_UI_FILE, self)
+        except FileNotFoundError:
+            self.show_critical_error(f"UI file '{self.DEFAULT_UI_FILE}' not found.")
+            return
+        except Exception as e:
+            self.show_critical_error(f"Error loading UI file: {e}")
+            return
 
         # Connect internal actions
         self.ui.actionTake_screenshot.triggered.connect(self.take_screenshot)

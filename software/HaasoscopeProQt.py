@@ -4,9 +4,9 @@ import sys
 import os
 import time
 import ftd2xx
-from PyQt5.QtWidgets import QApplication
-from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import Qt
+from PyQt6.QtWidgets import QApplication
+from PyQt6.QtGui import QIcon
+from PyQt6.QtCore import Qt
 
 # Import the new main window and necessary hardware functions
 from main_window import MainWindow
@@ -45,17 +45,14 @@ if __name__ == '__main__':
     print("Python version", sys.version)
 
     # The most common fix for UI scaling and grid misalignment issues
-    if sys.platform.startswith('win'):
-        import ctypes
-
-        try:
-            ctypes.windll.shcore.SetProcessDpiAwareness(True)
-            print("Windows: Set high DPI awareness.")
-        except Exception as e:
-            print(f"Could not set DPI awareness on Windows: {e}")
-
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
-    os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+    # if sys.platform.startswith('win'):
+    #     import ctypes
+    #     try:
+    #         ctypes.windll.shcore.SetProcessDpiAwareness(True)
+    #         print("Windows: Set high DPI awareness.")
+    #     except Exception as e:
+    #         print(f"Could not set DPI awareness on Windows: {e}")
+    # os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
 
     app = QApplication(sys.argv)
     font = app.font()
@@ -65,20 +62,16 @@ if __name__ == '__main__':
 
     win = None
     try:
-        # MainWindow.__init__ now handles all setup. If it fails, it will
-        # set the `setup_successful` flag to False.
+        # MainWindow.__init__ now handles all setup. If it fails, it will set the `setup_successful` flag to False.
         win = MainWindow(usbs)
         win.setWindowTitle('Haasoscope Pro Qt')
-
         if not win.setup_successful:
             print("ERROR: Initialization failed. Please check hardware and power.")
             # The window will still show, but the run button will be disabled.
         else:
             print("Initialization successful. Starting application.")
-
-        rv = app.exec_()
+        rv = app.exec()
         sys.exit(rv)
-
     except ftd2xx.DeviceError as e:
         print(f"FATAL: A hardware communication error occurred: {e}")
         print("Please ensure the device is connected and drivers are installed correctly.")
