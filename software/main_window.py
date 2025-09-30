@@ -603,7 +603,6 @@ class MainWindow(TemplateBaseClass):
             lines_vis = [line.isVisible() for line in self.plot_manager.lines]
             self.recorder.record_event(self.xydata, self.plot_manager.otherlines['vline'].value(), lines_vis)
 
-        # --- START: Multi-channel FFT processing ---
         if self.fftui and self.fftui.isVisible():
             active_channel_name = f"CH{self.state.activexychannel + 1}"
 
@@ -640,7 +639,6 @@ class MainWindow(TemplateBaseClass):
                         self.fftui.update_plot(ch_name, plot_x_data, mag, pen, title, xlabel, is_active)
                 else:
                     self.fftui.clear_plot(ch_name)
-        # --- END: Multi-channel FFT processing ---
 
         now = time.time()
         dt = now - self.last_time + 1e-9
@@ -734,28 +732,8 @@ class MainWindow(TemplateBaseClass):
                     _set_measurement("Board temp", self.cached_temps[1], "\u00b0C")
 
             if hasattr(self, 'xydata'):
-                # NEW: Determine which data source to use based on interleaving state
-                board_idx = self.state.activeboard
-                if self.state.dointerleaved[board_idx]:
-                    # Use interleaved data for higher resolution
-                    x_full = self.xydatainterleaved[self.state.activexychannel][0]
-                    y_full = self.xydatainterleaved[self.state.activexychannel][1]
-                    # For interleaved data, use all samples
-                    x_data_for_analysis = x_full
-                    y_data_for_analysis = y_full
-                else:
-                    # Use regular xydata
-                    x_full = self.xydata[self.state.activexychannel][0]
-                    y_full = self.xydata[self.state.activexychannel][1]
-                    midpoint = len(y_full) // 2
-
-                    # If in two-channel mode, only use first half
-                    if self.state.dotwochannel[board_idx]:
-                        x_data_for_analysis = x_full[:midpoint]
-                        y_data_for_analysis = y_full[:midpoint]
-                    else:
-                        x_data_for_analysis = x_full
-                        y_data_for_analysis = y_full
+                x_data_for_analysis = self.plot_manager.lines[self.state.activexychannel].xData
+                y_data_for_analysis = self.plot_manager.lines[self.state.activexychannel].yData
 
                 if y_data_for_analysis is not None and len(y_data_for_analysis) > 0:
                     vline_val = self.plot_manager.otherlines['vline'].value()
@@ -774,6 +752,7 @@ class MainWindow(TemplateBaseClass):
                         freq, unit = format_freq(freq, "Hz", False)
                         _set_measurement("Freq", freq, unit)
                     if self.ui.actionRisetime.isChecked():
+                        self.plot_manager.update_risetime_fit_lines(fit_results)
                         risetime_val = measurements.get('Risetime', 0)
                         if math.isfinite(risetime_val): _set_measurement("Risetime", risetime_val, "ns")
                         if self.ui.actionRisetime_error.isChecked():
