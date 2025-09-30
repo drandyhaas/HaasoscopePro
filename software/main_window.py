@@ -6,8 +6,9 @@ import threading
 from collections import deque
 from scipy.signal import resample
 from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
+import pyqtgraph as pg
 from PyQt5.QtWidgets import QMessageBox, QColorDialog, QFrame, QAction
-from PyQt5.QtGui import QPalette, QIcon, QStandardItemModel, QStandardItem
+from PyQt5.QtGui import QPalette, QIcon, QStandardItemModel, QStandardItem, QCursor
 
 # Import all the refactored components
 from scope_state import ScopeState
@@ -25,6 +26,84 @@ import ftd2xx
 
 pwd = get_pwd()
 print(f"Current dir is {pwd}")
+
+
+class HistogramWindow(QtWidgets.QWidget):
+    """Popup window showing a histogram of measurement values."""
+    
+    def __init__(self, parent=None, plot_manager=None):
+        super().__init__(parent)
+        self.setWindowFlags(QtCore.Qt.Tool | QtCore.Qt.FramelessWindowHint | QtCore.Qt.WindowStaysOnTopHint)
+        self.setAttribute(QtCore.Qt.WA_ShowWithoutActivating)
+        self.plot_manager = plot_manager
+        
+        # Setup layout
+        layout = QtWidgets.QVBoxLayout()
+        layout.setContentsMargins(5, 5, 5, 5)
+        
+        # Create plot widget
+        self.plot_widget = pg.PlotWidget()
+        
+        # Match styling to main plot
+        from PyQt5.QtGui import QColor
+        self.plot_widget.setBackground(QColor('black'))
+        self.plot_widget.showGrid(x=True, y=True, alpha=0.8)
+        
+        # Set font to match main plot
+        font = QtWidgets.QApplication.font()
+        for axis in ['bottom', 'left']:
+            self.plot_widget.getAxis(axis).setStyle(tickFont=font)
+            self.plot_widget.getAxis(axis).setPen('w')
+            self.plot_widget.getAxis(axis).setTextPen('w')
+        
+        self.plot_widget.setLabel('left', 'Count')
+        self.plot_widget.setLabel('bottom', 'Value')
+
+        layout.addWidget(self.plot_widget)
+        self.setLayout(layout)
+
+        self.bar_graph = None
+
+    def update_histogram(self, measurement_name, values, brush_color=None):
+        """Update the histogram with new data."""
+        if len(values) == 0:
+            return
+
+        # Calculate histogram
+        y, x = np.histogram(list(values), bins=20)
+
+        # Use provided color or default to blue
+        if brush_color is None:
+            brush_color = 'b'
+
+        # Create bar graph if it doesn't exist
+        if self.bar_graph is None:
+            self.bar_graph = pg.BarGraphItem(x=x[:-1], height=y, width=(x[1]-x[0])*0.8, brush=brush_color)
+            self.plot_widget.addItem(self.bar_graph)
+        else:
+            self.bar_graph.setOpts(x=x[:-1], height=y, width=(x[1]-x[0])*0.8, brush=brush_color)
+
+        # Update title and axis
+        self.plot_widget.setTitle(f'{measurement_name} Distribution (n={len(values)})', color='w')
+
+    def position_relative_to_table(self, table_widget, main_plot_widget):
+        """Position the window to the left of the measurement table, with bottom aligned to main plot."""
+        # Get table geometry in global coordinates
+        table_global_pos = table_widget.mapToGlobal(table_widget.pos())
+        table_rect = table_widget.geometry()
+
+        # Get main plot bottom position
+        plot_global_pos = main_plot_widget.mapToGlobal(main_plot_widget.pos())
+        plot_rect = main_plot_widget.geometry()
+        plot_bottom = plot_global_pos.y() + plot_rect.height()
+
+        # Position to the left of table, with same width and bottom aligned to plot
+        self.setGeometry(table_global_pos.x() - table_rect.width() - 10,
+                        plot_bottom - table_rect.height(),
+                        table_rect.width(),
+                        table_rect.height())
+
+
 WindowTemplate, TemplateBaseClass = loadUiType(pwd + "/HaasoscopePro.ui")
 class MainWindow(TemplateBaseClass):
     def __init__(self, usbs):
@@ -65,6 +144,10 @@ class MainWindow(TemplateBaseClass):
         self.cached_temps = (0, 0)  # (adc_temp, board_temp)
         self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
 
+        # Histogram window for measurements
+        self.histogram_window = HistogramWindow(self, self.plot_manager)
+        self.histogram_timer = QtCore.QTimer()
+
         # 6. Setup timers for data acquisition and measurement updates
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update_plot_loop)
@@ -72,6 +155,12 @@ class MainWindow(TemplateBaseClass):
         self.timer2.timeout.connect(self.update_measurements_display)
         self.status_timer = QtCore.QTimer()
         self.status_timer.timeout.connect(self.update_status_bar)
+
+        # Setup selection tracking for measurement table
+        self.ui.tableView.selectionModel().selectionChanged.connect(self.on_measurement_selection_changed)
+
+        self.histogram_timer.timeout.connect(self.update_histogram_display)
+        self.current_histogram_measurement = None
 
         # 7. Run the main initialization and hardware setup sequence
         if self.state.num_board > 0:
@@ -124,13 +213,42 @@ class MainWindow(TemplateBaseClass):
 
         # Perform an initial adjustment of the table geometry
         self._adjust_table_view_geometry()
-        
+
         # Set column widths for the measurement table
         self.ui.tableView.setColumnWidth(0, 135)  # Measurement name column
         self.ui.tableView.setColumnWidth(1, 80)  # Measurement value column
         self.ui.tableView.setColumnWidth(2, 80)  # Measurement avg column
         self.ui.tableView.setColumnWidth(3, 80)  # Measurement rms column
         self.show()
+
+    def on_measurement_selection_changed(self, selected, deselected):
+        """Handle measurement table selection changes."""
+        # Get selected indexes
+        indexes = self.ui.tableView.selectionModel().selectedIndexes()
+
+        if indexes:
+            # Get the first selected row (column 0 = measurement name)
+            row = indexes[0].row()
+            name_item = self.measurement_model.item(row, 0)
+
+            if name_item:
+                measurement_name = name_item.text().split(' (')[0]  # Remove unit suffix
+
+                if measurement_name in self.measurement_history:
+                    self.current_histogram_measurement = measurement_name
+                    self.histogram_window.position_relative_to_table(self.ui.tableView, self.ui.plot)
+                    self.histogram_window.show()
+                    
+                    # Get color from active channel
+                    brush_color = self.plot_manager.linepens[self.state.activexychannel].color()
+                    self.histogram_window.update_histogram(measurement_name, 
+                                                          self.measurement_history[measurement_name],
+                                                          brush_color)
+                    if not self.histogram_timer.isActive():
+                        self.histogram_timer.start(100)  # Update at 10 Hz
+        else:
+            # No selection - hide histogram
+                self.hide_histogram()
 
     def _sync_initial_ui_state(self):
         """A one-time function to sync the UI's visual state after the window has loaded."""
@@ -140,6 +258,24 @@ class MainWindow(TemplateBaseClass):
         self.ui.runButton.setText(" Run ")
         self.ui.actionPan_and_zoom.setChecked(False)
         self.plot_manager.set_pan_and_zoom(False)
+
+    def update_histogram_display(self):
+        """Update the histogram window with current data."""
+        if self.current_histogram_measurement and self.histogram_window.isVisible():
+            if self.current_histogram_measurement in self.measurement_history:
+                # Get color from active channel
+                brush_color = self.plot_manager.linepens[self.state.activexychannel].color()
+                self.histogram_window.update_histogram(
+                    self.current_histogram_measurement,
+                    self.measurement_history[self.current_histogram_measurement],
+                    brush_color
+                )
+    
+    def hide_histogram(self):
+        """Hide the histogram window and stop updates."""
+        self.histogram_window.hide()
+        self.histogram_timer.stop()
+        self.current_histogram_measurement = None
 
     def _sync_board_settings_to_hardware(self, board_idx):
         """
@@ -744,6 +880,7 @@ class MainWindow(TemplateBaseClass):
         self.timer.stop()
         self.timer2.stop()
         self.recorder.stop()
+        self.histogram_window.close()
         self.close_socket()
         self.controller.cleanup()
         if self.fftui: self.fftui.close()
