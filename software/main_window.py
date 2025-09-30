@@ -864,6 +864,11 @@ class MainWindow(TemplateBaseClass):
         # Update XY menu item based on whether the active board is in two-channel mode
         self.ui.actionXY_Plot.setEnabled(self.state.dotwochannel[self.state.activeboard])
 
+        # Update Aux Out box to show the value for the currently selected board
+        self.ui.Auxout_comboBox.blockSignals(True)
+        self.ui.Auxout_comboBox.setCurrentIndex(self.state.auxoutval[self.state.activeboard])
+        self.ui.Auxout_comboBox.blockSignals(False)
+
         # Update LPF box to show the value for the currently selected channel
         current_lpf_val = self.state.lpf[self.state.activexychannel]
         lpf_text = "Off" if current_lpf_val == 0 else str(current_lpf_val)+" MHz"
