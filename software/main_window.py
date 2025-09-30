@@ -1235,12 +1235,20 @@ class MainWindow(TemplateBaseClass):
 
         if self.fftui is None:
             self.fftui = FFTWindow()
-
+            # Connect the window_closed signal to our handler
+            self.fftui.window_closed.connect(self.on_fft_window_closed)
         should_show = any(self.state.fft_enabled.values())
-        if should_show:
-            self.fftui.show()
-        else:
-            self.fftui.hide()
+        if should_show: self.fftui.show()
+        else: self.fftui.hide()
+    
+    def on_fft_window_closed(self):
+        """Called when FFT window is closed by user."""
+        # Disable FFT for all channels and uncheck the checkbox
+        self.state.fft_enabled.clear()
+        self.ui.fftCheck.setChecked(False)
+        should_show = any(self.state.fft_enabled.values())
+        if should_show: self.fftui.show()
+        else: self.fftui.hide()
 
     def update_fft_checkbox_state(self):
         """Updates the 'FFT' checkbox to reflect the state of the active channel."""
