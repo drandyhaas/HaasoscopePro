@@ -61,6 +61,8 @@ class MainWindow(TemplateBaseClass):
         self.measurement_items = {} # To store references to QStandardItem objects
         self.setup_successful = False
         self.measurement_history = {} # To store the last 100 values: {name: deque}
+        self.last_temp_update_time = 0
+        self.cached_temps = (0, 0)  # (adc_temp, board_temp)
         self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
 
         # 6. Setup timers for data acquisition and measurement updates
@@ -539,9 +541,9 @@ class MainWindow(TemplateBaseClass):
             
             # Calculate average and RMS
             history = self.measurement_history[name]
-            avg_value = round(sum(history) / len(history), 2) if len(history) > 0 else value
-            rms_value = round(np.sqrt(np.mean(np.array(list(history))**2)), 2) if len(history) > 0 else value
-            
+            avg_value = round(np.mean(history),2) #if len(history) > 0 else value
+            rms_value = round(np.std(history), 2) #if len(history) > 0 else value
+
             if name in self.measurement_items:
                 # Update existing item's value, average, and RMS
                 self.measurement_items[name][1].setText(str(value))
@@ -567,11 +569,19 @@ class MainWindow(TemplateBaseClass):
                 _set_measurement("Persist lines", num_persist)
 
             if self.ui.actionTemperatures.isChecked():
+                # Only read temperatures once per second (slow USB operation)
+                current_time = time.time()
+                if current_time - self.last_temp_update_time >= 1.0:
+                    if self.state.num_board > 0:
+                        active_usb = self.controller.usbs[self.state.activeboard]
+                        adctemp, boardtemp = gettemps(active_usb)
+                        self.cached_temps = (adctemp, boardtemp)
+                        self.last_temp_update_time = current_time
+                
+                # Always call _set_measurement with cached values to keep the row active
                 if self.state.num_board > 0:
-                    active_usb = self.controller.usbs[self.state.activeboard]
-                    adctemp, boardtemp = gettemps(active_usb)
-                    _set_measurement("ADC temp", adctemp, "\u00b0C")
-                    _set_measurement("Board temp", boardtemp, "\u00b0C")
+                    _set_measurement("ADC temp", self.cached_temps[0], "\u00b0C")
+                    _set_measurement("Board temp", self.cached_temps[1], "\u00b0C")
 
             if hasattr(self, 'xydata'):
                 x_full = self.xydata[self.state.activexychannel][0] # TODO: use interleaved data when appropriate
@@ -597,8 +607,8 @@ class MainWindow(TemplateBaseClass):
                         freq, unit = format_freq(freq, "Hz", False)
                         _set_measurement("Freq", freq, unit)
                     if self.ui.actionRisetime.isChecked():
-                        _set_measurement("Risetime", measurements.get('Risetime', 0), "ns")
-                        _set_measurement("Risetime error", measurements.get('Risetime error', 0), "ns")
+                            _set_measurement("Risetime", measurements.get('Risetime', 0), "ns")
+                            _set_measurement("Risetime error", measurements.get('Risetime error', 0), "ns")
 
         # Remove stale measurements that are no longer selected
         stale_keys = list(self.measurement_items.keys() - active_measurements)
@@ -606,7 +616,7 @@ class MainWindow(TemplateBaseClass):
         rows_to_remove = []
         for key in stale_keys:
             # Find the item in the model by its text to avoid accessing a deleted C++ object
-            items = self.measurement_model.findItems(key)
+            items = self.measurement_model.findItems(key, QtCore.Qt.MatchStartsWith)
             if items:
                 rows_to_remove.append(items[0].row())
 
