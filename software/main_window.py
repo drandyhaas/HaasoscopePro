@@ -582,6 +582,11 @@ class MainWindow(TemplateBaseClass):
         if s.pll_reset_grace_period > 0:
             s.pll_reset_grace_period -= 1
 
+        for board_idx in range(s.num_board):
+            if s.dooversample[board_idx] and board_idx%2==0:
+                do_meanrms_calibration(self)
+                break
+
         # --- Plotting Logic: Switch between Time Domain and XY Mode ---
         if self.state.xy_mode:
             # For XY mode, we need to ensure the data lengths match.

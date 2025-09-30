@@ -121,41 +121,43 @@ def autocalibration(main_window, resamp=2, dofiner=False, oldtoff=0, finewidth=1
 def do_meanrms_calibration(main_window):
     """Calculates and applies DC offset and amplitude (RMS) corrections between two boards."""
     s = main_window.state
-    
-    if s.activeboard % 2 == 1:
-        print("Error: Please select the even-numbered board of a pair (e.g., 0, 2) to calibrate.")
-        return
 
-    # c1 is the primary board (e.g. board 0), c2 is the secondary (e.g. board 1)
-    c1_idx = s.activeboard * s.num_chan_per_board
-    c2_idx = (s.activeboard + 1) * s.num_chan_per_board
+    for board_idx in range(s.num_board):
+        if s.dooversample[board_idx] and board_idx % 2 == 0:
 
-    fitwidth = (s.max_x - s.min_x) * 0.99
-    vline = main_window.plot_manager.otherlines['vline'].value()
+            # c1 is the primary board (e.g. board 0), c2 is the secondary (e.g. board 1)
+            c1_idx = board_idx * s.num_chan_per_board
+            c2_idx = (board_idx + 1) * s.num_chan_per_board
 
-    # Get y-data for both channels within the fit window
-    yc1 = main_window.xydata[c1_idx][1][
-        (main_window.xydata[c1_idx][0] > vline - fitwidth) & (main_window.xydata[c1_idx][0] < vline + fitwidth)]
-    yc2 = main_window.xydata[c2_idx][1][
-        (main_window.xydata[c2_idx][0] > vline - fitwidth) & (main_window.xydata[c2_idx][0] < vline + fitwidth)]
+            # Get y-data for both channels within the fit window
+            yc1 = main_window.xydata[c1_idx][1]
+            yc2 = main_window.xydata[c2_idx][1]
 
-    if len(yc1) == 0 or len(yc2) == 0:
-        print("Mean/RMS calibration failed: no data in window.")
-        return
+            if len(yc1) < 10 or len(yc2) < 10:
+                print("Mean/RMS calibration failed: not enough data in window.")
+                return
 
-    # Calculate mean and standard deviation for each channel
-    mean_primary = np.mean(yc1)
-    std_primary = np.std(yc1)
-    mean_secondary = np.mean(yc2)
-    std_secondary = np.std(yc2)
+            # Calculate mean and standard deviation for each channel
+            mean_primary = np.mean(yc1)
+            #print(mean_primary)
+            std_primary = np.std(yc1)
+            #print(std_primary)
+            mean_secondary = np.mean(yc2)
+            #print(mean_secondary)
+            std_secondary = np.std(yc2)
+            #print(std_secondary)
 
-    # The correction to ADD to the secondary data is (primary - secondary)
-    s.extrigboardmeancorrection[s.activeboard] += (mean_primary - mean_secondary)
+            # The correction to ADD to the secondary data is (primary - secondary)
+            mean_cor = mean_primary - mean_secondary
+            if abs(mean_cor)<1:
+                s.extrigboardmeancorrection[s.activeboard] += mean_cor
 
-    # The correction to MULTIPLY the secondary data by is (primary / secondary)
-    if std_secondary > 0:
-        s.extrigboardstdcorrection[s.activeboard] *= (std_primary / std_secondary)
+            # The correction to MULTIPLY the secondary data by is (primary / secondary)
+            if std_primary > 0 and std_secondary > 0:
+                std_corr = std_primary / std_secondary
+                if std_corr<1.5:
+                    s.extrigboardstdcorrection[s.activeboard] *= std_corr
 
-    print(f"Updated corrections to be applied to board {s.activeboard + 1}: "
-          f"Mean+={s.extrigboardmeancorrection[s.activeboard]:.4f}, "
-          f"Std*={s.extrigboardstdcorrection[s.activeboard]:.4f}")
+            print(f"Updated corrections to be applied to board {s.activeboard + 1}: "
+                  f"Mean+={s.extrigboardmeancorrection[s.activeboard]:.4f}, "
+                  f"Std*={s.extrigboardstdcorrection[s.activeboard]:.4f}")
