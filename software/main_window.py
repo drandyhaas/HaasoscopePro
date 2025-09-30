@@ -802,8 +802,21 @@ class MainWindow(TemplateBaseClass):
     def resizeEvent(self, event):
         """Handles window resize events to adjust the table view."""
         super().resizeEvent(event)  # Call the parent's resize event
+        
+        # Close histogram window when main window resizes
+        if self.histogram_window.isVisible():
+            self.hide_histogram()
+
         # Use a single shot timer to ensure the layout has settled before adjusting
         QtCore.QTimer.singleShot(1, self._adjust_table_view_geometry)
+    
+    def moveEvent(self, event):
+        """Handles window move events."""
+        super().moveEvent(event)
+
+        # Close histogram window when main window moves
+        if self.histogram_window.isVisible():
+            self.hide_histogram()
 
     def allocate_xy_data(self):
         """Creates or re-sizes the numpy arrays for storing waveform data."""
