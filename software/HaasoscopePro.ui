@@ -2181,6 +2181,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionVpp"/>
     <addaction name="actionFreq"/>
     <addaction name="actionRisetime"/>
+    <addaction name="actionRisetime_error"/>
     <addaction name="actionRisetime_fit_lines"/>
    </widget>
    <widget class="QMenu" name="menuView">
@@ -2533,6 +2534,14 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Markers</string>
+   </property>
+  </action>
+  <action name="actionRisetime_error">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Risetime error</string>
    </property>
   </action>
  </widget>

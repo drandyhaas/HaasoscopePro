@@ -670,7 +670,7 @@ class MainWindow(TemplateBaseClass):
                        f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s")
         if self.recorder.is_recording: status_text += ", Recording to "+str(self.recorder.file_handle.name)
         self.ui.statusBar.showMessage(status_text)
-        
+
     def update_measurements_display(self):
         """Slow timer callback to update measurements in the table view without clearing it."""
         active_measurements = set()
@@ -681,18 +681,18 @@ class MainWindow(TemplateBaseClass):
             value = round(value, 2)
             if unit != "":
                 unit = " (" + unit + ")"
-            
+
             # Initialize history deque if this is a new measurement
             if name not in self.measurement_history:
                 self.measurement_history[name] = deque(maxlen=100)
-            
+
             # Add current value to history
             self.measurement_history[name].append(value)
-            
+
             # Calculate average and RMS
             history = self.measurement_history[name]
-            avg_value = round(np.mean(history),2) #if len(history) > 0 else value
-            rms_value = round(np.std(history), 2) #if len(history) > 0 else value
+            avg_value = round(np.mean(history), 2)
+            rms_value = round(np.std(history), 2)
 
             if name in self.measurement_items:
                 # Update existing item's value, average, and RMS
@@ -727,28 +727,45 @@ class MainWindow(TemplateBaseClass):
                         adctemp, boardtemp = gettemps(active_usb)
                         self.cached_temps = (adctemp, boardtemp)
                         self.last_temp_update_time = current_time
-                
+
                 # Always call _set_measurement with cached values to keep the row active
                 if self.state.num_board > 0:
                     _set_measurement("ADC temp", self.cached_temps[0], "\u00b0C")
                     _set_measurement("Board temp", self.cached_temps[1], "\u00b0C")
 
             if hasattr(self, 'xydata'):
-                x_full = self.xydata[self.state.activexychannel][0] # TODO: use interleaved data when appropriate
-                y_full = self.xydata[self.state.activexychannel][1]
-                midpoint = len(y_full) // 2
-                
-                x_data_for_analysis = x_full[:midpoint] if self.state.dotwochannel[self.state.activeboard] else x_full
-                y_data_for_analysis = y_full[:midpoint] if self.state.dotwochannel[self.state.activeboard] else y_full
-                
+                # NEW: Determine which data source to use based on interleaving state
+                board_idx = self.state.activeboard
+                if self.state.dointerleaved[board_idx]:
+                    # Use interleaved data for higher resolution
+                    x_full = self.xydatainterleaved[self.state.activexychannel][0]
+                    y_full = self.xydatainterleaved[self.state.activexychannel][1]
+                    # For interleaved data, use all samples
+                    x_data_for_analysis = x_full
+                    y_data_for_analysis = y_full
+                else:
+                    # Use regular xydata
+                    x_full = self.xydata[self.state.activexychannel][0]
+                    y_full = self.xydata[self.state.activexychannel][1]
+                    midpoint = len(y_full) // 2
+
+                    # If in two-channel mode, only use first half
+                    if self.state.dotwochannel[board_idx]:
+                        x_data_for_analysis = x_full[:midpoint]
+                        y_data_for_analysis = y_full[:midpoint]
+                    else:
+                        x_data_for_analysis = x_full
+                        y_data_for_analysis = y_full
+
                 if y_data_for_analysis is not None and len(y_data_for_analysis) > 0:
                     vline_val = self.plot_manager.otherlines['vline'].value()
                     measurements, fit_results = self.processor.calculate_measurements(
-                        x_data_for_analysis, y_data_for_analysis, vline_val, do_risetime_calc=self.ui.actionRisetime.isChecked()
+                        x_data_for_analysis, y_data_for_analysis, vline_val,
+                        do_risetime_calc=self.ui.actionRisetime.isChecked()
                     )
 
-                    if self.ui.actionMean.isChecked(): _set_measurement("Mean", measurements.get('Mean', 0),"mV")
-                    if self.ui.actionRMS.isChecked(): _set_measurement("RMS", measurements.get('RMS', 0),"mV")
+                    if self.ui.actionMean.isChecked(): _set_measurement("Mean", measurements.get('Mean', 0), "mV")
+                    if self.ui.actionRMS.isChecked(): _set_measurement("RMS", measurements.get('RMS', 0), "mV")
                     if self.ui.actionMinimum.isChecked(): _set_measurement("Min", measurements.get('Min', 0), "mV")
                     if self.ui.actionMaximum.isChecked(): _set_measurement("Max", measurements.get('Max', 0), "mV")
                     if self.ui.actionVpp.isChecked(): _set_measurement("Vpp", measurements.get('Vpp', 0), "mV")
@@ -757,8 +774,11 @@ class MainWindow(TemplateBaseClass):
                         freq, unit = format_freq(freq, "Hz", False)
                         _set_measurement("Freq", freq, unit)
                     if self.ui.actionRisetime.isChecked():
-                            _set_measurement("Risetime", measurements.get('Risetime', 0), "ns")
-                            _set_measurement("Risetime error", measurements.get('Risetime error', 0), "ns")
+                        risetime_val = measurements.get('Risetime', 0)
+                        if math.isfinite(risetime_val): _set_measurement("Risetime", risetime_val, "ns")
+                        if self.ui.actionRisetime_error.isChecked():
+                            risetime_err_val = measurements.get('Risetime error', 0)
+                            if math.isfinite(risetime_err_val):_set_measurement("Risetime error", risetime_err_val, "ns")
 
         # Remove stale measurements that are no longer selected
         stale_keys = list(self.measurement_items.keys() - active_measurements)
