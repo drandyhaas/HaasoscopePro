@@ -50,7 +50,7 @@ class HardwareController:
         auxoutselector(usb, 0)
 
         # --- RESTORED POWER SUPPLY HEALTH CHECK ---
-        print(f"  Performing power supply check for board {board_idx}...")
+        #print(f"  Performing power supply check for board {board_idx}...")
         # Turn everything off to get a baseline reading
         setfan(usb, False)
         send_leds(usb, 0, 0, 0, 0, 0, 0)
@@ -75,9 +75,9 @@ class HardwareController:
 
         # Check for a significant voltage drop (a large negative diff)
         difftemp = newtemp - oldtemp
-        print(f"  ADC Temp/Voltage Check: Start={oldtemp:.2f}, Load={newtemp:.2f}, Diff={difftemp:.2f}")
+        print(f"ADC Temp/Voltage Check: Start={oldtemp:.2f}, Load={newtemp:.2f}, Diff={difftemp:.2f}")
         if difftemp < -0.3:
-            print(f"  !! WARNING: Potential power supply issue on board {board_idx}. Voltage sag detected.")
+            print(f"!! WARNING: Potential power supply issue on board {board_idx}. Voltage sag detected.")
             return False  # Indicate that this board's setup failed
         # --- END OF HEALTH CHECK ---
 
@@ -148,8 +148,8 @@ class HardwareController:
             # Go to the middle of the good range
             n_steps = start + length // 2 + 1
             for i in range(n_steps):
-                self.do_phase(board, plloutnum, 1, pllnum=0, quiet=(i != n_steps - 1))
-                self.do_phase(board, plloutnum2, 1, pllnum=0, quiet=(i != n_steps - 1))
+                self.do_phase(board, plloutnum, 1, pllnum=0, quiet=True) #(i != n_steps - 1))
+                self.do_phase(board, plloutnum2, 1, pllnum=0, quiet=True) #(i != n_steps - 1))
             s.plljustreset[board] -= 1
 
         elif s.plljustreset[board] == -2:  # Second to last step

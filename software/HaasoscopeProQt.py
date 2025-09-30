@@ -20,7 +20,7 @@ print(f"Found {len(usbs)} board(s). Performing initial configuration...")
 if usbs:
     for b in range(len(usbs)):
         if len(usbs) > 1:
-            clkout_ena(usbs[b], True)  # Turn on lvdsout_clk for multi-board setups
+            clkout_ena(usbs[b], True, False)  # Turn on lvdsout_clk for multi-board setups
             time.sleep(0.1)  # Wait for clocks to lock after configuration
 
         # Reading version multiple times seems to be a hardware quirk to ensure a stable read
