@@ -208,17 +208,20 @@ class DataProcessor:
     def _apply_lpf(self, board_idx, xy_data_array):
         """Applies a digital low-pass filter if configured."""
         state = self.state
-        if state.lpf > 0:
-            sr = state.samplerate / (2 if state.dotwochannel[board_idx] else 1) / state.downsamplefactor
-            nyquist = 0.5 * sr * 1e9
-            normal_cutoff = min(state.lpf * 1e6 / nyquist, 0.99)
+        sr = state.samplerate / (2 if state.dotwochannel[board_idx] else 1) / state.downsamplefactor
+        nyquist = 0.5 * sr * 1e9
 
+        c1_idx = board_idx * 2
+        if state.lpf[c1_idx]:
+            normal_cutoff = min(state.lpf[c1_idx] * 1e6 / nyquist, 0.99)
             fb, fa = butter(5, normal_cutoff, btype='low', analog=False)
-
-            c1_idx = board_idx * 2
             xy_data_array[c1_idx][1] = filtfilt(fb, fa, xy_data_array[c1_idx][1])
-            if state.dotwochannel[board_idx]:
-                c2_idx = c1_idx + 1
+
+        if state.dotwochannel[board_idx]:
+            c2_idx = c1_idx + 1
+            if state.lpf[c2_idx]:
+                normal_cutoff = min(state.lpf[c2_idx] * 1e6 / nyquist, 0.99)
+                fb, fa = butter(5, normal_cutoff, btype='low', analog=False)
                 xy_data_array[c2_idx][1] = filtfilt(fb, fa, xy_data_array[c2_idx][1])
 
     def _apply_board_stabilizer(self, board_idx, xy_data_array):

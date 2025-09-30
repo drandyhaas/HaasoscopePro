@@ -50,6 +50,7 @@ class ScopeState:
         self.VperD = [(self.basevoltage / 1000.)] * (self.num_board * self.num_chan_per_board)
         self.auxoutval = [0] * self.num_board
         self.tad = [0] * self.num_board
+        self.lpf = [0] * (num_boards * num_chan_per_board)
 
         # Triggering Parameters
         self.triggerlevel = 127
@@ -66,7 +67,6 @@ class ScopeState:
         self.downsamplemerging = 1
         self.highresval = 1
         self.doresamp = 4
-        self.lpf = 0
         self.xy_mode = False
         self.skip_next_event = False
         self.fitwidthfraction = 0.2

@@ -864,6 +864,14 @@ class MainWindow(TemplateBaseClass):
         # Update XY menu item based on whether the active board is in two-channel mode
         self.ui.actionXY_Plot.setEnabled(self.state.dotwochannel[self.state.activeboard])
 
+        # Update LPF box to show the value for the currently selected channel
+        current_lpf_val = self.state.lpf[self.state.activexychannel]
+        lpf_text = "Off" if current_lpf_val == 0 else str(current_lpf_val)+" MHz"
+        lpf_index = self.ui.lpfBox.findText(lpf_text)
+        self.ui.lpfBox.blockSignals(True)
+        if lpf_index != -1: self.ui.lpfBox.setCurrentIndex(lpf_index)
+        self.ui.lpfBox.blockSignals(False)
+
         # If we are in XY mode but switched to a board that is not in two-channel mode, exit XY mode
         if self.state.xy_mode and not self.state.dotwochannel[self.state.activeboard]:
             self.ui.actionXY_Plot.setChecked(False)
@@ -1425,7 +1433,7 @@ class MainWindow(TemplateBaseClass):
 
     def lpf_changed(self):
         thetext = self.ui.lpfBox.currentText()
-        self.state.lpf = 0 if thetext == "Off" else int(thetext.split()[0]) # remove MHz
+        self.state.lpf[self.state.activexychannel] = 0 if thetext == "Off" else int(thetext.split()[0]) # remove MHz
 
     def single_clicked(self):
         self.state.getone = not self.state.getone
