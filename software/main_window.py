@@ -3,6 +3,7 @@
 import sys, time, math, warnings
 import numpy as np
 import threading
+from collections import deque
 from scipy.signal import resample
 from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
 from PyQt5.QtWidgets import QMessageBox, QColorDialog, QFrame, QAction
@@ -56,9 +57,10 @@ class MainWindow(TemplateBaseClass):
         # Initialize the table model and item tracking
         self.measurement_model = QStandardItemModel()
         self.ui.tableView.setModel(self.measurement_model)
-        self.measurement_model.setHorizontalHeaderLabels(["Measurement", "Value"])
+        self.measurement_model.setHorizontalHeaderLabels(["Measurement", "Value", "Avg (100)", "RMS (100)"])
         self.measurement_items = {} # To store references to QStandardItem objects
         self.setup_successful = False
+        self.measurement_history = {} # To store the last 100 values: {name: deque}
         self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
 
         # 6. Setup timers for data acquisition and measurement updates
@@ -120,6 +122,12 @@ class MainWindow(TemplateBaseClass):
 
         # Perform an initial adjustment of the table geometry
         self._adjust_table_view_geometry()
+        
+        # Set column widths for the measurement table
+        self.ui.tableView.setColumnWidth(0, 135)  # Measurement name column
+        self.ui.tableView.setColumnWidth(1, 80)  # Measurement value column
+        self.ui.tableView.setColumnWidth(2, 80)  # Measurement avg column
+        self.ui.tableView.setColumnWidth(3, 80)  # Measurement rms column
         self.show()
 
     def _sync_initial_ui_state(self):
@@ -518,18 +526,36 @@ class MainWindow(TemplateBaseClass):
         def _set_measurement(name, value, unit=""):
             """Helper to add or update a measurement row in the table."""
             active_measurements.add(name)
-            value = round(value,2)
-            if unit!="": unit = " ("+unit+")"
+            value = round(value, 2)
+            if unit != "":
+                unit = " (" + unit + ")"
+            
+            # Initialize history deque if this is a new measurement
+            if name not in self.measurement_history:
+                self.measurement_history[name] = deque(maxlen=100)
+            
+            # Add current value to history
+            self.measurement_history[name].append(value)
+            
+            # Calculate average and RMS
+            history = self.measurement_history[name]
+            avg_value = round(sum(history) / len(history), 2) if len(history) > 0 else value
+            rms_value = round(np.sqrt(np.mean(np.array(list(history))**2)), 2) if len(history) > 0 else value
+            
             if name in self.measurement_items:
-                # Update existing item's value
+                # Update existing item's value, average, and RMS
                 self.measurement_items[name][1].setText(str(value))
                 self.measurement_items[name][0].setText(name + unit)
+                self.measurement_items[name][2].setText(str(avg_value))
+                self.measurement_items[name][3].setText(str(rms_value))
             else:
                 # Add new row and store items
                 name_item = QStandardItem(name + unit)
                 value_item = QStandardItem(str(value))
-                self.measurement_model.appendRow([name_item, value_item])
-                self.measurement_items[name] = (name_item, value_item)
+                avg_item = QStandardItem(str(avg_value))
+                rms_item = QStandardItem(str(rms_value))
+                self.measurement_model.appendRow([name_item, value_item, avg_item, rms_item])
+                self.measurement_items[name] = (name_item, value_item, avg_item, rms_item)
 
         if self.state.dodrawing:
             if self.ui.actionTrigger_thresh.isChecked():
@@ -588,10 +614,12 @@ class MainWindow(TemplateBaseClass):
         for row in sorted(list(set(rows_to_remove)), reverse=True):
             self.measurement_model.removeRow(row)
 
-        # Now, clean up the tracking dictionary
+        # Now, clean up the tracking dictionary and history
         for key in stale_keys:
             if key in self.measurement_items:
                 del self.measurement_items[key]
+            if key in self.measurement_history:
+                del self.measurement_history[key]
 
     def _adjust_table_view_geometry(self):
         """Sets the table view geometry to fill the bottom of the side panel."""
@@ -787,7 +815,7 @@ class MainWindow(TemplateBaseClass):
     def dostartstop(self):
         if self.state.paused:
             self.timer.start(0)  # 0ms interval for fastest refresh
-            self.timer2.start(1000)  # 1s interval for measurements
+            self.timer2.start(20)  # 20ms interval = 50 Hz for measurements
             self.status_timer.start(200)  # Start status timer at 5 Hz
             self.state.paused = False
             self.ui.runButton.setChecked(True)
