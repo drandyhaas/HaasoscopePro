@@ -20,6 +20,7 @@ import math
 def add_secondary_axis(plot_item, conversion_func, **axis_args):
     """Adds a secondary y-axis that is dynamically linked by a conversion function."""
     proxy_view = pg.ViewBox()
+    proxy_view.setMouseEnabled(False,False)
     axis = plot_item.getAxis('right')
     plot_item.scene().addItem(proxy_view)
     axis.linkToView(proxy_view)
