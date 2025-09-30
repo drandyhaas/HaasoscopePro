@@ -49,13 +49,23 @@ class HistogramWindow(QtWidgets.QWidget):
         self.plot_widget.setBackground(QColor('black'))
         self.plot_widget.showGrid(x=True, y=True, alpha=0.8)
         
-        # Set font to match main plot
+        # Set font and styling to match main plot
         font = QtWidgets.QApplication.font()
+        font.setPixelSize(11)
+
         for axis in ['bottom', 'left']:
-            self.plot_widget.getAxis(axis).setStyle(tickFont=font)
-            self.plot_widget.getAxis(axis).setPen('w')
-            self.plot_widget.getAxis(axis).setTextPen('w')
-        
+            axis_item = self.plot_widget.getAxis(axis)
+            axis_item.setStyle(tickFont=font)
+            self.plot_widget.getAxis(axis).setPen('grey')
+            self.plot_widget.getAxis(axis).setTextPen('grey')
+
+        # Set title font
+        self.plot_widget.getPlotItem().titleLabel.item.setFont(font)
+
+        # Disable mouse interactions
+        self.plot_widget.setMouseEnabled(x=False, y=False)
+        self.plot_widget.setMenuEnabled(False)
+
         self.plot_widget.setLabel('left', 'Count')
         self.plot_widget.setLabel('bottom', 'Value')
 
@@ -84,7 +94,7 @@ class HistogramWindow(QtWidgets.QWidget):
             self.bar_graph.setOpts(x=x[:-1], height=y, width=(x[1]-x[0])*0.8, brush=brush_color)
 
         # Update title and axis
-        self.plot_widget.setTitle(f'{measurement_name} Distribution (n={len(values)})', color='w')
+        self.plot_widget.setTitle(f'{measurement_name} Distribution (n={len(values)})', color='grey')
 
     def position_relative_to_table(self, table_widget, main_plot_widget):
         """Position the window to the left of the measurement table, with bottom aligned to main plot."""
@@ -98,10 +108,12 @@ class HistogramWindow(QtWidgets.QWidget):
         plot_bottom = plot_global_pos.y() + plot_rect.height()
 
         # Position to the left of table, with same width and bottom aligned to plot
-        self.setGeometry(table_global_pos.x() - table_rect.width() - 10,
-                        plot_bottom - table_rect.height(),
+        heightcorr = 0
+        if table_rect.height()>300: heightcorr = table_rect.height() - 300
+        self.setGeometry(table_global_pos.x() - table_rect.width() - 2,
+                        plot_bottom - table_rect.height() - 8 + heightcorr,
                         table_rect.width(),
-                        table_rect.height())
+                        table_rect.height() - heightcorr)
 
 
 WindowTemplate, TemplateBaseClass = loadUiType(pwd + "/HaasoscopePro.ui")
