@@ -5,11 +5,102 @@ import numpy as np
 from scipy.signal import resample
 
 
+def find_rising_edges(x, y, threshold_percentile=20, min_slope_percentile=80):
+    """
+    Detect rising edges in a signal by finding points where the derivative exceeds a threshold.
+
+    Args:
+        x: Time values
+        y: Signal values
+        threshold_percentile: Percentile of signal range to use as minimum amplitude threshold
+        min_slope_percentile: Percentile of derivative to use as minimum slope threshold
+
+    Returns:
+        Array of x positions (times) where rising edges occur
+    """
+    # Calculate derivative (rate of change)
+    dy = np.diff(y)
+    dx = np.diff(x)
+    slope = dy / (dx + 1e-12)  # Avoid division by zero
+
+    # Find threshold for what constitutes a "rising edge"
+    y_range = np.max(y) - np.min(y)
+    y_threshold = np.min(y) + y_range * (threshold_percentile / 100.0)
+    slope_threshold = np.percentile(np.abs(slope), min_slope_percentile)
+
+    # Find points where slope is positive and exceeds threshold, and signal is above minimum
+    rising_mask = (slope > slope_threshold) & (y[:-1] > y_threshold)
+
+    # Find the peaks (local maxima) in the derivative among rising regions
+    edges = []
+    i = 0
+    while i < len(rising_mask):
+        if rising_mask[i]:
+            # Found start of rising region, find the peak slope in this region
+            j = i
+            while j < len(rising_mask) and rising_mask[j]:
+                j += 1
+            # Find index of maximum slope in this region
+            peak_idx = i + np.argmax(slope[i:j])
+            edges.append(x[peak_idx])
+            i = j
+        else:
+            i += 1
+
+    return np.array(edges)
+
+
+def compute_edge_offset(edges1, edges2, max_offset):
+    """
+    Compute the time offset between two sets of edges by finding the shift that maximizes matches.
+
+    Args:
+        edges1: Array of edge times from first signal
+        edges2: Array of edge times from second signal
+        max_offset: Maximum offset to search (in same units as edge times)
+
+    Returns:
+        Optimal time offset (how much to shift signal 2 to align with signal 1)
+    """
+    if len(edges1) == 0 or len(edges2) == 0:
+        print("Warning: No edges found in one or both signals")
+        return 0
+
+    # Search through possible offsets
+    best_offset = 0
+    best_score = -1
+
+    # Use adaptive search range based on typical sample spacing
+    search_resolution = max_offset / 1000.0
+    offsets_to_try = np.arange(-max_offset, max_offset, search_resolution)
+
+    for offset in offsets_to_try:
+        # Shift edges2 by offset
+        shifted_edges2 = edges2 + offset
+
+        # Count how many edges match (are close to each other)
+        matches = 0
+        tolerance = search_resolution * 2  # Tolerance for "match"
+
+        for e1 in edges1:
+            distances = np.abs(shifted_edges2 - e1)
+            if len(distances) > 0 and np.min(distances) < tolerance:
+                matches += 1
+
+        if matches > best_score:
+            best_score = matches
+            best_offset = offset
+
+    print(f"Edge matching found {best_score} matched edges at offset {best_offset}")
+    return best_offset
+
+
 def autocalibration(main_window, resamp=2, dofiner=False, oldtoff=0, finewidth=16):
     """
     Performs an automated calibration to align the timing of two boards.
     It finds the coarse offset (Toff) and then the fine-grained offset (TAD).
-    
+    Uses rising edge detection for robust alignment.
+
     Args:
         main_window: Reference to the MainWindow instance
         resamp: Resampling factor for higher timing resolution
@@ -25,7 +116,7 @@ def autocalibration(main_window, resamp=2, dofiner=False, oldtoff=0, finewidth=1
 
     print(f"Autocalibration running with: resamp={resamp}, dofiner={dofiner}, finewidth={finewidth}")
     s = main_window.state
-    
+
     if s.activeboard % 2 == 1:
         print("Error: Please select the even-numbered board of a pair (e.g., 0, 2) to calibrate.")
         return
@@ -51,36 +142,39 @@ def autocalibration(main_window, resamp=2, dofiner=False, oldtoff=0, finewidth=1
     c1datanewy, c1datanewx = resample(c1data[1], len(c1data[0]) * resamp, t=c1data[0])
     c2datanewy, c2datanewx = resample(c2data[1], len(c2data[0]) * resamp, t=c2data[0])
 
-    # Define the search range for the time shift
-    minrange = -s.toff * resamp
-    if dofiner:
-        minrange = (s.toff - oldtoff - finewidth) * resamp
-    maxrange = 10 * s.expect_samples * resamp
-    if dofiner:
-        maxrange = (s.toff - oldtoff + finewidth) * resamp
-
-    c2datanewy = np.roll(c2datanewy, int(minrange))
-
-    minrms = 1e9
-    minshift = 0
+    # Apply windowing around the vertical line (region of interest)
     fitwidth = (s.max_x - s.min_x) * s.fitwidthfraction
     vline = main_window.plot_manager.otherlines['vline'].value()
 
-    # Iterate through all possible shifts and find the one with the minimum RMS difference
-    print(f"Searching for best shift in range {minrange} to {maxrange}...")
-    for nshift in range(int(minrange), int(maxrange)):
-        yc1 = c1datanewy[(c1datanewx > vline - fitwidth) & (c1datanewx < vline + fitwidth)]
-        yc2 = c2datanewy[(c2datanewx > vline - fitwidth) & (c2datanewx < vline + fitwidth)]
-        if len(yc1) != len(yc2):
-            continue  # Skip if windowing results in unequal lengths
+    window_mask1 = (c1datanewx > vline - fitwidth) & (c1datanewx < vline + fitwidth)
+    window_mask2 = (c2datanewx > vline - fitwidth) & (c2datanewx < vline + fitwidth)
 
-        therms = np.std(yc1 - yc2)
-        if therms < minrms:
-            minrms = therms
-            minshift = nshift
-        c2datanewy = np.roll(c2datanewy, 1)
+    x1_windowed = c1datanewx[window_mask1]
+    y1_windowed = c1datanewy[window_mask1]
+    x2_windowed = c2datanewx[window_mask2]
+    y2_windowed = c2datanewy[window_mask2]
 
-    print(f"Minimum RMS difference found for total shift = {minshift}")
+    # Find rising edges in both signals
+    print("Detecting rising edges in both signals...")
+    edges1 = find_rising_edges(x1_windowed, y1_windowed)
+    edges2 = find_rising_edges(x2_windowed, y2_windowed)
+
+    print(f"Found {len(edges1)} edges in signal 1, {len(edges2)} edges in signal 2")
+
+    # Define the search range for the time shift
+    if dofiner:
+        max_time_offset = finewidth * (c1datanewx[1] - c1datanewx[0])
+    else:
+        max_time_offset = 10 * s.expect_samples * (c1datanewx[1] - c1datanewx[0])
+
+    # Compute optimal offset using edge matching
+    time_offset = compute_edge_offset(edges1, edges2, max_time_offset)
+
+    # Convert time offset to sample shift
+    sample_spacing = c1datanewx[1] - c1datanewx[0]
+    minshift = int(round(time_offset / sample_spacing))
+
+    print(f"Edge-based alignment found optimal shift = {minshift} samples ({time_offset} time units)")
 
     if dofiner:
         # Fine-tuning phase: adjust Toff slightly and set the final TAD value
