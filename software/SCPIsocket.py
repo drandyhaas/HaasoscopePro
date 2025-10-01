@@ -74,7 +74,7 @@ class DataSocket:
                     s.bind((self.HOST, self.PORT))
                     s.listen()
                     s.settimeout(1.0)  # Timeout to check runthethread flag
-                    print(f"SCPI socket listening on {self.HOST}:{self.PORT}")
+                    #print(f"SCPI socket listening on {self.HOST}:{self.PORT}")
 
                     conn = None
                     while self.runthethread and conn is None:

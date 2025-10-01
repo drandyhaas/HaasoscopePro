@@ -6,6 +6,7 @@ from math import log
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtWidgets, loadUiType
+from pyqtgraph.Qt import QtCore
 from PyQt5.QtGui import QColor
 from scipy.signal import find_peaks
 from utils import get_pwd
@@ -21,6 +22,9 @@ class FFTWindow(FFTTemplateBaseClass):
     This class manages its own plot items and updates. The main application
     interacts with it by calling the `update_plot` method.
     """
+
+    # Signal emitted when window is closed by user
+    window_closed = QtCore.pyqtSignal()
 
     def __init__(self):
         super().__init__()
@@ -254,3 +258,7 @@ class FFTWindow(FFTTemplateBaseClass):
         self.plot.setLogMode(x=False, y=self.dolog)
         self.plot.setLabel('left', 'log10 Amplitude' if self.dolog else 'Amplitude')
         self.new_plot = True
+    
+    def closeEvent(self, event):
+        """Override closeEvent to emit signal before closing."""
+        self.window_closed.emit()

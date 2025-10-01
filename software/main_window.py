@@ -3,10 +3,12 @@
 import sys, time, math, warnings
 import numpy as np
 import threading
+from collections import deque
 from scipy.signal import resample
 from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
+import pyqtgraph as pg
 from PyQt5.QtWidgets import QMessageBox, QColorDialog, QFrame, QAction
-from PyQt5.QtGui import QPalette, QIcon
+from PyQt5.QtGui import QPalette, QIcon, QStandardItemModel, QStandardItem, QCursor
 
 # Import all the refactored components
 from scope_state import ScopeState
@@ -14,6 +16,8 @@ from hardware_controller import HardwareController
 from data_processor import DataProcessor, format_freq
 from plot_manager import PlotManager
 from data_recorder import DataRecorder
+from histogram_window import HistogramWindow
+from calibration import autocalibration, do_meanrms_calibration
 
 # Import remaining dependencies
 from FFTWindow import FFTWindow
@@ -24,6 +28,96 @@ import ftd2xx
 
 pwd = get_pwd()
 print(f"Current dir is {pwd}")
+
+
+class HistogramWindow(QtWidgets.QWidget):
+    """Popup window showing a histogram of measurement values."""
+    
+    def __init__(self, parent=None, plot_manager=None):
+        super().__init__(parent)
+        self.setWindowFlags(QtCore.Qt.Tool | QtCore.Qt.FramelessWindowHint | QtCore.Qt.WindowStaysOnTopHint)
+        self.setAttribute(QtCore.Qt.WA_ShowWithoutActivating)
+        self.plot_manager = plot_manager
+        
+        # Setup layout
+        layout = QtWidgets.QVBoxLayout()
+        layout.setContentsMargins(5, 5, 5, 5)
+        
+        # Create plot widget
+        self.plot_widget = pg.PlotWidget()
+        
+        # Match styling to main plot
+        from PyQt5.QtGui import QColor
+        self.plot_widget.setBackground(QColor('black'))
+        self.plot_widget.showGrid(x=True, y=True, alpha=0.8)
+        
+        # Set font and styling to match main plot
+        font = QtWidgets.QApplication.font()
+        font.setPixelSize(11)
+
+        for axis in ['bottom', 'left']:
+            axis_item = self.plot_widget.getAxis(axis)
+            axis_item.setStyle(tickFont=font)
+            self.plot_widget.getAxis(axis).setPen('grey')
+            self.plot_widget.getAxis(axis).setTextPen('grey')
+
+        # Set title font
+        self.plot_widget.getPlotItem().titleLabel.item.setFont(font)
+
+        # Disable mouse interactions
+        self.plot_widget.setMouseEnabled(x=False, y=False)
+        self.plot_widget.setMenuEnabled(False)
+
+        self.plot_widget.setLabel('left', 'Count')
+        self.plot_widget.setLabel('bottom', 'Value')
+
+        layout.addWidget(self.plot_widget)
+        self.setLayout(layout)
+
+        self.bar_graph = None
+
+    def update_histogram(self, measurement_name, values, brush_color=None):
+        """Update the histogram with new data."""
+        if len(values) == 0:
+            return
+
+        # Calculate histogram
+        y, x = np.histogram(list(values), bins=20)
+
+        # Use provided color or default to blue
+        if brush_color is None:
+            brush_color = 'b'
+
+        # Create bar graph if it doesn't exist
+        if self.bar_graph is None:
+            self.bar_graph = pg.BarGraphItem(x=x[:-1], height=y, width=(x[1]-x[0])*0.8, brush=brush_color)
+            self.plot_widget.addItem(self.bar_graph)
+        else:
+            self.bar_graph.setOpts(x=x[:-1], height=y, width=(x[1]-x[0])*0.8, brush=brush_color)
+
+        # Update title and axis
+        self.plot_widget.setTitle(f'{measurement_name} Distribution (n={len(values)})', color='grey')
+
+    def position_relative_to_table(self, table_widget, main_plot_widget):
+        """Position the window to the left of the measurement table, with bottom aligned to main plot."""
+        # Get table geometry in global coordinates
+        table_global_pos = table_widget.mapToGlobal(table_widget.pos())
+        table_rect = table_widget.geometry()
+
+        # Get main plot bottom position
+        plot_global_pos = main_plot_widget.mapToGlobal(main_plot_widget.pos())
+        plot_rect = main_plot_widget.geometry()
+        plot_bottom = plot_global_pos.y() + plot_rect.height()
+
+        # Position to the left of table, with same width and bottom aligned to plot
+        heightcorr = 0
+        if table_rect.height()>300: heightcorr = table_rect.height() - 300
+        self.setGeometry(table_global_pos.x() - table_rect.width() - 2,
+                        plot_bottom - table_rect.height() - 8 + heightcorr,
+                        table_rect.width(),
+                        table_rect.height() - heightcorr)
+
+
 WindowTemplate, TemplateBaseClass = loadUiType(pwd + "/HaasoscopePro.ui")
 class MainWindow(TemplateBaseClass):
     def __init__(self, usbs):
@@ -52,8 +146,21 @@ class MainWindow(TemplateBaseClass):
         self.socket_thread = None
         self.fftui = None
         self.ui.boardBox.setMaximum(self.state.num_board - 1)
+
+        # Initialize the table model and item tracking
+        self.measurement_model = QStandardItemModel()
+        self.ui.tableView.setModel(self.measurement_model)
+        self.measurement_model.setHorizontalHeaderLabels(["Measurement", "Value", "Avg (100)", "RMS (100)"])
+        self.measurement_items = {} # To store references to QStandardItem objects
         self.setup_successful = False
+        self.measurement_history = {} # To store the last 100 values: {name: deque}
+        self.last_temp_update_time = 0
+        self.cached_temps = (0, 0)  # (adc_temp, board_temp)
         self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
+
+        # Histogram window for measurements
+        self.histogram_window = HistogramWindow(self, self.plot_manager)
+        self.histogram_timer = QtCore.QTimer()
 
         # 6. Setup timers for data acquisition and measurement updates
         self.timer = QtCore.QTimer()
@@ -62,6 +169,12 @@ class MainWindow(TemplateBaseClass):
         self.timer2.timeout.connect(self.update_measurements_display)
         self.status_timer = QtCore.QTimer()
         self.status_timer.timeout.connect(self.update_status_bar)
+
+        # Setup selection tracking for measurement table
+        self.ui.tableView.selectionModel().selectionChanged.connect(self.on_measurement_selection_changed)
+
+        self.histogram_timer.timeout.connect(self.update_histogram_display)
+        self.current_histogram_measurement = None
 
         # 7. Run the main initialization and hardware setup sequence
         if self.state.num_board > 0:
@@ -112,7 +225,44 @@ class MainWindow(TemplateBaseClass):
         # DEFER UI sync until after the constructor is finished and the event loop starts
         QtCore.QTimer.singleShot(10, self._sync_initial_ui_state)
 
+        # Perform an initial adjustment of the table geometry
+        self._adjust_table_view_geometry()
+
+        # Set column widths for the measurement table
+        self.ui.tableView.setColumnWidth(0, 135)  # Measurement name column
+        self.ui.tableView.setColumnWidth(1, 80)  # Measurement value column
+        self.ui.tableView.setColumnWidth(2, 80)  # Measurement avg column
+        self.ui.tableView.setColumnWidth(3, 80)  # Measurement rms column
         self.show()
+
+    def on_measurement_selection_changed(self, selected, deselected):
+        """Handle measurement table selection changes."""
+        # Get selected indexes
+        indexes = self.ui.tableView.selectionModel().selectedIndexes()
+
+        if indexes:
+            # Get the first selected row (column 0 = measurement name)
+            row = indexes[0].row()
+            name_item = self.measurement_model.item(row, 0)
+
+            if name_item:
+                measurement_name = name_item.text().split(' (')[0]  # Remove unit suffix
+
+                if measurement_name in self.measurement_history:
+                    self.current_histogram_measurement = measurement_name
+                    self.histogram_window.position_relative_to_table(self.ui.tableView, self.ui.plot)
+                    self.histogram_window.show()
+                    
+                    # Get color from active channel
+                    brush_color = self.plot_manager.linepens[self.state.activexychannel].color()
+                    self.histogram_window.update_histogram(measurement_name, 
+                                                          self.measurement_history[measurement_name],
+                                                          brush_color)
+                    if not self.histogram_timer.isActive():
+                        self.histogram_timer.start(100)  # Update at 10 Hz
+        else:
+            # No selection - hide histogram
+                self.hide_histogram()
 
     def _sync_initial_ui_state(self):
         """A one-time function to sync the UI's visual state after the window has loaded."""
@@ -122,6 +272,24 @@ class MainWindow(TemplateBaseClass):
         self.ui.runButton.setText(" Run ")
         self.ui.actionPan_and_zoom.setChecked(False)
         self.plot_manager.set_pan_and_zoom(False)
+
+    def update_histogram_display(self):
+        """Update the histogram window with current data."""
+        if self.current_histogram_measurement and self.histogram_window.isVisible():
+            if self.current_histogram_measurement in self.measurement_history:
+                # Get color from active channel
+                brush_color = self.plot_manager.linepens[self.state.activexychannel].color()
+                self.histogram_window.update_histogram(
+                    self.current_histogram_measurement,
+                    self.measurement_history[self.current_histogram_measurement],
+                    brush_color
+                )
+    
+    def hide_histogram(self):
+        """Hide the histogram window and stop updates."""
+        self.histogram_window.hide()
+        self.histogram_timer.stop()
+        self.current_histogram_measurement = None
 
     def _sync_board_settings_to_hardware(self, board_idx):
         """
@@ -196,9 +364,9 @@ class MainWindow(TemplateBaseClass):
         # Processing and Display controls
         self.ui.actionDrawing.triggered.connect(self.drawing_toggled)
         self.ui.actionGrid.triggered.connect(lambda checked: self.plot_manager.set_grid(checked))
-        self.ui.markerCheck.stateChanged.connect(lambda checked: self.plot_manager.set_markers(checked))
+        self.ui.actionMarkers.triggered.connect(lambda checked: self.plot_manager.set_markers(checked))
         self.ui.actionPan_and_zoom.triggered.connect(lambda checked: self.plot_manager.set_pan_and_zoom(checked))
-        self.ui.rightaxisCheck.clicked.connect(lambda checked: self.plot_manager.right_axis.setVisible(checked))
+        self.ui.actionVoltage_axis.triggered.connect(lambda checked: self.plot_manager.right_axis.setVisible(checked))
         self.ui.linewidthBox.valueChanged.connect(self.plot_manager.set_line_width)
         self.ui.lpfBox.currentIndexChanged.connect(self.lpf_changed)
         self.ui.resampBox.valueChanged.connect(lambda val: setattr(self.state, 'doresamp', val))
@@ -235,8 +403,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionRecord.triggered.connect(self.toggle_recording)
         self.ui.actionVerify_firmware.triggered.connect(self.verify_firmware)
         self.ui.actionUpdate_firmware.triggered.connect(self.update_firmware)
-        self.ui.actionDo_autocalibration.triggered.connect(self.autocalibration)
-        self.ui.actionOversampling_mean_and_RMS.triggered.connect(self.do_meanrms_calibration)
+        self.ui.actionDo_autocalibration.triggered.connect(lambda: autocalibration(self))
+        self.ui.actionOversampling_mean_and_RMS.triggered.connect(lambda: do_meanrms_calibration(self))
         self.ui.actionToggle_trig_stabilizer.triggered.connect(self.trig_stabilizer_toggled)
         self.ui.actionToggle_extra_trig_stabilizer.triggered.connect(self.extra_trig_stabilizer_toggled)
 
@@ -414,6 +582,11 @@ class MainWindow(TemplateBaseClass):
         if s.pll_reset_grace_period > 0:
             s.pll_reset_grace_period -= 1
 
+        for board_idx in range(s.num_board):
+            if s.dooversample[board_idx] and board_idx%2==0:
+                do_meanrms_calibration(self)
+                break
+
         # --- Plotting Logic: Switch between Time Domain and XY Mode ---
         if self.state.xy_mode:
             # For XY mode, we need to ensure the data lengths match.
@@ -435,7 +608,6 @@ class MainWindow(TemplateBaseClass):
             lines_vis = [line.isVisible() for line in self.plot_manager.lines]
             self.recorder.record_event(self.xydata, self.plot_manager.otherlines['vline'].value(), lines_vis)
 
-        # --- START: Multi-channel FFT processing ---
         if self.fftui and self.fftui.isVisible():
             active_channel_name = f"CH{self.state.activexychannel + 1}"
 
@@ -472,7 +644,6 @@ class MainWindow(TemplateBaseClass):
                         self.fftui.update_plot(ch_name, plot_x_data, mag, pen, title, xlabel, is_active)
                 else:
                     self.fftui.clear_plot(ch_name)
-        # --- END: Multi-channel FFT processing ---
 
         now = time.time()
         dt = now - self.last_time + 1e-9
@@ -500,66 +671,158 @@ class MainWindow(TemplateBaseClass):
         status_text = (f"{format_freq(effective_sr, 'S/s')}, {self.fps:.2f} fps, "
                        f"{s.nevents} events, {s.lastrate:.2f} Hz, "
                        f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s")
+        if self.recorder.is_recording: status_text += ", Recording to "+str(self.recorder.file_handle.name)
         self.ui.statusBar.showMessage(status_text)
-        
+
     def update_measurements_display(self):
-        """Slow timer callback to update text-based measurements."""
-        the_str = ""
-        if self.recorder.is_recording:
-            the_str += f"Recording to file {self.recorder.file_handle.name}\n"
+        """Slow timer callback to update measurements in the table view without clearing it."""
+        active_measurements = set()
+
+        def _set_measurement(name, value, unit=""):
+            """Helper to add or update a measurement row in the table."""
+            active_measurements.add(name)
+            value = round(value, 2)
+            if unit != "":
+                unit = " (" + unit + ")"
+
+            # Initialize history deque if this is a new measurement
+            if name not in self.measurement_history:
+                self.measurement_history[name] = deque(maxlen=100)
+
+            # Add current value to history
+            self.measurement_history[name].append(value)
+
+            # Calculate average and RMS
+            history = self.measurement_history[name]
+            avg_value = round(np.mean(history), 2)
+            rms_value = round(np.std(history), 2)
+
+            if name in self.measurement_items:
+                # Update existing item's value, average, and RMS
+                self.measurement_items[name][1].setText(str(value))
+                self.measurement_items[name][0].setText(name + unit)
+                self.measurement_items[name][2].setText(str(avg_value))
+                self.measurement_items[name][3].setText(str(rms_value))
+            else:
+                # Add new row and store items
+                name_item = QStandardItem(name + unit)
+                value_item = QStandardItem(str(value))
+                avg_item = QStandardItem(str(avg_value))
+                rms_item = QStandardItem(str(rms_value))
+                self.measurement_model.appendRow([name_item, value_item, avg_item, rms_item])
+                self.measurement_items[name] = (name_item, value_item, avg_item, rms_item)
 
         if self.state.dodrawing:
-
             if self.ui.actionTrigger_thresh.isChecked():
-                # Get the threshold value directly from the plot manager's line object
                 hline_val = self.plot_manager.otherlines['hline'].value()
-                the_str += f"Trigger threshold: {hline_val:.3f} div\n"
+                _set_measurement("Trig threshold", hline_val, "div")
 
             if self.ui.actionN_persist_lines.isChecked():
-                # Get the number of lines from the plot manager's persistence deque
                 num_persist = len(self.plot_manager.persist_lines)
-                the_str += f"N persist lines: {num_persist}\n"
+                _set_measurement("Persist lines", num_persist)
 
             if self.ui.actionTemperatures.isChecked():
+                # Only read temperatures once per second (slow USB operation)
+                current_time = time.time()
+                if current_time - self.last_temp_update_time >= 1.0:
+                    if self.state.num_board > 0:
+                        active_usb = self.controller.usbs[self.state.activeboard]
+                        adctemp, boardtemp = gettemps(active_usb)
+                        self.cached_temps = (adctemp, boardtemp)
+                        self.last_temp_update_time = current_time
+
+                # Always call _set_measurement with cached values to keep the row active
                 if self.state.num_board > 0:
-                    # Get the usb device for the currently active board from the controller
-                    active_usb = self.controller.usbs[self.state.activeboard]
-                    # The gettemps function is expected to return a pre-formatted string
-                    the_str += gettemps(active_usb) + "\n"
+                    _set_measurement("ADC temp", self.cached_temps[0], "\u00b0C")
+                    _set_measurement("Board temp", self.cached_temps[1], "\u00b0C")
 
-            source_str, fit_results = "", None
-            if self.ui.persistavgCheck.isChecked() and self.plot_manager.average_line.isVisible():
-                target_x = self.plot_manager.average_line.xData
-                target_y = self.plot_manager.average_line.yData
-                source_str = "from average"
-            elif hasattr(self, 'xydata'):
-                x_full = self.xydata[self.state.activexychannel][0]
-                y_full = self.xydata[self.state.activexychannel][1]
-                midpoint = len(y_full) // 2
-                if self.state.dotwochannel[self.state.activeboard]:
-                    x_data_for_analysis = x_full[:midpoint]
-                    y_data_for_analysis = y_full[:midpoint]
-                else:
-                    x_data_for_analysis = x_full
-                    y_data_for_analysis = y_full
+            if hasattr(self, 'xydata'):
+                x_data_for_analysis = self.plot_manager.lines[self.state.activexychannel].xData
+                y_data_for_analysis = self.plot_manager.lines[self.state.activexychannel].yData
 
-                the_str += f"\nMeasurements {source_str} for board {self.state.activeboard} ch {self.state.selectedchannel}:\n"
-                vline_val = self.plot_manager.otherlines['vline'].value()
-                measurements, fit_results = self.processor.calculate_measurements(
-                    x_data_for_analysis, y_data_for_analysis, vline_val, do_risetime_calc=self.ui.actionRisetime.isChecked()
-                )
+                if y_data_for_analysis is not None and len(y_data_for_analysis) > 0:
+                    vline_val = self.plot_manager.otherlines['vline'].value()
+                    measurements, fit_results = self.processor.calculate_measurements(
+                        x_data_for_analysis, y_data_for_analysis, vline_val,
+                        do_risetime_calc=self.ui.actionRisetime.isChecked()
+                    )
 
-                # Update the text browser
-                if self.ui.actionMean.isChecked(): the_str += f"Mean: {measurements.get('Mean', 'N/A')}\n"
-                if self.ui.actionRMS.isChecked(): the_str += f"RMS: {measurements.get('RMS', 'N/A')}\n"
-                if self.ui.actionVpp.isChecked(): the_str += f"Vpp: {measurements.get('Vpp', 'N/A')}\n"
-                if self.ui.actionFreq.isChecked(): the_str += f"Freq: {measurements.get('Freq', 'N/A')}\n"
-                if self.ui.actionRisetime.isChecked(): the_str += f"Risetime: {measurements.get('Risetime', 'N/A')}\n"
+                    if self.ui.actionMean.isChecked(): _set_measurement("Mean", measurements.get('Mean', 0), "mV")
+                    if self.ui.actionRMS.isChecked(): _set_measurement("RMS", measurements.get('RMS', 0), "mV")
+                    if self.ui.actionMinimum.isChecked(): _set_measurement("Min", measurements.get('Min', 0), "mV")
+                    if self.ui.actionMaximum.isChecked(): _set_measurement("Max", measurements.get('Max', 0), "mV")
+                    if self.ui.actionVpp.isChecked(): _set_measurement("Vpp", measurements.get('Vpp', 0), "mV")
+                    if self.ui.actionFreq.isChecked():
+                        freq = measurements.get('Freq', 0)
+                        freq, unit = format_freq(freq, "Hz", False)
+                        _set_measurement("Freq", freq, unit)
+                    if self.ui.actionRisetime.isChecked():
+                        self.plot_manager.update_risetime_fit_lines(fit_results)
+                        risetime_val = measurements.get('Risetime', 0)
+                        if math.isfinite(risetime_val): _set_measurement("Risetime", risetime_val, "ns")
+                        if self.ui.actionRisetime_error.isChecked():
+                            risetime_err_val = measurements.get('Risetime error', 0)
+                            if math.isfinite(risetime_err_val):_set_measurement("Risetime error", risetime_err_val, "ns")
 
-            self.ui.textBrowser.setText(the_str)
+        # Remove stale measurements that are no longer selected
+        stale_keys = list(self.measurement_items.keys() - active_measurements)
 
-            # Tell the plot manager to update the fit lines with the latest results
-            self.plot_manager.update_risetime_fit_lines(fit_results)
+        rows_to_remove = []
+        for key in stale_keys:
+            # Find the item in the model by its text to avoid accessing a deleted C++ object
+            items = self.measurement_model.findItems(key, QtCore.Qt.MatchStartsWith)
+            if items:
+                rows_to_remove.append(items[0].row())
+
+        # Remove rows from the model, from bottom to top, to avoid index shifting issues
+        for row in sorted(list(set(rows_to_remove)), reverse=True):
+            self.measurement_model.removeRow(row)
+
+        # Now, clean up the tracking dictionary and history
+        for key in stale_keys:
+            if key in self.measurement_items:
+                del self.measurement_items[key]
+            if key in self.measurement_history:
+                del self.measurement_history[key]
+
+    def _adjust_table_view_geometry(self):
+        """Sets the table view geometry to fill the bottom of the side panel."""
+        frame_height = self.ui.frame.height()
+        table_top_y = 600  # The Y coordinate where the table should start
+        table_height = frame_height - table_top_y
+
+        # Ensure the height is not negative if the window is very short
+        if table_height < 50:
+            table_height = 50
+
+        # Also account for the frame's width
+        frame_width = self.ui.frame.width()
+
+        self.ui.tableView.setGeometry(
+            0,            # x
+            table_top_y,  # y
+            frame_width,  # width
+            table_height  # height
+        )
+
+    def resizeEvent(self, event):
+        """Handles window resize events to adjust the table view."""
+        super().resizeEvent(event)  # Call the parent's resize event
+        
+        # Close histogram window when main window resizes
+        if self.histogram_window.isVisible():
+            self.hide_histogram()
+
+        # Use a single shot timer to ensure the layout has settled before adjusting
+        QtCore.QTimer.singleShot(1, self._adjust_table_view_geometry)
+    
+    def moveEvent(self, event):
+        """Handles window move events."""
+        super().moveEvent(event)
+
+        # Close histogram window when main window moves
+        if self.histogram_window.isVisible():
+            self.hide_histogram()
 
     def allocate_xy_data(self):
         """Creates or re-sizes the numpy arrays for storing waveform data."""
@@ -648,6 +911,7 @@ class MainWindow(TemplateBaseClass):
         self.timer.stop()
         self.timer2.stop()
         self.recorder.stop()
+        self.histogram_window.close()
         self.close_socket()
         self.controller.cleanup()
         if self.fftui: self.fftui.close()
@@ -729,7 +993,7 @@ class MainWindow(TemplateBaseClass):
     def dostartstop(self):
         if self.state.paused:
             self.timer.start(0)  # 0ms interval for fastest refresh
-            self.timer2.start(1000)  # 1s interval for measurements
+            self.timer2.start(20)  # 20ms interval = 50 Hz for measurements
             self.status_timer.start(200)  # Start status timer at 5 Hz
             self.state.paused = False
             self.ui.runButton.setChecked(True)
@@ -805,6 +1069,19 @@ class MainWindow(TemplateBaseClass):
 
         # Update XY menu item based on whether the active board is in two-channel mode
         self.ui.actionXY_Plot.setEnabled(self.state.dotwochannel[self.state.activeboard])
+
+        # Update Aux Out box to show the value for the currently selected board
+        self.ui.Auxout_comboBox.blockSignals(True)
+        self.ui.Auxout_comboBox.setCurrentIndex(self.state.auxoutval[self.state.activeboard])
+        self.ui.Auxout_comboBox.blockSignals(False)
+
+        # Update LPF box to show the value for the currently selected channel
+        current_lpf_val = self.state.lpf[self.state.activexychannel]
+        lpf_text = "Off" if current_lpf_val == 0 else str(current_lpf_val)+" MHz"
+        lpf_index = self.ui.lpfBox.findText(lpf_text)
+        self.ui.lpfBox.blockSignals(True)
+        if lpf_index != -1: self.ui.lpfBox.setCurrentIndex(lpf_index)
+        self.ui.lpfBox.blockSignals(False)
 
         # If we are in XY mode but switched to a board that is not in two-channel mode, exit XY mode
         if self.state.xy_mode and not self.state.dotwochannel[self.state.activeboard]:
@@ -1126,12 +1403,20 @@ class MainWindow(TemplateBaseClass):
 
         if self.fftui is None:
             self.fftui = FFTWindow()
-
+            # Connect the window_closed signal to our handler
+            self.fftui.window_closed.connect(self.on_fft_window_closed)
         should_show = any(self.state.fft_enabled.values())
-        if should_show:
-            self.fftui.show()
-        else:
-            self.fftui.hide()
+        if should_show: self.fftui.show()
+        else: self.fftui.hide()
+    
+    def on_fft_window_closed(self):
+        """Called when FFT window is closed by user."""
+        # Disable FFT for all channels and uncheck the checkbox
+        self.state.fft_enabled.clear()
+        self.ui.fftCheck.setChecked(False)
+        should_show = any(self.state.fft_enabled.values())
+        if should_show: self.fftui.show()
+        else: self.fftui.hide()
 
     def update_fft_checkbox_state(self):
         """Updates the 'FFT' checkbox to reflect the state of the active channel."""
@@ -1367,7 +1652,7 @@ class MainWindow(TemplateBaseClass):
 
     def lpf_changed(self):
         thetext = self.ui.lpfBox.currentText()
-        self.state.lpf = 0 if thetext == "Off" else int(thetext)
+        self.state.lpf[self.state.activexychannel] = 0 if thetext == "Off" else int(thetext.split()[0]) # remove MHz
 
     def single_clicked(self):
         self.state.getone = not self.state.getone
@@ -1396,147 +1681,3 @@ class MainWindow(TemplateBaseClass):
         board = self.state.activeboard
         self.state.auxoutval[board] = index
         self.controller.set_auxout(board, index)
-
-    # #########################################################################
-    # ## Calibration functions
-    # #########################################################################
-
-    def autocalibration(self, resamp=2, dofiner=False, oldtoff=0, finewidth=16):
-        """
-        Performs an automated calibration to align the timing of two boards.
-        It finds the coarse offset (Toff) and then the fine-grained offset (TAD).
-        """
-        # If called from the GUI, the first argument is 'False'. Reset to defaults.
-        if not resamp:
-            resamp = 2
-            dofiner = False
-            oldtoff = 0
-
-        print(f"Autocalibration running with: resamp={resamp}, dofiner={dofiner}, finewidth={finewidth}")
-        s = self.state
-        if s.activeboard % 2 == 1:
-            print("Error: Please select the even-numbered board of a pair (e.g., 0, 2) to calibrate.")
-            return
-
-        # Gently reset the fine-grained delay (TAD) to 0 before starting
-        if s.tad[s.activeboard] != 0:
-            print("Resetting TAD to 0 before calibration...")
-            for t in range(abs(s.tad[s.activeboard]) // 5 + 1):
-                current_tad = self.ui.tadBox.value()
-                if current_tad == 0: break
-                new_tad = current_tad - 5 if current_tad > 0 else current_tad + 5
-                self.ui.tadBox.setValue(new_tad)  # This will trigger tad_changed
-                time.sleep(.1)
-
-        # Get data from the primary board and the board-under-test
-        c1 = s.activeboard * s.num_chan_per_board
-        c2 = (s.activeboard + 1) * s.num_chan_per_board
-        c1data = self.xydata[c1]
-        c2data = self.xydata[c2]
-
-        # Resample data for higher timing resolution
-        c1datanewy, c1datanewx = resample(c1data[1], len(c1data[0]) * resamp, t=c1data[0])
-        c2datanewy, c2datanewx = resample(c2data[1], len(c2data[0]) * resamp, t=c2data[0])
-
-        # Define the search range for the time shift
-        minrange = -s.toff * resamp
-        if dofiner: minrange = (s.toff - oldtoff - finewidth) * resamp
-        maxrange = 10 * s.expect_samples * resamp
-        if dofiner: maxrange = (s.toff - oldtoff + finewidth) * resamp
-
-        c2datanewy = np.roll(c2datanewy, int(minrange))
-
-        minrms = 1e9
-        minshift = 0
-        fitwidth = (s.max_x - s.min_x) * s.fitwidthfraction
-        vline = self.plot_manager.otherlines['vline'].value()
-
-        # Iterate through all possible shifts and find the one with the minimum RMS difference
-        print(f"Searching for best shift in range {minrange} to {maxrange}...")
-        for nshift in range(int(minrange), int(maxrange)):
-            yc1 = c1datanewy[(c1datanewx > vline - fitwidth) & (c1datanewx < vline + fitwidth)]
-            yc2 = c2datanewy[(c2datanewx > vline - fitwidth) & (c2datanewx < vline + fitwidth)]
-            if len(yc1) != len(yc2): continue  # Skip if windowing results in unequal lengths
-
-            therms = np.std(yc1 - yc2)
-            if therms < minrms:
-                minrms = therms
-                minshift = nshift
-            c2datanewy = np.roll(c2datanewy, 1)
-
-        print(f"Minimum RMS difference found for total shift = {minshift}")
-
-        if dofiner:
-            # Fine-tuning phase: adjust Toff slightly and set the final TAD value
-            s.toff = minshift // resamp + oldtoff - 1
-            self.ui.ToffBox.setValue(s.toff)
-
-            # Convert the subsample shift into a hardware TAD value
-            tadshift = round((138.4 * 2 / resamp) * (minshift % resamp), 1)
-            tadshiftround = round(tadshift + 138.4)
-            print(f"Optimal TAD value calculated to be ~{tadshiftround}")
-
-            if tadshiftround < 250:
-                print("Setting final TAD value...")
-                for t in range(abs(s.tad[s.activeboard] - tadshiftround) // 5 + 1):
-                    current_tad = self.ui.tadBox.value()
-                    if abs(current_tad - tadshiftround) < 5: break
-                    new_tad = current_tad + 5 if current_tad < tadshiftround else current_tad - 5
-                    self.ui.tadBox.setValue(new_tad)
-                    time.sleep(.1)
-                print("Autocalibration finished.")
-            else:
-                print("Required TAD shift is too large. Adjusting clock phase and retrying.")
-                self.controller.do_phase(s.activeboard + 1, plloutnum=0, updown=1, pllnum=0)
-                self.controller.do_phase(s.activeboard + 1, plloutnum=1, updown=1, pllnum=0)
-                self.controller.do_phase(s.activeboard + 1, plloutnum=2, updown=1, pllnum=0)
-                s.triggerautocalibration[s.activeboard + 1] = True  # Request another calibration after new data
-        else:
-            # Coarse phase: find the rough Toff value, then do DC/RMS correction, then start the fine-tuning phase
-            oldtoff = s.toff
-            s.toff = minshift // resamp + s.toff
-            print(f"Coarse Toff set to {s.toff}. Performing mean/RMS calibration...")
-            self.do_meanrms_calibration()
-            print("Starting fine-tuning phase...")
-            self.autocalibration(resamp=64, dofiner=True, oldtoff=oldtoff)
-
-    def do_meanrms_calibration(self):
-        """Calculates and applies DC offset and amplitude (RMS) corrections between two boards."""
-        s = self.state
-        if s.activeboard % 2 == 1:
-            print("Error: Please select the even-numbered board of a pair (e.g., 0, 2) to calibrate.")
-            return
-
-        # c1 is the primary board (e.g. board 0), c2 is the secondary (e.g. board 1)
-        c1_idx = s.activeboard * s.num_chan_per_board
-        c2_idx = (s.activeboard + 1) * s.num_chan_per_board
-
-        fitwidth = (s.max_x - s.min_x) * 0.99
-        vline = self.plot_manager.otherlines['vline'].value()
-
-        # Get y-data for both channels within the fit window
-        yc1 = self.xydata[c1_idx][1][
-            (self.xydata[c1_idx][0] > vline - fitwidth) & (self.xydata[c1_idx][0] < vline + fitwidth)]
-        yc2 = self.xydata[c2_idx][1][
-            (self.xydata[c2_idx][0] > vline - fitwidth) & (self.xydata[c2_idx][0] < vline + fitwidth)]
-
-        if len(yc1) == 0 or len(yc2) == 0:
-            print("Mean/RMS calibration failed: no data in window.")
-            return
-
-        # Calculate mean and standard deviation for each channel
-        mean_primary = np.mean(yc1)
-        std_primary = np.std(yc1)
-        mean_secondary = np.mean(yc2)
-        std_secondary = np.std(yc2)
-
-        # The correction to ADD to the secondary data is (primary - secondary)
-        s.extrigboardmeancorrection[s.activeboard] += (mean_primary - mean_secondary)
-
-        # The correction to MULTIPLY the secondary data by is (primary / secondary)
-        if std_secondary > 0:
-            s.extrigboardstdcorrection[s.activeboard] *= (std_primary / std_secondary)
-
-        print(f"Updated corrections to be applied to board {s.activeboard + 1}: "
-              f"Mean+={s.extrigboardmeancorrection[s.activeboard]:.4f}, "
-              f"Std*={s.extrigboardstdcorrection[s.activeboard]:.4f}")

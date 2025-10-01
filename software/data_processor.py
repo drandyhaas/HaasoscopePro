@@ -52,18 +52,23 @@ def find_fundamental_frequency_scipy(signal: np.ndarray, sampling_rate: float) -
     return positive_freqs[peak_indices[0]]
 
 
-def format_freq(freq_hz: float, suffix="Hz") -> str:
+def format_freq(freq_hz: float, suffix="Hz", dostr=True):
     """Formats a frequency in Hz to a string with appropriate units."""
     if freq_hz is None or freq_hz < 1.0:
-        return f"{freq_hz:.2f} {suffix}"
+        if dostr: return f"{freq_hz:.2f} {suffix}"
+        else: return freq_hz, "Hz"
     if freq_hz < 1000:
-        return f"{freq_hz:.3f} {suffix}"
+        if dostr: return f"{freq_hz:.3f} {suffix}"
+        else: return freq_hz, "Hz"
     elif freq_hz < 1_000_000:
-        return f"{freq_hz / 1000:.3f} k{suffix}"
+        if dostr: return f"{freq_hz / 1000:.3f} k{suffix}"
+        else: return freq_hz / 1000, "kHz"
     elif freq_hz < 1_000_000_000:
-        return f"{freq_hz / 1_000_000:.3f} M{suffix}"
+        if dostr: return f"{freq_hz / 1_000_000:.3f} M{suffix}"
+        else: return freq_hz / 1_000_000, "MHz"
     else:
-        return f"{freq_hz / 1_000_000_000:.3f} G{suffix}"
+        if dostr: return f"{freq_hz / 1_000_000_000:.3f} G{suffix}"
+        else: return freq_hz / 1_000_000_000, "GHz"
 
 
 def find_crossing_distance(y_data, y_threshold, x_ref, x0=0.0, dx=1.0):
@@ -203,17 +208,20 @@ class DataProcessor:
     def _apply_lpf(self, board_idx, xy_data_array):
         """Applies a digital low-pass filter if configured."""
         state = self.state
-        if state.lpf > 0:
-            sr = state.samplerate / (2 if state.dotwochannel[board_idx] else 1) / state.downsamplefactor
-            nyquist = 0.5 * sr * 1e9
-            normal_cutoff = min(state.lpf * 1e6 / nyquist, 0.99)
+        sr = state.samplerate / (2 if state.dotwochannel[board_idx] else 1) / state.downsamplefactor
+        nyquist = 0.5 * sr * 1e9
 
+        c1_idx = board_idx * 2
+        if state.lpf[c1_idx]:
+            normal_cutoff = min(state.lpf[c1_idx] * 1e6 / nyquist, 0.99)
             fb, fa = butter(5, normal_cutoff, btype='low', analog=False)
-
-            c1_idx = board_idx * 2
             xy_data_array[c1_idx][1] = filtfilt(fb, fa, xy_data_array[c1_idx][1])
-            if state.dotwochannel[board_idx]:
-                c2_idx = c1_idx + 1
+
+        if state.dotwochannel[board_idx]:
+            c2_idx = c1_idx + 1
+            if state.lpf[c2_idx]:
+                normal_cutoff = min(state.lpf[c2_idx] * 1e6 / nyquist, 0.99)
+                fb, fa = butter(5, normal_cutoff, btype='low', analog=False)
                 xy_data_array[c2_idx][1] = filtfilt(fb, fa, xy_data_array[c2_idx][1])
 
     def _apply_board_stabilizer(self, board_idx, xy_data_array):
@@ -279,17 +287,17 @@ class DataProcessor:
         VperD = state.VperD[state.activexychannel]
 
         measurements = {
-            "Mean": f"{1000 * VperD * np.mean(y_data):.3f} mV",
-            "RMS": f"{1000 * VperD * np.std(y_data):.3f} mV",
-            "Max": f"{1000 * VperD * np.max(y_data):.3f} mV",
-            "Min": f"{1000 * VperD * np.min(y_data):.3f} mV",
-            "Vpp": f"{1000 * VperD * (np.max(y_data) - np.min(y_data)):.3f} mV"
+            "Mean": 1000 * VperD * np.mean(y_data),
+            "RMS": 1000 * VperD * np.std(y_data),
+            "Max": 1000 * VperD * np.max(y_data),
+            "Min": 1000 * VperD * np.min(y_data),
+            "Vpp": 1000 * VperD * (np.max(y_data) - np.min(y_data))
         }
 
         sampling_rate = (state.samplerate * 1e9) / state.downsamplefactor
         if state.dotwochannel[state.activeboard]: sampling_rate /= 2
         found_freq = find_fundamental_frequency_scipy(y_data, sampling_rate)
-        measurements["Freq"] = format_freq(found_freq)
+        measurements["Freq"] = found_freq
 
         # Initialize fit results to None
         fit_results = None
@@ -300,7 +308,7 @@ class DataProcessor:
             yc = y_data[(x_data > vline - fitwidth) & (x_data < vline + fitwidth)]
 
             if xc.size < 10:
-                measurements["Risetime"] = "Fit range too small"
+                measurements["Risetime"] = math.nan
             else:
                 p0 = [np.max(yc), xc[xc.size // 2], 2 * state.nsunits, np.min(yc)]
                 if state.fallingedge[state.activeboard]: p0[2] *= -1
@@ -316,11 +324,13 @@ class DataProcessor:
                         risetime = state.nsunits * 0.6 * abs(top - bot) / slope
                         risetimeerr = state.nsunits * 0.6 * 4 * abs(top - bot) * perr[2] / (slope * slope)
 
-                        measurements["Risetime"] = f"{abs(risetime):.2f} \u00B1 {abs(risetimeerr):.2f} ns"
+                        measurements["Risetime"] = risetime
+                        measurements["Risetime error"] = risetimeerr
                         # Package the raw results to be returned
                         fit_results = {'popt': popt, 'pcov': pcov, 'xc': xc, 'risetime_err': risetimeerr}
 
                     except (RuntimeError, ValueError):
-                        measurements["Risetime"] = "Fit failed"
+                        measurements["Risetime"] = math.nan
+                        measurements["Risetime error"] = math.nan
 
         return measurements, fit_results
