@@ -44,7 +44,7 @@ def autocalibration(main_window):
     print(f"Found {edge1} in signal 1, {edge2} in signal 2")
 
     # make sure c2 is left of c1 by at least half a sample, so we can use TAD to get it right to half a sample difference
-    time_offset = edge1-edge2 - (sample_spacing) # /2.0 ???
+    time_offset = edge1-edge2 - (sample_spacing/2.0) + (sample_spacing/2.0)*s.tad[s.activeboard]/138.4
     sample_offset = math.floor(time_offset / sample_spacing)
 
     print(f"Edge-based alignment found {time_offset} ns shift, and {sample_offset} nearest samples")
@@ -54,20 +54,21 @@ def autocalibration(main_window):
     # Convert the subsample shift into a hardware TAD value
     remaining_time_offset = time_offset - sample_offset*sample_spacing
     print("remaining_time_offset", remaining_time_offset)
-    tadshift = remaining_time_offset * 138.4 / (sample_spacing/2.0)
+    print("old tad was",s.tad[s.activeboard])
+    tadshift = remaining_time_offset * 138.4/(sample_spacing/2.0)
     print("tadshift",tadshift)
     tadshiftround = round(tadshift)
     print(f"Optimal TAD value calculated to be ~{tadshiftround}")
 
-    if tadshiftround < 250:
+    if tadshiftround <= 255:
         print("Setting final TAD value...")
-        for t in range(abs(s.tad[s.activeboard] - tadshiftround) // 5 + 1):
+        for t in range(abs(s.tad[s.activeboard] - tadshiftround) + 5):
             current_tad = main_window.ui.tadBox.value()
-            if abs(current_tad - tadshiftround) < 5:
+            if abs(current_tad - tadshiftround) < 1:
                 break
-            new_tad = current_tad + 5 if current_tad < tadshiftround else current_tad - 5
+            new_tad = current_tad + 1 if current_tad < tadshiftround else current_tad - 1
             main_window.ui.tadBox.setValue(new_tad)
-            time.sleep(.1)
+            time.sleep(.01)
         print("Autocalibration finished.")
     else:
         print("Required TAD shift is too large. Adjusting clock. Re-run autocalibration!") # TODO: rerun automatically
@@ -107,14 +108,12 @@ def do_meanrms_calibration(main_window, doprint=False):
 
             # The correction to ADD to the secondary data is (primary - secondary)
             mean_cor = mean_primary - mean_secondary
-            if abs(mean_cor)<1:
-                s.extrigboardmeancorrection[s.activeboard] += mean_cor
+            s.extrigboardmeancorrection[s.activeboard] += max(min(mean_cor,1),-1) # cap the correction just in case
 
             # The correction to MULTIPLY the secondary data by is (primary / secondary)
             if std_primary > 0 and std_secondary > 0:
                 std_corr = std_primary / std_secondary
-                if std_corr<1.5:
-                    s.extrigboardstdcorrection[s.activeboard] *= std_corr
+                s.extrigboardstdcorrection[s.activeboard] *= max(min(std_corr,2),0.5) #  cap the correction just in case
 
             if doprint:
                 print(f"Updated corrections to be applied to board {s.activeboard + 1}: "
