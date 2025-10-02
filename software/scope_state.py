@@ -58,7 +58,7 @@ class ScopeState:
         self.triggerpos = 50
         self.triggershift = 2
         self.triggertimethresh = 0
-        self.toff = 50
+        self.toff = 100
 
         # Data Processing and Display Parameters
         self.downsample = 0
@@ -82,7 +82,7 @@ class ScopeState:
         self.downsamplemergingcounter = [0] * self.num_board
         self.distcorr = [0] * self.num_board
         self.totdistcorr = [0] * self.num_board
-        self.distcorrtol = 2.0
+        self.distcorrtol = 5.0
         self.distcorrsamp = 50
         self.noextboard = -1
         self.lvdstrigdelay = [0] * self.num_board

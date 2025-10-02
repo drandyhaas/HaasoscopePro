@@ -1,124 +1,122 @@
 # calibration.py
 
-import time
+import time, math
 import numpy as np
-from scipy.signal import resample
+from data_processor import find_crossing_distance
 
 
-def autocalibration(main_window, resamp=2, dofiner=False, oldtoff=0, finewidth=16):
+class AutocalibrationCollector:
+    """Collects data over multiple events for autocalibration."""
+
+    def __init__(self, main_window, num_events):
+        self.main_window = main_window
+        self.num_events = num_events
+        self.timeshifts = []
+        self.s = main_window.state
+        self.c1 = self.s.activeboard * self.s.num_chan_per_board
+        self.c2 = (self.s.activeboard + 1) * self.s.num_chan_per_board
+        self.events_collected = -1
+        self.sample_spacing = 1.0
+        self.TAD_PER_HALF_SAMPLE = 1.0 # to change unit from TAD to time (ns)
+        self.was_drawing = None
+
+    def collect_event_data(self):
+        """Called by update_plot_loop to collect data from the current event."""
+        # Get data from the current event
+        c1data = self.main_window.xydata[self.c1]
+        c2data = self.main_window.xydata[self.c2]
+        y1 = c1data[1]
+        y2 = c2data[1]
+        self.sample_spacing = c1data[0][1] - c1data[0][0]
+        self.TAD_PER_HALF_SAMPLE = 138.4 / (self.sample_spacing / 2.0)
+
+        vline = self.main_window.plot_manager.otherlines['vline'].value()
+        hline = self.main_window.plot_manager.otherlines['hline'].value()
+        edge1 = find_crossing_distance(y1, hline, vline, 0, self.sample_spacing)
+        edge2 = find_crossing_distance(y2, hline, vline, 0, self.sample_spacing)
+
+        self.events_collected += 1
+        if self.events_collected == 0:
+            #print(f"Event 1: Found {edge1:.2f} in signal 1, {edge2:.2f} in signal 2")
+            return False # skip the first event, since phases or other things may have changed
+
+        # Calculate offsets for this event
+        timeshift = edge1 - edge2 - (self.sample_spacing/2.0) + self.s.tad[self.s.activeboard]/self.TAD_PER_HALF_SAMPLE
+        self.timeshifts.append(timeshift)
+
+        if self.events_collected % 20 == 0:
+            print(f"  Processed {self.events_collected}/{self.num_events} events for oversampling calibration...")
+
+        # Return True if we've collected enough events
+        return self.events_collected >= self.num_events
+
+    def apply_calibration(self):
+        """Apply the averaged calibration after collecting all events."""
+        if self.events_collected == 0:
+            print("Error: No valid events collected for calibration?!")
+            return
+
+        # Calculate average time offset
+        time_offset = np.mean(self.timeshifts)
+
+        # find sample offset
+        sample_offset = math.floor(time_offset / self.sample_spacing)
+
+        # Calculate TAD shift for this event
+        remaining_time_offset = time_offset - sample_offset * self.sample_spacing
+        tadshift = remaining_time_offset * self.TAD_PER_HALF_SAMPLE
+        tadshiftround = round(tadshift)
+
+        print(f"  Averaging complete:")
+        #print(f"  Got {self.events_collected} events")
+        print(f"  Samples delay: {sample_offset}")
+        print(f"  TAD shift: {tadshift:.2f} +- {self.TAD_PER_HALF_SAMPLE*np.std(self.timeshifts)/math.sqrt(self.events_collected):.2f}")
+        print(f"  Old TAD was: {self.s.tad[self.s.activeboard]}")
+        #print(f"  Fine delay: {tadshiftround}")
+
+        # Apply the averaged corrections
+        self.s.toff += sample_offset
+        self.main_window.ui.ToffBox.setValue(self.s.toff)
+        if tadshiftround > 255:
+            print("Required TAD shift is too large. Adjusting PLL a step down on other board.")
+            self.main_window.controller.do_phase(self.s.activeboard + 1, plloutnum=0, updown=0, pllnum=0)
+            self.main_window.controller.do_phase(self.s.activeboard + 1, plloutnum=1, updown=0, pllnum=0)
+            self.main_window.controller.do_phase(self.s.activeboard + 1, plloutnum=2, updown=0, pllnum=0)
+            self.s.extraphasefortad[self.s.activeboard + 1] = 1
+            print("Asking for re-run of calibration.")
+            self.s.triggerautocalibration[self.s.activeboard] = True
+        else:
+            print("Setting final fine delay:", tadshiftround)
+            for t in range(abs(self.s.tad[self.s.activeboard] - tadshiftround) + 5):
+                current_tad = self.main_window.ui.tadBox.value()
+                if abs(current_tad - tadshiftround) < 1:
+                    break
+                new_tad = current_tad + 1 if current_tad < tadshiftround else current_tad - 1
+                self.main_window.ui.tadBox.setValue(new_tad)
+                time.sleep(.01)
+            print("Autocalibration finished.")
+
+
+def autocalibration(main_window, num_events=100):
     """
-    Performs an automated calibration to align the timing of two boards.
-    It finds the coarse offset (Toff) and then the fine-grained offset (TAD).
-    
+    Initiates automated calibration to align the timing of two boards.
+    Averages over multiple events to reduce event-to-event fluctuations.
+
     Args:
-        main_window: Reference to the MainWindow instance
-        resamp: Resampling factor for higher timing resolution
-        dofiner: If True, performs fine-tuning phase
-        oldtoff: Previous Toff value for fine-tuning
-        finewidth: Width of search window for fine-tuning
+        main_window: The main window object
+        num_events: Number of events to average over (default: 100)
     """
-    # If called from the GUI, the first argument is 'False'. Reset to defaults.
-    if not resamp:
-        resamp = 2
-        dofiner = False
-        oldtoff = 0
-
-    print(f"Autocalibration running with: resamp={resamp}, dofiner={dofiner}, finewidth={finewidth}")
     s = main_window.state
-    
-    if s.activeboard % 2 == 1:
-        print("Error: Please select the even-numbered board of a pair (e.g., 0, 2) to calibrate.")
+    if s.activeboard % 2 == 1 or not s.dooversample[s.activeboard]:
+        print("Error: Please select the even-numbered board of an oversampling pair (e.g., 0, 2) to calibrate.")
         return
 
-    # Gently reset the fine-grained delay (TAD) to 0 before starting
-    if s.tad[s.activeboard] != 0:
-        print("Resetting TAD to 0 before calibration...")
-        for t in range(abs(s.tad[s.activeboard]) // 5 + 1):
-            current_tad = main_window.ui.tadBox.value()
-            if current_tad == 0:
-                break
-            new_tad = current_tad - 5 if current_tad > 0 else current_tad + 5
-            main_window.ui.tadBox.setValue(new_tad)  # This will trigger tad_changed
-            time.sleep(.1)
-
-    # Get data from the primary board and the board-under-test
-    c1 = s.activeboard * s.num_chan_per_board
-    c2 = (s.activeboard + 1) * s.num_chan_per_board
-    c1data = main_window.xydata[c1]
-    c2data = main_window.xydata[c2]
-
-    # Resample data for higher timing resolution
-    c1datanewy, c1datanewx = resample(c1data[1], len(c1data[0]) * resamp, t=c1data[0])
-    c2datanewy, c2datanewx = resample(c2data[1], len(c2data[0]) * resamp, t=c2data[0])
-
-    # Define the search range for the time shift
-    minrange = -s.toff * resamp
-    if dofiner:
-        minrange = (s.toff - oldtoff - finewidth) * resamp
-    maxrange = 10 * s.expect_samples * resamp
-    if dofiner:
-        maxrange = (s.toff - oldtoff + finewidth) * resamp
-
-    c2datanewy = np.roll(c2datanewy, int(minrange))
-
-    minrms = 1e9
-    minshift = 0
-    fitwidth = (s.max_x - s.min_x) * s.fitwidthfraction
-    vline = main_window.plot_manager.otherlines['vline'].value()
-
-    # Iterate through all possible shifts and find the one with the minimum RMS difference
-    print(f"Searching for best shift in range {minrange} to {maxrange}...")
-    for nshift in range(int(minrange), int(maxrange)):
-        yc1 = c1datanewy[(c1datanewx > vline - fitwidth) & (c1datanewx < vline + fitwidth)]
-        yc2 = c2datanewy[(c2datanewx > vline - fitwidth) & (c2datanewx < vline + fitwidth)]
-        if len(yc1) != len(yc2):
-            continue  # Skip if windowing results in unequal lengths
-
-        therms = np.std(yc1 - yc2)
-        if therms < minrms:
-            minrms = therms
-            minshift = nshift
-        c2datanewy = np.roll(c2datanewy, 1)
-
-    print(f"Minimum RMS difference found for total shift = {minshift}")
-
-    if dofiner:
-        # Fine-tuning phase: adjust Toff slightly and set the final TAD value
-        s.toff = minshift // resamp + oldtoff - 1
-        main_window.ui.ToffBox.setValue(s.toff)
-
-        # Convert the subsample shift into a hardware TAD value
-        tadshift = round((138.4 * 2 / resamp) * (minshift % resamp), 1)
-        tadshiftround = round(tadshift + 138.4)
-        print(f"Optimal TAD value calculated to be ~{tadshiftround}")
-
-        if tadshiftround < 250:
-            print("Setting final TAD value...")
-            for t in range(abs(s.tad[s.activeboard] - tadshiftround) // 5 + 1):
-                current_tad = main_window.ui.tadBox.value()
-                if abs(current_tad - tadshiftround) < 5:
-                    break
-                new_tad = current_tad + 5 if current_tad < tadshiftround else current_tad - 5
-                main_window.ui.tadBox.setValue(new_tad)
-                time.sleep(.1)
-            print("Autocalibration finished.")
-        else:
-            print("Required TAD shift is too large. Adjusting clock phase and retrying.")
-            main_window.controller.do_phase(s.activeboard + 1, plloutnum=0, updown=1, pllnum=0)
-            main_window.controller.do_phase(s.activeboard + 1, plloutnum=1, updown=1, pllnum=0)
-            main_window.controller.do_phase(s.activeboard + 1, plloutnum=2, updown=1, pllnum=0)
-            s.triggerautocalibration[s.activeboard + 1] = True  # Request another calibration after new data
-    else:
-        # Coarse phase: find the rough Toff value, then do DC/RMS correction, then start the fine-tuning phase
-        oldtoff = s.toff
-        s.toff = minshift // resamp + s.toff
-        print(f"Coarse Toff set to {s.toff}. Performing mean/RMS calibration...")
-        do_meanrms_calibration(main_window)
-        print("Starting fine-tuning phase...")
-        autocalibration(main_window, resamp=64, dofiner=True, oldtoff=oldtoff)
+    print(f"Starting autocalibration: averaging over {num_events} events...")
+    # Create a collector and register it with the main window
+    main_window.autocalib_collector = AutocalibrationCollector(main_window, num_events)
 
 
-def do_meanrms_calibration(main_window):
+def do_meanrms_calibration(main_window, doprint=False):
     """Calculates and applies DC offset and amplitude (RMS) corrections between two boards."""
     s = main_window.state
 
@@ -149,15 +147,14 @@ def do_meanrms_calibration(main_window):
 
             # The correction to ADD to the secondary data is (primary - secondary)
             mean_cor = mean_primary - mean_secondary
-            if abs(mean_cor)<1:
-                s.extrigboardmeancorrection[s.activeboard] += mean_cor
+            s.extrigboardmeancorrection[s.activeboard] += max(min(mean_cor,1),-1) # cap the correction just in case
 
             # The correction to MULTIPLY the secondary data by is (primary / secondary)
             if std_primary > 0 and std_secondary > 0:
                 std_corr = std_primary / std_secondary
-                if std_corr<1.5:
-                    s.extrigboardstdcorrection[s.activeboard] *= std_corr
+                s.extrigboardstdcorrection[s.activeboard] *= max(min(std_corr,2),0.5) #  cap the correction just in case
 
-            print(f"Updated corrections to be applied to board {s.activeboard + 1}: "
-                  f"Mean+={s.extrigboardmeancorrection[s.activeboard]:.4f}, "
-                  f"Std*={s.extrigboardstdcorrection[s.activeboard]:.4f}")
+            if doprint:
+                print(f"Updated corrections to be applied to board {s.activeboard + 1}: "
+                      f"Mean+={s.extrigboardmeancorrection[s.activeboard]:.4f}, "
+                      f"Std*={s.extrigboardstdcorrection[s.activeboard]:.4f}")
