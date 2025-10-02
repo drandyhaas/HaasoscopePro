@@ -17,6 +17,7 @@ from data_processor import DataProcessor, format_freq
 from plot_manager import PlotManager
 from data_recorder import DataRecorder
 from histogram_window import HistogramWindow
+from measurements_manager import MeasurementsManager
 from calibration import autocalibration, do_meanrms_calibration
 
 # Import remaining dependencies
@@ -28,94 +29,6 @@ import ftd2xx
 
 pwd = get_pwd()
 print(f"Current dir is {pwd}")
-
-
-class HistogramWindow(QtWidgets.QWidget):
-    """Popup window showing a histogram of measurement values."""
-    
-    def __init__(self, parent=None, plot_manager=None):
-        super().__init__(parent)
-        self.setWindowFlags(QtCore.Qt.Tool | QtCore.Qt.FramelessWindowHint | QtCore.Qt.WindowStaysOnTopHint)
-        self.setAttribute(QtCore.Qt.WA_ShowWithoutActivating)
-        self.plot_manager = plot_manager
-        
-        # Setup layout
-        layout = QtWidgets.QVBoxLayout()
-        layout.setContentsMargins(5, 5, 5, 5)
-        
-        # Create plot widget
-        self.plot_widget = pg.PlotWidget()
-        
-        # Match styling to main plot
-        from PyQt5.QtGui import QColor
-        self.plot_widget.setBackground(QColor('black'))
-        self.plot_widget.showGrid(x=True, y=True, alpha=0.8)
-        
-        # Set font and styling to match main plot
-        font = QtWidgets.QApplication.font()
-        font.setPixelSize(11)
-
-        for axis in ['bottom', 'left']:
-            axis_item = self.plot_widget.getAxis(axis)
-            axis_item.setStyle(tickFont=font)
-            self.plot_widget.getAxis(axis).setPen('grey')
-            self.plot_widget.getAxis(axis).setTextPen('grey')
-
-        # Set title font
-        self.plot_widget.getPlotItem().titleLabel.item.setFont(font)
-
-        # Disable mouse interactions
-        self.plot_widget.setMouseEnabled(x=False, y=False)
-        self.plot_widget.setMenuEnabled(False)
-
-        self.plot_widget.setLabel('left', 'Count')
-        self.plot_widget.setLabel('bottom', 'Value')
-
-        layout.addWidget(self.plot_widget)
-        self.setLayout(layout)
-
-        self.bar_graph = None
-
-    def update_histogram(self, measurement_name, values, brush_color=None):
-        """Update the histogram with new data."""
-        if len(values) == 0:
-            return
-
-        # Calculate histogram
-        y, x = np.histogram(list(values), bins=20)
-
-        # Use provided color or default to blue
-        if brush_color is None:
-            brush_color = 'b'
-
-        # Create bar graph if it doesn't exist
-        if self.bar_graph is None:
-            self.bar_graph = pg.BarGraphItem(x=x[:-1], height=y, width=(x[1]-x[0])*0.8, brush=brush_color)
-            self.plot_widget.addItem(self.bar_graph)
-        else:
-            self.bar_graph.setOpts(x=x[:-1], height=y, width=(x[1]-x[0])*0.8, brush=brush_color)
-
-        # Update title and axis
-        self.plot_widget.setTitle(f'{measurement_name} Distribution (n={len(values)})', color='grey')
-
-    def position_relative_to_table(self, table_widget, main_plot_widget):
-        """Position the window to the left of the measurement table, with bottom aligned to main plot."""
-        # Get table geometry in global coordinates
-        table_global_pos = table_widget.mapToGlobal(table_widget.pos())
-        table_rect = table_widget.geometry()
-
-        # Get main plot bottom position
-        plot_global_pos = main_plot_widget.mapToGlobal(main_plot_widget.pos())
-        plot_rect = main_plot_widget.geometry()
-        plot_bottom = plot_global_pos.y() + plot_rect.height()
-
-        # Position to the left of table, with same width and bottom aligned to plot
-        heightcorr = 0
-        if table_rect.height()>300: heightcorr = table_rect.height() - 300
-        self.setGeometry(table_global_pos.x() - table_rect.width() - 2,
-                        plot_bottom - table_rect.height() - 8 + heightcorr,
-                        table_rect.width(),
-                        table_rect.height() - heightcorr)
 
 
 WindowTemplate, TemplateBaseClass = loadUiType(pwd + "/HaasoscopePro.ui")
@@ -146,35 +59,22 @@ class MainWindow(TemplateBaseClass):
         self.socket_thread = None
         self.fftui = None
         self.ui.boardBox.setMaximum(self.state.num_board - 1)
-
-        # Initialize the table model and item tracking
-        self.measurement_model = QStandardItemModel()
-        self.ui.tableView.setModel(self.measurement_model)
-        self.measurement_model.setHorizontalHeaderLabels(["Measurement", "Value", "Avg (100)", "RMS (100)"])
-        self.measurement_items = {} # To store references to QStandardItem objects
         self.setup_successful = False
-        self.measurement_history = {} # To store the last 100 values: {name: deque}
-        self.last_temp_update_time = 0
-        self.cached_temps = (0, 0)  # (adc_temp, board_temp)
         self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
 
         # Histogram window for measurements
         self.histogram_window = HistogramWindow(self, self.plot_manager)
-        self.histogram_timer = QtCore.QTimer()
 
-        # 6. Setup timers for data acquisition and measurement updates
+        # 6. Initialize measurements manager (handles table, histogram, etc.)
+        self.measurements = MeasurementsManager(self)
+
+        # 7. Setup timers for data acquisition and measurement updates
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update_plot_loop)
         self.timer2 = QtCore.QTimer()
-        self.timer2.timeout.connect(self.update_measurements_display)
+        self.timer2.timeout.connect(self.measurements.update_measurements_display)
         self.status_timer = QtCore.QTimer()
         self.status_timer.timeout.connect(self.update_status_bar)
-
-        # Setup selection tracking for measurement table
-        self.ui.tableView.selectionModel().selectionChanged.connect(self.on_measurement_selection_changed)
-
-        self.histogram_timer.timeout.connect(self.update_histogram_display)
-        self.current_histogram_measurement = None
 
         # 7. Run the main initialization and hardware setup sequence
         if self.state.num_board > 0:
@@ -226,7 +126,7 @@ class MainWindow(TemplateBaseClass):
         QtCore.QTimer.singleShot(10, self._sync_initial_ui_state)
 
         # Perform an initial adjustment of the table geometry
-        self._adjust_table_view_geometry()
+        self.measurements.adjust_table_view_geometry()
 
         # Set column widths for the measurement table
         self.ui.tableView.setColumnWidth(0, 135)  # Measurement name column
@@ -235,34 +135,6 @@ class MainWindow(TemplateBaseClass):
         self.ui.tableView.setColumnWidth(3, 80)  # Measurement rms column
         self.show()
 
-    def on_measurement_selection_changed(self, selected, deselected):
-        """Handle measurement table selection changes."""
-        # Get selected indexes
-        indexes = self.ui.tableView.selectionModel().selectedIndexes()
-
-        if indexes:
-            # Get the first selected row (column 0 = measurement name)
-            row = indexes[0].row()
-            name_item = self.measurement_model.item(row, 0)
-
-            if name_item:
-                measurement_name = name_item.text().split(' (')[0]  # Remove unit suffix
-
-                if measurement_name in self.measurement_history:
-                    self.current_histogram_measurement = measurement_name
-                    self.histogram_window.position_relative_to_table(self.ui.tableView, self.ui.plot)
-                    self.histogram_window.show()
-                    
-                    # Get color from active channel
-                    brush_color = self.plot_manager.linepens[self.state.activexychannel].color()
-                    self.histogram_window.update_histogram(measurement_name, 
-                                                          self.measurement_history[measurement_name],
-                                                          brush_color)
-                    if not self.histogram_timer.isActive():
-                        self.histogram_timer.start(100)  # Update at 10 Hz
-        else:
-            # No selection - hide histogram
-                self.hide_histogram()
 
     def _sync_initial_ui_state(self):
         """A one-time function to sync the UI's visual state after the window has loaded."""
@@ -273,23 +145,6 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionPan_and_zoom.setChecked(False)
         self.plot_manager.set_pan_and_zoom(False)
 
-    def update_histogram_display(self):
-        """Update the histogram window with current data."""
-        if self.current_histogram_measurement and self.histogram_window.isVisible():
-            if self.current_histogram_measurement in self.measurement_history:
-                # Get color from active channel
-                brush_color = self.plot_manager.linepens[self.state.activexychannel].color()
-                self.histogram_window.update_histogram(
-                    self.current_histogram_measurement,
-                    self.measurement_history[self.current_histogram_measurement],
-                    brush_color
-                )
-    
-    def hide_histogram(self):
-        """Hide the histogram window and stop updates."""
-        self.histogram_window.hide()
-        self.histogram_timer.stop()
-        self.current_histogram_measurement = None
 
     def _sync_board_settings_to_hardware(self, board_idx):
         """
@@ -696,155 +551,25 @@ class MainWindow(TemplateBaseClass):
         if self.recorder.is_recording: status_text += ", Recording to "+str(self.recorder.file_handle.name)
         self.ui.statusBar.showMessage(status_text)
 
-    def update_measurements_display(self):
-        """Slow timer callback to update measurements in the table view without clearing it."""
-        active_measurements = set()
-
-        def _set_measurement(name, value, unit=""):
-            """Helper to add or update a measurement row in the table."""
-            active_measurements.add(name)
-            value = round(value, 2)
-            if unit != "":
-                unit = " (" + unit + ")"
-
-            # Initialize history deque if this is a new measurement
-            if name not in self.measurement_history:
-                self.measurement_history[name] = deque(maxlen=100)
-
-            # Add current value to history
-            self.measurement_history[name].append(value)
-
-            # Calculate average and RMS
-            history = self.measurement_history[name]
-            avg_value = round(np.mean(history), 2)
-            rms_value = round(np.std(history), 2)
-
-            if name in self.measurement_items:
-                # Update existing item's value, average, and RMS
-                self.measurement_items[name][1].setText(str(value))
-                self.measurement_items[name][0].setText(name + unit)
-                self.measurement_items[name][2].setText(str(avg_value))
-                self.measurement_items[name][3].setText(str(rms_value))
-            else:
-                # Add new row and store items
-                name_item = QStandardItem(name + unit)
-                value_item = QStandardItem(str(value))
-                avg_item = QStandardItem(str(avg_value))
-                rms_item = QStandardItem(str(rms_value))
-                self.measurement_model.appendRow([name_item, value_item, avg_item, rms_item])
-                self.measurement_items[name] = (name_item, value_item, avg_item, rms_item)
-
-        if self.state.dodrawing:
-            if self.ui.actionTrigger_thresh.isChecked():
-                hline_val = self.plot_manager.otherlines['hline'].value()
-                _set_measurement("Trig threshold", hline_val, "div")
-
-            if self.ui.actionN_persist_lines.isChecked():
-                num_persist = len(self.plot_manager.persist_lines)
-                _set_measurement("Persist lines", num_persist)
-
-            if self.ui.actionTemperatures.isChecked():
-                # Only read temperatures once per second (slow USB operation)
-                current_time = time.time()
-                if current_time - self.last_temp_update_time >= 1.0:
-                    if self.state.num_board > 0:
-                        active_usb = self.controller.usbs[self.state.activeboard]
-                        adctemp, boardtemp = gettemps(active_usb)
-                        self.cached_temps = (adctemp, boardtemp)
-                        self.last_temp_update_time = current_time
-
-                # Always call _set_measurement with cached values to keep the row active
-                if self.state.num_board > 0:
-                    _set_measurement("ADC temp", self.cached_temps[0], "\u00b0C")
-                    _set_measurement("Board temp", self.cached_temps[1], "\u00b0C")
-
-            if hasattr(self, 'xydata'):
-                x_data_for_analysis = self.plot_manager.lines[self.state.activexychannel].xData
-                y_data_for_analysis = self.plot_manager.lines[self.state.activexychannel].yData
-
-                if y_data_for_analysis is not None and len(y_data_for_analysis) > 0:
-                    vline_val = self.plot_manager.otherlines['vline'].value()
-                    measurements, fit_results = self.processor.calculate_measurements(
-                        x_data_for_analysis, y_data_for_analysis, vline_val,
-                        do_risetime_calc=self.ui.actionRisetime.isChecked()
-                    )
-
-                    if self.ui.actionMean.isChecked(): _set_measurement("Mean", measurements.get('Mean', 0), "mV")
-                    if self.ui.actionRMS.isChecked(): _set_measurement("RMS", measurements.get('RMS', 0), "mV")
-                    if self.ui.actionMinimum.isChecked(): _set_measurement("Min", measurements.get('Min', 0), "mV")
-                    if self.ui.actionMaximum.isChecked(): _set_measurement("Max", measurements.get('Max', 0), "mV")
-                    if self.ui.actionVpp.isChecked(): _set_measurement("Vpp", measurements.get('Vpp', 0), "mV")
-                    if self.ui.actionFreq.isChecked():
-                        freq = measurements.get('Freq', 0)
-                        freq, unit = format_freq(freq, "Hz", False)
-                        _set_measurement("Freq", freq, unit)
-                    if self.ui.actionRisetime.isChecked():
-                        self.plot_manager.update_risetime_fit_lines(fit_results)
-                        risetime_val = measurements.get('Risetime', 0)
-                        if math.isfinite(risetime_val): _set_measurement("Risetime", risetime_val, "ns")
-                        if self.ui.actionRisetime_error.isChecked():
-                            risetime_err_val = measurements.get('Risetime error', 0)
-                            if math.isfinite(risetime_err_val):_set_measurement("Risetime error", risetime_err_val, "ns")
-
-        # Remove stale measurements that are no longer selected
-        stale_keys = list(self.measurement_items.keys() - active_measurements)
-
-        rows_to_remove = []
-        for key in stale_keys:
-            # Find the item in the model by its text to avoid accessing a deleted C++ object
-            items = self.measurement_model.findItems(key, QtCore.Qt.MatchStartsWith)
-            if items:
-                rows_to_remove.append(items[0].row())
-
-        # Remove rows from the model, from bottom to top, to avoid index shifting issues
-        for row in sorted(list(set(rows_to_remove)), reverse=True):
-            self.measurement_model.removeRow(row)
-
-        # Now, clean up the tracking dictionary and history
-        for key in stale_keys:
-            if key in self.measurement_items:
-                del self.measurement_items[key]
-            if key in self.measurement_history:
-                del self.measurement_history[key]
-
-    def _adjust_table_view_geometry(self):
-        """Sets the table view geometry to fill the bottom of the side panel."""
-        frame_height = self.ui.frame.height()
-        table_top_y = 600  # The Y coordinate where the table should start
-        table_height = frame_height - table_top_y
-
-        # Ensure the height is not negative if the window is very short
-        if table_height < 50:
-            table_height = 50
-
-        # Also account for the frame's width
-        frame_width = self.ui.frame.width()
-
-        self.ui.tableView.setGeometry(
-            0,            # x
-            table_top_y,  # y
-            frame_width,  # width
-            table_height  # height
-        )
 
     def resizeEvent(self, event):
         """Handles window resize events to adjust the table view."""
         super().resizeEvent(event)  # Call the parent's resize event
-        
+
         # Close histogram window when main window resizes
         if self.histogram_window.isVisible():
-            self.hide_histogram()
+            self.measurements.hide_histogram()
 
         # Use a single shot timer to ensure the layout has settled before adjusting
-        QtCore.QTimer.singleShot(1, self._adjust_table_view_geometry)
-    
+        QtCore.QTimer.singleShot(1, self.measurements.adjust_table_view_geometry)
+
     def moveEvent(self, event):
         """Handles window move events."""
         super().moveEvent(event)
 
         # Close histogram window when main window moves
         if self.histogram_window.isVisible():
-            self.hide_histogram()
+            self.measurements.hide_histogram()
 
     def allocate_xy_data(self):
         """Creates or re-sizes the numpy arrays for storing waveform data."""
