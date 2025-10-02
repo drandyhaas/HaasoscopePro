@@ -305,7 +305,7 @@ class MainWindow(TemplateBaseClass):
         #    when the primary (even) board of a pair is selected.
         can_change_oversampling = (s.num_board > 1 and s.activeboard % 2 == 0 and not s.dotwochannel[s.activeboard])
         self.ui.oversampCheck.setEnabled(can_change_oversampling)
-        self.ui.interleavedCheck.setEnabled(can_change_oversampling)
+        self.ui.interleavedCheck.setEnabled(can_change_oversampling and self.ui.oversampCheck.isChecked())
 
         # Get the model item for "Channel 1" (which is at index 1)
         chan1_item = self.ui.trigchan_comboBox.model().item(1)
