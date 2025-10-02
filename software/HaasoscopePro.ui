@@ -2138,6 +2138,7 @@ Outlined if triggering on this channel</string>
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
+    <addaction name="actionAuto_oversample_alignment"/>
     <addaction name="actionDo_autocalibration"/>
    </widget>
    <widget class="QMenu" name="menuAdvanced">
@@ -2229,7 +2230,7 @@ Outlined if triggering on this channel</string>
   </action>
   <action name="actionDo_autocalibration">
    <property name="text">
-    <string>Oversampling time alignment</string>
+    <string>Oversample alignment</string>
    </property>
    <property name="toolTip">
     <string>Find the best delay and fine delay</string>
@@ -2541,6 +2542,17 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Risetime error</string>
+   </property>
+  </action>
+  <action name="actionAuto_oversample_alignment">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Auto oversample alignment and interleave</string>
    </property>
   </action>
  </widget>

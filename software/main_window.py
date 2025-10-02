@@ -606,6 +606,8 @@ class MainWindow(TemplateBaseClass):
                 self.autocalib_collector.apply_calibration()
                 s.dodrawing = self.autocalib_collector.was_drawing
                 self.autocalib_collector = None
+                if self.ui.actionAuto_oversample_alignment.isChecked():
+                    self.ui.interleavedCheck.setChecked(True)
 
         # --- Plotting Logic: Switch between Time Domain and XY Mode ---
         if self.state.xy_mode:
@@ -1605,6 +1607,8 @@ class MainWindow(TemplateBaseClass):
         if bool(checked):
             self.ui.interleavedCheck.setEnabled(True)
             self.ui.twochanCheck.setEnabled(False)
+            if self.ui.actionAuto_oversample_alignment.isChecked():
+                autocalibration(self)
         else:
             self.ui.interleavedCheck.setEnabled(False)
             self.ui.interleavedCheck.setChecked(False)
