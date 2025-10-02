@@ -35,6 +35,7 @@ class MeasurementsManager:
 
         # Histogram tracking
         self.current_histogram_measurement = None
+        self.current_histogram_unit = ""
 
         # Setup histogram timer
         self.histogram_timer = QtCore.QTimer()
@@ -54,10 +55,16 @@ class MeasurementsManager:
             name_item = self.measurement_model.item(row, 0)
 
             if name_item:
-                measurement_name = name_item.text().split(' (')[0]  # Remove unit suffix
+                full_text = name_item.text()
+                measurement_name = full_text.split(' (')[0]  # Remove unit suffix
+                # Extract unit if present
+                unit = ""
+                if ' (' in full_text and ')' in full_text:
+                    unit = full_text.split(' (')[1].split(')')[0]
 
                 if measurement_name in self.measurement_history:
                     self.current_histogram_measurement = measurement_name
+                    self.current_histogram_unit = unit
                     self.histogram_window.position_relative_to_table(self.ui.tableView, self.ui.plot)
                     self.histogram_window.show()
 
@@ -65,7 +72,8 @@ class MeasurementsManager:
                     brush_color = self.plot_manager.linepens[self.state.activexychannel].color()
                     self.histogram_window.update_histogram(measurement_name,
                                                           self.measurement_history[measurement_name],
-                                                          brush_color)
+                                                          brush_color,
+                                                          unit)
                     if not self.histogram_timer.isActive():
                         self.histogram_timer.start(100)  # Update at 10 Hz
         else:
@@ -81,7 +89,8 @@ class MeasurementsManager:
                 self.histogram_window.update_histogram(
                     self.current_histogram_measurement,
                     self.measurement_history[self.current_histogram_measurement],
-                    brush_color
+                    brush_color,
+                    self.current_histogram_unit
                 )
 
     def hide_histogram(self):

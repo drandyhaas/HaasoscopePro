@@ -51,7 +51,7 @@ class HistogramWindow(QtWidgets.QWidget):
 
         self.bar_graph = None
 
-    def update_histogram(self, measurement_name, values, brush_color=None):
+    def update_histogram(self, measurement_name, values, brush_color=None, unit=""):
         """Update the histogram with new data."""
         if len(values) == 0:
             return
@@ -70,8 +70,14 @@ class HistogramWindow(QtWidgets.QWidget):
         else:
             self.bar_graph.setOpts(x=x[:-1], height=y, width=(x[1]-x[0])*0.8, brush=brush_color)
 
-        # Update title and axis
+        # Update title and axis label with unit
         self.plot_widget.setTitle(f'{measurement_name} Distribution (n={len(values)})', color='grey')
+
+        # Update bottom axis label with unit if provided
+        if unit:
+            self.plot_widget.setLabel('bottom', f'Value ({unit})')
+        else:
+            self.plot_widget.setLabel('bottom', 'Value')
 
     def position_relative_to_table(self, table_widget, main_plot_widget):
         """Position the window to the left of the measurement table, with bottom aligned to main plot."""
