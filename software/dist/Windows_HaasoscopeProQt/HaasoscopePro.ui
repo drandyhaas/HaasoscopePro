@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1221</width>
-    <height>800</height>
+    <width>1225</width>
+    <height>895</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -43,21 +43,6 @@
       <property name="frameShadow">
        <enum>QFrame::Raised</enum>
       </property>
-      <widget class="QTextBrowser" name="textBrowser">
-       <property name="geometry">
-        <rect>
-         <x>0</x>
-         <y>600</y>
-         <width>400</width>
-         <height>400</height>
-        </rect>
-       </property>
-       <property name="font">
-        <font>
-         <family>Arial</family>
-        </font>
-       </property>
-      </widget>
       <widget class="QGroupBox" name="groupBox_2">
        <property name="geometry">
         <rect>
@@ -159,7 +144,7 @@
        <widget class="QLabel" name="label_2">
         <property name="geometry">
          <rect>
-          <x>30</x>
+          <x>40</x>
           <y>360</y>
           <width>71</width>
           <height>16</height>
@@ -294,7 +279,7 @@
        <widget class="QPushButton" name="timeslowButton">
         <property name="geometry">
          <rect>
-          <x>110</x>
+          <x>130</x>
           <y>380</y>
           <width>61</width>
           <height>21</height>
@@ -315,7 +300,7 @@
        <widget class="QPushButton" name="timefastButton">
         <property name="geometry">
          <rect>
-          <x>110</x>
+          <x>130</x>
           <y>360</y>
           <width>61</width>
           <height>21</height>
@@ -543,11 +528,11 @@
        </widget>
        <widget class="QLineEdit" name="timebaseBox">
         <property name="enabled">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
         <property name="geometry">
          <rect>
-          <x>10</x>
+          <x>20</x>
           <y>380</y>
           <width>91</width>
           <height>20</height>
@@ -559,7 +544,7 @@
          </font>
         </property>
         <property name="toolTip">
-         <string>Timebase factor (power of 3.2 GS/s)</string>
+         <string>Time per &quot;division&quot; (1/10th of screen)</string>
         </property>
         <property name="text">
          <string>0</string>
@@ -590,7 +575,7 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>73</y>
+          <y>140</y>
           <width>61</width>
           <height>16</height>
          </rect>
@@ -608,7 +593,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>71</y>
+          <y>138</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -641,7 +626,7 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>49</y>
+          <y>116</y>
           <width>61</width>
           <height>16</height>
          </rect>
@@ -659,7 +644,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>47</y>
+          <y>114</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -692,7 +677,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>100</y>
+          <y>20</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -725,7 +710,7 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>102</y>
+          <y>22</y>
           <width>61</width>
           <height>16</height>
          </rect>
@@ -743,7 +728,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>128</y>
+          <y>48</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -776,7 +761,7 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>130</y>
+          <y>50</y>
           <width>61</width>
           <height>20</height>
          </rect>
@@ -789,91 +774,6 @@
         <property name="text">
          <string>Upsample</string>
         </property>
-       </widget>
-       <widget class="QLabel" name="label_24">
-        <property name="geometry">
-         <rect>
-          <x>90</x>
-          <y>20</y>
-          <width>41</width>
-          <height>20</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="text">
-         <string>LPF</string>
-        </property>
-       </widget>
-       <widget class="QComboBox" name="lpfBox">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>20</y>
-          <width>71</width>
-          <height>22</height>
-         </rect>
-        </property>
-        <property name="toolTip">
-         <string>Frequency of low pass filter applied (MHz)</string>
-        </property>
-        <property name="currentText">
-         <string>Off</string>
-        </property>
-        <property name="currentIndex">
-         <number>0</number>
-        </property>
-        <property name="maxVisibleItems">
-         <number>10</number>
-        </property>
-        <item>
-         <property name="text">
-          <string>Off</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>1</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>5</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>10</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>20</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>50</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>100</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>200</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>400</string>
-         </property>
-        </item>
        </widget>
       </widget>
       <widget class="QGroupBox" name="viewgroupBox">
@@ -893,32 +793,11 @@
        <property name="title">
         <string>View options</string>
        </property>
-       <widget class="QCheckBox" name="markerCheck">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>40</y>
-          <width>111</width>
-          <height>17</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>Whether to add markers to the samples</string>
-        </property>
-        <property name="text">
-         <string>Markers</string>
-        </property>
-       </widget>
        <widget class="QLabel" name="label_16">
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>102</y>
+          <y>112</y>
           <width>61</width>
           <height>16</height>
          </rect>
@@ -936,7 +815,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>100</y>
+          <y>110</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -965,35 +844,11 @@
          <number>20</number>
         </property>
        </widget>
-       <widget class="QCheckBox" name="rightaxisCheck">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>20</y>
-          <width>111</width>
-          <height>17</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>Whether to draw the right side axis for the selected channel</string>
-        </property>
-        <property name="text">
-         <string>Voltage axis</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
        <widget class="QLabel" name="label_23">
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>130</y>
+          <y>140</y>
           <width>61</width>
           <height>20</height>
          </rect>
@@ -1011,7 +866,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>128</y>
+          <y>138</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -1044,7 +899,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>60</y>
+          <y>50</y>
           <width>111</width>
           <height>17</height>
          </rect>
@@ -1068,7 +923,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>80</y>
+          <y>70</y>
           <width>111</width>
           <height>17</height>
          </rect>
@@ -1083,6 +938,57 @@
         </property>
         <property name="text">
          <string>Persist average</string>
+        </property>
+       </widget>
+       <widget class="QSpinBox" name="persistTbox">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>20</y>
+          <width>51</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Time each line takes to fade out (50*2^x ms)</string>
+        </property>
+        <property name="accelerated">
+         <bool>false</bool>
+        </property>
+        <property name="suffix">
+         <string/>
+        </property>
+        <property name="minimum">
+         <number>0</number>
+        </property>
+        <property name="maximum">
+         <number>12</number>
+        </property>
+        <property name="value">
+         <number>0</number>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_13">
+        <property name="geometry">
+         <rect>
+          <x>70</x>
+          <y>22</y>
+          <width>51</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="text">
+         <string>Persist</string>
         </property>
        </widget>
       </widget>
@@ -1665,85 +1571,6 @@ Outlined if triggering on this channel</string>
          </property>
         </item>
        </widget>
-       <widget class="QSpinBox" name="persistTbox">
-        <property name="geometry">
-         <rect>
-          <x>50</x>
-          <y>340</y>
-          <width>51</width>
-          <height>20</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>Time each line takes to fade out (50*2^x ms)</string>
-        </property>
-        <property name="accelerated">
-         <bool>false</bool>
-        </property>
-        <property name="suffix">
-         <string/>
-        </property>
-        <property name="minimum">
-         <number>0</number>
-        </property>
-        <property name="maximum">
-         <number>12</number>
-        </property>
-        <property name="value">
-         <number>0</number>
-        </property>
-       </widget>
-       <widget class="QLineEdit" name="persistText">
-        <property name="geometry">
-         <rect>
-          <x>107</x>
-          <y>340</y>
-          <width>71</width>
-          <height>20</height>
-         </rect>
-        </property>
-        <property name="inputMask">
-         <string/>
-        </property>
-        <property name="text">
-         <string notr="true">0 s</string>
-        </property>
-        <property name="maxLength">
-         <number>50</number>
-        </property>
-        <property name="frame">
-         <bool>false</bool>
-        </property>
-        <property name="cursorPosition">
-         <number>3</number>
-        </property>
-        <property name="readOnly">
-         <bool>true</bool>
-        </property>
-       </widget>
-       <widget class="QLabel" name="label_13">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>340</y>
-          <width>47</width>
-          <height>19</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="text">
-         <string>Persist</string>
-        </property>
-       </widget>
        <widget class="QCheckBox" name="twochanCheck">
         <property name="geometry">
          <rect>
@@ -1763,6 +1590,91 @@ Outlined if triggering on this channel</string>
         </property>
         <property name="text">
          <string>Two channels</string>
+        </property>
+       </widget>
+       <widget class="QComboBox" name="lpfBox">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>340</y>
+          <width>91</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Frequency of low pass filter applied (MHz)</string>
+        </property>
+        <property name="currentText">
+         <string>Off</string>
+        </property>
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <property name="maxVisibleItems">
+         <number>10</number>
+        </property>
+        <item>
+         <property name="text">
+          <string>Off</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>1 MHz</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>5 MHz</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>10 MHz</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>20 MHz</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>50 MHz</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>100 MHz</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>200 MHz</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>400 MHz</string>
+         </property>
+        </item>
+       </widget>
+       <widget class="QLabel" name="label_24">
+        <property name="geometry">
+         <rect>
+          <x>120</x>
+          <y>342</y>
+          <width>61</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="text">
+         <string>Low pass</string>
         </property>
        </widget>
       </widget>
@@ -2180,6 +2092,19 @@ Outlined if triggering on this channel</string>
         </property>
        </widget>
       </widget>
+      <widget class="QTableView" name="tableView">
+       <property name="geometry">
+        <rect>
+         <x>0</x>
+         <y>600</y>
+         <width>400</width>
+         <height>231</height>
+        </rect>
+       </property>
+       <property name="alternatingRowColors">
+        <bool>true</bool>
+       </property>
+      </widget>
      </widget>
     </item>
    </layout>
@@ -2189,7 +2114,7 @@ Outlined if triggering on this channel</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1221</width>
+     <width>1225</width>
      <height>21</height>
     </rect>
    </property>
@@ -2213,8 +2138,8 @@ Outlined if triggering on this channel</string>
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
+    <addaction name="actionAuto_oversample_alignment"/>
     <addaction name="actionDo_autocalibration"/>
-    <addaction name="actionOversampling_mean_and_RMS"/>
    </widget>
    <widget class="QMenu" name="menuAdvanced">
     <property name="title">
@@ -2256,6 +2181,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionVpp"/>
     <addaction name="actionFreq"/>
     <addaction name="actionRisetime"/>
+    <addaction name="actionRisetime_error"/>
     <addaction name="actionRisetime_fit_lines"/>
    </widget>
    <widget class="QMenu" name="menuView">
@@ -2268,9 +2194,11 @@ Outlined if triggering on this channel</string>
     <addaction name="actionDrawing"/>
     <addaction name="actionHigh_resolution"/>
     <addaction name="actionGrid"/>
+    <addaction name="actionMarkers"/>
     <addaction name="actionXY_Plot"/>
     <addaction name="actionLine_color"/>
     <addaction name="actionPan_and_zoom"/>
+    <addaction name="actionVoltage_axis"/>
    </widget>
    <widget class="QMenu" name="menuReference">
     <property name="title">
@@ -2302,7 +2230,7 @@ Outlined if triggering on this channel</string>
   </action>
   <action name="actionDo_autocalibration">
    <property name="text">
-    <string>Oversampling time alignment</string>
+    <string>Oversample alignment</string>
    </property>
    <property name="toolTip">
     <string>Find the best delay and fine delay</string>
@@ -2524,7 +2452,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>N persist lines</string>
+    <string>Persist lines</string>
    </property>
   </action>
   <action name="actionToggle_extra_trig_stabilizer">
@@ -2587,6 +2515,44 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Show reference(s)</string>
+   </property>
+  </action>
+  <action name="actionVoltage_axis">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Voltage axis</string>
+   </property>
+  </action>
+  <action name="actionMarkers">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Markers</string>
+   </property>
+  </action>
+  <action name="actionRisetime_error">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Risetime error</string>
+   </property>
+  </action>
+  <action name="actionAuto_oversample_alignment">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Auto oversample alignment and interleave</string>
    </property>
   </action>
  </widget>

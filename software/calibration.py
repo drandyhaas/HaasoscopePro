@@ -22,6 +22,10 @@ class AutocalibrationCollector:
 
     def collect_event_data(self):
         """Called by update_plot_loop to collect data from the current event."""
+
+        #calibrate mean and RMS, which could affect edges slightly
+        do_meanrms_calibration(self.main_window)
+
         # Get data from the current event
         c1data = self.main_window.xydata[self.c1]
         c2data = self.main_window.xydata[self.c2]
@@ -35,22 +39,29 @@ class AutocalibrationCollector:
         edge1 = find_crossing_distance(y1, hline, vline, 0, self.sample_spacing)
         edge2 = find_crossing_distance(y2, hline, vline, 0, self.sample_spacing)
 
-        self.events_collected += 1
-        if self.events_collected == 0:
-            #print(f"Event 1: Found {edge1:.2f} in signal 1, {edge2:.2f} in signal 2")
-            return False # skip the first event, since phases or other things may have changed
+        if edge1 is not None and edge2 is not None:
 
-        # Calculate offsets for this event
-        timeshift = edge1 - edge2 - (self.sample_spacing/2.0) + self.s.tad[self.s.activeboard]/self.TAD_PER_HALF_SAMPLE
-        self.timeshifts.append(timeshift)
+            self.events_collected += 1
+            if self.events_collected <5:
+                return False # skip the first N events since calibrations and relays might be changing
+            if self.events_collected == 10:
+                print("  Applying rough calibration on event 10") # helps with mean RMS calibration
+                self.apply_calibration(dotad=False)
+                return False
 
-        if self.events_collected % 20 == 0:
-            print(f"  Processed {self.events_collected}/{self.num_events} events for oversampling calibration...")
+            # Calculate offsets for this event
+            timeshift = edge1 - edge2 - (self.sample_spacing/2.0) + self.s.tad[self.s.activeboard]/self.TAD_PER_HALF_SAMPLE
+            self.timeshifts.append(timeshift)
 
-        # Return True if we've collected enough events
-        return self.events_collected >= self.num_events
+            if self.events_collected % 20 == 0:
+                print(f"  Processed {self.events_collected}/{self.num_events} events for oversampling calibration...")
 
-    def apply_calibration(self):
+            # Return True if we've collected enough events
+            return self.events_collected >= self.num_events
+
+        else: return False
+
+    def apply_calibration(self, dotad=True):
         """Apply the averaged calibration after collecting all events."""
         if self.events_collected == 0:
             print("Error: No valid events collected for calibration?!")
@@ -77,24 +88,26 @@ class AutocalibrationCollector:
         # Apply the averaged corrections
         self.s.toff += sample_offset
         self.main_window.ui.ToffBox.setValue(self.s.toff)
-        if tadshiftround > 255:
-            print("Required TAD shift is too large. Adjusting PLL a step down on other board.")
-            self.main_window.controller.do_phase(self.s.activeboard + 1, plloutnum=0, updown=0, pllnum=0)
-            self.main_window.controller.do_phase(self.s.activeboard + 1, plloutnum=1, updown=0, pllnum=0)
-            self.main_window.controller.do_phase(self.s.activeboard + 1, plloutnum=2, updown=0, pllnum=0)
-            self.s.extraphasefortad[self.s.activeboard + 1] = 1
-            print("Asking for re-run of calibration.")
-            self.s.triggerautocalibration[self.s.activeboard] = True
-        else:
-            print("Setting final fine delay:", tadshiftround)
-            for t in range(abs(self.s.tad[self.s.activeboard] - tadshiftround) + 5):
-                current_tad = self.main_window.ui.tadBox.value()
-                if abs(current_tad - tadshiftround) < 1:
-                    break
-                new_tad = current_tad + 1 if current_tad < tadshiftround else current_tad - 1
-                self.main_window.ui.tadBox.setValue(new_tad)
-                time.sleep(.01)
-            print("Autocalibration finished.")
+        if dotad:
+            if tadshiftround > 255:
+                print("Required TAD shift is too large. Adjusting PLL a step down on other board.")
+                self.main_window.controller.do_phase(self.s.activeboard + 1, plloutnum=0, updown=0, pllnum=0)
+                self.main_window.controller.do_phase(self.s.activeboard + 1, plloutnum=1, updown=0, pllnum=0)
+                self.main_window.controller.do_phase(self.s.activeboard + 1, plloutnum=2, updown=0, pllnum=0)
+                self.s.extraphasefortad[self.s.activeboard + 1] = 1
+                print("Asking for re-run of calibration.")
+                self.s.triggerautocalibration[self.s.activeboard] = True
+            else:
+                print("Setting final fine delay:", tadshiftround)
+                for t in range(abs(self.s.tad[self.s.activeboard] - tadshiftround) + 5):
+                    current_tad = self.main_window.ui.tadBox.value()
+                    if abs(current_tad - tadshiftround) < 1:
+                        break
+                    new_tad = current_tad + 1 if current_tad < tadshiftround else current_tad - 1
+                    self.main_window.ui.tadBox.setValue(new_tad)
+                    time.sleep(.01)
+                print("Autocalibration finished.")
+        self.timeshifts = [] # clear calibrations
 
 
 def autocalibration(main_window, num_events=100):
@@ -128,8 +141,18 @@ def do_meanrms_calibration(main_window, doprint=False):
             c2_idx = (board_idx + 1) * s.num_chan_per_board
 
             # Get y-data for both channels within the fit window
-            yc1 = main_window.xydata[c1_idx][1]
-            yc2 = main_window.xydata[c2_idx][1]
+            xf1 = main_window.xydata[c1_idx][0]
+            xf2 = main_window.xydata[c2_idx][0]
+            yf1 = main_window.xydata[c1_idx][1]
+            yf2 = main_window.xydata[c2_idx][1]
+
+            fitwidth = (s.max_x - s.min_x) * s.downsamplezoom * 0.4
+            vline = main_window.plot_manager.otherlines['vline'].value()
+            #hline = self.main_window.plot_manager.otherlines['hline'].value()
+            #xc1 = xf1[(xf1 > vline - fitwidth) & (xf1 < vline + fitwidth)]
+            #xc2 = xf2[(xf2> vline - fitwidth) & (xf2 < vline + fitwidth)]
+            yc1 = yf1[(xf1 > vline - fitwidth) & (xf1 < vline + fitwidth)]
+            yc2 = yf2[(xf2 > vline - fitwidth) & (xf2 < vline + fitwidth)]
 
             if len(yc1) < 10 or len(yc2) < 10:
                 print("Mean/RMS calibration failed: not enough data in window.")
@@ -147,9 +170,11 @@ def do_meanrms_calibration(main_window, doprint=False):
 
             # The correction to ADD to the secondary data is (primary - secondary)
             mean_cor = mean_primary - mean_secondary
+            #print("mean_primary, mean_secondary:",mean_primary,mean_secondary)
             s.extrigboardmeancorrection[s.activeboard] += max(min(mean_cor,1),-1) # cap the correction just in case
 
             # The correction to MULTIPLY the secondary data by is (primary / secondary)
+            #print("std_primary, std_secondary:",std_primary,std_secondary)
             if std_primary > 0 and std_secondary > 0:
                 std_corr = std_primary / std_secondary
                 s.extrigboardstdcorrection[s.activeboard] *= max(min(std_corr,2),0.5) #  cap the correction just in case
