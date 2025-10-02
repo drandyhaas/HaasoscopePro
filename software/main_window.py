@@ -379,7 +379,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionHigh_resolution.triggered.connect(self.high_resolution_toggled)
 
         # Advanced/Hardware controls
-        self.ui.pllresetButton.clicked.connect(lambda: self.controller.pllreset(self.state.activeboard))
+        self.ui.pllresetButton.clicked.connect(self.dopllreset)
         self.ui.tadBox.valueChanged.connect(self.tad_changed)
         self.ui.ToffBox.valueChanged.connect(lambda val: setattr(self.state, 'toff', val))
         self.ui.Auxout_comboBox.currentIndexChanged.connect(self.auxout_changed)
@@ -1627,6 +1627,10 @@ class MainWindow(TemplateBaseClass):
         self.time_changed()
         all_colors = [pen.color() for pen in self.plot_manager.linepens]
         self.controller.do_leds(all_colors)
+
+    def dopllreset(self):
+        while self.state.downsamplezoom>1: self.time_slow()
+        self.controller.pllreset(self.state.activeboard)
 
     def tad_changed(self, value):
         self.state.tad[self.state.activeboard] = value
