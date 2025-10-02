@@ -450,6 +450,7 @@ class MainWindow(TemplateBaseClass):
         #    when the primary (even) board of a pair is selected.
         can_change_oversampling = (s.num_board > 1 and s.activeboard % 2 == 0 and not s.dotwochannel[s.activeboard])
         self.ui.oversampCheck.setEnabled(can_change_oversampling)
+        self.ui.interleavedCheck.setEnabled(can_change_oversampling)
 
         # Get the model item for "Channel 1" (which is at index 1)
         chan1_item = self.ui.trigchan_comboBox.model().item(1)
@@ -586,6 +587,25 @@ class MainWindow(TemplateBaseClass):
             if s.dooversample[board_idx] and board_idx%2==0:
                 do_meanrms_calibration(self)
                 break
+
+        # Check if autocalibration is collecting data
+        if s.triggerautocalibration[s.activeboard]: autocalibration(self)
+        if hasattr(self, 'autocalib_collector') and self.autocalib_collector is not None:
+            if self.autocalib_collector.was_drawing is None:
+                self.autocalib_collector.was_drawing = s.dodrawing # remember if we were drawing before calibration
+                s.dodrawing = False
+                if s.extraphasefortad[s.activeboard + 1] and not s.triggerautocalibration[s.activeboard]:
+                    print("Resetting PLL extra phase. Adjusting PLL a step back up on other board.")
+                    self.controller.do_phase(s.activeboard + 1, plloutnum=0, updown=1, pllnum=0)
+                    self.controller.do_phase(s.activeboard + 1, plloutnum=1, updown=1, pllnum=0)
+                    self.controller.do_phase(s.activeboard + 1, plloutnum=2, updown=1, pllnum=0)
+                    s.extraphasefortad[s.activeboard + 1] = 0
+                s.triggerautocalibration[s.activeboard] = False
+            if self.autocalib_collector.collect_event_data():
+                # Done collecting, apply calibration
+                self.autocalib_collector.apply_calibration()
+                s.dodrawing = self.autocalib_collector.was_drawing
+                self.autocalib_collector = None
 
         # --- Plotting Logic: Switch between Time Domain and XY Mode ---
         if self.state.xy_mode:
@@ -1088,14 +1108,13 @@ class MainWindow(TemplateBaseClass):
             self.ui.actionXY_Plot.setChecked(False)
             self.plot_manager.toggle_xy_view(False, self.state.activeboard)
 
-
         # If in XY mode, update the pen color to match the new active board's CH1
         if self.state.xy_mode:
             ch0_index = self.state.activeboard * self.state.num_chan_per_board + 0
             new_pen = self.plot_manager.linepens[ch0_index]
             self.plot_manager.set_xy_pen(new_pen)
 
-        # NEW: Reset FFT analysis when channel changes
+        # Reset FFT analysis when channel changes
         if self.fftui:
             self.fftui.reset_analysis_state()
 
