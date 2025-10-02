@@ -329,7 +329,10 @@ class PlotManager(pg.QtCore.QObject):
         else:
             self.persist_timer.stop()
             self.clear_persist()
-        self.ui.persistText.setText(f"{self.persist_time / 1000.0} s")
+
+        # Update the spinbox tooltip to show the actual time value
+        time_str = f"{self.persist_time / 1000.0:.1f} s" if self.persist_time > 0 else "Off"
+        self.ui.persistTbox.setToolTip(f"Persistence time: {time_str}")
 
     def _add_to_persistence(self, x, y, line_idx):
         if len(self.persist_lines) >= self.max_persist_lines:
