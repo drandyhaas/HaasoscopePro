@@ -419,7 +419,7 @@
           <number>0</number>
          </property>
          <property name="maximum">
-          <number>100</number>
+          <number>255</number>
          </property>
          <property name="value">
           <number>2</number>
@@ -2183,6 +2183,8 @@ Outlined if triggering on this channel</string>
     <addaction name="actionRisetime"/>
     <addaction name="actionRisetime_error"/>
     <addaction name="actionRisetime_fit_lines"/>
+    <addaction name="separator"/>
+    <addaction name="actionEdge_fit_method"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -2303,7 +2305,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Risetime</string>
+    <string>Rise or fall time</string>
    </property>
   </action>
   <action name="actionTrigger_thresh">
@@ -2385,7 +2387,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Risetime fit lines</string>
+    <string>Rise or fall time fit lines</string>
    </property>
   </action>
   <action name="actionTake_screenshot">
@@ -2541,7 +2543,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Risetime error</string>
+    <string>Rise or fall time error</string>
    </property>
   </action>
   <action name="actionAuto_oversample_alignment">
@@ -2553,6 +2555,17 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Auto oversample alignment and interleave</string>
+   </property>
+  </action>
+  <action name="actionEdge_fit_method">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Edge fit method</string>
    </property>
   </action>
  </widget>

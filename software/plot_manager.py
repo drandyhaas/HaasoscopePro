@@ -201,6 +201,8 @@ class PlotManager(pg.QtCore.QObject):
                 if not is_oversample_secondary:
                     vline_time = self.otherlines['vline'].value()
                     hline_pos = (s.triggerlevel - 127) * s.yscale * 256
+                    # Include triggerdelta in the threshold
+                    hline_threshold = hline_pos + s.triggerdelta * s.yscale*256
 
                     fitwidth = (s.max_x - s.min_x)
                     xc = xdatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]
@@ -215,7 +217,7 @@ class PlotManager(pg.QtCore.QObject):
                         if s.fallingedge[li // 2]: yc = -yc
 
                         if xc.size > 1:
-                            distcorrtemp = find_crossing_distance(yc, hline_pos, vline_time, xc[0], xc[1] - xc[0])
+                            distcorrtemp = find_crossing_distance(yc, hline_threshold, vline_time, xc[0], xc[1] - xc[0])
                             if distcorrtemp is not None and abs(
                                     distcorrtemp) < s.distcorrtol * s.downsamplefactor / s.nsunits:
                                 xdatanew -= distcorrtemp

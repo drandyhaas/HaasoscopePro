@@ -71,8 +71,20 @@ def format_freq(freq_hz: float, suffix="Hz", dostr=True):
         else: return freq_hz / 1_000_000_000, "GHz"
 
 
-def find_crossing_distance(y_data, y_threshold, x_ref, x0=0.0, dx=1.0):
-    """Calculates the horizontal distance from a reference x-position to the closest threshold crossing."""
+def find_crossing_distance(y_data, y_threshold, x_ref, x0=0.0, dx=1.0, rising=True):
+    """Calculates the horizontal distance from a reference x-position to the closest threshold crossing.
+
+    Args:
+        y_data: Signal data
+        y_threshold: Threshold value to find crossings
+        x_ref: Reference x position
+        x0: Starting x position (default 0.0)
+        dx: Sample spacing (default 1.0)
+        rising: If True, find rising edge crossings (low to high). If False, find falling edge crossings (high to low).
+
+    Returns:
+        Distance from x_ref to the closest crossing, or None if no crossing found.
+    """
     # Find all indices where the data crosses the threshold
     crossings = np.where(np.diff(np.sign(y_data - y_threshold)))[0]
     if crossings.size == 0:
@@ -83,9 +95,15 @@ def find_crossing_distance(y_data, y_threshold, x_ref, x0=0.0, dx=1.0):
     y2 = y_data[crossings + 1]
     x1 = x0 + crossings * dx
 
-    # Avoid division by zero
+    # Filter crossings by direction
     delta_y = y2 - y1
-    valid_crossings = delta_y != 0
+    if rising:
+        # Rising edge: y2 > y1 (delta_y > 0)
+        valid_crossings = delta_y > 0
+    else:
+        # Falling edge: y2 < y1 (delta_y < 0)
+        valid_crossings = delta_y < 0
+
     if not np.any(valid_crossings):
         return None
 
@@ -232,6 +250,8 @@ class DataProcessor:
 
         vline_time = 4 * 10 * (s.triggerpos + 1.0) * (s.downsamplefactor / s.nsunits / s.samplerate)
         hline_pos = (s.triggerlevel - 127) * s.yscale * 256
+        # Include triggerdelta in the threshold
+        hline_threshold = hline_pos + s.triggerdelta * s.yscale*256
 
         # --- This is the Board-level alignment logic from the original drawchannels() ---
         if abs(s.totdistcorr[board_idx]) > s.distcorrtol * s.downsamplefactor:
@@ -254,7 +274,7 @@ class DataProcessor:
                 yc = thed[1][(thed[0] > vline_time - fitwidth) & (thed[0] < vline_time + fitwidth)]
                 if s.fallingedge[board_idx]: yc = -yc
                 if xc.size > 1:
-                    distcorrtemp = find_crossing_distance(yc, hline_pos, vline_time, xc[0], xc[1] - xc[0])
+                    distcorrtemp = find_crossing_distance(yc, hline_threshold, vline_time, xc[0], xc[1] - xc[0])
 
         if distcorrtemp is not None and abs(distcorrtemp) < s.distcorrtol * s.downsamplefactor / s.nsunits:
             s.distcorr[board_idx] = distcorrtemp
@@ -330,38 +350,65 @@ class DataProcessor:
         state = self.state
         fitwidth = (state.max_x - state.min_x) * state.fitwidthfraction
 
+        # Use "Falltime" for falling edges, "Risetime" for rising edges
+        time_label = "Falltime" if state.fallingedge[state.activeboard] else "Risetime"
+        error_label = f"{time_label} error"
+
         # Get data around trigger point
         xc = x_data[(x_data > vline - fitwidth) & (x_data < vline + fitwidth)]
         yc = y_data[(x_data > vline - fitwidth) & (x_data < vline + fitwidth)]
 
         if xc.size < 5:
-            measurements["Risetime"] = math.nan
-            measurements["Risetime error"] = math.nan
+            measurements[time_label] = math.nan
+            measurements[error_label] = math.nan
             return measurements, None
 
-        # Find the steepest section by calculating slopes with a sliding window
+        # Calculate signal min and max for edge validation using the FULL selected data
+        y_min = np.min(yc)
+        y_max = np.max(yc)
+        y_20_threshold = y_min + 0.2 * (y_max - y_min)
+        y_80_threshold = y_min + 0.8 * (y_max - y_min)
+
+        # Find the steepest section that extends from at least 20% to at least 80%
         window_size = max(5, min(10, xc.size // 3))  # Adaptive window size
-        max_abs_slope = 0
+        max_slope = 0
         best_start_idx = 0
+        found_valid_edge = False
 
         for i in range(xc.size - window_size):
             # Fit a line to this window
             x_window = xc[i:i+window_size]
             y_window = yc[i:i+window_size]
 
-            # Simple linear regression
-            coeffs = np.polyfit(x_window, y_window, 1)
-            slope = coeffs[0]
+            # Check if this window extends from at least 20% to at least 80%
+            y_window_min = np.min(y_window)
+            y_window_max = np.max(y_window)
 
-            # Adjust slope sign for falling edges
-            if state.fallingedge[state.activeboard]:
-                slope = -slope
+            if y_window_min <= y_20_threshold and y_window_max >= y_80_threshold:
+                # Simple linear regression
+                coeffs = np.polyfit(x_window, y_window, 1)
+                slope = coeffs[0]
 
-            if abs(slope) > abs(max_abs_slope):
-                max_abs_slope = slope
-                best_start_idx = i
+                # Adjust slope sign for falling edges
+                if state.fallingedge[state.activeboard]:
+                    slope = -slope
+                    if slope < max_slope:
+                        max_slope = slope
+                        best_start_idx = i
+                        found_valid_edge = True
+                else:
+                    if slope > max_slope:
+                        max_slope = slope
+                        best_start_idx = i
+                        found_valid_edge = True
 
-        # Fit a line to the steepest section
+        # If no valid edge found, return NaN
+        if not found_valid_edge:
+            measurements[time_label] = math.nan
+            measurements[error_label] = math.nan
+            return measurements, None
+
+        # Fit a line to the steepest valid section
         x_fit = xc[best_start_idx:best_start_idx+window_size]
         y_fit = yc[best_start_idx:best_start_idx+window_size]
 
@@ -380,8 +427,8 @@ class DataProcessor:
                 risetime = state.nsunits * 0.6 * abs(y_amp) / abs(slope)
                 risetimeerr = state.nsunits * 0.6 * abs(y_amp) * slope_err / (slope * slope)
 
-                measurements["Risetime"] = risetime
-                measurements["Risetime error"] = risetimeerr
+                measurements[time_label] = risetime
+                measurements[error_label] = risetimeerr
 
                 # Package results for plotting
                 fit_results = {
@@ -396,13 +443,13 @@ class DataProcessor:
                     'fit_type': 'edge'
                 }
             else:
-                measurements["Risetime"] = math.nan
-                measurements["Risetime error"] = math.nan
+                measurements[time_label] = math.nan
+                measurements[error_label] = math.nan
                 fit_results = None
 
         except (RuntimeError, ValueError, np.linalg.LinAlgError):
-            measurements["Risetime"] = math.nan
-            measurements["Risetime error"] = math.nan
+            measurements[time_label] = math.nan
+            measurements[error_label] = math.nan
             fit_results = None
 
         return measurements, fit_results

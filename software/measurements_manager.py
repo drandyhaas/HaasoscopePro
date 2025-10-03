@@ -170,7 +170,7 @@ class MeasurementsManager:
                     measurements, fit_results = self.processor.calculate_measurements(
                         x_data_for_analysis, y_data_for_analysis, vline_val,
                         do_risetime_calc=self.ui.actionRisetime.isChecked(),
-                        use_edge_fit=True
+                        use_edge_fit=self.ui.actionEdge_fit_method.isChecked()
                     )
 
                     if self.ui.actionMean.isChecked(): _set_measurement("Mean", measurements.get('Mean', 0), "mV")
@@ -182,13 +182,19 @@ class MeasurementsManager:
                         freq = measurements.get('Freq', 0)
                         freq, unit = format_freq(freq, "Hz", False)
                         _set_measurement("Freq", freq, unit)
+                    # Always update fit lines (will hide them if fit_results is None or risetime is unchecked)
+                    self.plot_manager.update_risetime_fit_lines(fit_results if self.ui.actionRisetime.isChecked() else None)
+
                     if self.ui.actionRisetime.isChecked():
-                        self.plot_manager.update_risetime_fit_lines(fit_results)
-                        risetime_val = measurements.get('Risetime', 0)
-                        if math.isfinite(risetime_val): _set_measurement("Risetime", risetime_val, "ns")
+                        # Check if this is a falling edge to use correct label
+                        time_label = "Falltime" if self.state.fallingedge[self.state.activeboard] else "Risetime"
+                        error_label = f"{time_label} error"
+
+                        risetime_val = measurements.get(time_label, 0)
+                        if math.isfinite(risetime_val): _set_measurement(time_label, risetime_val, "ns")
                         if self.ui.actionRisetime_error.isChecked():
-                            risetime_err_val = measurements.get('Risetime error', 0)
-                            if math.isfinite(risetime_err_val):_set_measurement("Risetime error", risetime_err_val, "ns")
+                            risetime_err_val = measurements.get(error_label, 0)
+                            if math.isfinite(risetime_err_val):_set_measurement(error_label, risetime_err_val, "ns")
 
         # Remove stale measurements that are no longer selected
         stale_keys = list(self.measurement_items.keys() - active_measurements)
