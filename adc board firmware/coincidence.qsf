@@ -393,6 +393,8 @@ set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to "asmi:inst4|asm
 set_location_assignment PIN_E2 -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_SCE"
 set_instance_assignment -name IO_MAXIMUM_TOGGLE_RATE "0 MHz" -to "asmi:inst4|asmi_asmi_parallel_0:asmi_parallel_0|sd2~ALTERA_SCE"
 set_global_assignment -name SMART_RECOMPILE ON
+set_location_assignment PIN_E16 -to exttrigin
+set_location_assignment PIN_B15 -to auxout
 set_global_assignment -name BDF_FILE coincidence.bdf
 set_global_assignment -name SDC_FILE coincidence.sdc
 set_global_assignment -name VERILOG_FILE command_processor.v
@@ -402,8 +404,9 @@ set_global_assignment -name VERILOG_FILE phase_detector.v
 set_global_assignment -name CDF_FILE Chain1.cdf
 set_global_assignment -name CDF_FILE Chain2.cdf
 set_global_assignment -name CDF_FILE Chain2compressed.cdf
-set_global_assignment -name QSYS_FILE asmi.qsys
 set_global_assignment -name QSYS_FILE clkctrl.qsys
+set_global_assignment -name QSYS_FILE asmi.qsys
+set_global_assignment -name QSYS_FILE remoteupdate.qsys
 set_global_assignment -name QIP_FILE lvds1.qip
 set_global_assignment -name QIP_FILE pll1.qip
 set_global_assignment -name QIP_FILE pll2.qip
@@ -425,6 +428,4 @@ set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/ftdi_245fifo/axi_stream
 set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/ftdi_245fifo/axi_stream_packing.v
 set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/ftdi_245fifo/axi_stream_downsizing.v
 set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/ftdi_245fifo/axi_stream_assert.v
-set_location_assignment PIN_E16 -to exttrigin
-set_location_assignment PIN_B15 -to auxout
 set_instance_assignment -name PARTITION_HIERARCHY root_partition -to | -section_id Top

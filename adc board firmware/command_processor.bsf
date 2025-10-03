@@ -21,9 +21,9 @@ https://fpgasoftware.intel.com/eula.
 */
 (header "symbol" (version "1.1"))
 (symbol
-	(rect 16 16 384 832)
+	(rect 16 16 384 864)
 	(text "command_processor" (rect 5 0 91 12)(font "Arial" ))
-	(text "inst" (rect 8 800 20 812)(font "Arial" ))
+	(text "inst" (rect 8 832 20 844)(font "Arial" ))
 	(port
 		(pt 0 32)
 		(input)
@@ -205,6 +205,34 @@ https://fpgasoftware.intel.com/eula.
 		(text "phase_diff_b[15..0]" (rect 0 0 76 12)(font "Arial" ))
 		(text "phase_diff_b[15..0]" (rect 21 427 97 439)(font "Arial" ))
 		(line (pt 0 432)(pt 16 432)(line_width 3))
+	)
+	(port
+		(pt 0 448)
+		(input)
+		(text "sample1_triggered[19..0]" (rect 0 0 95 12)(font "Arial" ))
+		(text "sample1_triggered[19..0]" (rect 21 443 116 455)(font "Arial" ))
+		(line (pt 0 448)(pt 16 448)(line_width 3))
+	)
+	(port
+		(pt 0 464)
+		(input)
+		(text "sample2_triggered[19..0]" (rect 0 0 96 12)(font "Arial" ))
+		(text "sample2_triggered[19..0]" (rect 21 459 117 471)(font "Arial" ))
+		(line (pt 0 464)(pt 16 464)(line_width 3))
+	)
+	(port
+		(pt 0 480)
+		(input)
+		(text "sample3_triggered[19..0]" (rect 0 0 96 12)(font "Arial" ))
+		(text "sample3_triggered[19..0]" (rect 21 475 117 487)(font "Arial" ))
+		(line (pt 0 480)(pt 16 480)(line_width 3))
+	)
+	(port
+		(pt 0 496)
+		(input)
+		(text "sample4_triggered[19..0]" (rect 0 0 97 12)(font "Arial" ))
+		(text "sample4_triggered[19..0]" (rect 21 491 118 503)(font "Arial" ))
+		(line (pt 0 496)(pt 16 496)(line_width 3))
 	)
 	(port
 		(pt 368 32)
@@ -542,7 +570,14 @@ https://fpgasoftware.intel.com/eula.
 		(text "firstlast[1..0]" (rect 300 779 347 791)(font "Arial" ))
 		(line (pt 368 784)(pt 352 784)(line_width 3))
 	)
+	(port
+		(pt 368 800)
+		(output)
+		(text "reloadflash" (rect 0 0 42 12)(font "Arial" ))
+		(text "reloadflash" (rect 305 795 347 807)(font "Arial" ))
+		(line (pt 368 800)(pt 352 800)(line_width 1))
+	)
 	(drawing
-		(rectangle (rect 16 16 352 800)(line_width 1))
+		(rectangle (rect 16 16 352 832)(line_width 1))
 	)
 )

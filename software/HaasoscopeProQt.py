@@ -1,19 +1,34 @@
+import math
 import os.path
 import numpy as np
 import sys, time, warnings
+from collections import deque
 import pyqtgraph as pg
 import PyQt5
 from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
-from PyQt5.QtGui import QPalette, QColor, QIcon
-from PyQt5.QtWidgets import QApplication, QMessageBox, QWidget, QPushButton
+from PyQt5.QtGui import QPalette, QColor, QIcon, QPen
+from PyQt5.QtWidgets import QApplication, QMessageBox, QWidget, QPushButton, QFrame, QColorDialog
 from scipy.optimize import curve_fit
-from scipy.signal import resample
+from scipy.signal import resample, butter, filtfilt
+from scipy.interpolate import interp1d
 import struct
 from usbs import *
 from board import *
 from SCPIsocket import hspro_socket
+from datetime import datetime
 import threading
 import matplotlib.cm as cm
+
+# Look for special paths when double-clicking on the pre-made exe, so we can find the .ui files
+path_string = sys.path[0]
+pwd = path_string # it will be the current direct directory already if we are running from the command line
+target = ["Mac_HaasoscopeProQt", "Windows_HaasoscopeProQt"]
+for tar in target:
+    index = path_string.find(tar)
+    if index != -1: # The substring was found
+        index_with_target = index + len(tar)
+        pwd = path_string[:index_with_target]
+print("Current dir is "+pwd)
 
 usbs = connectdevices(100) # max of 100 devices
 #if len(usbs)==0: sys.exit(0)
@@ -22,32 +37,59 @@ for b in range(len(usbs)):
     version(usbs[b])
     version(usbs[b])
     version(usbs[b])
+    index = str(usbs[b].serial).find("_v1.")
+    if index > -1:
+        usbs[b].beta = float(str(usbs[b].serial)[index + 2:index + 6])
+        print("Special beta device:", usbs[b].beta)
 time.sleep(.1) # wait for clocks to lock
 usbs = orderusbs(usbs)
 tellfirstandlast(usbs)
 
 # Define fft window class from template
-FFTWindowTemplate, FFTTemplateBaseClass = loadUiType("HaasoscopeProFFT.ui")
+FFTWindowTemplate, FFTTemplateBaseClass = loadUiType(pwd+"/HaasoscopeProFFT.ui")
 class FFTWindow(FFTTemplateBaseClass):
     def __init__(self):
         FFTTemplateBaseClass.__init__(self)
         self.ui = FFTWindowTemplate()
         self.ui.setupUi(self)
+        self.ui.actionTake_screenshot.triggered.connect(self.take_screenshot)
+        self.ui.actionLog_scale.triggered.connect(self.log_scale)
         self.ui.plot.setLabel('bottom', 'Frequency (MHz)')
         self.ui.plot.setLabel('left', 'Amplitude')
-        self.ui.plot.showGrid(x=True, y=True, alpha=1.0)
+        self.ui.plot.showGrid(x=True, y=True, alpha=.8)
+        self.ui.plot.setMenuEnabled(False) # disables the right-click menu
+        self.ui.plot.setMouseEnabled(x=False, y=False) # disables pan and zoom
+        self.ui.plot.hideButtons() # hides the little autoscale button in the lower left
         #self.ui.plot.setRange(xRange=(0.0, 1600.0))
         self.ui.plot.setBackground(QColor('black'))
         c = (10, 10, 10)
         self.fftpen = pg.mkPen(color=c) # width=2 slower
-        self.fftline = self.ui.plot.plot(pen=self.fftpen, name="fft_plot")
+        self.fftline = self.ui.plot.plot(pen=self.fftpen, name="fft_plot", skipFiniteCheck=True, connect="finite")
         self.fftlastTime = time.time() - 10
         self.fftyrange = 1
+        self.fftyrangelow = 1e-10
+        self.dolog = False
+        self.newplot = True
+
+    def take_screenshot(self):
+        # Capture the entire FFT window
+        pixmap = self.grab()
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"HaasoscopePro_FFT_{timestamp}.png"
+        pixmap.save(filename)
+        print(f"Screenshot saved as {filename}")
+
+    def log_scale(self):
+        self.dolog = self.ui.actionLog_scale.isChecked()
+        self.ui.plot.setLogMode(x=False, y=self.dolog)
+        self.newplot = True
+        if self.dolog: self.ui.plot.setLabel('left', 'log10 Amplitude')
+        else: self.ui.plot.setLabel('left', 'Amplitude')
 
 # Define main window class from template
-WindowTemplate, TemplateBaseClass = loadUiType("HaasoscopePro.ui")
+WindowTemplate, TemplateBaseClass = loadUiType(pwd+"/HaasoscopePro.ui")
 class MainWindow(TemplateBaseClass):
-
+    softwareversion = 29.24
     expect_samples = 100
     expect_samples_extra = 5 # enough to cover downsample shifting and toff shifting
     samplerate = 3.2  # freq in GHz
@@ -55,24 +97,28 @@ class MainWindow(TemplateBaseClass):
     num_board = len(usbs)
     num_chan_per_board = 2
     num_logic_inputs = 0
+    firmwareversion = -1
     debug = False
     dopattern = 0 # set to 4 to do max varying test pattern
     debugprint = True
     showbinarydata = True
     debugstrobe = False
+    debug_trigger_phase = False
     dofast = False
     dotwochannel = False
     dointerleaved = [False] * num_board
     dooverrange = False
     total_rx_len = 0
     time_start = time.time()
-    triggertype = 1
+    triggertype = [1] * num_board
+    fallingedge = [0] * num_board
     isrolling = 0
+    isdrawing = False # for interlock with hspro socket thread
     selectedchannel = 0
     activeboard = 0
     activexychannel = 0
     tad = [0] * num_board
-    toff = 36
+    toff = 50
     triggershift = 2 # amount to shift trigger earlier, so we have time to shift later on for toff etc.
     themuxoutV = True
     phasecs = []
@@ -97,7 +143,7 @@ class MainWindow(TemplateBaseClass):
     downsamplezoom = 1
     triggerlevel = 127
     triggerdelta = 1
-    triggerpos = int(expect_samples * 128 / 256)
+    triggerpos = 500
     triggertimethresh = 0
     triggerchan = [0] * num_board
     hline = 0
@@ -129,13 +175,13 @@ class MainWindow(TemplateBaseClass):
     extrigboardmeancorrection = [0] * num_board
     lastrate = 0
     lastsize = 0
-    VperD = [0.16]*(num_board*2)
+    basevoltage = 200 # 160 or 200
+    VperD = [basevoltage/1000.]*(num_board*num_chan_per_board)
     plljustreset = [-10] * num_board
     plljustresetdir = [0] * num_board
     phasenbad = [[0] * 12] * num_board
     dooversample = [False] * num_board
-    doresamp = 0
-    dopersist = False
+    doresamp = 4
     triggerautocalibration = [False] * num_board
     extraphasefortad = [0] * num_board
     doexttrigecho = [False] * num_board
@@ -143,6 +189,10 @@ class MainWindow(TemplateBaseClass):
     doeventcounter = False
     oldeventtime = -9999
     doeventtime = False
+    distcorr = [0]*num_board
+    totdistcorr = [0]*num_board
+    distcorrtol = 2.0 # ns of max correction
+    distcorrsamp = 50 # num samples on each side of trig line to search for trig crossing
     lvdstrigdelay = [0] * num_board
     lastlvdstrigdelay = [0] * num_board
     acdc = [False]*(num_board*num_chan_per_board)
@@ -173,11 +223,12 @@ class MainWindow(TemplateBaseClass):
         self.ui.depthBox.valueChanged.connect(self.depth)
         self.ui.boardBox.valueChanged.connect(self.boardchanged)
         self.ui.trigchan_comboBox.currentIndexChanged.connect(self.triggerchanchanged)
-        self.ui.gridCheck.stateChanged.connect(self.grid)
+        self.ui.actionGrid.triggered.connect(self.grid)
         self.ui.markerCheck.stateChanged.connect(self.marker)
-        self.ui.highresCheck.stateChanged.connect(self.highres)
+        self.ui.actionHigh_resolution.triggered.connect(self.highres)
+        self.ui.lpfBox.currentIndexChanged.connect(self.lowpassfilter)
         self.ui.pllresetButton.clicked.connect(self.pllreset)
-        self.ui.adfresetButton.clicked.connect(self.adfreset)
+        self.ui.actionClock_reset.triggered.connect(self.adfreset)
         self.ui.upposButton0.clicked.connect(self.uppos)
         self.ui.downposButton0.clicked.connect(self.downpos)
         self.ui.upposButton1.clicked.connect(self.uppos1)
@@ -198,14 +249,15 @@ class MainWindow(TemplateBaseClass):
         self.ui.attCheck.stateChanged.connect(self.setatt)
         self.ui.tenxCheck.stateChanged.connect(self.settenx)
         self.ui.chanonCheck.stateChanged.connect(self.chanon)
-        self.ui.drawingCheck.clicked.connect(self.drawing)
-        self.ui.persistCheck.clicked.connect(self.persist)
+        self.ui.actionDrawing.triggered.connect(self.drawing)
+        self.ui.linewidthBox.valueChanged.connect(self.wideline)
         self.ui.fwfBox.valueChanged.connect(self.fwf)
         self.ui.tadBox.valueChanged.connect(self.setTAD)
         self.ui.resampBox.valueChanged.connect(self.resamp)
         self.ui.twochanCheck.clicked.connect(self.twochan)
         self.ui.ToffBox.valueChanged.connect(self.setToff)
         self.ui.fftCheck.clicked.connect(self.fft)
+        self.ui.actionTake_screenshot.triggered.connect(self.take_screenshot)
         self.ui.actionDo_autocalibration.triggered.connect(self.autocalibration)
         self.ui.actionUpdate_firmware.triggered.connect(self.update_firmware)
         self.ui.actionForce_split.triggered.connect( self.force_split )
@@ -214,6 +266,14 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionToggle_PLL_controls.triggered.connect(self.toggle_pll_controls)
         self.ui.actionRecord.triggered.connect(self.recordtofile)
         self.ui.actionAbout.triggered.connect(self.about)
+        self.ui.actionOversampling_mean_and_RMS.triggered.connect(self.do_meanrms_calibration)
+        self.ui.actionPan_and_zoom.triggered.connect(self.dopanandzoom)
+        self.ui.rightaxisCheck.clicked.connect(self.dorightaxis)
+        self.ui.actionLine_color.triggered.connect(self.chancolor)
+        self.avg_pen = pg.mkPen(color='w', width=1)
+        self.lpf = 0
+        self.extratot = False
+        self.rightaxis = None
         self.dofft = False
         self.db = False
         self.lastTime = time.time()
@@ -231,14 +291,79 @@ class MainWindow(TemplateBaseClass):
         self.timer2.timeout.connect(self.drawtext)
         self.ui.statusBar.showMessage(str(self.num_board)+" boards connected!")
         self.ui.trigchan_comboBox.setMaxVisibleItems(1)
+        self.max_persist_lines = 16
+        self.persist_time = 0 # ms for each line to live
+        self.persist_lines = deque(maxlen=self.max_persist_lines)
+        self.persist_timer = QtCore.QTimer()
+        self.persist_timer.timeout.connect(self.update_persist_effect)
+        self.ui.persistTbox.valueChanged.connect(self.persist)
+        self.dopanandzoom()
         self.show()
 
     def about(self):
-        QMessageBox.about(
-            self,  # Parent widget (optional, but good practice)
-            "Haasoscope Pro Qt, by DrAndyHaas",  # Title of the About dialog
-            "A PyQt5 application for the Haasoscope Pro\n\nVersion 27.01"  # Text content
-        )
+        QMessageBox.about( self, # Parent widget (optional, but good practice)
+            "Haasoscope Pro Qt, by DrAndyHaas", # Title of the About dialog
+            "A PyQt5 application for the Haasoscope Pro\n\nVersion "+f"{self.softwareversion:.2f}" )
+
+    def chancolor(self):
+        thecolor = QColorDialog.getColor(self.linepens[self.activexychannel].color(), self, "Select a color for this channel")
+        if thecolor.isValid():
+            self.linepens[self.activexychannel].setColor(thecolor)
+            self.selectchannel()
+            self.doleds()
+
+    def dopanandzoom(self):
+        if self.ui.actionPan_and_zoom.isChecked():
+            self.ui.plot.setMouseEnabled(x=True, y=True)
+            self.ui.plot.showButtons()
+            if len(self.otherlines)>0:
+                self.otherlines[0].setMovable(False)
+                self.otherlines[1].setMovable(False)
+        else:
+            self.ui.plot.setMouseEnabled(x=False, y=False)
+            self.ui.plot.hideButtons()
+            if len(self.otherlines)>0:
+                self.otherlines[0].setMovable(True)
+                self.otherlines[1].setMovable(True)
+
+    def lowpassfilter(self):
+        thetext = self.ui.lpfBox.currentText()
+        if thetext=="Off": self.lpf=0
+        else: self.lpf=int(thetext)
+
+    def dorightaxis(self):
+        self.rightaxis.setVisible(self.ui.rightaxisCheck.isChecked())
+
+    def persist(self):
+        self.persist_time = 50*pow(2,self.ui.persistTbox.value())
+        if self.ui.persistTbox.value()==0: self.persist_time=0
+        if self.persist_time>0: self.persist_timer.start(50) # ms
+        self.ui.persistText.setText(str(self.persist_time/1000)+" s")
+
+    def clear_persist(self):
+        for item, creation_time, li in list(self.persist_lines):
+            self.ui.plot.removeItem(item)
+            self.persist_lines.remove((item, creation_time, li))
+
+    def update_persist_effect(self):
+        """Updates the alpha/transparency of the persistent lines."""
+        if len(self.persist_lines)==0 and self.persist_time==0: self.persist_timer.stop()
+        current_time = time.time()
+        for item, creation_time, li in list(self.persist_lines):
+            age = (current_time - creation_time) * 1000.
+            if age > self.persist_time: # this line is too old, though the deque should handle removal as new events come in
+                # as a fallback, remove it here
+                self.ui.plot.removeItem(item)
+                self.persist_lines.remove((item, creation_time, li))
+                #alpha = 0
+            else:
+                # Calculate alpha based on age (linear fade)
+                alpha = int(100 * (1 - (age / self.persist_time)))
+                pen = self.linepens[li]
+                color = pen.color()
+                color.setAlpha(alpha)
+                new_pen = pg.mkPen(color, width=1)
+                item.setPen(new_pen)
 
     def recordtofile(self):
         self.dorecordtofile = not self.dorecordtofile
@@ -277,6 +402,10 @@ class MainWindow(TemplateBaseClass):
         self.activeboard = self.ui.boardBox.value()
         self.selectchannel()
 
+    def set_channel_frame(self):
+        if self.doexttrig[self.activeboard] or self.doextsmatrig[self.activeboard] or self.triggerchan[self.activeboard]!=self.activexychannel%2: self.ui.chanColor.setFrameStyle(QFrame.NoFrame)
+        else: self.ui.chanColor.setFrameStyle(QFrame.Box)
+
     def selectchannel(self):
         if self.num_board==0: return
         if self.activeboard%2==0 and not self.dotwochannel and self.num_board>1:
@@ -304,6 +433,7 @@ class MainWindow(TemplateBaseClass):
         else:
             self.ui.extsmatrigCheck.setChecked(False)
             self.ui.exttrigCheck.setEnabled(True)
+        self.lines[self.activexychannel].setVisible(self.ui.chanonCheck.isChecked()) # set old channel back, if we were not drawing it because of persist avg
         self.selectedchannel = self.ui.chanBox.value()
         self.activexychannel = self.activeboard*self.num_chan_per_board + self.selectedchannel
         p = self.ui.chanColor.palette()
@@ -312,6 +442,7 @@ class MainWindow(TemplateBaseClass):
             col = self.linepens[self.activexychannel-self.num_chan_per_board].color().darker(200)
         p.setColor(QPalette.Base, col)  # Set background color of box
         self.ui.chanColor.setPalette(p)
+        self.set_channel_frame()
         if self.lines[self.activexychannel].isVisible():
             self.ui.chanonCheck.setChecked(QtCore.Qt.Checked)
         else:
@@ -321,10 +452,36 @@ class MainWindow(TemplateBaseClass):
         self.ui.ohmCheck.setChecked(self.mohm[self.activexychannel])
         self.ui.tenxCheck.setChecked(self.tenx[self.activexychannel]==10)
         self.ui.attCheck.setChecked(self.att[self.activexychannel])
+        if usbs[self.activeboard].beta < 1.2:
+            self.ui.attCheck.setText("5x attenuation")
+            self.ui.Auxout_comboBox.setEnabled(False)
+            self.ui.extsmatrigCheck.setEnabled(False)
+        else:
+            self.ui.attCheck.setText("800 MHz antialias")
+            self.ui.Auxout_comboBox.setEnabled(True)
+            self.ui.extsmatrigCheck.setEnabled(True)
         self.ui.Auxout_comboBox.setCurrentIndex(self.auxoutval[self.activeboard])
         self.ui.offsetBox.setValue(self.offset[self.activexychannel])
         self.ui.gainBox.setValue(self.gain[self.activexychannel])
         self.ui.trigchan_comboBox.setCurrentIndex(self.triggerchan[self.activeboard] if self.dotwochannel else 0)
+        self.ui.risingfalling_comboBox.setCurrentIndex(self.fallingedge[self.activeboard])
+        self.changegain()
+        self.changeoffset()
+        self.update_right_axis()
+        self.clear_persist()
+        self.set_average_line_pen()
+
+    def update_right_axis(self):
+        if self.num_board>0:
+            pen=QPen(self.linepens[self.activexychannel])
+            pen.setWidth(1)
+            self.rightaxis.setPen(pen)
+            self.rightaxis.setTextPen(color=pen.color())
+            self.rightaxis.setLabel(text="Voltage for board "+str(self.activeboard)+" channel "+str(self.selectedchannel), units='V')
+            self.rightaxis.conversion_func = lambda val: val * self.VperD[self.activexychannel]
+            ts = round(2*5*self.VperD[self.activexychannel],1)
+            self.rightaxis.setTickSpacing(ts, 0.1*ts)
+            self.rightaxis.update_function()
 
     def fft(self):
         if self.ui.fftCheck.checkState() == QtCore.Qt.Checked:
@@ -340,20 +497,31 @@ class MainWindow(TemplateBaseClass):
         self.doresamp = value
 
     def twochan(self):
+        self.downsample = 0
+        self.timeslow()
+        self.timefast()
         self.dotwochannel = self.ui.twochanCheck.checkState() == QtCore.Qt.Checked
         if self.dorecordtofile:  # if writing, close and open new file, by calling recordtofile() twice, since the number of samples per event for each channel will change
             self.recordtofile()
             self.recordtofile()
-        for bo in range(self.num_board):
-            for ch in range(self.num_chan_per_board):
-                setchanatt(usbs[bo], ch, self.dotwochannel, self.dooversample[bo])  # turn on/off antialias for two/single channel mode
-        self.ui.attCheck.setChecked(self.dotwochannel)
-        self.att = [self.dotwochannel]*(self.num_board*self.num_chan_per_board)
+        if self.num_board>1 or usbs[self.activeboard].beta > 1.2:
+            for bo in range(self.num_board):
+                for ch in range(self.num_chan_per_board):
+                    setchanatt(usbs[bo], ch, self.dotwochannel, self.dooversample[bo])  # turn on/off antialias for two/single channel mode
+            self.ui.attCheck.setChecked(self.dotwochannel)
+            self.att = [self.dotwochannel]*(self.num_board*self.num_chan_per_board)
         self.setupchannels()
         self.doleds()
-        for usb in usbs: setupboard(usb,self.dopattern,self.dotwochannel,self.dooverrange)
+        for usb in usbs: setupboard(usb,self.dopattern,self.dotwochannel,self.dooverrange,self.basevoltage==200)
         for usb in usbs: self.telldownsample(usb, self.downsample)
         self.timechanged()
+        self.selectchannel()
+        self.changegain()
+        self.changeoffset()
+        for i in range(0, self.num_board*self.num_chan_per_board): # all others set to 0
+            if i==self.activexychannel: continue
+            self.offset[i] = 0
+            self.gain[i] = 0
         if self.dotwochannel:
             self.ui.chanBox.setMaximum(self.num_chan_per_board - 1)
             self.ui.oversampCheck.setEnabled(False)
@@ -388,17 +556,21 @@ class MainWindow(TemplateBaseClass):
             setgain(usbs[self.ui.boardBox.value()+1], self.selectedchannel, self.ui.gainBox.value(),self.dooversample[self.activeboard])
             self.gain[self.activexychannel+self.num_chan_per_board] = self.ui.gainBox.value()  # remember it
         db = self.ui.gainBox.value()
-        v2 = 0.1605*self.tenx[self.activexychannel]/pow(10, db / 20.) # 0.16 V at 0 dB gain
+        v2 = (self.basevoltage/1000.)*self.tenx[self.activexychannel]/pow(10, db / 20.) # basevoltage V at 0 dB gain
         if self.dooversample[self.activeboard]: v2 *= 2.0
+        if not self.mohm[self.activexychannel]: v2 /= 2.0
         oldvperd = self.VperD[self.activeboard*2+self.selectedchannel]
         self.VperD[self.activeboard*2+self.selectedchannel] = v2
         if self.dooversample[self.activeboard] and self.ui.boardBox.value()%2==0: # also adjust other board we're oversampling with
             self.VperD[(self.activeboard+1)*2+self.selectedchannel] = v2
         self.ui.offsetBox.setValue(int(self.ui.offsetBox.value()*oldvperd/v2))
-        v2 = round(1000*v2,0)
-        self.ui.VperD.setText(str(int(v2))+" mV/div")
+        v2 = round(1002*v2,0) # to get the numbers to round well
+        if v2 > 50: v2 = round(v2, -1) # round to nearset 10 mV if large
+        if int(v2)==13: self.ui.VperD.setText(str(12.5)+" mV/div")
+        else: self.ui.VperD.setText(str(int(v2))+" mV/div")
         if self.ui.gainBox.value()>24: self.ui.gainBox.setSingleStep(2)
         else: self.ui.gainBox.setSingleStep(6)
+        self.update_right_axis()
 
     def fwf(self):
         self.fitwidthfraction = self.ui.fwfBox.value() / 100.
@@ -410,18 +582,20 @@ class MainWindow(TemplateBaseClass):
         #     spicommand(usbs[self.activeboard], "TAD", 0x02, 0xB7, 1, False, quiet=False)
         self.tad[self.activeboard] = self.ui.tadBox.value()
         spicommand(usbs[self.activeboard], "TAD", 0x02, 0xB6, abs(self.tad[self.activeboard]), False, quiet=True)
-        if self.tad[self.activeboard]>135:
-            if not self.extraphasefortad[self.activeboard]:
-                self.dophase(self.activeboard, plloutnum=0, updown=1, pllnum=0) # adjust up one, to account for phase offset of TAD
-                self.dophase(self.activeboard, plloutnum=1, updown=1, pllnum=0)
-                self.extraphasefortad[self.activeboard]+=1
-                print("extra phase for TAD>135 now",self.extraphasefortad[self.activeboard])
-        else:
-            if self.extraphasefortad[self.activeboard]:
-                self.dophase(self.activeboard, plloutnum=0, updown=0, pllnum=0) # adjust down one, to not account for phase offset of TAD
-                self.dophase(self.activeboard, plloutnum=1, updown=0, pllnum=0)
-                self.extraphasefortad[self.activeboard]-=1
-                print("extra phase for TAD>135 now",self.extraphasefortad[self.activeboard])
+        adjustphaseforTAD = False
+        if adjustphaseforTAD:
+            if self.tad[self.activeboard]>135:
+                if not self.extraphasefortad[self.activeboard]:
+                    self.dophase(self.activeboard, plloutnum=0, updown=1, pllnum=0) # adjust up one, to account for phase offset of TAD
+                    self.dophase(self.activeboard, plloutnum=1, updown=1, pllnum=0)
+                    self.extraphasefortad[self.activeboard]+=1
+                    print("extra phase for TAD>135 now",self.extraphasefortad[self.activeboard])
+            else:
+                if self.extraphasefortad[self.activeboard]:
+                    self.dophase(self.activeboard, plloutnum=0, updown=0, pllnum=0) # adjust down one, to not account for phase offset of TAD
+                    self.dophase(self.activeboard, plloutnum=1, updown=0, pllnum=0)
+                    self.extraphasefortad[self.activeboard]-=1
+                    print("extra phase for TAD>135 now",self.extraphasefortad[self.activeboard])
 
     def setToff(self):
         self.toff = self.ui.ToffBox.value()
@@ -439,8 +613,11 @@ class MainWindow(TemplateBaseClass):
     def chanon(self):
         if self.ui.chanonCheck.checkState() == QtCore.Qt.Checked:
             self.lines[self.activexychannel].setVisible(True)
+            if self.ui.persistavgCheck.isChecked(): self.average_line.setVisible(True)
         else:
             self.lines[self.activexychannel].setVisible(False)
+            self.average_line.setVisible(False)
+        self.set_average_line_pen()
 
     def setacdc(self):
         self.acdc[self.activexychannel] = self.ui.acdcCheck.checkState() == QtCore.Qt.Checked # remember it
@@ -456,6 +633,8 @@ class MainWindow(TemplateBaseClass):
         self.mohm[self.activexychannel] = self.ui.ohmCheck.checkState() == QtCore.Qt.Checked # remember it
         setchanimpedance(usbs[self.activeboard], self.selectedchannel,
                          self.ui.ohmCheck.checkState() == QtCore.Qt.Checked, self.dooversample[self.activeboard])  # will be True for 1M ohm, False for 50 ohm
+        self.changegain()
+        self.changeoffset()
 
     def setatt(self):
         self.att[self.activexychannel] = self.ui.attCheck.checkState() == QtCore.Qt.Checked # remember it
@@ -553,8 +732,8 @@ class MainWindow(TemplateBaseClass):
     def pllreset(self, board):
         if not board: board = self.activeboard # if we called it from the button
         usbs[board].send(bytes([5, 99, 99, 99, 100, 100, 100, 100]))
-        tres = usbs[board].recv(4)
-        print("pllreset sent to board",board,"- got back:", tres[3], tres[2], tres[1], tres[0])
+        usbs[board].recv(4)
+        print("Pllreset sent to board",board)
         self.phasecs[board] = [[0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]]  # reset counters
         self.plljustreset[board] = 0
         self.plljustresetdir[board] = 1
@@ -585,17 +764,22 @@ class MainWindow(TemplateBaseClass):
             self.dophase(board, plloutnum2, (self.plljustresetdir[board] == 1), pllnum=0, quiet=True)  # adjust phase of plloutnum
         elif self.plljustreset[board]==-1:
             if debugphase: print("plljustreset for board",board,"is",self.plljustreset[board])
-            print("bad clkstr per phase step:",self.phasenbad[board])
+            print("clkstr per phase step:",self.phasenbad[board])
             startofzeros, lengthofzeros = find_longest_zero_stretch(self.phasenbad[board], True)
             print("good phase starts at",startofzeros, "and goes for", lengthofzeros,"steps")
-            if startofzeros>=12: startofzeros-=12
-            n = startofzeros + lengthofzeros//2 + self.phaseoffset # amount to adjust clklvds and clklvdsout (positive)
-            if n>=12: n-=12
-            n+=1 # extra 1 because we went to phase=-1 before
-            for i in range(n):
-                self.dophase(board, plloutnum, 1, pllnum=0, quiet=(i != n - 1)) # adjust phase of plloutnum
-                self.dophase(board, plloutnum2, 1, pllnum=0, quiet=(i != n - 1))  # adjust phase of plloutnum
-            self.plljustreset[board] += self.plljustresetdir[board]
+            if lengthofzeros<4:
+                print("Bad PLL calibration found! Check power connections?!")
+                if not self.paused: self.dostartstop()
+                self.ui.runButton.setEnabled(False)
+            else:
+                if startofzeros>=12: startofzeros-=12
+                n = startofzeros + lengthofzeros//2 + self.phaseoffset # amount to adjust clklvds and clklvdsout (positive)
+                if n>=12: n-=12
+                n+=1 # extra 1 because we went to phase=-1 before
+                for i in range(n):
+                    self.dophase(board, plloutnum, 1, pllnum=0, quiet=(i != n - 1)) # adjust phase of plloutnum
+                    self.dophase(board, plloutnum2, 1, pllnum=0, quiet=(i != n - 1))  # adjust phase of plloutnum
+                self.plljustreset[board] += self.plljustresetdir[board]
         elif self.plljustreset[board] == -2: # pllreset is now ALMOST DONE
             self.depth()
             self.plljustreset[board] += self.plljustresetdir[board]
@@ -603,24 +787,24 @@ class MainWindow(TemplateBaseClass):
             self.dodrawing = True
             self.plljustreset[board] = -10
 
-    def wheelEvent(self, event):  # QWheelEvent
-        if hasattr(event, "delta"):
-            if event.delta() > 0:
-                self.uppos()
-            else:
-                self.downpos()
-        elif hasattr(event, "angleDelta"):
-            if event.angleDelta() > 0:
-                self.uppos()
-            else:
-                self.downpos()
+    # def wheelEvent(self, event): # QWheelEvent
+    #     if hasattr(event, "angleDelta"):
+    #         pass
 
     def keyPressEvent(self, event):
-        if event.key() == QtCore.Qt.Key_Up: self.uppos()
-        if event.key() == QtCore.Qt.Key_Down: self.downpos()
-        if event.key() == QtCore.Qt.Key_Left: self.timefast()
-        if event.key() == QtCore.Qt.Key_Right: self.timeslow()
-        # modifiers = QtWidgets.QApplication.keyboardModifiers()
+        modifiers = QtWidgets.QApplication.keyboardModifiers()
+        if event.key() == QtCore.Qt.Key_Up:
+            if modifiers & QtCore.Qt.ShiftModifier:
+                self.ui.gainBox.setValue(self.ui.gainBox.value() + 1)
+            else:
+                self.ui.offsetBox.stepUp()
+        if event.key() == QtCore.Qt.Key_Down:
+            if modifiers & QtCore.Qt.ShiftModifier:
+                self.ui.gainBox.setValue(self.ui.gainBox.value() - 1)
+            else:
+                self.ui.offsetBox.stepDown()
+        if event.key() == QtCore.Qt.Key_Left: self.timeslow()
+        if event.key() == QtCore.Qt.Key_Right: self.timefast()
 
     def exttrig(self, value):
         board = self.ui.boardBox.value()
@@ -640,16 +824,18 @@ class MainWindow(TemplateBaseClass):
         else:
             self.doexttrigecho[board] = False  # turn off for this one since it's not doing exttrig anymore
         self.sendtriggerinfo(board) # to account for trigger time delay or not
+        self.set_channel_frame()
 
     def extsmatrig(self):
         self.doextsmatrig[self.activeboard] = self.ui.extsmatrigCheck.isChecked()
         #print("ext SMA trig now",self.doextsmatrig[self.activeboard],"for board",self.activeboard)
         if self.doextsmatrig[self.activeboard]: self.ui.exttrigCheck.setEnabled(False)
         else: self.ui.exttrigCheck.setEnabled(True)
+        self.set_channel_frame()
 
     def grid(self):
-        if self.ui.gridCheck.isChecked():
-            self.ui.plot.showGrid(x=True, y=True)
+        if self.ui.actionGrid.isChecked():
+            self.ui.plot.showGrid(x=True, y=True, alpha=0.8)
         else:
             self.ui.plot.showGrid(x=False, y=False)
 
@@ -661,9 +847,15 @@ class MainWindow(TemplateBaseClass):
                 # self.lines[li].setSymbolPen("black")
                 self.lines[li].setSymbolPen(self.linepens[li].color())
                 self.lines[li].setSymbolBrush(self.linepens[li].color())
+            self.average_line.setSymbol("o")
+            self.average_line.setSymbolSize(3)
+            self.average_line.setSymbolPen(self.avg_pen.color())
+            self.average_line.setSymbolBrush(self.avg_pen.color())
+
         else:
             for li in range(self.nlines):
                 self.lines[li].setSymbol(None)
+            self.average_line.setSymbol(None)
 
     def dostartstop(self):
         if self.paused:
@@ -689,13 +881,15 @@ class MainWindow(TemplateBaseClass):
             for board in range(self.num_board): self.sendtriggerinfo(board)
 
     def triggerposchanged(self, value):
-        self.triggerpos = int(self.expect_samples * value / 100)
+        self.triggerpos = int(self.expect_samples * value / 10000.)
+        #print("trigposchanged", self.expect_samples * value / 10000.)
         for board in range(self.num_board): self.sendtriggerinfo(board)
         self.drawtriggerlines()
 
     def triggerchanchanged(self):
         self.triggerchan[self.activeboard] = self.ui.trigchan_comboBox.currentIndex()
         self.sendtriggerinfo(self.activeboard)
+        self.set_channel_frame()
 
     def sendtriggerinfo(self, board):
         triggerpos = self.triggerpos + self.triggershift # move actual trigger a little earlier, so we have time to shift a bit later on (downsamplemerging, delayoffset, toff etc.)
@@ -713,14 +907,12 @@ class MainWindow(TemplateBaseClass):
         usbs[board].recv(4)
 
     def drawtriggerlines(self):
-        self.hline = (self.triggerlevel - 127) * self.yscale * 16 * 16
-        self.otherlines[1].setData([self.min_x, self.max_x],
-                                   [self.hline, self.hline])  # horizontal line showing trigger threshold
         point = self.triggerpos + 1.0
         self.vline = 4 * 10 * point * (self.downsamplefactor / self.nsunits / self.samplerate)
-        self.otherlines[0].setData([self.vline, self.vline], [max(self.hline + self.min_y / 2, self.min_y),
-                                                              min(self.hline + self.max_y / 2,
-                                                                  self.max_y)])  # vertical line showing trigger time
+        self.otherlines[0].setValue(self.vline) # vertical line showing trigger time
+
+        self.hline = (self.triggerlevel - 127) * self.yscale * 256
+        self.otherlines[1].setValue(self.hline)  # horizontal line showing trigger threshold
 
     def tot(self):
         self.triggertimethresh = self.ui.totBox.value()
@@ -729,9 +921,13 @@ class MainWindow(TemplateBaseClass):
     def depth(self):
         self.expect_samples = self.ui.depthBox.value()
         self.setupchannels()
-        self.triggerposchanged(self.ui.thresholdPos.value())
+        self.triggerposchanged(5000)
         self.tot()
+        self.changegain()
         self.timechanged()
+        self.downsample = 0
+        self.timeslow()
+        self.timefast()
 
     def rolling(self):
         self.isrolling = not self.isrolling
@@ -750,8 +946,8 @@ class MainWindow(TemplateBaseClass):
         self.getone = not self.getone
         self.ui.singleButton.setChecked(self.getone)
 
-    def highres(self, value):
-        self.highresval = value > 0
+    def highres(self):
+        self.highresval = self.ui.actionHigh_resolution.isChecked()
         # print("highres",self.highresval)
         for usb in usbs: self.telldownsample(usb, self.downsample)
 
@@ -794,30 +990,34 @@ class MainWindow(TemplateBaseClass):
     def timefast(self):
         amount = 1
         if self.downsample - amount < -10:
-            print("downsample too small!")
+            #print("downsample too small!")
             return
         self.downsample = self.downsample - amount
         if self.downsample<0:
             self.downsamplezoom = pow(2, -self.downsample)
             self.ui.thresholdPos.setEnabled(False)
+            #self.otherlines[0].setMovable(False)
         else:
             self.downsamplezoom = 1
             self.ui.thresholdPos.setEnabled(True)
+            #self.otherlines[0].setMovable(True)
             for usb in usbs: self.telldownsample(usb, self.downsample)
         self.timechanged()
 
     def timeslow(self):
         amount = 1
         if (self.downsample + amount - 5) > 31:
-            print("downsample too large!")
+            #print("downsample too large!")
             return
         self.downsample = self.downsample + amount
         if self.downsample<0:
             self.downsamplezoom = pow(2, -self.downsample)
             self.ui.thresholdPos.setEnabled(False)
+            #self.otherlines[0].setMovable(False)
         else:
             self.downsamplezoom = 1
             self.ui.thresholdPos.setEnabled(True)
+            #self.otherlines[0].setMovable(True)
             for usb in usbs: self.telldownsample(usb, self.downsample)
         self.timechanged()
 
@@ -849,43 +1049,54 @@ class MainWindow(TemplateBaseClass):
         else:
             self.min_x = 0
 
-        if hasattr(self,"hsprosock"):
-            while self.hsprosock.issending: time.sleep(.001)
-        if self.dotwochannel:
-            for c in range(self.num_chan_per_board * self.num_board):
-                self.xydata[c][0] = np.array([range(0, 2 * 10 * self.expect_samples)]) * (
-                            2 * self.downsamplefactor / self.nsunits / self.samplerate)
-        else:
-            for c in range(self.num_chan_per_board * self.num_board):
-                self.xydata[c][0] = np.array([range(0, 4 * 10 * self.expect_samples)]) * (
-                            1 * self.downsamplefactor / self.nsunits / self.samplerate)
-                if self.dointerleaved[c//2]:
-                    self.xydatainterleaved[c//2][0] = np.array([range(0, 2 * 4 * 10 * self.expect_samples)]) * (
-                            0.5 * self.downsamplefactor / self.nsunits / self.samplerate)
+            if hasattr(self,"hsprosock"):
+                while self.hsprosock.issending: time.sleep(.001)
+            self.totdistcorr = [0]*self.num_board
+            if self.dotwochannel:
+                for c in range(self.num_chan_per_board * self.num_board):
+                    self.xydata[c][0] = np.array([range(0, 2 * 10 * self.expect_samples)]) * (
+                                2 * self.downsamplefactor / self.nsunits / self.samplerate)
+            else:
+                for c in range(self.num_chan_per_board * self.num_board):
+                    self.xydata[c][0] = np.array([range(0, 4 * 10 * self.expect_samples)]) * (
+                                1 * self.downsamplefactor / self.nsunits / self.samplerate)
+                    if self.dointerleaved[c//2]:
+                        self.xydatainterleaved[c//2][0] = np.array([range(0, 2 * 4 * 10 * self.expect_samples)]) * (
+                                0.5 * self.downsamplefactor / self.nsunits / self.samplerate)
         self.ui.plot.setRange(xRange=(self.min_x, self.max_x), padding=0.00)
         self.ui.plot.setRange(yRange=(self.min_y, self.max_y), padding=0.01)
         self.drawtriggerlines()
-        self.tot()
+        doextratot = False
+        if doextratot:
+            if self.downsample>=5:
+                if not self.extratot: self.ui.totBox.setValue(self.ui.totBox.value()+1)
+                self.extratot = True
+            else:
+                if self.extratot: self.ui.totBox.setValue(self.ui.totBox.value()-1)
+                self.extratot = False
+            self.tot()
         self.ui.timebaseBox.setText("2^"+str(self.downsample))
 
     def risingfalling(self):
-        fallingedge = self.ui.risingfalling_comboBox.currentIndex()==1
-        if self.triggertype == 1:
-            if fallingedge: self.triggertype = 2
-        if self.triggertype == 2:
-            if not fallingedge: self.triggertype = 1
+        self.fallingedge[self.activeboard] = self.ui.risingfalling_comboBox.currentIndex()==1
+        if self.triggertype[self.activeboard] == 1:
+            if self.fallingedge[self.activeboard]: self.triggertype[self.activeboard] = 2
+        if self.triggertype[self.activeboard] == 2:
+            if not self.fallingedge[self.activeboard]: self.triggertype[self.activeboard] = 1
 
     def drawing(self):
-        if self.ui.drawingCheck.checkState() == QtCore.Qt.Checked:
+        if self.ui.actionDrawing.isChecked():
             self.dodrawing = True
             # print("drawing now",self.dodrawing)
         else:
             self.dodrawing = False
             # print("drawing now",self.dodrawing)
 
-    def persist(self):
-        self.dopersist = not self.dopersist
-        print("do persist",self.dopersist)
+    def wideline(self):
+        for chan in range(self.num_board*self.num_chan_per_board):
+            self.linepens[chan].setWidth(self.ui.linewidthBox.value())
+        self.avg_pen.setWidth(self.ui.linewidthBox.value())
+        self.average_line.setPen(self.avg_pen)
 
     def updateplot(self):
         if hasattr(self,"hsprosock"):
@@ -900,8 +1111,11 @@ class MainWindow(TemplateBaseClass):
             s = np.clip(dt * 3., 0, 1)
             self.fps = self.fps * (1 - s) + (1.0 / dt) * s
         self.statuscounter = self.statuscounter + 1
-        if self.statuscounter % 20 == 0: self.ui.statusBar.showMessage("%0.2f fps, %d events, %0.2f Hz, %0.2f MB/s" % (
-            self.fps, self.nevents, self.lastrate, self.lastrate * self.lastsize / 1e6))
+        sradjust = 1e9
+        if self.dotwochannel: sradjust = 0.5e9
+        if self.dointerleaved[self.activeboard]: sradjust = 2e9
+        if self.statuscounter % 20 == 0: self.ui.statusBar.showMessage("%s, %0.2f fps, %d events, %0.2f Hz, %0.2f MB/s" % (
+            format_freq(self.samplerate*sradjust/(1 if self.highresval else self.downsamplefactor), "S/s"), self.fps, self.nevents, self.lastrate, self.lastrate * self.lastsize / 1e6))
         if not gotevent: return
         if self.dorecordtofile:
             self.recordeventtofile()
@@ -911,22 +1125,59 @@ class MainWindow(TemplateBaseClass):
                     self.recordtofile()
         if not self.dodrawing: return
         for li in range(self.nlines):
+            xdatanew, ydatanew = None, None
             if not self.dointerleaved[int(li/2)]:
-                if self.doresamp:
+                if self.doresamp and self.downsample<0:
                     ydatanew, xdatanew = resample(self.xydata[li][1], len(self.xydata[li][0]) * self.doresamp, t=self.xydata[li][0])
-                    self.lines[li].setData(xdatanew,ydatanew)
                 else:
-                    self.lines[li].setData(self.xydata[li][0], self.xydata[li][1])
+                    if self.persist_time>0: xdatanew, ydatanew = self.xydata[li][0].copy(), self.xydata[li][1].copy()
+                    else: xdatanew, ydatanew = self.xydata[li][0], self.xydata[li][1]
             else:
                 if li%4 == 0:
                     self.xydatainterleaved[int(li/2)][1][0::2] = self.xydata[li][1]
                     self.xydatainterleaved[int(li/2)][1][1::2] = self.xydata[li+self.num_chan_per_board][1]
-                    if self.doresamp:
-                        ydatanew, xdatanew = resample(self.xydatainterleaved[int(li/2)][1], len(self.xydatainterleaved[int(li/2)][0]) * self.doresamp, t=self.xydatainterleaved[int(li/2)][0])
-                        self.lines[li].setData(xdatanew,ydatanew)
-                    else:
-                        self.lines[li].setData(self.xydatainterleaved[int(li/2)][0],self.xydatainterleaved[int(li/2)][1])
+                    if self.ui.actionToggle_trig_stabilizer.isChecked():
+                        self.xydatainterleaved[int(li/2)][0][0::2] = self.xydata[li][0]
+                        self.xydatainterleaved[int(li/2)][0][1::2] = self.xydata[li+self.num_chan_per_board][0] + (1/2.)/3.2/self.nsunits
+                    xdatanew = np.linspace(self.xydatainterleaved[int(li/2)][0].min(), self.xydatainterleaved[int(li/2)][0].max(), len(self.xydatainterleaved[int(li/2)][0])*1) # first put them on a regular x spacing
+                    f_int = interp1d(self.xydatainterleaved[int(li/2)][0], self.xydatainterleaved[int(li/2)][1], kind='linear')
+                    ydatanew = f_int(xdatanew)
+                    if self.doresamp and self.downsample<0:
+                        ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * self.doresamp, t=xdatanew) # then resample
 
+            if self.ui.actionToggle_extra_trig_stabilizer.isChecked() and not (self.dooversample[li//4] and li%4!=0): # special stabilization, not for oversampled data on channel +1 though
+                fitwidth = (self.max_x - self.min_x)
+                xc = xdatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
+                numsamp = self.distcorrsamp  # number of samples to use on each side of trigger time
+                if self.doresamp: numsamp *= self.doresamp # adjust for extra samples from upsampling
+                fitwidth *= numsamp / max(2, xc.size)
+                xc = xdatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
+                # print("xc size start end", xc.size, xc[0], xc[-1], "and vline at", self.vline)
+                yc = ydatanew[(xdatanew > self.vline - fitwidth) & (xdatanew < self.vline + fitwidth)]
+                if self.fallingedge[li//2]: yc = -yc
+                if xc.size > 1:
+                    distcorrtemp = find_crossing_distance(yc, self.hline, self.vline, xc[0], xc[1] - xc[0])
+                    if distcorrtemp is not None and abs(distcorrtemp) < self.distcorrtol*self.downsamplefactor/self.nsunits:
+                        xdatanew -= distcorrtemp
+
+            if xdatanew is not None:
+                self.lines[li].setData(xdatanew, ydatanew)
+                if li==self.activexychannel:
+                    if self.persist_time>0 and self.ui.chanonCheck.isChecked() and (self.ui.persistlinesCheck.isChecked() or self.ui.persistavgCheck.isChecked()):
+                        if len(self.persist_lines) >= self.max_persist_lines:
+                            oldest_item, _, _ = self.persist_lines[0]
+                            self.ui.plot.removeItem(oldest_item)
+                        pen = self.linepens[li]
+                        color = pen.color()
+                        color.setAlpha(int(100./255))
+                        new_pen = pg.mkPen(color, width=1)
+                        persist_item = self.ui.plot.plot(xdatanew, ydatanew, pen=new_pen, skipFiniteCheck=True, connect="finite")
+                        persist_item.setVisible(self.ui.persistlinesCheck.isChecked())
+                        self.persist_lines.append((persist_item, time.time(), li))
+                        self.lines[li].setVisible(self.ui.persistlinesCheck.isChecked())
+                    else:
+                        self.lines[li].setVisible(self.ui.chanonCheck.isChecked())
+        self.update_persist_average()
         if self.dofft and hasattr(self.fftui,"fftfreqplot_xdata"):
             self.fftui.fftline.setPen(self.linepens[self.activeboard * self.num_chan_per_board + self.selectedchannel])
             self.fftui.fftline.setData(self.fftui.fftfreqplot_xdata,self.fftui.fftfreqplot_ydata)
@@ -935,14 +1186,49 @@ class MainWindow(TemplateBaseClass):
             self.fftui.ui.plot.setRange(xRange=(0.0, self.fftui.fftax_xlim))
             now = time.time()
             dt = now - self.fftui.fftlastTime
-            if dt>3.0 or self.fftui.fftyrange<self.fftui.fftfreqplot_ydatamax*1.1:
+            if dt>3.0 or self.fftui.fftyrange<self.fftui.fftfreqplot_ydatamax or self.fftui.fftyrangelow>self.fftui.fftfreqplot_ydatamin*100 or self.fftui.newplot:
+                self.fftui.newplot = False
                 self.fftui.fftlastTime = now
-                self.fftui.ui.plot.setRange(yRange=(0.0, self.fftui.fftfreqplot_ydatamax*1.1))
-                self.fftui.fftyrange = self.fftui.fftfreqplot_ydatamax * 1.1
+                self.fftui.fftyrange = self.fftui.fftfreqplot_ydatamax * 1.2
+                self.fftui.fftyrangelow = self.fftui.fftfreqplot_ydatamin / 1.0
+                if self.fftui.dolog: self.fftui.ui.plot.setYRange(log(self.fftui.fftyrangelow,10), log(self.fftui.fftyrange,10))
+                else: self.fftui.ui.plot.setYRange(0, self.fftui.fftyrange)
             if not self.fftui.isVisible(): # closed the fft window
                 self.dofft = False
                 self.ui.fftCheck.setChecked(QtCore.Qt.Unchecked)
         app.processEvents()
+
+    def update_persist_average(self):
+        """Calculates and plots the average by first interpolating all lines."""
+        if len(self.persist_lines) < 2:
+            self.average_line.clear()
+            return
+
+        # --- 1. Define a Common X-Axis ---
+        # Find the min and max x-range across all visible lines
+        first_line = self.persist_lines[0][0]
+        min_x = first_line.xData.min()
+        max_x = first_line.xData.max()
+
+        for item, _, _ in self.persist_lines:
+            min_x = min(min_x, item.xData.min())
+            max_x = max(max_x, item.xData.max())
+
+        # Create the new, uniform x-axis
+        common_x_axis = np.linspace(min_x, max_x, self.expect_samples * 40 * (2 if self.dointerleaved[self.activeboard] else 1) )
+
+        # --- 2. Interpolate Each Line ---
+        resampled_y_values = []
+        for item, _, _ in self.persist_lines:
+            # Use np.interp to resample the line's y-data onto the common x-axis
+            interpolated_y = np.interp(common_x_axis, item.xData, item.yData)
+            resampled_y_values.append(interpolated_y)
+
+        # --- 3. Average and Plot ---
+        if resampled_y_values:
+            y_average = np.mean(resampled_y_values, axis=0)
+            if self.doresamp: y_average, common_x_axis = resample(y_average, len(common_x_axis) * self.doresamp, t=common_x_axis)
+            self.average_line.setData(common_x_axis, y_average)
 
     def recordeventtofile(self):
         time_s = str(time.time())
@@ -990,14 +1276,16 @@ class MainWindow(TemplateBaseClass):
                         if debugread: print("noext board", board, "not ready")
                 if not any(readyevent):
                     if debugread: print("none ready")
-                for board in range(self.num_board):
-                    if not readyevent[board]:
-                        if debugread: print("board",board,"data not ready?")
-                        continue
-                    data = self.getdata(usbs[board])
-                    rx_len = rx_len + len(data)
-                    if self.dofft and board==self.activeboard: self.plot_fft()
-                    self.drawchannels(data, board)
+                for nodoext in [True, False]:
+                    if nodoext: continue # first do just the non-ext-trigger boards, to find the right trig stabilizer offsets
+                    for board in range(self.num_board):
+                        if not readyevent[board]:
+                            if debugread: print("board",board,"data not ready?")
+                            continue
+                        data = self.getdata(usbs[board])
+                        rx_len = rx_len + len(data)
+                        self.drawchannels(data, board)
+                        if self.dofft and board==self.activeboard: self.plot_fft()
                 if self.getone and rx_len > 0:
                     self.dostartstop()
                     self.drawtext()
@@ -1020,7 +1308,7 @@ class MainWindow(TemplateBaseClass):
 
     # sets trigger on a board, and sees whether an event is ready to be read out (and then if so calculates sample_triggered)
     def getchannels(self, board):
-        tt = self.triggertype
+        tt = self.triggertype[board]
         if self.doexttrig[board] > 0:
             if self.doexttrigecho[board]: tt = 30
             else: tt = 3
@@ -1030,19 +1318,32 @@ class MainWindow(TemplateBaseClass):
         triggercounter = usbs[board].recv(4)  # get the 4 bytes
         acqstate = triggercounter[0]
         if acqstate == 251:  # an event is ready to be read out
-            gotzerobit = False
-            for s in range(20):
-                thebit = getbit(triggercounter[int(s / 8) + 1], s % 8)
-                if thebit == 0:
-                    gotzerobit = True
-                if thebit == 1 and gotzerobit:
-                    self.sample_triggered[board] = s
-                    gotzerobit = False
-            #if board==0: print("board",board,"sample triggered", binprint(triggercounter[3]), binprint(triggercounter[2]), binprint(triggercounter[1]))
-            #if board==0: print("sample_triggered", self.sample_triggered[board], "for board", board)
-            # if board==0:
-            #     if 9<=self.sample_triggered[board]<=11: self.dodrawing=True
-            #     else: self.dodrawing=False
+            self.sample_triggered[board] = triggercounter[1]
+            if self.debug_trigger_phase:
+                if board==0:
+                    print("\nbest sample triggered from triggercounter[1] =", triggercounter[1])
+                    print("board",board,"sample triggered", binprint(triggercounter[3]), binprint(triggercounter[2]), binprint(triggercounter[1]))
+                    print("sample_triggered", self.sample_triggered[board], "for board", board)
+                ststring = [0]*4
+                for st in range(4):
+                    usbs[board].send(bytes([2, 15+st, 100, 100, 100, 100, 100, 100]))  # get sample triggered 0
+                    ststring[st] = usbs[board].recv(4)
+                    print("sample triggered", st, binprint(ststring[st][2]), binprint(ststring[st][1]), binprint(ststring[st][0]))
+                # if board==0:
+                #     if 9<=self.sample_triggered[board]<=11: self.dodrawing=True
+                #     else: self.dodrawing=False
+                gotzerobit = False
+                for tb in range(0,20):
+                    for st in range(4):
+                        if self.dotwochannel and (st+1)%2==self.triggerchan[board]: continue
+                        thebit = getbit(ststring[st][tb//8],tb%8 )
+                        print(tb, thebit )
+                        if not thebit: gotzerobit = True
+                        if gotzerobit and thebit:
+                            gotzerobit = False
+                            print("X", tb, st)
+                            #self.triggerphase[board] = st
+                            #self.sample_triggered[board] = tb
             return 1
         else:
             return 0
@@ -1074,7 +1375,8 @@ class MainWindow(TemplateBaseClass):
         if self.downsamplemergingcounter[board] == self.downsamplemerging:
             if not self.doexttrig[board]:
                 self.downsamplemergingcounter[board] = 0
-        self.triggerphase[board]=res[1]
+        if self.debug_trigger_phase: print("got triggerphase from firmware =",res[1])
+        self.triggerphase[board] = res[1]
 
         if not self.doexttrig[board] and any(self.doexttrigecho):
             assert self.doexttrigecho.count(True)==1
@@ -1123,17 +1425,23 @@ class MainWindow(TemplateBaseClass):
 
     def drawchannels(self, data, board):
         if self.dofast: return
+        if self.num_board>0 and self.firmwareversion<28:
+            if self.firmwareversion>-1: print("Firmware v28+ required, for new triggerphase calculation!")
+            self.firmwareversion = -1
+            return 0
+        if hasattr(self,"hsprosock"):
+            while self.hsprosock.issending:
+                time.sleep(.001)
+                self.isdrawing=False
+        self.isdrawing=True
         if self.doexttrig[board]:
             boardtouse = self.noextboard
             self.sample_triggered[board] = self.sample_triggered[boardtouse] # take from the other board when using ext trig
             self.triggerphase[board] = self.triggerphase[boardtouse]
         sample_triggered_touse = self.sample_triggered[board]
-        if (self.triggerphase[board]%4) != (self.triggerphase[board]>>2)%4:
-            #print("sampletriggered",self.sample_triggered[board],"and triggerphase for board",board,"is",self.triggerphase[board]>>4, "needzeros:",self.triggerphase[board]%4, "zeroblind:",(self.triggerphase[board]>>2)%4)
-            if self.sample_triggered[board]<10: sample_triggered_touse = self.sample_triggered[board]-1 # if we're in this rare case, adjust sample_triggered by 1 since the real thing would have had all ones
-        if self.sample_triggered[board]<10:
-            triggerphase = (self.triggerphase[board]>>2)%4 # use the triggerphase from the lower 10 bits of sample_triggered, the version not caring about whether it has zeros
-        else: triggerphase = self.triggerphase[board]>>4 # just use triggerphase from the upper 10 bits of sample_triggered when sample_triggered is occuring in the last 10 bits
+        if self.debug_trigger_phase: print("sampletriggered", self.sample_triggered[board], "and triggerphase for board", board, "is", self.triggerphase[board])
+        if self.dotwochannel: triggerphase = self.triggerphase[board]//2
+        else: triggerphase = self.triggerphase[board]
         nbadclkA = 0
         nbadclkB = 0
         nbadclkC = 0
@@ -1173,7 +1481,7 @@ class MainWindow(TemplateBaseClass):
                         nbadstr = nbadstr + 1
                         #print("s=", s, "n=", n, "str", val, binprint(val))
             if self.dotwochannel:
-                samp = s*20 - downsampleoffset - triggerphase//2
+                samp = s*20 - downsampleoffset - triggerphase
                 nsamp=20
                 nstart=0
                 if samp<0:
@@ -1198,7 +1506,52 @@ class MainWindow(TemplateBaseClass):
                 if 0 < nsamp <= 40:
                     self.xydata[board * self.num_chan_per_board][1][samp:samp + nsamp] = npunpackedsamples[s*self.nsubsamples+nstart:s*self.nsubsamples+nstart+nsamp]
 
+        if self.lpf>0:
+            sr = self.samplerate / (2 if self.dotwochannel else 1) / self.downsamplefactor
+            normal_cutoff = min(self.lpf*1e6 / (0.5*sr*1e9), 0.99) # can't be >=1, which would happen at lower sr
+            order = 5
+            fb, fa = butter(order, normal_cutoff, btype='low', analog=False) # Get the filter coefficients for a Butterworth filter
+            self.xydata[board * self.num_chan_per_board+0][1] = filtfilt(fb, fa, self.xydata[board * self.num_chan_per_board+0][1])
+            if self.dotwochannel: self.xydata[board * self.num_chan_per_board+1][1] = filtfilt(fb, fa, self.xydata[board * self.num_chan_per_board+1][1])
+
+        if self.ui.actionToggle_trig_stabilizer.isChecked():
+            if abs(self.totdistcorr[board]) > self.distcorrtol*self.downsamplefactor:
+                self.xydata[board * self.num_chan_per_board][0] += self.totdistcorr[board]
+                if self.dotwochannel: self.xydata[board * self.num_chan_per_board + 1][0] += self.totdistcorr[board]
+                self.totdistcorr[board] = 0
+            distcorrtemp=None
+            if self.doexttrig[board]: # take from the best non exttrig board
+                if self.dooversample[board] and board%2==1: distcorrtemp = self.distcorr[board-1]
+                elif not self.doexttrig[self.activeboard]: distcorrtemp = self.distcorr[self.activeboard]
+                else: # take from first triggering board
+                    for bn in range(self.num_board):
+                        if not self.doexttrig[board]:
+                            distcorrtemp = self.distcorr[bn]
+                            break
+            else: # find distcorr for this board which is triggering
+                thed = self.xydata[board * self.num_chan_per_board + self.triggerchan[board]]
+                fitwidth = (self.max_x - self.min_x)
+                xc = thed[0][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
+                numsamp = self.distcorrsamp # number of samples to use on each side of trigger time
+                fitwidth *= numsamp / max(2,xc.size)
+                xc = thed[0][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
+                #print("xc size start end", xc.size, xc[0], xc[-1], "and vline at", self.vline)
+                yc = thed[1][(thed[0] > self.vline - fitwidth) & (thed[0] < self.vline + fitwidth)]
+                if self.fallingedge[board]: yc = -yc
+                if xc.size>1:
+                    distcorrtemp = find_crossing_distance(yc, self.hline, self.vline, xc[0], xc[1] - xc[0])
+            if distcorrtemp is not None and abs(distcorrtemp) < self.distcorrtol*self.downsamplefactor/self.nsunits:
+                self.distcorr[board]=distcorrtemp
+                self.xydata[board * self.num_chan_per_board][0] -= self.distcorr[board]
+                if self.dotwochannel: self.xydata[board * self.num_chan_per_board + 1][0] -= self.distcorr[board]
+                self.totdistcorr[board] += self.distcorr[board]
+            #print("board totdistcorr distcorrtemp distcorr", board, self.totdistcorr[board], distcorrtemp, self.distcorr[board])
+        self.isdrawing = False
+
         self.adjustclocks(board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr)
+        if self.plljustreset[board]==-10 and (nbadclkA > 0 or nbadclkB > 0 or nbadclkC > 0 or nbadclkD > 0 or nbadstr > 0):
+            print("Found a bad clock or strobe - triggering a PLL reset!")
+            self.pllreset(board)
         if board == self.activeboard:
             self.nbadclkA = nbadclkA
             self.nbadclkB = nbadclkB
@@ -1217,38 +1570,80 @@ class MainWindow(TemplateBaseClass):
             #thestr += "Nbadclks A B C D:" + str(self.nbadclkA) + " " + str(self.nbadclkB) + " " + str(self.nbadclkC) + " " + str(self.nbadclkD) + str("\n")
             #thestr += "Nbadstrobes:" + str(self.nbadstr) + str("\n")
             #thestr += "Last clk:"+str(self.lastclk) + str("\n")
+            if self.ui.actionN_persist_lines.isChecked(): thestr += "N persist lines:"+str(len(self.persist_lines)) + str("\n")
             if self.ui.actionTemperatures.isChecked(): thestr += gettemps(usbs[self.activeboard]) + str("\n")
 
-            thestr += "\nMeasurements for board "+str(self.activeboard)+" and chan "+str(self.selectedchannel)+":\n"
-            if self.ui.actionMean.isChecked(): thestr += "Mean: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.mean(self.xydata[self.activexychannel][1]), 3) ) + " mV\n"
-            if self.ui.actionRMS.isChecked(): thestr += "RMS: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.std(self.xydata[self.activexychannel][1]), 3) ) + " mV\n"
-            if self.ui.actionMaximum.isChecked(): thestr += "Max: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.max(self.xydata[self.activexychannel][1]), 3) ) + " mV\n"
-            if self.ui.actionMinimum.isChecked(): thestr += "Min: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.min(self.xydata[self.activexychannel][1]), 3) ) + " mV\n"
-            if self.ui.actionVpp.isChecked(): thestr += "Vpp: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * (np.max(self.xydata[self.activexychannel][1]) - np.min(self.xydata[self.activexychannel][1])), 3) ) + " mV\n"
+            # which data to use for measurements
+            if self.persist_time>0 and len(self.persist_lines)>=2 and self.average_line.isVisible():
+                usingpersistdata=True
+                targetdata = [self.average_line.xData, self.average_line.yData]
+                targetdatastr = "from average for"
+            else:
+                usingpersistdata=False
+                if not self.dointerleaved[self.activeboard]:
+                    targetdata = self.xydata[self.activexychannel]
+                    targetdatastr = "for"
+                else:
+                    targetdata = self.xydatainterleaved[int(self.activeboard/2)]
+                    targetdatastr = "from interleaved"
+
+            thestr += "\nMeasurements "+targetdatastr+" board "+str(self.activeboard)+" and chan "+str(self.selectedchannel)+":\n"
+            if self.ui.actionMean.isChecked(): thestr += "Mean: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.mean(targetdata[1]), 3) ) + " mV\n"
+            if self.ui.actionRMS.isChecked(): thestr += "RMS: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.std(targetdata[1]), 3) ) + " mV\n"
+            if self.ui.actionMaximum.isChecked(): thestr += "Max: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.max(targetdata[1]), 3) ) + " mV\n"
+            if self.ui.actionMinimum.isChecked(): thestr += "Min: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * np.min(targetdata[1]), 3) ) + " mV\n"
+            if self.ui.actionVpp.isChecked(): thestr += "Vpp: " + str( round( 1000* self.VperD[self.activeboard*2+self.selectedchannel] * (np.max(targetdata[1]) - np.min(targetdata[1])), 3) ) + " mV\n"
             if self.ui.actionFreq.isChecked():
                 sampling_rate = self.samplerate*1e9/self.downsamplefactor # Hz
-                if self.dotwochannel: sampling_rate /= 2
-                found_freq = find_fundamental_frequency_scipy(self.xydata[self.activexychannel][1], sampling_rate)
-                thestr += "Freq: " + str(format_freq(found_freq))
+                if self.doresamp and usingpersistdata: sampling_rate*=self.doresamp
+                elif self.dotwochannel: sampling_rate /= 2
+                found_freq = find_fundamental_frequency_scipy(targetdata[1], sampling_rate)
+                thestr += "Freq: " + str(format_freq(found_freq)) + "\n"
+            for i in range(3): self.otherlines[2+i].setVisible(False) # assume we're not drawing the risetime fit line
             if self.ui.actionRisetime.isChecked():
-                if not self.dointerleaved[self.activeboard]:
-                    targety = self.xydata[self.activexychannel]
-                else:
-                    targety = self.xydatainterleaved[int(self.activeboard/2)]
-                p0 = [max(targety[1]), self.vline - 10, 20, min(targety[1])] #initial guess
                 fitwidth = (self.max_x - self.min_x) * self.fitwidthfraction
-                xc = targety[0][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]  # only fit in range
-                yc = targety[1][(targety[0] > self.vline - fitwidth) & (targety[0] < self.vline + fitwidth)]
-                if xc.size > 10: # require at least something to fit, otherwise we'll through an area
+                xc = targetdata[0][(targetdata[0] > self.vline - fitwidth) & (targetdata[0] < self.vline + fitwidth)]  # only fit in range
+                yc = targetdata[1][(targetdata[0] > self.vline - fitwidth) & (targetdata[0] < self.vline + fitwidth)]
+                if self.fallingedge[self.activeboard]:
+                    p0 = [min(targetdata[1]), xc[xc.size//2], -2*self.nsunits, max(targetdata[1])] #initial guess
+                else:
+                    p0 = [max(targetdata[1]), xc[xc.size//2], 2*self.nsunits, min(targetdata[1])] #initial guess
+                if xc.size < 10: # require at least something to fit, otherwise we'll throw an error
+                    thestr += "Risetime: fit range too small\n"
+                else:
                     with warnings.catch_warnings():
                         try:
                             warnings.simplefilter("ignore")
+                            p0[1] -= (p0[0]-p0[3])/p0[2]/2 # correct the left edge inital guess
                             popt, pcov = curve_fit(fit_rise, xc, yc, p0)
                             perr = np.sqrt(np.diag(pcov))
-                            risetime = 0.8 * popt[2]
-                            risetimeerr = perr[2]
-                            # print(popt)
-                            thestr += "Risetime: " + str(risetime.round(2)) + "+-" + str(risetimeerr.round(2)) + " " + self.units + str("\n")
+                            #print(popt)
+                            top = popt[0]
+                            left = popt[1]
+                            slope = popt[2]
+                            bot = popt[3]
+                            drawinitialguess=False
+                            if drawinitialguess:
+                                top = p0[0]  # popt[0]
+                                left = p0[1]  # popt[1]
+                                slope = p0[2]  # popt[2]
+                                bot = p0[3]  # popt[3]
+                            right = left+(top-bot)/slope
+                            #print("right",right)
+                            risetime = self.nsunits * 0.6 * (top-bot)/slope # from 20 - 80%
+                            if self.fallingedge[self.activeboard]: risetime*=-1
+                            risetimeerr = self.nsunits * 0.6 * 4 * (top-bot) * perr[2] / (slope*slope) # 4 is fudge factor, since the error is often underestimated
+                            thestr += "Risetime: " + str(risetime.round(2)) + "+-" + str(risetimeerr.round(2)) + " ns\n"
+                            if self.ui.actionRisetime_fit_lines.isChecked():
+                                self.otherlines[2].setData([right, xc[-1]],[top, top])
+                                self.otherlines[3].setData([left, right], [bot, top])
+                                self.otherlines[4].setData([xc[0], left], [bot, bot])
+                                #print(risetimeerr)
+                                if abs(risetimeerr) != math.inf:
+                                    for i in range(3): self.otherlines[2+i].setVisible(True)
+                                else:
+                                    self.otherlines[3].setData([xc[0], xc[-1]], [-2.0, 2.0])
+                                    self.otherlines[3].setVisible(True)
                         except RuntimeError:
                             pass
 
@@ -1261,12 +1656,15 @@ class MainWindow(TemplateBaseClass):
 
     def update_firmware(self):
         print("thinking about updating firmware on board",self.activeboard)
-        if not os.path.exists("../adc board firmware/output_files/coincidence_auto.rpd"):
-            print("../adc board firmware/output_files/coincidence_auto.rpd was not found!")
-            return
+        firmwarepath = "../adc board firmware/output_files/coincidence_auto.rpd"
+        if not os.path.exists(firmwarepath):
+            firmwarepath = "../../../adc board firmware/output_files/coincidence_auto.rpd"
+            if not os.path.exists(firmwarepath):
+                print("coincidence_auto.rpd was not found!")
+                return
         msg_box = QMessageBox()
         msg_box.setWindowTitle("Confirmation")
-        msg_box.setText("Do you really want to update the firmware with ../adc board firmware/output_files/coincidence_auto.rpd?")
+        msg_box.setText("Do you really want to update the firmware with "+firmwarepath)
         msg_box.setIcon(QMessageBox.Question)
         msg_box.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
         msg_box.setDefaultButton(QMessageBox.Cancel)  # Set default focused button
@@ -1295,11 +1693,21 @@ class MainWindow(TemplateBaseClass):
                     baderase=True
             if not baderase: print("erase verified")
             else: return
-        writtenbytes = flash_writeall_from_file(usbs[self.activeboard],'../adc board firmware/output_files/coincidence_auto.rpd', dowrite=True)
+        writtenbytes = flash_writeall_from_file(usbs[self.activeboard],firmwarepath, dowrite=True)
         print("took",round(time.time()-starttime,3),"seconds so far")
         print("verifying write")
         readbytes = flash_readall(usbs[self.activeboard])
-        if writtenbytes == readbytes: print("verified!")
+        if writtenbytes == readbytes:
+            print("verified!")
+            print("took", round(time.time() - starttime, 3), "seconds")
+
+            ver = version(usbs[self.activeboard], True)
+            if ver>=29:
+                # now reset the board and exit the softare
+                reload_firmware(usbs[self.activeboard])
+                print("Can exit software now, then restart it")
+                if not self.paused: self.dostartstop()
+                self.ui.runButton.setEnabled(False)
         else:
             print("not verified!!!")
             nbad=0
@@ -1311,7 +1719,6 @@ class MainWindow(TemplateBaseClass):
                         print("not showing more")
                         break
         for bo in range(self.num_board): clkout_ena(usbs[bo],self.num_board>1)
-        print("took",round(time.time()-starttime,3),"seconds")
 
     def autocalibration(self, resamp=2, dofiner=False, oldtoff=0, finewidth=16):
         if not resamp: # called from GUI, defaults aren't filled
@@ -1376,21 +1783,30 @@ class MainWindow(TemplateBaseClass):
         else:
             oldtoff = self.toff
             self.toff = minshift//resamp + self.toff
-            yc = self.xydata[c][1][
-                (self.xydata[c][0] > self.vline - fitwidth) & (self.xydata[c][0] < self.vline + fitwidth)]
-            yc1 = self.xydata[c1][1][
-                (self.xydata[c1][0] > self.vline - fitwidth) & (self.xydata[c1][0] < self.vline + fitwidth)]
-            extrigboardmean = np.mean(yc)
-            otherboardmean = np.mean(yc1)
-            self.extrigboardmeancorrection[self.activeboard] = self.extrigboardmeancorrection[self.activeboard] + extrigboardmean - otherboardmean
-            extrigboardstd = np.std(yc)
-            otherboardstd = np.std(yc1)
-            if otherboardstd > 0:
-                self.extrigboardstdcorrection[self.activeboard] = self.extrigboardstdcorrection[self.activeboard] * extrigboardstd / otherboardstd
-            else:
-                self.extrigboardstdcorrection[self.activeboard] = self.extrigboardstdcorrection[self.activeboard]
-            print("calculated mean and std corrections", self.extrigboardmeancorrection[self.activeboard], self.extrigboardstdcorrection[self.activeboard])
+            self.do_meanrms_calibration()
             self.autocalibration(64,True, oldtoff)
+
+    def do_meanrms_calibration(self):
+        if self.activeboard%2==1:
+            print("Select the even board number first!")
+            return
+        c1 = self.activeboard * self.num_chan_per_board
+        c = (self.activeboard + 1) * self.num_chan_per_board
+        fitwidth = (self.max_x - self.min_x) * 0.99 # self.fitwidthfraction
+        yc = self.xydata[c][1][
+                (self.xydata[c][0] > self.vline - fitwidth) & (self.xydata[c][0] < self.vline + fitwidth)]
+        yc1 = self.xydata[c1][1][
+            (self.xydata[c1][0] > self.vline - fitwidth) & (self.xydata[c1][0] < self.vline + fitwidth)]
+        extrigboardmean = np.mean(yc)
+        otherboardmean = np.mean(yc1)
+        self.extrigboardmeancorrection[self.activeboard] = self.extrigboardmeancorrection[self.activeboard] + extrigboardmean - otherboardmean
+        extrigboardstd = np.std(yc)
+        otherboardstd = np.std(yc1)
+        if otherboardstd > 0:
+            self.extrigboardstdcorrection[self.activeboard] = self.extrigboardstdcorrection[self.activeboard] * extrigboardstd / otherboardstd
+        else:
+            self.extrigboardstdcorrection[self.activeboard] = self.extrigboardstdcorrection[self.activeboard]
+        print("calculated mean and std corrections", self.extrigboardmeancorrection[self.activeboard], self.extrigboardstdcorrection[self.activeboard])
 
     def plot_fft(self):
         if self.dointerleaved[self.activeboard]: y = self.xydatainterleaved[int(self.activeboard/2)][1]
@@ -1402,7 +1818,7 @@ class MainWindow(TemplateBaseClass):
         # t = np.arange(0,1,1.0/n) * (n*uspersample) # time vector in us
         frq = (k / uspersample)[list(range(int(n / 2)))] / n  # one side frequency range up to Nyquist
         Y = np.fft.fft(y)[list(range(int(n / 2)))] / n  # fft computing and normalization
-        Y[0] = 0  # to suppress DC
+        Y[0] = 1e-3  # to suppress DC
         if np.max(frq) < .001:
             self.fftui.fftfreqplot_xdata = frq * 1000000.0
             self.fftui.fftax_xlabel = 'Frequency (Hz)'
@@ -1415,8 +1831,9 @@ class MainWindow(TemplateBaseClass):
             self.fftui.fftfreqplot_xdata = frq
             self.fftui.fftax_xlabel = 'Frequency (MHz)'
             self.fftui.fftax_xlim = frq[int(n / 2) - 1]
-        self.fftui.fftfreqplot_ydata = abs(Y)
-        self.fftui.fftfreqplot_ydatamax = np.max(abs(Y))
+        self.fftui.fftfreqplot_ydata = abs(Y)+1e-10
+        self.fftui.fftfreqplot_ydatamax = np.max(self.fftui.fftfreqplot_ydata)
+        self.fftui.fftfreqplot_ydatamin = np.min(self.fftui.fftfreqplot_ydata)
 
     def fastadclineclick(self, curve):
         for li in range(self.nlines):
@@ -1466,8 +1883,10 @@ class MainWindow(TemplateBaseClass):
         self.hsprosock_t1.start()
 
     def close_socket(self):
-        self.hsprosock.runthethread = False
-        self.hsprosock_t1.join()
+        if hasattr(self,"hsprosock"):
+            print("Closing socket")
+            self.hsprosock.runthethread = False
+            self.hsprosock_t1.join()
 
     def doleds(self):
         for board in range(self.num_board):
@@ -1507,6 +1926,13 @@ class MainWindow(TemplateBaseClass):
             self.xydata = np.empty([int(self.num_chan_per_board * self.num_board), 2, 4 * 10 * self.expect_samples], dtype=float)
             self.xydatainterleaved = np.empty([int(self.num_chan_per_board * self.num_board), 2, 2 * 4 * 10 * self.expect_samples], dtype=float)
 
+    def set_average_line_pen(self):
+        if not self.ui.persistlinesCheck.isChecked(): self.avg_pen = self.linepens[self.activexychannel]
+        else: self.avg_pen = pg.mkPen(color='w', width=self.ui.linewidthBox.value())
+        self.average_line.setPen(self.avg_pen)
+        for theline in range(len(self.persist_lines)): self.persist_lines[theline][0].setVisible(self.ui.persistlinesCheck.isChecked() and self.ui.chanonCheck.isChecked())
+        self.average_line.setVisible(self.ui.persistavgCheck.isChecked() and self.ui.chanonCheck.isChecked())
+
     def launch(self):
         self.nlines = self.num_chan_per_board * self.num_board
         chan=0
@@ -1514,11 +1940,11 @@ class MainWindow(TemplateBaseClass):
         for board in range(self.num_board):
             for boardchan in range( self.num_chan_per_board ):
                 #print("chan=",chan, " board=",board, "boardchan=",boardchan)
-                alpha = 0.9
+                alpha = 1
                 colors[chan][3] = alpha
                 c = QColor.fromRgbF(*colors[chan])
                 pen = pg.mkPen(color=c) # width=2 slows drawing down
-                line = self.ui.plot.plot(pen=pen, name=self.chtext + str(chan))
+                line = self.ui.plot.plot(pen=pen, name=self.chtext + str(chan), skipFiniteCheck=True, connect="finite")
                 line.curve.setClickable(True)
                 line.curve.sigClicked.connect(self.fastadclineclick)
                 self.lines.append(line)
@@ -1534,16 +1960,35 @@ class MainWindow(TemplateBaseClass):
         else: self.ui.chanBox.setMaximum(0)
         self.ui.boardBox.setMaximum(self.num_board - 1)
 
-        # trigger lines
+        # average of persist lines
+        self.average_line = self.ui.plot.plot(pen=self.avg_pen, name="persist average")
+        self.average_line.setVisible(self.ui.persistavgCheck.isChecked())
+        self.ui.persistavgCheck.clicked.connect(lambda: self.average_line.setVisible(self.ui.persistavgCheck.isChecked()))
+        self.ui.persistavgCheck.clicked.connect(self.set_average_line_pen)
+        self.ui.persistlinesCheck.clicked.connect(self.set_average_line_pen)
+
+        # vertical trigger position line
         self.vline = 0.0
-        pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
-        line = self.ui.plot.plot([self.vline, self.vline], [-2.0, 2.0], pen=pen, name="trigger time vert")
+        dashedpen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
+        hoverpen = pg.mkPen(color="w", width=2.0, style=QtCore.Qt.DashLine)
+        line = pg.InfiniteLine(pos=self.vline, angle=90, movable=True, pen=dashedpen, hoverPen=hoverpen)
+        self.ui.plot.addItem(line)
+        line.sigDragged.connect(self.on_vline_dragged)
         self.otherlines.append(line)
 
+        # horizontal trigger threshold line
         self.hline = 0.0
-        pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
-        line = self.ui.plot.plot([-2.0, 2.0], [self.hline, self.hline], pen=pen, name="trigger thresh horiz")
+        line = pg.InfiniteLine(pos=self.hline, angle=0, movable=True, pen=dashedpen, hoverPen=hoverpen)
+        self.ui.plot.addItem(line)
+        line.sigPositionChanged.connect(self.on_hline_dragged)
         self.otherlines.append(line)
+
+        # risetime fit lines
+        for i in range(3):
+            pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DotLine)
+            line = self.ui.plot.plot([700.0, 700.0], [-2.0, 2.0], pen=pen, name="risetime fit line", skipFiniteCheck=True, connect="finite")
+            line.setVisible(False)
+            self.otherlines.append(line)
 
         # other stuff
         # https://pyqtgraph.readthedocs.io/en/latest/api_reference/graphicsItems/plotitem.html
@@ -1552,18 +1997,44 @@ class MainWindow(TemplateBaseClass):
         self.ui.plot.setRange(yRange=(self.min_y, self.max_y), padding=0.01)
         self.ui.plot.getAxis("left").setTickSpacing(1,.1)
         self.ui.plot.setBackground(QColor('black'))
-        self.ui.plot.showGrid(x=True, y=True)
+        self.ui.plot.showGrid(x=True, y=True, alpha=0.8)
+        self.ui.plot.setMenuEnabled(False) # disables the right-click menu
+        if self.num_board>0:
+            self.rightaxis = add_secondary_axis(
+                plot_item=self.ui.plot,
+                conversion_func=lambda val: val * self.VperD[self.activexychannel],
+                text='Voltage', units='V', color="w")
+            self.rightaxis.setWidth(w=40)
+            self.update_right_axis()
         for usb in usbs: self.telldownsample(usb, 0)
+
+    def on_vline_dragged(self, line):
+        if self.downsamplezoom>1: # just pan left or right
+            if self.min_x < line.value() < self.max_x:
+                self.max_x -= line.value() - self.vline
+                self.min_x -= line.value() - self.vline
+                #print("vline min max", self.vline, self.min_x, self.max_x)
+                self.ui.plot.setRange(xRange=(self.min_x, self.max_x), padding=0.00)
+            self.drawtriggerlines()
+        else: # actually adjust trigger position
+            t = (line.value() / (4 * 10 * (self.downsamplefactor / self.nsunits / self.samplerate)) - 1.0) * 10000./self.expect_samples
+            #print("on_vline_dragged",t)
+            self.ui.thresholdPos.setValue(ceil(t))
+            self.drawtriggerlines()
+
+    def on_hline_dragged(self, line):
+        t = line.value() / (self.yscale * 256) + 127
+        self.ui.threshold.setValue(int(t))
 
     def setup_connection(self, board):
         print("Setting up board",board)
         ver = version(usbs[board],False)
-        if not hasattr(self,"firmwareversion"): self.firmwareversion = ver
+        if self.firmwareversion<0: self.firmwareversion = ver
         if ver < self.firmwareversion:
             print("Warning - this board has older firmware than another being used!")
             self.firmwareversion = ver # find the minimum firmware being used
         self.adfreset(board)
-        setupboard(usbs[board], self.dopattern, self.dotwochannel, self.dooverrange)
+        if setupboard(usbs[board], self.dopattern, self.dotwochannel, self.dooverrange, self.basevoltage==200)>0: return 0
         for c in range(self.num_chan_per_board):
             setchanacdc(usbs[board], c, 0, self.dooversample[board])
             setchanimpedance(usbs[board], c, 0, self.dooversample[board])
@@ -1571,9 +2042,33 @@ class MainWindow(TemplateBaseClass):
         setsplit(usbs[board], False)
         self.pllreset(board)
         auxoutselector(usbs[board],0)
+
+        # Try toggling relays and test to see if the ADC temp measurement is affected - hack to check power supply
+        setfan(usbs[board], 0)
+        send_leds(usbs[board], 0, 0, 0, 0, 0, 0)
+        time.sleep(0.9)
+        oldtemp = gettemps(usbs[board],retadcval=True)
+        for c in range(self.num_chan_per_board):
+            setchanimpedance(usbs[board], c, 1, self.dooversample[board])
+            setchanatt(usbs[board], c, 1, self.dooversample[board])
+        setsplit(usbs[board], True)
+        setfan(usbs[board], 1)
+        send_leds(usbs[board], 255,255,255, 255,255,255)
+        time.sleep(0.1)
+        newtemp = gettemps(usbs[board], retadcval=True)
+        difftemp = newtemp-oldtemp
+        print("Temps: old new diff",round(oldtemp,2),round(newtemp,2),round(difftemp,2))
+        for c in range(self.num_chan_per_board):
+            setchanimpedance(usbs[board], c, 0, self.dooversample[board])
+            setchanatt(usbs[board], c, 0, self.dooversample[board])
+        setsplit(usbs[board], False)
+        if difftemp < -0.3: # if the "temperature" went down, power was likely bad
+            print("Bad power from board",board,"?!")
+            return 0
+
         return 1
 
-    def closeEvent(self, event):
+    def closeEvent(self, event=None):
         if event: print("Handling closeEvent")
         self.close_socket()
         self.timer.stop()
@@ -1581,6 +2076,14 @@ class MainWindow(TemplateBaseClass):
         if self.dorecordtofile: self.outf.close()
         if self.fftui != 0: self.fftui.close()
         for usb in usbs: cleanup(usb)
+
+    def take_screenshot(self):
+        # Capture the entire window
+        pixmap = self.grab()
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = f"HaasoscopePro_{timestamp}.png"
+        pixmap.save(filename)
+        print(f"Screenshot saved as {filename}")
 
 if __name__ == '__main__': # calls setup_connection for each board, then init
     print('Argument List:', str(sys.argv))
@@ -1591,27 +2094,45 @@ if __name__ == '__main__': # calls setup_connection for each board, then init
     app = QtWidgets.QApplication.instance()
     standalone = app is None
     if standalone:
+        # The most common fix for grid misalignment
+        if sys.platform.startswith('win'):
+            import ctypes
+            print("On Windows, SetProcessDpiAwareness(True)")
+            ctypes.windll.shcore.SetProcessDpiAwareness(True)
+        # For all platforms, you can also try setting environment variables
+        QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
+        os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
+        os.environ["QT_SCALE_FACTOR"] = "1"
         app = QtWidgets.QApplication(sys.argv)
-    try:
         font = app.font()
         font.setPixelSize(11)
         app.setFont(font)
         app.setWindowIcon(QIcon('icon.png'))
         win = MainWindow()
         win.setWindowTitle('Haasoscope Pro Qt')
-        for usbi in range(len(usbs)):
-            if not win.setup_connection(usbi):
-                print("Exiting now - failed setup_connections!")
-                cleanup(usbs[usbi])
-                sys.exit(1)
-        if not win.init():
-            print("Exiting now - failed init!")
-            for usbi in usbs: cleanup(usbi)
-            sys.exit(2)
-    except ftd2xx.DeviceError:
-        print("Device com failed!")
-        self.close_socket()
-    if standalone:
+        print("Haasoscope Pro Qt, version "+f"{win.softwareversion:.2f}")
+        try:
+            goodsetup=True
+            for usbi in range(len(usbs)):
+                if not win.setup_connection(usbi):
+                    print("Failed to setup!")
+                    for usbj in usbs: cleanup(usbj)
+                    if not win.paused: win.dostartstop()
+                    win.ui.runButton.setEnabled(False)
+                    win.ui.actionUpdate_firmware.setEnabled(False)
+                    goodsetup=False
+            if not goodsetup or not win.init():
+                print("Failed initialization!")
+                for usbi in usbs: cleanup(usbi)
+                if not win.paused: win.dostartstop()
+                win.ui.runButton.setEnabled(False)
+                win.ui.actionUpdate_firmware.setEnabled(False)
+        except ftd2xx.DeviceError:
+            print("Device com failed!")
+            if not win.paused: win.dostartstop()
+            win.ui.runButton.setEnabled(False)
+            win.ui.actionUpdate_firmware.setEnabled(False)
+            win.close_socket()
         rv = app.exec_()
         sys.exit(rv)
     else:

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<system name="$${FILENAME}">
+ <component
+   name="$${FILENAME}"
+   displayName="$${FILENAME}"
+   version="1.0"
+   description=""
+   tags="INTERNAL_COMPONENT=true"
+   categories="" />
+ <parameter name="bonusData"><![CDATA[bonusData 
+{
+   element remote_update_0
+   {
+      datum _sortIndex
+      {
+         value = "0";
+         type = "int";
+      }
+   }
+}
+]]></parameter>
+ <parameter name="clockCrossingAdapter" value="HANDSHAKE" />
+ <parameter name="device" value="EP4CE30F23C6" />
+ <parameter name="deviceFamily" value="Cyclone IV E" />
+ <parameter name="deviceSpeedGrade" value="6" />
+ <parameter name="fabricMode" value="QSYS" />
+ <parameter name="generateLegacySim" value="false" />
+ <parameter name="generationId" value="0" />
+ <parameter name="globalResetBus" value="false" />
+ <parameter name="hdlLanguage" value="VERILOG" />
+ <parameter name="hideFromIPCatalog" value="true" />
+ <parameter name="lockedInterfaceDefinition" value="" />
+ <parameter name="maxAdditionalLatency" value="1" />
+ <parameter name="projectName" value="" />
+ <parameter name="sopcBorderPoints" value="false" />
+ <parameter name="systemHash" value="0" />
+ <parameter name="testBenchDutName" value="" />
+ <parameter name="timeStamp" value="0" />
+ <parameter name="useTestBenchNamingPattern" value="false" />
+ <instanceScript></instanceScript>
+ <interface name="busy" internal="remote_update_0.busy" type="conduit" dir="end">
+  <port name="busy" internal="busy" />
+ </interface>
+ <interface name="clock" internal="remote_update_0.clock" type="clock" dir="end">
+  <port name="clock" internal="clock" />
+ </interface>
+ <interface
+   name="data_out"
+   internal="remote_update_0.data_out"
+   type="conduit"
+   dir="end">
+  <port name="data_out" internal="data_out" />
+ </interface>
+ <interface
+   name="param"
+   internal="remote_update_0.param"
+   type="conduit"
+   dir="end">
+  <port name="param" internal="param" />
+ </interface>
+ <interface
+   name="read_param"
+   internal="remote_update_0.read_param"
+   type="conduit"
+   dir="end">
+  <port name="read_param" internal="read_param" />
+ </interface>
+ <interface
+   name="read_source"
+   internal="remote_update_0.read_source"
+   type="conduit"
+   dir="end">
+  <port name="read_source" internal="read_source" />
+ </interface>
+ <interface
+   name="reconfig"
+   internal="remote_update_0.reconfig"
+   type="conduit"
+   dir="end">
+  <port name="reconfig" internal="reconfig" />
+ </interface>
+ <interface name="reset" internal="remote_update_0.reset" type="reset" dir="end">
+  <port name="reset" internal="reset" />
+ </interface>
+ <interface
+   name="reset_timer"
+   internal="remote_update_0.reset_timer"
+   type="conduit"
+   dir="end">
+  <port name="reset_timer" internal="reset_timer" />
+ </interface>
+ <module
+   name="remote_update_0"
+   kind="altera_remote_update"
+   version="23.1"
+   enabled="1"
+   autoexport="1">
+  <parameter name="AUTO_DEVICE_SPEEDGRADE" value="6" />
+  <parameter name="CBX_AUTO_BLACKBOX" value="ALL" />
+  <parameter name="DEVICE" value="EP4CE30F23C6" />
+  <parameter name="DEVICE_FAMILY" value="Cyclone IV E" />
+  <parameter name="GUI_config_device" value="EPCS16" />
+  <parameter name="check_app_pof" value="false" />
+  <parameter name="check_avalon_interface" value="false" />
+  <parameter name="m_support_write_config_check" value="false" />
+  <parameter name="operation_mode" value="REMOTE" />
+ </module>
+ <interconnectRequirement for="$system" name="qsys_mm.clockCrossingAdapter" value="HANDSHAKE" />
+ <interconnectRequirement for="$system" name="qsys_mm.enableEccProtection" value="FALSE" />
+ <interconnectRequirement for="$system" name="qsys_mm.insertDefaultSlave" value="FALSE" />
+ <interconnectRequirement for="$system" name="qsys_mm.maxAdditionalLatency" value="1" />
+</system>

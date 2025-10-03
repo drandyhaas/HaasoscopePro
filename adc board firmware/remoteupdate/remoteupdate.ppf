@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pinplan
+ variation_name="remote_update_0"
+ megafunction_name="ALTERA_REMOTE_UPDATE"
+ intended_family="Cyclone IV E"
+ specifies="all_ports">
+ <global>
+  <pin name="busy" direction="output" scope="external" />
+  <pin name="data_out[28..0]" direction="output" scope="external" />
+  <pin name="param[2..0]" direction="input" scope="external" />
+  <pin name="read_param" direction="input" scope="external" />
+  <pin name="reconfig" direction="input" scope="external" />
+  <pin name="reset_timer" direction="input" scope="external" />
+  <pin name="read_source[1..0]" direction="input" scope="external" />
+  <pin name="clock" direction="input" scope="external" />
+  <pin name="reset" direction="input" scope="external" />
+ </global>
+</pinplan>

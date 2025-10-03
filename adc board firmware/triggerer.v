@@ -21,6 +21,11 @@ module triggerer(
    output reg [8:0]  triggerphase,
    output integer    downsamplecounter,
    output integer    eventtime,
+   
+   output reg [19:0]  sample1_triggered=0,
+   output reg [19:0]  sample2_triggered=0,
+   output reg [19:0]  sample3_triggered=0,
+   output reg [19:0]  sample4_triggered=0,
 
    // synced inputs from other clocks
    input reg signed [11:0]  lowerthresh,
@@ -59,13 +64,9 @@ reg         firingsecondstep = 0;
 reg [7:0]   current_active_trigger_type = 0;
 reg         rising = 0;
 reg         auxtrigout = 0;
-reg [19:0]  sample_triggered2 = 0;
-reg [19:0]  sample_triggered3 = 0;
-reg [19:0]  sample_triggered4 = 0;
-reg [9:0]   sample_triggered_max_val1 = 0, sample_triggered_max_val2 = 0;
-reg         st1zero, st2zero, st3zero, st4zero; // for sample_triggered
 integer     eventtimecounter = 0;
 reg [1:0]   forwardsbackwardsexttrig = 0;
+reg thebit, gotzerobit;
 
 // synced inputs from other clocks
 reg signed [11:0] lowerthresh_sync = 0;
@@ -87,7 +88,7 @@ reg         lvdsin_trig_sync = 0, lvdsin_trig_b_sync = 0;
 reg [1:0]   firstlast_sync = 0;
 
 // this drives the trigger
-integer i;
+integer i, j;
 always @ (posedge clklvds) begin
    
    triggerlive_sync       <= triggerlive;
@@ -150,7 +151,7 @@ always @ (posedge clklvds) begin
    // rolling trigger
    if (dorolling_sync && acqstate>0 && acqstate<249) begin
       if (rollingtriggercounter==8000000) begin // ~10 Hz
-         sample_triggered <= 0;
+         sample_triggered = 0;
          downsamplemergingcounter_triggered <= downsamplemergingcounter;
          ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
          lvdsout_trig = 1'b1; // tell the others
@@ -164,12 +165,11 @@ always @ (posedge clklvds) begin
    0 : begin // ready
       auxtrigout <= 0;
       tot_counter <= 0;
-      sample_triggered <= 0;
-      sample_triggered2 <= 0;
-      sample_triggered3 <= 0;
-      sample_triggered4 <= 0;
-      sample_triggered_max_val1 <= 0;
-      sample_triggered_max_val2 <= 0;
+      sample_triggered = 0;
+      sample1_triggered <= 0;
+      sample2_triggered <= 0;
+      sample3_triggered <= 0;
+      sample4_triggered <= 0;
       triggerphase <= -9'd1;
       forwardsbackwardsexttrig <= 2'b11; // tell state 250 to fire forwards and backwards for one extra clock tick after trigger
       downsamplemergingcounter_triggered <= -8'd1;
@@ -215,29 +215,29 @@ always @ (posedge clklvds) begin
       if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
       else begin
          for (i=0;i<10;i=i+1) begin
-            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
+            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && // if in single channel mode OR triggering on channel 0
                ( (samplevalue[ 0+i]<lowerthresh_sync && rising) || (samplevalue[ 0+i]>upperthresh_sync && !rising) ) ) acqstate <= 8'd2;
             if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
-               ( (samplevalue[ 0+i]<lowerthresh_sync && !rising) || (samplevalue[ 0+i]>upperthresh_sync && rising) ) ) sample_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
-            else sample_triggered[9-i] <= 1'b0;
+               ( (samplevalue[ 0+i]<lowerthresh_sync && !rising) || (samplevalue[ 0+i]>upperthresh_sync && rising) ) ) sample1_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
+            else sample1_triggered[9-i] <= 1'b0;
             
-            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
+            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && // if in single channel mode OR triggering on channel 1
                ( (samplevalue[10+i]<lowerthresh_sync && rising) || (samplevalue[10+i]>upperthresh_sync && !rising) ) ) acqstate <= 8'd2;
             if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
-               ( (samplevalue[10+i]<lowerthresh_sync && !rising) || (samplevalue[10+i]>upperthresh_sync && rising) ) ) sample_triggered2[9-i] <= 1'b1; // remember the samples that caused the trigger
-            else sample_triggered2[9-i] <= 1'b0;
+               ( (samplevalue[10+i]<lowerthresh_sync && !rising) || (samplevalue[10+i]>upperthresh_sync && rising) ) ) sample2_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
+            else sample2_triggered[9-i] <= 1'b0;
             
-            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
+            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && // if in single channel mode OR triggering on channel 0
                ( (samplevalue[20+i]<lowerthresh_sync && rising) || (samplevalue[20+i]>upperthresh_sync && !rising) ) ) acqstate <= 8'd2;
             if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
-               ( (samplevalue[20+i]<lowerthresh_sync && !rising) || (samplevalue[20+i]>upperthresh_sync && rising) ) ) sample_triggered3[9-i] <= 1'b1; // remember the samples that caused the trigger
-            else sample_triggered3[9-i] <= 1'b0;
+               ( (samplevalue[20+i]<lowerthresh_sync && !rising) || (samplevalue[20+i]>upperthresh_sync && rising) ) ) sample3_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
+            else sample3_triggered[9-i] <= 1'b0;
             
-            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
+            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && // if in single channel mode OR triggering on channel 1
                ( (samplevalue[30+i]<lowerthresh_sync && rising) || (samplevalue[30+i]>upperthresh_sync && !rising) ) ) acqstate <= 8'd2;
             if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
-               ( (samplevalue[30+i]<lowerthresh_sync && !rising) || (samplevalue[30+i]>upperthresh_sync && rising) ) ) sample_triggered4[9-i] <= 1'b1; // remember the samples that caused the trigger
-            else sample_triggered4[9-i] <= 1'b0;
+               ( (samplevalue[30+i]<lowerthresh_sync && !rising) || (samplevalue[30+i]>upperthresh_sync && rising) ) ) sample4_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
+            else sample4_triggered[9-i] <= 1'b0;
          end
       end
    end
@@ -250,7 +250,7 @@ always @ (posedge clklvds) begin
                ( (samplevalue[ 0+i]<lowerthresh_sync && !rising) || (samplevalue[ 0+i]>upperthresh_sync && rising) ) ) begin
                firingsecondstep=1'b1;
                if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
-                  sample_triggered[10+9-i] <= 1'b1; // remember the samples that caused the trigger
+                  sample1_triggered[10+9-i] <= 1'b1; // remember the samples that caused the trigger
                   downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
                end
             end
@@ -258,7 +258,7 @@ always @ (posedge clklvds) begin
                ( (samplevalue[10+i]<lowerthresh_sync && !rising) || (samplevalue[10+i]>upperthresh_sync && rising) ) ) begin
                firingsecondstep=1'b1;
                if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
-                  sample_triggered2[10+9-i] <= 1'b1; // remember the samples that caused the trigger
+                  sample2_triggered[10+9-i] <= 1'b1; // remember the samples that caused the trigger
                   downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
                end
             end
@@ -266,7 +266,7 @@ always @ (posedge clklvds) begin
                ( (samplevalue[20+i]<lowerthresh_sync && !rising) || (samplevalue[20+i]>upperthresh_sync && rising) ) ) begin
                firingsecondstep=1'b1;
                if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
-                  sample_triggered3[10+9-i] <= 1'b1; // remember the samples that caused the trigger
+                  sample3_triggered[10+9-i] <= 1'b1; // remember the samples that caused the trigger
                   downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
                end
             end
@@ -274,7 +274,7 @@ always @ (posedge clklvds) begin
                ( (samplevalue[30+i]<lowerthresh_sync && !rising) || (samplevalue[30+i]>upperthresh_sync && rising) ) ) begin
                firingsecondstep=1'b1;
                if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
-                  sample_triggered4[10+9-i] <= 1'b1; // remember the samples that caused the trigger
+                  sample4_triggered[10+9-i] <= 1'b1; // remember the samples that caused the trigger
                   downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
                end
             end
@@ -296,7 +296,7 @@ always @ (posedge clklvds) begin
       else begin
          if (lvdsin_trig_sync && firstlast_sync!=2'd1) begin // don't pay attention if we're the first board
             ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-            sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
+            sample_triggered = 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
             downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
             if (current_active_trigger_type==30) lvdsout_trig_b = 1; // echo back, if we're supposed to, for measuring time offset
             forwardsbackwardsexttrig <= 2'b01; // tell next state to only fire forwards still
@@ -304,7 +304,7 @@ always @ (posedge clklvds) begin
          end
          if (lvdsin_trig_b_sync && firstlast_sync!=2'd2) begin // don't pay attention if we're the last board
             ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-            sample_triggered <= 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
+            sample_triggered = 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
             downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
             if (current_active_trigger_type==30) lvdsout_trig = 1; // echo back, if we're supposed to, for measuring time offset
             forwardsbackwardsexttrig <= 2'b10; // tell next state to only fire backwards still
@@ -331,7 +331,7 @@ always @ (posedge clklvds) begin
             ram_address_triggered <= ram_wr_address - triggerToT_sync + 10'd3; // remember where the trigger happened, + trigger delay
             lvdsout_trig = 1'b1; // tell the others forwards
             lvdsout_trig_b = 1'b1; // tell the others backwards
-            sample_triggered <= 0; // we didn't measure the trigger edge - going to be some jitter unfortunately
+            sample_triggered = 0; // we didn't measure the trigger edge - going to be some jitter unfortunately
             downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
             acqstate <= 8'd250;
          end
@@ -352,76 +352,36 @@ always @ (posedge clklvds) begin
       
       auxtrigout<=1; // send to back panel, trigger out
       
-      if (triggerphase == -9'd1) begin // just once
+      if (triggerphase == -9'd1) begin // just once      
          triggerphase = 0;
-         eventtime <= eventtimecounter; // remember the time the trigger occurred
-         
+         eventtime <= eventtimecounter; // remember the time the trigger occurred         
          if (forwardsbackwardsexttrig[0]) lvdsout_trig = 1'b1; // tell the others forwards still
          if (forwardsbackwardsexttrig[1]) lvdsout_trig_b = 1'b1; // tell the others backwards still
          
-         // see whether the sample_triggered's have a 0 in the first 10 bits
-         st1zero=0;
-         st2zero=0;
-         st3zero=0;
-         st4zero=0;
-         for (int i=0; i<10; i++) begin
-            if (sample_triggered [i]==0) st1zero=1;
-            if (sample_triggered2[i]==0) st2zero=1;
-            if (sample_triggered3[i]==0) st3zero=1;
-            if (sample_triggered4[i]==0) st4zero=1;
-         end
-         
-         // find the best sample_triggered that has a zero, and use it for the output sample_triggered
-         // usually that will determine the triggerphase as well
-         if (st1zero) sample_triggered_max_val1 = sample_triggered [9:0];
-         if (st2zero && sample_triggered2[9:0] > sample_triggered_max_val1) begin
-            sample_triggered_max_val1 = sample_triggered2[9:0];
-            triggerphase[1:0] = 2'd1;
-         end
-         if (st3zero && sample_triggered3[9:0] > sample_triggered_max_val1) begin
-            sample_triggered_max_val1 = sample_triggered3[9:0];
-            triggerphase[1:0] = 2'd2;
-         end
-         if (st4zero && sample_triggered4[9:0] > sample_triggered_max_val1) begin
-            sample_triggered_max_val1 = sample_triggered4[9:0];
-            triggerphase[1:0] = 2'd3;
-         end
-         if (triggerphase[1:0]==2'd1) sample_triggered[9:0] <= sample_triggered2[9:0];
-         else if (triggerphase[1:0]==2'd2) sample_triggered[9:0] <= sample_triggered3[9:0];
-         else if (triggerphase[1:0]==2'd3) sample_triggered[9:0] <= sample_triggered4[9:0];
-         
-         // correct triggerphase in the rare case that the best one would have been all zeros in the first 10 bits
-         sample_triggered_max_val1 = sample_triggered [9:0];
-         if (sample_triggered2[9:0] > sample_triggered_max_val1) begin
-            sample_triggered_max_val1 = sample_triggered2[9:0];
-            triggerphase[3:2] = 2'd1;
-         end
-         if (sample_triggered3[9:0] > sample_triggered_max_val1) begin
-            sample_triggered_max_val1 = sample_triggered3[9:0];
-            triggerphase[3:2] = 2'd2;
-         end
-         if (sample_triggered4[9:0] > sample_triggered_max_val1) begin
-            sample_triggered_max_val1 = sample_triggered4[9:0];
-            triggerphase[3:2] = 2'd3;
-         end
+         for (int i=0; i<20; i++) begin
+//            They go from top -> bottom and from left <- right
+//            sample triggered 0 00001000 01111000 01111000
+//            sample triggered 1 00001000 01111000 01111000
+//            sample triggered 2 00001000 01111000 01111000
+//            sample triggered 3 00001100 00111100 00111100
+            
+            for (int j=0; j<4; j++) begin
+               if (channeltype_sync[0]==1'b0 || triggerchan_sync==j%2) begin
+                  if (j==0) thebit = sample1_triggered[i];
+                  if (j==1) thebit = sample2_triggered[i];
+                  if (j==2) thebit = sample3_triggered[i];
+                  if (j==3) thebit = sample4_triggered[i];
+                  if (thebit==1'b0) gotzerobit = 1'b1;
+                  if (gotzerobit && thebit) begin
+                     gotzerobit = 1'b0;
+                     triggerphase[1:0] = j[1:0];
+                     sample_triggered = i[5:0];
+                  end
+               end
+            end
 
-         // find the best sample_triggered to use for when the rising edge is in the last 10 bits
-         sample_triggered_max_val2 = sample_triggered[19:10];
-         if (sample_triggered2[19:10] > sample_triggered_max_val2) begin
-            sample_triggered_max_val2 = sample_triggered2[19:10];
-            triggerphase[5:4] = 2'd1;
          end
-         if (sample_triggered3[19:10] > sample_triggered_max_val2) begin
-            sample_triggered_max_val2 = sample_triggered3[19:10];
-            triggerphase[5:4] = 2'd2;
-         end
-         if (sample_triggered4[19:10] > sample_triggered_max_val2) begin
-            sample_triggered_max_val2 = sample_triggered4[19:10];
-            triggerphase[5:4] = 2'd3;
-         end
-         if (triggerphase[5:4]==2'd1) sample_triggered[19:10] <= sample_triggered2[19:10];
-         else if (triggerphase[5:4]==2'd2) sample_triggered[19:10] <= sample_triggered3[19:10];
-         else if (triggerphase[5:4]==2'd3) sample_triggered[19:10] <= sample_triggered4[19:10];
+         
       end
       
    end

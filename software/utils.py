@@ -2,6 +2,8 @@ import time
 import numpy as np
 from scipy.signal import find_peaks
 from scipy.fft import fft, fftfreq
+import pyqtgraph as pg
+from pyqtgraph.Qt import QtWidgets
 
 def reverse_bits(byte):
     reversed_byte = 0
@@ -143,6 +145,11 @@ def flash_readall(usb):
         else: print("flash_readall timeout?")
     return readbytes
 
+def reload_firmware(usb):
+    print("New firmware is being loaded into the FPGA")
+    usb.send(bytes([2, 19, 1, 0, 100, 100, 100, 100]))
+    usb.recv(4)
+
 def find_fundamental_frequency_scipy(signal, sampling_rate):
     """
     Finds the fundamental frequency using SciPy's find_peaks for robustness.
@@ -180,21 +187,103 @@ def find_fundamental_frequency_scipy(signal, sampling_rate):
 
     return fundamental_freq
 
-
-def format_freq(freq_hz):
+def format_freq(freq_hz, suffix="Hz"):
     """Formats a frequency in Hz to a string with appropriate units."""
     if freq_hz is None:
         return "N/A"
-
     if freq_hz < 1000:
         # Keep as Hz
-        return f"{freq_hz:.3f} Hz"
+        return f"{freq_hz:.3f} {suffix}"
     elif freq_hz < 1_000_000:
         # Convert to kHz
-        return f"{freq_hz / 1000:.3f} kHz"
+        return f"{freq_hz / 1000:.3f} k{suffix}"
     elif freq_hz < 1_000_000_000:
         # Convert to MHz
-        return f"{freq_hz / 1_000_000:.3f} MHz"
+        return f"{freq_hz / 1_000_000:.3f} M{suffix}"
     else:
         # Convert to GHz
-        return f"{freq_hz / 1_000_000_000:.3f} GHz"
+        return f"{freq_hz / 1_000_000_000:.3f} G{suffix}"
+
+def find_crossing_distance(y_data, y_threshold, x_start, x0=0.0, dx=1.0):
+    """
+    Calculates the horizontal distance from a starting x-position to the
+    crossing point that is CLOSEST to that position.
+
+    Args:
+        y_data (np.ndarray): An array of y-values, assumed to be evenly spaced in x.
+        y_threshold (float): The y-value to find the crossing for.
+        x_start (float): The reference x-position to find the closest crossing to.
+        x0 (float, optional): The x-coordinate of the first data point. Defaults to 0.0.
+        dx (float, optional): The spacing between x-coordinates. Defaults to 1.0.
+
+    Returns:
+        float: The signed distance along x from x_start to the closest
+               intersection point. Returns None if no crossing is found.
+    """
+    # Find all indices where y_data goes from below to at or above the threshold
+    crossover_indices = np.where((y_data[:-1] < y_threshold) & (y_data[1:] >= y_threshold))[0]
+
+    if crossover_indices.size == 0: return None
+
+    # Calculate the x-intersection point for ALL crossovers
+    y1 = y_data[crossover_indices]
+    y2 = y_data[crossover_indices + 1]
+    x1 = x0 + crossover_indices * dx
+
+    fraction = (y_threshold - y1) / (y2 - y1)
+    all_x_intersects = x1 + fraction * dx
+
+    # Find the intersection point that is closest to x_start
+    # We calculate the absolute difference to find the minimum distance,
+    # then select the corresponding x_intersect value.
+    closest_idx = np.argmin(np.abs(all_x_intersects - x_start))
+    closest_x_intersect = all_x_intersects[closest_idx]
+
+    return closest_x_intersect - x_start
+
+def add_secondary_axis(plot_item, conversion_func, **axis_args):
+    """
+    Adds a secondary y-axis that is dynamically linked by a conversion function.
+
+    The conversion function and update logic are attached to the returned
+    AxisItem, allowing them to be modified later.
+    """
+    # Create and add the proxy ViewBox
+    proxy_view = pg.ViewBox()
+    proxy_view.setMenuEnabled(False) # disables the right-click menu
+    proxy_view.setMouseEnabled(x=False, y=False) # disables pan and zoom
+    plot_item.scene().addItem(proxy_view)
+
+    # Get the right axis and link it
+    axis = plot_item.getAxis('right')
+    axis.linkToView(proxy_view)
+    axis.setLabel(**axis_args)
+    plot_item.showAxis('right')
+
+    # Attach the key components to the axis object
+    axis.proxy_view = proxy_view
+    axis.conversion_func = conversion_func  # Attach the function itself
+
+    # Define the update function
+    def update_proxy_range():
+        # Use the conversion_func attached to this axis object
+        main_yrange = plot_item.getViewBox().viewRange()[1]
+        proxy_range = [axis.conversion_func(y) for y in main_yrange]
+        axis.proxy_view.setYRange(*proxy_range, padding=0, update=False)
+
+    # Attach the update function so we can call it manually
+    axis.update_function = update_proxy_range
+
+    # Connect signals
+    plot_item.getViewBox().sigYRangeChanged.connect(axis.update_function)
+
+    def update_geometry():
+        axis.proxy_view.setGeometry(plot_item.getViewBox().sceneBoundingRect())
+
+    plot_item.getViewBox().sigResized.connect(update_geometry)
+
+    # Trigger initial updates
+    axis.update_function()
+    update_geometry()
+
+    return axis

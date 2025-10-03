@@ -1,5 +1,5 @@
 export MACOSX_DEPLOYMENT_TARGET=12.0 # Target macOS Monterey
-python3 -m PyInstaller HaasoscopeProQt.py
+/usr/bin/python3 -m PyInstaller HaasoscopeProQt.py
 cd dist
 rm -rf Mac_HaasoscopeProQt/HaasoscopeProQt
 rm -rf Mac_HaasoscopeProQt/_internal

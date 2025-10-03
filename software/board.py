@@ -3,7 +3,7 @@ from spi import *
 from utils import *
 from adf435x_core import *
 
-def adf4350(usb, freq, phase, r_counter=1, divided=FeedbackSelect.Divider, ref_doubler=False, ref_div2=True, themuxout=False):
+def adf4350(usb, freq, phase, r_counter=1, divided=FeedbackSelect.Divider, ref_doubler=False, ref_div2=True, themuxout=False, quiet=True):
     print('ADF4350 being set to %0.2f MHz' % freq)
     INT, MOD, FRAC, output_divider, band_select_clock_divider = (calculate_regs(
         device_type=DeviceType.ADF4350, freq=freq, ref_freq=50.0,
@@ -11,7 +11,7 @@ def adf4350(usb, freq, phase, r_counter=1, divided=FeedbackSelect.Divider, ref_d
         feedback_select=divided,
         r_counter=r_counter,  # needed when using FeedbackSelect.Divider (needed for phase resync?!)
         ref_doubler=ref_doubler, ref_div2=ref_div2, enable_gcd=True))
-    print("INT", INT, "MOD", MOD, "FRAC", FRAC, "outdiv", output_divider, "bandselclkdiv", band_select_clock_divider)
+    if not quiet: print("INT", INT, "MOD", MOD, "FRAC", FRAC, "outdiv", output_divider, "bandselclkdiv", band_select_clock_divider)
     regs = make_regs(
         INT=INT, MOD=MOD, FRAC=FRAC, output_divider=output_divider,
         band_select_clock_divider=band_select_clock_divider, r_counter=r_counter, ref_doubler=ref_doubler,
@@ -26,7 +26,7 @@ def adf4350(usb, freq, phase, r_counter=1, divided=FeedbackSelect.Divider, ref_d
     spimode(usb, 0)
     for r in reversed(range(len(regs))):
         # regs[2]=0x5004E42 #to override from ADF435x software
-        print("adf4350 reg", r, binprint(regs[r]), hex(regs[r]))
+        if not quiet: print("adf4350 reg", r, binprint(regs[r]), hex(regs[r]))
         fourbytes = inttobytes(regs[r])
         # for i in range(4): print(binprint(fourbytes[i]))
         spicommand(usb, "ADF4350 Reg " + str(r), fourbytes[3], fourbytes[2], fourbytes[1], False, fourth=fourbytes[0],
@@ -43,13 +43,16 @@ def swapinputs(usb,doswap,insetup=False):
         spicommand(usb, "CAL_EN", 0x00, 0x61, 0x01, False)  # enable calibration
         spicommand(usb, "LVDS_EN", 0x02, 0x00, 0x01, False)  # enable LVDS interface
 
-def setupboard(usb, dopattern, twochannel, dooverrange):
+def setupboard(usb, dopattern, twochannel, dooverrange, do1v=False):
     setfan(usb, 1)
 
     spimode(usb, 0)
     spicommand(usb, "DEVICE_CONFIG", 0x00, 0x02, 0x00, False)  # power up
     # spicommand(usb, "DEVICE_CONFIG", 0x00, 0x02, 0x03, False) # power down
-    spicommand2(usb, "VENDOR", 0x00, 0x0c, 0x00, 0x00, True)
+    res = spicommand2(usb, "VENDOR", 0x00, 0x0c, 0x00, 0x00, True)
+    if res[0] != 0x51:
+        print("Bad read vendor from adc!")
+        return 1
     spicommand(usb, "LVDS_EN", 0x02, 0x00, 0x00, False)  # disable LVDS interface
     spicommand(usb, "CAL_EN", 0x00, 0x61, 0x00, False)  # disable calibration
 
@@ -75,7 +78,6 @@ def setupboard(usb, dopattern, twochannel, dooverrange):
     tad=0
     spicommand(usb, "TAD", 0x02, 0xB6, tad, False)  # adjust TAD (time of ADC relative to clk)
 
-    do1v=False
     if do1v:
         spicommand2(usb, "FS_RANGE A",0x00,0x30,0xff,0xff,False)  # adjust full scale ADC range 1V for input A
         spicommand2(usb, "FS_RANGE B",0x00,0x32,0xff,0xff,False)  # adjust full scale ADC range 1V for input B
@@ -143,10 +145,22 @@ def setupboard(usb, dopattern, twochannel, dooverrange):
     # spicommand(usb, "CAL_SOFT_TRIG", 0x00, 0x6c, 0x01, False)
 
     spimode(usb, 0)
-    spicommand(usb, "Amp Rev ID", 0x00, 0x00, 0x00, True, cs=1, nbyte=2)
-    spicommand(usb, "Amp Prod ID", 0x01, 0x00, 0x00, True, cs=1, nbyte=2)
-    spicommand(usb, "Amp Rev ID", 0x00, 0x00, 0x00, True, cs=2, nbyte=2)
-    spicommand(usb, "Amp Prod ID", 0x01, 0x00, 0x00, True, cs=2, nbyte=2)
+    res = spicommand(usb, "Amp Rev ID", 0x00, 0x00, 0x00, True, cs=1, nbyte=2)
+    if res[0] != 0x03:
+        print("Bad read rev from amp 1!")
+        return 2
+    res = spicommand(usb, "Amp Prod ID", 0x01, 0x00, 0x00, True, cs=1, nbyte=2)
+    if res[0] != 0x00:
+        print("Bad read prod from amp 1!")
+        return 2
+    res = spicommand(usb, "Amp Rev ID", 0x00, 0x00, 0x00, True, cs=2, nbyte=2)
+    if res[0] != 0x03:
+        print("Bad read rev from amp 2!")
+        return 2
+    res = spicommand(usb, "Amp Prod ID", 0x01, 0x00, 0x00, True, cs=2, nbyte=2)
+    if res[0] != 0x00:
+        print("Bad read prod from amp 2!")
+        return 2
 
     spimode(usb, 1)
     spicommand(usb, "DAC ref on", 0x38, 0xff, 0xff, False, cs=4)
@@ -156,6 +170,7 @@ def setupboard(usb, dopattern, twochannel, dooverrange):
     dooffset(usb, 1, 0, 1, False)
     setgain(usb, 0, 0, False)
     setgain(usb, 1, 0, False)
+    return 0
 
 def setgain(usb, chan, value, doswap):
     spimode(usb, 0)
@@ -178,11 +193,12 @@ def dooffset(usb, chan, val, scaling, doswap):
     spimode(usb, 0)
     return ret
 
-def fit_rise(x, top, left, leftplus, bot):  # a function for fitting to find risetime
-    val = bot + (x - left) * (top - bot) / leftplus
+def fit_rise(x, top, left, slope, bot):  # a function for fitting to find risetime
+    val = slope * (x - left) + bot # y=mx+b
     inbottom = (x <= left)
     val[inbottom] = bot
-    intop = (x >= (left + leftplus))
+    right = left + (top-bot)/slope
+    intop = ( x >= right )
     val[intop] = top
     return val
 
@@ -245,10 +261,10 @@ def boardinbits(usb):
     #print("Board in bits", res[0], binprint(res[0]))
     return res[0]
 
-def setfan(usb,fanon):
+def setfan(usb,fanon, quiet=True):
     usb.send(bytes([2, 6, fanon, 100, 100, 100, 100, 100]))  # set / get fan status
     res = usb.recv(4)
-    print("Set fan", fanon, "and it was",res[0])
+    if not quiet: print("Set fan", fanon, "and it was",res[0])
 
 def cleanup(usb):
     spimode(usb, 0)
@@ -263,7 +279,7 @@ def getoverrange(usb):
         res = usb.recv(4)
         print("Overrange0", res[3], res[2], res[1], res[0])
 
-def gettemps(usb):
+def gettemps(usb, retadcval=False, retTboard=False):
     spimode(usb, 0)
     spicommand(usb, "SlowDAC1", 0x00, 0x00, 0x00, True, cs=6, nbyte=2,
                quiet=True)  # first conversion may be for old input
@@ -271,6 +287,7 @@ def gettemps(usb):
     slowdac1amp = 4.0
     slowdac1V = (256 * slowdac1[1] + slowdac1[0]) * 3300 / pow(2, 12) / slowdac1amp
     adctemp = (750-slowdac1V)/1.5
+    if retadcval: return adctemp
     spicommand(usb, "SlowDAC2", 0x08, 0x00, 0x00, True, cs=6, nbyte=2,
                quiet=True)  # first conversion may be for old input
     slowdac2 = spicommand(usb, "SlowDAC2", 0x08, 0x00, 0x00, True, cs=6, nbyte=2, quiet=True)
@@ -280,5 +297,6 @@ def gettemps(usb):
     T0 = 273 + 25
     beta = 3380 # for NCP18XH103F03RB
     Tboard = 1/( 1/T0 - math.log(Rboard/10000)/beta ) - 273 - 10
+    if retTboard: return Tboard
     return "Temps (ADC, board): "+str(round(adctemp, 1))+"\u00b0C, " + str(round(Tboard, 2))+"\u00b0C"
 

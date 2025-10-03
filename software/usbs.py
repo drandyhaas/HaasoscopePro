@@ -82,10 +82,11 @@ def orderusbs(usbs):
     if len(newusbs)==0:
         print("Didn't find a first board with no external clock!")
         #sys.exit(0)
-    while len(newusbs)<len(usbs):
-        nextboard = findnextboard(newusbs[-1],newusbs[0],usbs)
-        print("Found next board to be board",nextboard)
-        newusbs.append(nextboard)
+    else:
+        while len(newusbs)<len(usbs):
+            nextboard = findnextboard(newusbs[-1],newusbs[0],usbs)
+            print("Found next board to be board",nextboard)
+            newusbs.append(nextboard)
     newusbcons=[]
     for u in range(len(newusbs)):
         newusbcons.append(usbs[newusbs[u]])
@@ -95,12 +96,12 @@ def tellfirstandlast(usbs):
     for usb in usbs:
         if usb==usbs[0]:
             firstlast = 1
-            print("firstlast==1")
+            #print("firstlast==1")
         elif usb==usbs[-1]:
             firstlast = 2
-            print("firstlast==2")
+            #print("firstlast==2")
         else:
             firstlast = 0
-            print("firstlast==0")
+            #print("firstlast==0")
         usb.send(bytes([2, 14, firstlast, 0, 99, 99, 99, 99]))  # tell it if it's first or last or neither
         usb.recv(4)

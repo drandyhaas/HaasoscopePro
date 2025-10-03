@@ -49,7 +49,7 @@
          <x>0</x>
          <y>600</y>
          <width>400</width>
-         <height>221</height>
+         <height>400</height>
         </rect>
        </property>
        <property name="font">
@@ -98,6 +98,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Trigger voltage threshold</string>
+        </property>
         <property name="maximum">
          <number>255</number>
         </property>
@@ -134,17 +137,20 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Trigger time adjustment (amount to capture before vs after trigger time)</string>
+        </property>
         <property name="minimum">
          <number>0</number>
         </property>
         <property name="maximum">
-         <number>100</number>
+         <number>9900</number>
         </property>
         <property name="pageStep">
          <number>1</number>
         </property>
         <property name="value">
-         <number>50</number>
+         <number>5000</number>
         </property>
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
@@ -221,6 +227,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Whether to enable the rolling 5 Hz auto trigger or not</string>
+        </property>
         <property name="text">
          <string>Normal</string>
         </property>
@@ -244,6 +253,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Run or stop</string>
         </property>
         <property name="text">
          <string>Run</string>
@@ -269,6 +281,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Single event capture or continuous</string>
+        </property>
         <property name="text">
          <string>Single</string>
         </property>
@@ -290,6 +305,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Go to slower timebase, averaging samples if Highres is enabled)</string>
+        </property>
         <property name="text">
          <string>Slower</string>
         </property>
@@ -307,6 +325,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Go to faster timebase</string>
         </property>
         <property name="text">
          <string>Faster</string>
@@ -361,6 +382,9 @@
            <family>Arial</family>
           </font>
          </property>
+         <property name="toolTip">
+          <string>Time over threshold required to trigger (samples)</string>
+         </property>
          <property name="minimum">
           <number>0</number>
          </property>
@@ -368,7 +392,7 @@
           <number>255</number>
          </property>
          <property name="value">
-          <number>1</number>
+          <number>0</number>
          </property>
         </widget>
         <widget class="QLabel" name="label_6">
@@ -403,6 +427,9 @@
            <family>Arial</family>
           </font>
          </property>
+         <property name="toolTip">
+          <string>Amount needed over threshold to trigger (ADC values)</string>
+         </property>
          <property name="minimum">
           <number>0</number>
          </property>
@@ -410,7 +437,7 @@
           <number>100</number>
          </property>
          <property name="value">
-          <number>1</number>
+          <number>2</number>
          </property>
         </widget>
         <widget class="QLabel" name="label_15">
@@ -458,6 +485,9 @@
            <height>21</height>
           </rect>
          </property>
+         <property name="toolTip">
+          <string>Whether to use rising or falling edge for this board's trigger</string>
+         </property>
          <property name="currentText">
           <string>Rising</string>
          </property>
@@ -486,6 +516,9 @@
            <width>81</width>
            <height>21</height>
           </rect>
+         </property>
+         <property name="toolTip">
+          <string>Which channel to trigger on for this board</string>
          </property>
          <property name="currentText">
           <string>Chan 0</string>
@@ -525,6 +558,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Timebase factor (power of 3.2 GS/s)</string>
+        </property>
         <property name="text">
          <string>0</string>
         </property>
@@ -536,9 +572,9 @@
       <widget class="QGroupBox" name="readoutgroupBox">
        <property name="geometry">
         <rect>
-         <x>190</x>
+         <x>130</x>
          <y>420</y>
-         <width>121</width>
+         <width>131</width>
          <height>171</height>
         </rect>
        </property>
@@ -550,33 +586,12 @@
        <property name="title">
         <string>Readout options</string>
        </property>
-       <widget class="QCheckBox" name="highresCheck">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>20</y>
-          <width>70</width>
-          <height>17</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="text">
-         <string>Highres</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
        <widget class="QLabel" name="label_17">
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>74</y>
-          <width>41</width>
+          <y>73</y>
+          <width>61</width>
           <height>16</height>
          </rect>
         </property>
@@ -586,7 +601,7 @@
          </font>
         </property>
         <property name="text">
-         <string>F delay</string>
+         <string>Fine delay</string>
         </property>
        </widget>
        <widget class="QSpinBox" name="tadBox">
@@ -602,6 +617,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Fine ADC delay</string>
         </property>
         <property name="suffix">
          <string/>
@@ -623,8 +641,8 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>50</y>
-          <width>41</width>
+          <y>49</y>
+          <width>61</width>
           <height>16</height>
          </rect>
         </property>
@@ -650,6 +668,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Course delay of waveform (samples)</string>
         </property>
         <property name="accelerated">
          <bool>true</bool>
@@ -681,6 +702,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Memory depth / 40</string>
+        </property>
         <property name="suffix">
          <string/>
         </property>
@@ -701,8 +725,8 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>104</y>
-          <width>41</width>
+          <y>102</y>
+          <width>61</width>
           <height>16</height>
          </rect>
         </property>
@@ -719,7 +743,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>130</y>
+          <y>128</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -728,6 +752,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Number of points per sample via sinc interpolation</string>
         </property>
         <property name="suffix">
          <string/>
@@ -742,7 +769,7 @@
          <number>2</number>
         </property>
         <property name="value">
-         <number>0</number>
+         <number>4</number>
         </property>
        </widget>
        <widget class="QLabel" name="label_21">
@@ -750,7 +777,7 @@
          <rect>
           <x>70</x>
           <y>130</y>
-          <width>51</width>
+          <width>61</width>
           <height>20</height>
          </rect>
         </property>
@@ -760,16 +787,101 @@
          </font>
         </property>
         <property name="text">
-         <string>Upsamp</string>
+         <string>Upsample</string>
         </property>
+       </widget>
+       <widget class="QLabel" name="label_24">
+        <property name="geometry">
+         <rect>
+          <x>90</x>
+          <y>20</y>
+          <width>41</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="text">
+         <string>LPF</string>
+        </property>
+       </widget>
+       <widget class="QComboBox" name="lpfBox">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>20</y>
+          <width>71</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Frequency of low pass filter applied (MHz)</string>
+        </property>
+        <property name="currentText">
+         <string>Off</string>
+        </property>
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <property name="maxVisibleItems">
+         <number>10</number>
+        </property>
+        <item>
+         <property name="text">
+          <string>Off</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>1</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>5</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>10</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>20</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>50</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>100</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>200</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>400</string>
+         </property>
+        </item>
        </widget>
       </widget>
       <widget class="QGroupBox" name="viewgroupBox">
        <property name="geometry">
         <rect>
-         <x>320</x>
+         <x>270</x>
          <y>420</y>
-         <width>81</width>
+         <width>131</width>
          <height>171</height>
         </rect>
        </property>
@@ -781,33 +893,12 @@
        <property name="title">
         <string>View options</string>
        </property>
-       <widget class="QCheckBox" name="gridCheck">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>20</y>
-          <width>70</width>
-          <height>17</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="text">
-         <string>Grid</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
        <widget class="QCheckBox" name="markerCheck">
         <property name="geometry">
          <rect>
           <x>10</x>
           <y>40</y>
-          <width>70</width>
+          <width>111</width>
           <height>17</height>
          </rect>
         </property>
@@ -815,43 +906,19 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Whether to add markers to the samples</string>
         </property>
         <property name="text">
          <string>Markers</string>
         </property>
        </widget>
-       <widget class="QCheckBox" name="drawingCheck">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>60</y>
-          <width>70</width>
-          <height>17</height>
-         </rect>
-        </property>
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="text">
-         <string>Drawing</string>
-        </property>
-        <property name="checked">
-         <bool>true</bool>
-        </property>
-       </widget>
        <widget class="QLabel" name="label_16">
         <property name="geometry">
          <rect>
-          <x>10</x>
-          <y>132</y>
+          <x>70</x>
+          <y>102</y>
           <width>61</width>
           <height>16</height>
          </rect>
@@ -869,7 +936,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>110</y>
+          <y>100</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -878,6 +945,12 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Fraction of waveform to use for risetime and calibration calculations</string>
+        </property>
+        <property name="accelerated">
+         <bool>true</bool>
         </property>
         <property name="suffix">
          <string>%</string>
@@ -892,30 +965,124 @@
          <number>20</number>
         </property>
        </widget>
-       <widget class="QCheckBox" name="persistCheck">
-        <property name="enabled">
-         <bool>false</bool>
-        </property>
+       <widget class="QCheckBox" name="rightaxisCheck">
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>80</y>
-          <width>71</width>
+          <y>20</y>
+          <width>111</width>
           <height>17</height>
          </rect>
         </property>
         <property name="font">
          <font>
           <family>Arial</family>
-          <italic>false</italic>
-          <strikeout>false</strikeout>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Whether to draw the right side axis for the selected channel</string>
+        </property>
+        <property name="text">
+         <string>Voltage axis</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_23">
+        <property name="geometry">
+         <rect>
+          <x>70</x>
+          <y>130</y>
+          <width>61</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
          </font>
         </property>
         <property name="text">
-         <string>Persist</string>
+         <string>Line width</string>
         </property>
-        <property name="checkable">
+       </widget>
+       <widget class="QSpinBox" name="linewidthBox">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>128</y>
+          <width>51</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Width of plot line (pixels)</string>
+        </property>
+        <property name="suffix">
+         <string/>
+        </property>
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>10</number>
+        </property>
+        <property name="singleStep">
+         <number>1</number>
+        </property>
+        <property name="value">
+         <number>1</number>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="persistlinesCheck">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>60</y>
+          <width>111</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Whether to draw the persist lines</string>
+        </property>
+        <property name="text">
+         <string>Persist lines</string>
+        </property>
+        <property name="checked">
          <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="persistavgCheck">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>80</y>
+          <width>111</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Whether to draw the average persist line</string>
+        </property>
+        <property name="text">
+         <string>Persist average</string>
         </property>
        </widget>
       </widget>
@@ -939,37 +1106,22 @@
        <property name="flat">
         <bool>false</bool>
        </property>
-       <widget class="QCheckBox" name="twochanCheck">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>280</y>
-          <width>111</width>
-          <height>17</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="text">
-         <string>Two channels</string>
-        </property>
-       </widget>
        <widget class="QSpinBox" name="chanBox">
         <property name="geometry">
          <rect>
           <x>50</x>
           <y>30</y>
           <width>51</width>
-          <height>21</height>
+          <height>20</height>
          </rect>
         </property>
         <property name="font">
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Selected channel on this board</string>
         </property>
         <property name="maximum">
          <number>255</number>
@@ -979,7 +1131,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>31</y>
+          <y>30</y>
           <width>47</width>
           <height>20</height>
          </rect>
@@ -1007,6 +1159,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Whether the signal is AC or DC coupled</string>
+        </property>
         <property name="text">
          <string>AC coupled</string>
         </property>
@@ -1031,6 +1186,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Whether the signal is to be terminated with 1 MOhm or 50 Ohm</string>
+        </property>
         <property name="text">
          <string>1 MOhm</string>
         </property>
@@ -1052,6 +1210,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Whether to draw this channel or not</string>
+        </property>
         <property name="text">
          <string>Displayed</string>
         </property>
@@ -1063,7 +1224,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>240</y>
+          <y>260</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1072,6 +1233,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Whether to do oversampling using this scope and the next one</string>
         </property>
         <property name="text">
          <string>Oversampling</string>
@@ -1093,6 +1257,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Show the FFT plot for the selected channel</string>
         </property>
         <property name="text">
          <string>Show FFT</string>
@@ -1120,7 +1287,7 @@
         <property name="geometry">
          <rect>
           <x>50</x>
-          <y>62</y>
+          <y>63</y>
           <width>51</width>
           <height>20</height>
          </rect>
@@ -1129,6 +1296,12 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Voltage offset of this channel</string>
+        </property>
+        <property name="accelerated">
+         <bool>true</bool>
         </property>
         <property name="minimum">
          <number>-999</number>
@@ -1144,7 +1317,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>90</y>
+          <y>89</y>
           <width>47</width>
           <height>19</height>
          </rect>
@@ -1171,6 +1344,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Voltage gain of this channel</string>
         </property>
         <property name="suffix">
          <string> dB</string>
@@ -1202,6 +1378,9 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Whether to activate the filter</string>
+        </property>
         <property name="text">
          <string>800 MHz antialias</string>
         </property>
@@ -1215,13 +1394,16 @@
           <x>50</x>
           <y>7</y>
           <width>51</width>
-          <height>21</height>
+          <height>20</height>
          </rect>
         </property>
         <property name="font">
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Selected board</string>
         </property>
         <property name="maximum">
          <number>0</number>
@@ -1231,7 +1413,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>8</y>
+          <y>7</y>
           <width>47</width>
           <height>20</height>
          </rect>
@@ -1261,6 +1443,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Whether a 10x probe is being used</string>
         </property>
         <property name="text">
          <string>10x probe</string>
@@ -1323,8 +1508,18 @@
           <family>Arial</family>
          </font>
         </property>
+        <property name="toolTip">
+         <string>Color of the currently selected channel
+Outlined if triggering on this channel</string>
+        </property>
         <property name="frameShape">
-         <enum>QFrame::NoFrame</enum>
+         <enum>QFrame::Box</enum>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Plain</enum>
+        </property>
+        <property name="lineWidth">
+         <number>2</number>
         </property>
        </widget>
        <widget class="QCheckBox" name="interleavedCheck">
@@ -1334,7 +1529,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>260</y>
+          <y>280</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1343,6 +1538,9 @@
          <font>
           <family>Arial</family>
          </font>
+        </property>
+        <property name="toolTip">
+         <string>Whether to interleave the oversampled samples</string>
         </property>
         <property name="text">
          <string>Interleaved</string>
@@ -1383,7 +1581,7 @@
         <property name="geometry">
          <rect>
           <x>107</x>
-          <y>60</y>
+          <y>63</y>
           <width>71</width>
           <height>20</height>
          </rect>
@@ -1411,7 +1609,7 @@
         <property name="geometry">
          <rect>
           <x>130</x>
-          <y>370</y>
+          <y>372</y>
           <width>47</width>
           <height>20</height>
          </rect>
@@ -1433,6 +1631,9 @@
           <width>111</width>
           <height>22</height>
          </rect>
+        </property>
+        <property name="toolTip">
+         <string>What signal to output on the Aux out SMA on the back</string>
         </property>
         <property name="currentText">
          <string>Gnd</string>
@@ -1464,13 +1665,113 @@
          </property>
         </item>
        </widget>
+       <widget class="QSpinBox" name="persistTbox">
+        <property name="geometry">
+         <rect>
+          <x>50</x>
+          <y>340</y>
+          <width>51</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Time each line takes to fade out (50*2^x ms)</string>
+        </property>
+        <property name="accelerated">
+         <bool>false</bool>
+        </property>
+        <property name="suffix">
+         <string/>
+        </property>
+        <property name="minimum">
+         <number>0</number>
+        </property>
+        <property name="maximum">
+         <number>12</number>
+        </property>
+        <property name="value">
+         <number>0</number>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="persistText">
+        <property name="geometry">
+         <rect>
+          <x>107</x>
+          <y>340</y>
+          <width>71</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="inputMask">
+         <string/>
+        </property>
+        <property name="text">
+         <string notr="true">0 s</string>
+        </property>
+        <property name="maxLength">
+         <number>50</number>
+        </property>
+        <property name="frame">
+         <bool>false</bool>
+        </property>
+        <property name="cursorPosition">
+         <number>3</number>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_13">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>340</y>
+          <width>47</width>
+          <height>19</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="text">
+         <string>Persist</string>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="twochanCheck">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>240</y>
+          <width>111</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Whether to use both channels on each scope</string>
+        </property>
+        <property name="text">
+         <string>Two channels</string>
+        </property>
+       </widget>
       </widget>
       <widget class="QGroupBox" name="groupBox_3">
        <property name="geometry">
         <rect>
          <x>0</x>
          <y>420</y>
-         <width>181</width>
+         <width>121</width>
          <height>171</height>
         </rect>
        </property>
@@ -1554,7 +1855,7 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>100</x>
+          <x>70</x>
           <y>80</y>
           <width>21</width>
           <height>21</height>
@@ -1575,7 +1876,7 @@
        <widget class="QLabel" name="label_8">
         <property name="geometry">
          <rect>
-          <x>100</x>
+          <x>70</x>
           <y>60</y>
           <width>31</width>
           <height>16</height>
@@ -1596,7 +1897,7 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>100</x>
+          <x>70</x>
           <y>100</y>
           <width>21</width>
           <height>21</height>
@@ -1617,7 +1918,7 @@
        <widget class="QLabel" name="label_12">
         <property name="geometry">
          <rect>
-          <x>130</x>
+          <x>90</x>
           <y>60</y>
           <width>31</width>
           <height>16</height>
@@ -1638,7 +1939,7 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>130</x>
+          <x>90</x>
           <y>80</y>
           <width>21</width>
           <height>21</height>
@@ -1662,7 +1963,7 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>130</x>
+          <x>90</x>
           <y>100</y>
           <width>21</width>
           <height>21</height>
@@ -1731,7 +2032,7 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>70</x>
+          <x>50</x>
           <y>80</y>
           <width>21</width>
           <height>21</height>
@@ -1755,7 +2056,7 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>40</x>
+          <x>30</x>
           <y>80</y>
           <width>21</width>
           <height>21</height>
@@ -1779,7 +2080,7 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>70</x>
+          <x>50</x>
           <y>100</y>
           <width>21</width>
           <height>21</height>
@@ -1803,7 +2104,7 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>40</x>
+          <x>30</x>
           <y>100</y>
           <width>21</width>
           <height>21</height>
@@ -1824,7 +2125,7 @@
        <widget class="QLabel" name="label_7">
         <property name="geometry">
          <rect>
-          <x>40</x>
+          <x>30</x>
           <y>60</y>
           <width>31</width>
           <height>16</height>
@@ -1842,7 +2143,7 @@
        <widget class="QLabel" name="label_9">
         <property name="geometry">
          <rect>
-          <x>70</x>
+          <x>50</x>
           <y>60</y>
           <width>31</width>
           <height>16</height>
@@ -1860,9 +2161,9 @@
        <widget class="QPushButton" name="pllresetButton">
         <property name="geometry">
          <rect>
-          <x>10</x>
+          <x>20</x>
           <y>130</y>
-          <width>71</width>
+          <width>81</width>
           <height>23</height>
          </rect>
         </property>
@@ -1871,26 +2172,11 @@
           <family>Arial</family>
          </font>
         </property>
-        <property name="text">
-         <string>ResetPll</string>
-        </property>
-       </widget>
-       <widget class="QPushButton" name="adfresetButton">
-        <property name="geometry">
-         <rect>
-          <x>90</x>
-          <y>130</y>
-          <width>71</width>
-          <height>23</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
+        <property name="toolTip">
+         <string>Reset PLL of active board and find best PLL phase</string>
         </property>
         <property name="text">
-         <string>ResetClk</string>
+         <string>Reset PLL</string>
         </property>
        </widget>
       </widget>
@@ -1911,7 +2197,11 @@
     <property name="title">
      <string>File</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <addaction name="actionRecord"/>
+    <addaction name="actionTake_screenshot"/>
     <addaction name="separator"/>
     <addaction name="actionUpdate_firmware"/>
    </widget>
@@ -1919,20 +2209,32 @@
     <property name="title">
      <string>Calibration</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <addaction name="actionDo_autocalibration"/>
+    <addaction name="actionOversampling_mean_and_RMS"/>
    </widget>
-   <widget class="QMenu" name="menuOther">
+   <widget class="QMenu" name="menuAdvanced">
     <property name="title">
      <string>Advanced</string>
     </property>
-    <addaction name="separator"/>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <addaction name="actionForce_split"/>
     <addaction name="actionForce_switch_clocks"/>
+    <addaction name="actionClock_reset"/>
     <addaction name="actionToggle_PLL_controls"/>
+    <addaction name="actionToggle_trig_stabilizer"/>
+    <addaction name="actionToggle_extra_trig_stabilizer"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
      <string>Help</string>
+    </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
     </property>
     <addaction name="actionAbout"/>
    </widget>
@@ -1940,20 +2242,39 @@
     <property name="title">
      <string>Measurements</string>
     </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
     <addaction name="actionTrigger_thresh"/>
+    <addaction name="actionN_persist_lines"/>
     <addaction name="actionTemperatures"/>
     <addaction name="actionMean"/>
     <addaction name="actionRMS"/>
-    <addaction name="actionRisetime"/>
     <addaction name="actionMaximum"/>
     <addaction name="actionMinimum"/>
     <addaction name="actionVpp"/>
     <addaction name="actionFreq"/>
+    <addaction name="actionRisetime"/>
+    <addaction name="actionRisetime_fit_lines"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>View</string>
+    </property>
+    <property name="toolTipsVisible">
+     <bool>true</bool>
+    </property>
+    <addaction name="actionDrawing"/>
+    <addaction name="actionHigh_resolution"/>
+    <addaction name="actionGrid"/>
+    <addaction name="actionLine_color"/>
+    <addaction name="actionPan_and_zoom"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
+   <addaction name="menuView"/>
    <addaction name="menuMeasurements"/>
-   <addaction name="menuOther"/>
+   <addaction name="menuAdvanced"/>
    <addaction name="menuHelp"/>
   </widget>
   <widget class="QStatusBar" name="statusBar">
@@ -1971,7 +2292,10 @@
   </action>
   <action name="actionDo_autocalibration">
    <property name="text">
-    <string>Oversampling alignment</string>
+    <string>Oversampling time alignment</string>
+   </property>
+   <property name="toolTip">
+    <string>Find the best delay and fine delay</string>
    </property>
   </action>
   <action name="actionUpdate_firmware">
@@ -1986,15 +2310,27 @@
    <property name="text">
     <string>Force split chan 1</string>
    </property>
+   <property name="toolTip">
+    <string>Force split chan 1 to also go to front SMA output</string>
+   </property>
   </action>
   <action name="actionForce_switch_clocks">
    <property name="text">
     <string>Force switch clocks</string>
    </property>
+   <property name="toolTip">
+    <string>Force switch clocks between internal oscillator and external LVDS clock from another board (if available)</string>
+   </property>
   </action>
   <action name="actionToggle_PLL_controls">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
-    <string>Toggle PLL controls</string>
+    <string>PLL controls</string>
+   </property>
+   <property name="toolTip">
+    <string>PLL controls active or inactive</string>
    </property>
   </action>
   <action name="actionAbout">
@@ -2087,6 +2423,128 @@
    </property>
    <property name="text">
     <string>Freq</string>
+   </property>
+  </action>
+  <action name="actionToggle_trig_stabilizer">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Trigger stabilizer</string>
+   </property>
+   <property name="toolTip">
+    <string>Trigger stabilizer based on linear fit between samples</string>
+   </property>
+  </action>
+  <action name="actionRisetime_fit_lines">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Risetime fit lines</string>
+   </property>
+  </action>
+  <action name="actionTake_screenshot">
+   <property name="text">
+    <string>Take screenshot</string>
+   </property>
+  </action>
+  <action name="actionPersist">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Persist</string>
+   </property>
+  </action>
+  <action name="actionClock_reset">
+   <property name="text">
+    <string>Clock reset</string>
+   </property>
+   <property name="toolTip">
+    <string>Clock reset (ADF4350)</string>
+   </property>
+  </action>
+  <action name="actionGrid">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Grid</string>
+   </property>
+  </action>
+  <action name="actionDrawing">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Drawing</string>
+   </property>
+  </action>
+  <action name="actionOversampling_mean_and_RMS">
+   <property name="text">
+    <string>Oversampling mean and RMS</string>
+   </property>
+   <property name="toolTip">
+    <string>Oversampling mean and RMS adjustment only</string>
+   </property>
+  </action>
+  <action name="actionPan_and_zoom">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Pan and zoom</string>
+   </property>
+  </action>
+  <action name="actionN_persist_lines">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>N persist lines</string>
+   </property>
+  </action>
+  <action name="actionToggle_extra_trig_stabilizer">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Extra trigger stabilizer</string>
+   </property>
+   <property name="toolTip">
+    <string>Extra trigger stabilizer that runs after resampling or oversample interleaving</string>
+   </property>
+  </action>
+  <action name="actionHigh_resolution">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>High resolution</string>
+   </property>
+  </action>
+  <action name="actionLine_color">
+   <property name="text">
+    <string>Change line color</string>
    </property>
   </action>
  </widget>
