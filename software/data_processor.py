@@ -369,6 +369,29 @@ class DataProcessor:
         y_20_threshold = y_min + 0.2 * (y_max - y_min)
         y_80_threshold = y_min + 0.8 * (y_max - y_min)
 
+        # Get the trigger threshold for filtering
+        hline_pos = (state.triggerlevel - 127) * state.yscale * 256
+        hline_threshold = hline_pos + state.triggerdelta * state.yscale * 256
+
+        # Find where the signal crosses the trigger threshold
+        # This narrows our search significantly
+        crossings = np.where(np.diff(np.sign(yc - hline_threshold)))[0]
+
+        if len(crossings) == 0:
+            # No crossing found, return NaN
+            measurements[time_label] = math.nan
+            measurements[error_label] = math.nan
+            return measurements, None
+
+        # Find crossing closest to vline
+        vline_idx = np.argmin(np.abs(xc - vline))
+        closest_crossing_idx = crossings[np.argmin(np.abs(crossings - vline_idx))]
+
+        # Define search region: within ~10 samples of the trigger crossing
+        search_range = 10
+        search_start = max(0, closest_crossing_idx - search_range)
+        search_end = min(len(xc), closest_crossing_idx + search_range)
+
         # Find the steepest section that extends from at least 20% to at least 80%
         # Use variable window sizes to handle both fast and slow signals
         max_slope = 0
@@ -395,7 +418,16 @@ class DataProcessor:
             if window_size > xc.size:
                 continue
 
-            for i in range(xc.size - window_size + 1):
+            # Only check windows that overlap with the search region (±10 samples of crossing)
+            window_start = max(0, search_start - window_size + 1)
+            window_end = min(len(xc) - window_size + 1, search_end + 1)
+
+            # Use adaptive step size: larger steps for larger windows
+            # For small windows, check every position (step=1)
+            # For large windows, skip positions to speed up search
+            step = max(1, window_size // 20)  # Check every ~5% of window size
+
+            for i in range(window_start, window_end, step):
                 # Get this window
                 x_window = xc[i:i+window_size]
                 y_window = yc[i:i+window_size]
