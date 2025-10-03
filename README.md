@@ -20,11 +20,12 @@ See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiK
 
 ### Versions
 
-- v27 is the firmware that shipped with the first round of units, in the "main" branch
+- v27 is the firmware that shipped with the first round of units, in the "v27" branch, now outdated!
 - v28 fixed trigger stability
-- v29 adds more new GUI features etc., found in the "v29" branch
-- v29_cleanup is a beta (alpha?) version, a refactored and cleaned up python code, allowing new features to be added easily
-- to use a different branch, do <code>git pull && git checkout "branchname"</code> or select the branch name in the drop down box on github and then download the zip file of the code, then run the new software, update the firmware on your board from that new software, and power cycle the board (automatic firmware reload in v29+)
+- v29 adds more new GUI features etc., found in the "main" branch
+- the "v29_cleanup" branch has a beta version of the software - new development is occuring here
+
+To use a different branch, do <code>git pull && git checkout "branchname"</code> or select the branch name in the drop down box on github and then download the zip file of the code. Then run the new software, update the firmware (if needed) on your board from that new software, and power cycle the board (automatic firmware reload in v29+ firmware).
 
 ### Quick start (Windows/Mac)
 
