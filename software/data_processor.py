@@ -280,8 +280,17 @@ class DataProcessor:
 
         return freq, abs(Y)
 
-    def calculate_measurements(self, x_data, y_data, vline, do_risetime_calc=False):
-        """Calculates all requested measurements and returns fit results if requested."""
+    def calculate_measurements(self, x_data, y_data, vline, do_risetime_calc=False, use_edge_fit=True):
+        """Calculates all requested measurements and returns fit results if requested.
+
+        Args:
+            x_data: Time data
+            y_data: Signal data
+            vline: Trigger position
+            do_risetime_calc: Whether to calculate rise time
+            use_edge_fit: If True, use edge-based fitting (works for any signal).
+                         If False, use piecewise fitting (works for square waves).
+        """
         if len(y_data) < 2: return {}, None
         state = self.state
         VperD = state.VperD[state.activexychannel]
@@ -303,34 +312,135 @@ class DataProcessor:
         fit_results = None
 
         if do_risetime_calc:
-            fitwidth = (state.max_x - state.min_x) * state.fitwidthfraction
-            xc = x_data[(x_data > vline - fitwidth) & (x_data < vline + fitwidth)]
-            yc = y_data[(x_data > vline - fitwidth) & (x_data < vline + fitwidth)]
-
-            if xc.size < 10:
-                measurements["Risetime"] = math.nan
+            if use_edge_fit:
+                # New edge-based approach: find steep slope near trigger
+                measurements, fit_results = self._calculate_risetime_edge(
+                    x_data, y_data, vline, measurements
+                )
             else:
-                p0 = [np.max(yc), xc[xc.size // 2], 2 * state.nsunits, np.min(yc)]
-                if state.fallingedge[state.activeboard]: p0[2] *= -1
+                # Original piecewise approach for square waves
+                measurements, fit_results = self._calculate_risetime_piecewise(
+                    x_data, y_data, vline, measurements
+                )
 
-                with warnings.catch_warnings():
-                    try:
-                        warnings.simplefilter("ignore")
-                        p0[1] -= (p0[0] - p0[3]) / p0[2] / 2
-                        popt, pcov = curve_fit(fit_rise, xc, yc, p0=p0)
-                        perr = np.sqrt(np.diag(pcov))
+        return measurements, fit_results
 
-                        top, slope, bot = popt[0], popt[2], popt[3]
-                        risetime = state.nsunits * 0.6 * abs(top - bot) / slope
-                        risetimeerr = state.nsunits * 0.6 * 4 * abs(top - bot) * perr[2] / (slope * slope)
+    def _calculate_risetime_edge(self, x_data, y_data, vline, measurements):
+        """Calculate rise time by fitting a line to the steepest edge near the trigger point."""
+        state = self.state
+        fitwidth = (state.max_x - state.min_x) * state.fitwidthfraction
 
-                        measurements["Risetime"] = risetime
-                        measurements["Risetime error"] = risetimeerr
-                        # Package the raw results to be returned
-                        fit_results = {'popt': popt, 'pcov': pcov, 'xc': xc, 'risetime_err': risetimeerr}
+        # Get data around trigger point
+        xc = x_data[(x_data > vline - fitwidth) & (x_data < vline + fitwidth)]
+        yc = y_data[(x_data > vline - fitwidth) & (x_data < vline + fitwidth)]
 
-                    except (RuntimeError, ValueError):
-                        measurements["Risetime"] = math.nan
-                        measurements["Risetime error"] = math.nan
+        if xc.size < 5:
+            measurements["Risetime"] = math.nan
+            measurements["Risetime error"] = math.nan
+            return measurements, None
+
+        # Find the steepest section by calculating slopes with a sliding window
+        window_size = max(5, min(10, xc.size // 3))  # Adaptive window size
+        max_abs_slope = 0
+        best_start_idx = 0
+
+        for i in range(xc.size - window_size):
+            # Fit a line to this window
+            x_window = xc[i:i+window_size]
+            y_window = yc[i:i+window_size]
+
+            # Simple linear regression
+            coeffs = np.polyfit(x_window, y_window, 1)
+            slope = coeffs[0]
+
+            # Adjust slope sign for falling edges
+            if state.fallingedge[state.activeboard]:
+                slope = -slope
+
+            if abs(slope) > abs(max_abs_slope):
+                max_abs_slope = slope
+                best_start_idx = i
+
+        # Fit a line to the steepest section
+        x_fit = xc[best_start_idx:best_start_idx+window_size]
+        y_fit = yc[best_start_idx:best_start_idx+window_size]
+
+        try:
+            # Linear fit: y = mx + b
+            coeffs, cov = np.polyfit(x_fit, y_fit, 1, cov=True)
+            slope, intercept = coeffs
+            slope_err = np.sqrt(cov[0, 0])
+
+            # Calculate the signal amplitude (max - min in entire region)
+            y_amp = np.max(yc) - np.min(yc)
+
+            # Rise time is the time to traverse 60% of the amplitude at this slope
+            # (10% to 90% is often 0.8, 20% to 80% is 0.6)
+            if abs(slope) > 0:
+                risetime = state.nsunits * 0.6 * abs(y_amp) / abs(slope)
+                risetimeerr = state.nsunits * 0.6 * abs(y_amp) * slope_err / (slope * slope)
+
+                measurements["Risetime"] = risetime
+                measurements["Risetime error"] = risetimeerr
+
+                # Package results for plotting
+                fit_results = {
+                    'slope': slope,
+                    'intercept': intercept,
+                    'slope_err': slope_err,
+                    'x_fit': x_fit,
+                    'y_fit': y_fit,
+                    'xc': xc,
+                    'yc': yc,
+                    'risetime_err': risetimeerr,
+                    'fit_type': 'edge'
+                }
+            else:
+                measurements["Risetime"] = math.nan
+                measurements["Risetime error"] = math.nan
+                fit_results = None
+
+        except (RuntimeError, ValueError, np.linalg.LinAlgError):
+            measurements["Risetime"] = math.nan
+            measurements["Risetime error"] = math.nan
+            fit_results = None
+
+        return measurements, fit_results
+
+    def _calculate_risetime_piecewise(self, x_data, y_data, vline, measurements):
+        """Calculate rise time using the original piecewise function approach (for square waves)."""
+        state = self.state
+        fitwidth = (state.max_x - state.min_x) * state.fitwidthfraction
+        xc = x_data[(x_data > vline - fitwidth) & (x_data < vline + fitwidth)]
+        yc = y_data[(x_data > vline - fitwidth) & (x_data < vline + fitwidth)]
+
+        if xc.size < 10:
+            measurements["Risetime"] = math.nan
+            measurements["Risetime error"] = math.nan
+            return measurements, None
+
+        p0 = [np.max(yc), xc[xc.size // 2], 2 * state.nsunits, np.min(yc)]
+        if state.fallingedge[state.activeboard]: p0[2] *= -1
+
+        with warnings.catch_warnings():
+            try:
+                warnings.simplefilter("ignore")
+                p0[1] -= (p0[0] - p0[3]) / p0[2] / 2
+                popt, pcov = curve_fit(fit_rise, xc, yc, p0=p0)
+                perr = np.sqrt(np.diag(pcov))
+
+                top, slope, bot = popt[0], popt[2], popt[3]
+                risetime = state.nsunits * 0.6 * abs(top - bot) / slope
+                risetimeerr = state.nsunits * 0.6 * 4 * abs(top - bot) * perr[2] / (slope * slope)
+
+                measurements["Risetime"] = risetime
+                measurements["Risetime error"] = risetimeerr
+                # Package the raw results to be returned
+                fit_results = {'popt': popt, 'pcov': pcov, 'xc': xc, 'risetime_err': risetimeerr, 'fit_type': 'piecewise'}
+
+            except (RuntimeError, ValueError):
+                measurements["Risetime"] = math.nan
+                measurements["Risetime error"] = math.nan
+                fit_results = None
 
         return measurements, fit_results

@@ -169,7 +169,8 @@ class MeasurementsManager:
                     vline_val = self.plot_manager.otherlines['vline'].value()
                     measurements, fit_results = self.processor.calculate_measurements(
                         x_data_for_analysis, y_data_for_analysis, vline_val,
-                        do_risetime_calc=self.ui.actionRisetime.isChecked()
+                        do_risetime_calc=self.ui.actionRisetime.isChecked(),
+                        use_edge_fit=True
                     )
 
                     if self.ui.actionMean.isChecked(): _set_measurement("Mean", measurements.get('Mean', 0), "mV")
