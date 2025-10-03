@@ -370,37 +370,71 @@ class DataProcessor:
         y_80_threshold = y_min + 0.8 * (y_max - y_min)
 
         # Find the steepest section that extends from at least 20% to at least 80%
-        window_size = max(5, min(10, xc.size // 3))  # Adaptive window size
+        # Use variable window sizes to handle both fast and slow signals
         max_slope = 0
-        best_start_idx = 0
+        best_x_fit = None
+        best_y_fit = None
         found_valid_edge = False
 
-        for i in range(xc.size - window_size):
-            # Fit a line to this window
-            x_window = xc[i:i+window_size]
-            y_window = yc[i:i+window_size]
+        # Try multiple window sizes from small to large
+        min_window = max(3, xc.size // 20)  # At least 3 points, or 5% of data
+        max_window = xc.size  # Can use full width for very slow signals
 
-            # Check if this window extends from at least 20% to at least 80%
-            y_window_min = np.min(y_window)
-            y_window_max = np.max(y_window)
+        # Try window sizes: small, medium, large, and full
+        window_sizes_to_try = [
+            min_window,
+            max(5, xc.size // 10),
+            max(10, xc.size // 5),
+            max(20, xc.size // 3),
+            max_window
+        ]
+        # Remove duplicates and sort
+        window_sizes_to_try = sorted(set(window_sizes_to_try))
 
-            if y_window_min <= y_20_threshold and y_window_max >= y_80_threshold:
-                # Simple linear regression
-                coeffs = np.polyfit(x_window, y_window, 1)
-                slope = coeffs[0]
+        for window_size in window_sizes_to_try:
+            if window_size > xc.size:
+                continue
 
-                # Adjust slope sign for falling edges
-                if state.fallingedge[state.activeboard]:
-                    slope = -slope
-                    if slope < max_slope:
-                        max_slope = slope
-                        best_start_idx = i
-                        found_valid_edge = True
-                else:
-                    if slope > max_slope:
-                        max_slope = slope
-                        best_start_idx = i
-                        found_valid_edge = True
+            for i in range(xc.size - window_size + 1):
+                # Get this window
+                x_window = xc[i:i+window_size]
+                y_window = yc[i:i+window_size]
+
+                # Check if this window extends from at least 20% to at least 80%
+                y_window_min = np.min(y_window)
+                y_window_max = np.max(y_window)
+
+                if y_window_min <= y_20_threshold and y_window_max >= y_80_threshold:
+                    # Extract only the points between 20% and 80% thresholds for fitting
+                    # For the range check, use the actual min/max of the two thresholds
+                    threshold_min = min(y_20_threshold, y_80_threshold)
+                    threshold_max = max(y_20_threshold, y_80_threshold)
+                    in_range = (y_window >= threshold_min) & (y_window <= threshold_max)
+                    x_fit_candidate = x_window[in_range]
+                    y_fit_candidate = y_window[in_range]
+
+                    # Need at least 3 points for a good fit
+                    if len(x_fit_candidate) >= 3:
+                        # Simple linear regression on the 20%-80% portion
+                        coeffs = np.polyfit(x_fit_candidate, y_fit_candidate, 1)
+                        slope = coeffs[0]
+
+                        # For rising trigger, find the largest positive slope
+                        # For falling trigger, find the most negative (smallest) slope
+                        if state.fallingedge[state.activeboard]:
+                            # Falling edge: look for most negative slope
+                            if max_slope == 0 or slope < max_slope:
+                                max_slope = slope
+                                best_x_fit = x_fit_candidate
+                                best_y_fit = y_fit_candidate
+                                found_valid_edge = True
+                        else:
+                            # Rising edge: look for most positive slope
+                            if slope > max_slope:
+                                max_slope = slope
+                                best_x_fit = x_fit_candidate
+                                best_y_fit = y_fit_candidate
+                                found_valid_edge = True
 
         # If no valid edge found, return NaN
         if not found_valid_edge:
@@ -408,9 +442,9 @@ class DataProcessor:
             measurements[error_label] = math.nan
             return measurements, None
 
-        # Fit a line to the steepest valid section
-        x_fit = xc[best_start_idx:best_start_idx+window_size]
-        y_fit = yc[best_start_idx:best_start_idx+window_size]
+        # Use the best fit data found
+        x_fit = best_x_fit
+        y_fit = best_y_fit
 
         try:
             # Linear fit: y = mx + b
@@ -430,13 +464,27 @@ class DataProcessor:
                 measurements[time_label] = risetime
                 measurements[error_label] = risetimeerr
 
+                # Extend the fit line to cover 0% to 100% of the signal range
+                # Using the slope from 20%-80% fit, but drawing from y_min to y_max
+                y_0_percent = y_min
+                y_100_percent = y_max
+
+                # Calculate x values where the fit line crosses 0% and 100%
+                # y = slope * x + intercept, so x = (y - intercept) / slope
+                x_at_0_percent = (y_0_percent - intercept) / slope
+                x_at_100_percent = (y_100_percent - intercept) / slope
+
+                # Create extended fit line from 0% to 100%
+                x_fit_extended = np.array([x_at_0_percent, x_at_100_percent])
+                y_fit_extended = np.array([y_0_percent, y_100_percent])
+
                 # Package results for plotting
                 fit_results = {
                     'slope': slope,
                     'intercept': intercept,
                     'slope_err': slope_err,
-                    'x_fit': x_fit,
-                    'y_fit': y_fit,
+                    'x_fit': x_fit_extended,  # Use extended line for plotting
+                    'y_fit': y_fit_extended,  # Use extended line for plotting
                     'xc': xc,
                     'yc': yc,
                     'risetime_err': risetimeerr,
@@ -457,15 +505,21 @@ class DataProcessor:
     def _calculate_risetime_piecewise(self, x_data, y_data, vline, measurements):
         """Calculate rise time using the original piecewise function approach (for square waves)."""
         state = self.state
+
+        # Use "Falltime" for falling edges, "Risetime" for rising edges
+        time_label = "Falltime" if state.fallingedge[state.activeboard] else "Risetime"
+        error_label = f"{time_label} error"
+
         fitwidth = (state.max_x - state.min_x) * state.fitwidthfraction
         xc = x_data[(x_data > vline - fitwidth) & (x_data < vline + fitwidth)]
         yc = y_data[(x_data > vline - fitwidth) & (x_data < vline + fitwidth)]
 
         if xc.size < 10:
-            measurements["Risetime"] = math.nan
-            measurements["Risetime error"] = math.nan
+            measurements[time_label] = math.nan
+            measurements[error_label] = math.nan
             return measurements, None
 
+        # initial guess
         p0 = [np.max(yc), xc[xc.size // 2], 2 * state.nsunits, np.min(yc)]
         if state.fallingedge[state.activeboard]: p0[2] *= -1
 
@@ -478,16 +532,17 @@ class DataProcessor:
 
                 top, slope, bot = popt[0], popt[2], popt[3]
                 risetime = state.nsunits * 0.6 * abs(top - bot) / slope
+                if state.fallingedge[state.activeboard]: risetime *= -1 # since we call it "Falltime" now in the label
                 risetimeerr = state.nsunits * 0.6 * 4 * abs(top - bot) * perr[2] / (slope * slope)
 
-                measurements["Risetime"] = risetime
-                measurements["Risetime error"] = risetimeerr
+                measurements[time_label] = risetime
+                measurements[error_label] = risetimeerr
                 # Package the raw results to be returned
                 fit_results = {'popt': popt, 'pcov': pcov, 'xc': xc, 'risetime_err': risetimeerr, 'fit_type': 'piecewise'}
 
             except (RuntimeError, ValueError):
-                measurements["Risetime"] = math.nan
-                measurements["Risetime error"] = math.nan
+                measurements[time_label] = math.nan
+                measurements[error_label] = math.nan
                 fit_results = None
 
         return measurements, fit_results
