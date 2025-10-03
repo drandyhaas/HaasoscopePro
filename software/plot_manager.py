@@ -469,26 +469,52 @@ class PlotManager(pg.QtCore.QObject):
             return
 
         try:
-            popt, pcov, xc = fit_results['popt'], fit_results['pcov'], fit_results['xc']
             risetime_err = fit_results['risetime_err']
 
             # If the fit error is infinite, the fit is unreliable, so don't draw
             if abs(risetime_err) == math.inf:
                 return
 
-            top, left, slope, bot = popt[0], popt[1], popt[2], popt[3]
-            if slope == 0: return
+            fit_type = fit_results.get('fit_type', 'piecewise')
 
-            right = left + (top - bot) / slope
+            if fit_type == 'edge':
+                # New edge-based fitting: draw the linear fit line
+                slope = fit_results['slope']
+                intercept = fit_results['intercept']
+                x_fit = fit_results['x_fit']
 
-            # Set data for the three line segments
-            self.otherlines['fit_0'].setData([right, xc[-1]], [top, top])  # Top line
-            self.otherlines['fit_1'].setData([left, right], [bot, top])  # Sloped line
-            self.otherlines['fit_2'].setData([xc[0], left], [bot, bot])  # Bottom line
+                if slope == 0: return
 
-            # Make all three segments visible
-            for i in range(3):
-                self.otherlines[f'fit_{i}'].setVisible(True)
+                # Calculate the fitted line over the fit region
+                y_fit_line = slope * x_fit + intercept
+
+                # Draw the linear fit line
+                self.otherlines['fit_1'].setData(x_fit, y_fit_line)
+                self.otherlines['fit_1'].setVisible(True)
+
+                # Optionally, draw horizontal lines at the fit endpoints to show the fit region
+                # self.otherlines['fit_0'].setData([x_fit[0], x_fit[0]], [y_fit_line[0]-10, y_fit_line[0]+10])
+                # self.otherlines['fit_2'].setData([x_fit[-1], x_fit[-1]], [y_fit_line[-1]-10, y_fit_line[-1]+10])
+                # self.otherlines['fit_0'].setVisible(True)
+                # self.otherlines['fit_2'].setVisible(True)
+
+            else:  # 'piecewise'
+                # Original piecewise fitting: draw the three-segment fit
+                popt, xc = fit_results['popt'], fit_results['xc']
+                top, left, slope, bot = popt[0], popt[1], popt[2], popt[3]
+
+                if slope == 0: return
+
+                right = left + (top - bot) / slope
+
+                # Set data for the three line segments
+                self.otherlines['fit_0'].setData([right, xc[-1]], [top, top])  # Top line
+                self.otherlines['fit_1'].setData([left, right], [bot, top])  # Sloped line
+                self.otherlines['fit_2'].setData([xc[0], left], [bot, bot])  # Bottom line
+
+                # Make all three segments visible
+                for i in range(3):
+                    self.otherlines[f'fit_{i}'].setVisible(True)
 
         except (KeyError, IndexError):
             # Fail silently if the fit_results dictionary is malformed
