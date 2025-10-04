@@ -35,7 +35,7 @@ To use a different branch, do <code>git pull && git checkout "branchname"</code>
 - for Windows: install by running the setup exe at <code>HaasoscopePro/software/ftdi_setup.exe</code>
 - for Mac: <code>sudo mkdir -p /usr/local/lib; sudo cp HaasoscopePro/software/libftd2xx.dylib /usr/local/lib/</code> 
 - for Linux: <code>sudo cp HaasoscopePro/software/libftd2xx.so /usr/lib/</code>
-4) Plug Haasoscope Pro into your computer via USB
+4) Plug Haasoscope Pro into your computer via USB (5V 2A at least!)
 5) Run **HaasoscopeProQt** in the <code>HaasoscopePro/software/dist/(OS)_HaasoscopeProQt</code> directory
 
 ### Fuller way of running (Windows/Mac/Linux)
@@ -44,7 +44,7 @@ To use a different branch, do <code>git pull && git checkout "branchname"</code>
 2) Install dependencies: <br><code>pip3 install numpy scipy pyqtgraph PyQt5 pyftdi matplotlib ftd2xx</code>
 3) Get code: <br><code>git clone https://github.com/drandyhaas/HaasoscopePro.git</code>
 4) Install FTDI driver (see Quick start above)
-5) Plug Haasoscope Pro into your computer via USB
+5) Plug Haasoscope Pro into your computer via USB (5V 2A at least!)
 6) Run:
 <br><code>cd HaasoscopePro/software</code>
 <br><code>python3 HaasoscopeProQt.py</code>
