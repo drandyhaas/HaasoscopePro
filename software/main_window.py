@@ -59,6 +59,10 @@ class MainWindow(TemplateBaseClass):
         self.setup_successful = False
         self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
 
+        # Initialize reference visibility to True for all channels by default
+        num_channels = self.state.num_board * self.state.num_chan_per_board
+        self.reference_visible = {i: True for i in range(num_channels)}
+
         # Histogram window for measurements
         self.histogram_window = HistogramWindow(self, self.plot_manager)
 
@@ -265,6 +269,7 @@ class MainWindow(TemplateBaseClass):
         # Reference menu actions
         self.ui.actionTake_Reference.triggered.connect(self.take_reference_waveform)
         self.ui.actionShow_Reference.triggered.connect(self.toggle_reference_waveform_visibility)
+        self.ui.actionClear_all.triggered.connect(self.clear_all_references)
 
         # View menu actions
         self.ui.actionXY_Plot.triggered.connect(self.toggle_xy_view_slot)
@@ -622,16 +627,19 @@ class MainWindow(TemplateBaseClass):
             for c in range(s.num_chan_per_board * s.num_board):
                 self.xydatainterleaved[c][0] = interleaved_time_axis
 
-        # --- Update reference waveforms with new scaling and visibility ---
-        show_refs_is_checked = self.ui.actionShow_Reference.isChecked()
+        # --- Update reference waveforms with new scaling and per-channel visibility ---
         for i in range(self.plot_manager.nlines):
-            if i in self.reference_data and show_refs_is_checked:
+            # Check if this specific channel has a reference and it's set to visible
+            has_reference = i in self.reference_data
+            is_visible = self.reference_visible.get(i, False)
+
+            if has_reference and is_visible:
                 # This channel has a reference and it should be visible
                 data = self.reference_data[i]
                 x_display = data['x_ns'] / s.nsunits
                 self.plot_manager.update_reference_plot(i, x_display, data['y'])
             else:
-                # This channel either has no reference or refs are turned off
+                # This channel either has no reference or its reference is hidden
                 self.plot_manager.hide_reference_plot(i)
 
     def handle_critical_error(self, title, message):
@@ -844,6 +852,9 @@ class MainWindow(TemplateBaseClass):
         # Reset FFT analysis when channel changes
         if self.fftui:
             self.fftui.reset_analysis_state()
+
+        # Update Show Reference menu checkbox to reflect active channel's reference visibility
+        self.update_reference_checkbox_state()
 
     def trigger_pos_changed(self, value):
         """
@@ -1133,13 +1144,38 @@ class MainWindow(TemplateBaseClass):
 
             self.reference_data[active_channel] = {'x_ns': x_data_in_ns, 'y': y_data}
 
+            # Set the reference visibility to True for this channel
+            self.reference_visible[active_channel] = True
+
+            # Update the checkbox to reflect the new visibility state
+            self.update_reference_checkbox_state()
+
             # Trigger a redraw to show the new reference immediately
             self.time_changed()
 
     def toggle_reference_waveform_visibility(self):
-        """Slot for 'Show Reference'. Triggers a redraw to apply visibility."""
-        self.time_changed() # Re-running time_changed will handle the visibility flag
+        """Slot for 'Show Reference'. Toggles visibility for the active channel's reference."""
+        s = self.state
+        active_channel = s.activexychannel
 
+        # Toggle the visibility state for the active channel
+        is_checked = self.ui.actionShow_Reference.isChecked()
+        self.reference_visible[active_channel] = is_checked
+
+        # Trigger a redraw to apply the visibility change
+        self.time_changed()
+
+    def clear_all_references(self):
+        """Slot for 'Clear all'. Hides all reference waveforms for all channels."""
+        # Set all reference visibility flags to False
+        for channel_idx in range(self.plot_manager.nlines):
+            self.reference_visible[channel_idx] = False
+
+        # Update the checkbox for the active channel
+        self.update_reference_checkbox_state()
+
+        # Trigger a redraw to hide all references
+        self.time_changed()
 
     def fft_clicked(self):
         """Toggles the FFT window state for the active channel."""
@@ -1173,6 +1209,18 @@ class MainWindow(TemplateBaseClass):
         self.ui.fftCheck.blockSignals(True)
         self.ui.fftCheck.setChecked(self.state.fft_enabled[active_channel_name])
         self.ui.fftCheck.blockSignals(False)
+
+    def update_reference_checkbox_state(self):
+        """Updates the 'Show Reference' checkbox to reflect the active channel's reference visibility."""
+        s = self.state
+        active_channel = s.activexychannel
+
+        # Check if this channel has a reference and if it's visible
+        is_visible = self.reference_visible.get(active_channel, False)
+
+        self.ui.actionShow_Reference.blockSignals(True)
+        self.ui.actionShow_Reference.setChecked(is_visible)
+        self.ui.actionShow_Reference.blockSignals(False)
 
     def twochan_changed(self):
         """Switches between single and dual channel mode FOR THE ACTIVE BOARD."""

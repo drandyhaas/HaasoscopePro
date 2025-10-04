@@ -2208,6 +2208,7 @@ Outlined if triggering on this channel</string>
     </property>
     <addaction name="actionTake_Reference"/>
     <addaction name="actionShow_Reference"/>
+    <addaction name="actionClear_all"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
@@ -2516,7 +2517,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Show reference(s)</string>
+    <string>Show reference</string>
    </property>
   </action>
   <action name="actionVoltage_axis">
@@ -2565,7 +2566,12 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Edge fit for rise/fall time</string>
+    <string>Edge fit method</string>
+   </property>
+  </action>
+  <action name="actionClear_all">
+   <property name="text">
+    <string>Clear all</string>
    </property>
   </action>
  </widget>
