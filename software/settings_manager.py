@@ -69,6 +69,10 @@ def save_setup(main_window):
         'max_x': s.max_x,
         'xy_mode': s.xy_mode,
 
+        # Processing settings
+        'doresamp': s.doresamp,
+        'fitwidthfraction': s.fitwidthfraction,
+
         # FFT and reference settings
         'fft_enabled': s.fft_enabled,
         'reference_visible': main_window.reference_visible,
@@ -236,6 +240,14 @@ def load_setup(main_window):
         if s.dotwochannel[s.activeboard]:
             main_window.ui.actionXY_Plot.setChecked(True)
             main_window.plot_manager.toggle_xy_view(True, s.activeboard)
+
+    # Processing settings
+    if 'doresamp' in setup:
+        s.doresamp = setup['doresamp']
+        main_window.ui.resampBox.setValue(s.doresamp)
+    if 'fitwidthfraction' in setup:
+        s.fitwidthfraction = setup['fitwidthfraction']
+        main_window.ui.fwfBox.setValue(int(s.fitwidthfraction * 100))
 
     # FFT and reference settings
     if 'fft_enabled' in setup:
