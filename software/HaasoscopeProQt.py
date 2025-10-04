@@ -11,7 +11,7 @@ from PyQt5.QtCore import Qt
 # Import the new main window and necessary hardware functions
 from main_window import MainWindow
 from usbs import connectdevices, orderusbs, tellfirstandlast, version
-from board import cleanup, clkout_ena
+from board import clkout_ena
 
 # --- Hardware Discovery and Initial Setup ---
 print("Searching for Haasoscope Pro boards...")
@@ -82,10 +82,6 @@ if __name__ == '__main__':
     except ftd2xx.DeviceError as e:
         print(f"FATAL: A hardware communication error occurred: {e}")
         print("Please ensure the device is connected and drivers are installed correctly.")
-        if win:
-            # Cleanly shut down if the window was partially created
-            win.close_socket()
-            cleanup(usbs)
         sys.exit(1)
 
     # except Exception as e:

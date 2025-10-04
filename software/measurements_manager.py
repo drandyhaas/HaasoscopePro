@@ -44,7 +44,7 @@ class MeasurementsManager:
         # Connect table selection changes
         self.ui.tableView.selectionModel().selectionChanged.connect(self.on_measurement_selection_changed)
 
-    def on_measurement_selection_changed(self, selected, deselected):
+    def on_measurement_selection_changed(self):
         """Handle measurement table selection changes."""
         # Get selected indexes
         indexes = self.ui.tableView.selectionModel().selectedIndexes()
@@ -103,12 +103,12 @@ class MeasurementsManager:
         """Slow timer callback to update measurements in the table view without clearing it."""
         active_measurements = set()
 
-        def _set_measurement(name, value, unit=""):
+        def _set_measurement(name, value, value_unit=""):
             """Helper to add or update a measurement row in the table."""
             active_measurements.add(name)
             value = round(value, 2)
-            if unit != "":
-                unit = " (" + unit + ")"
+            if value_unit != "":
+                value_unit = " (" + value_unit + ")"
 
             # Initialize history deque if this is a new measurement
             if name not in self.measurement_history:
@@ -125,12 +125,12 @@ class MeasurementsManager:
             if name in self.measurement_items:
                 # Update existing item's value, average, and RMS
                 self.measurement_items[name][1].setText(str(value))
-                self.measurement_items[name][0].setText(name + unit)
+                self.measurement_items[name][0].setText(name + value_unit)
                 self.measurement_items[name][2].setText(str(avg_value))
                 self.measurement_items[name][3].setText(str(rms_value))
             else:
                 # Add new row and store items
-                name_item = QStandardItem(name + unit)
+                name_item = QStandardItem(name + value_unit)
                 value_item = QStandardItem(str(value))
                 avg_item = QStandardItem(str(avg_value))
                 rms_item = QStandardItem(str(rms_value))

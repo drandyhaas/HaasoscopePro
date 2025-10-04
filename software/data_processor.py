@@ -4,7 +4,7 @@ import numpy as np
 import struct
 import warnings
 import math
-from scipy.signal import resample, butter, filtfilt, find_peaks
+from scipy.signal import butter, filtfilt, find_peaks
 from scipy.optimize import curve_fit
 from scipy.fft import fft, fftfreq
 

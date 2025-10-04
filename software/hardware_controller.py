@@ -1,6 +1,5 @@
 # hardware_controller.py
 
-import time
 import os
 from usbs import *
 from board import *

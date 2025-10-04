@@ -33,7 +33,7 @@ class DataRecorder:
             self.is_recording = True
             #print(f"Recording started to {filename}")
             return True
-        except IOError as e:
+        except IOError:
             self.is_recording = False
             return False
 

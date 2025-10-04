@@ -1,7 +1,6 @@
 import socket
 import struct
 import time
-import math
 import numpy as np
 
 class DataSocket:
@@ -16,6 +15,7 @@ class DataSocket:
     PORT = 32001  # Port to listen on
 
     def __init__(self):
+        self.runthethread = None
         self.issending = False
 
     def data_seqnum(self):
@@ -64,7 +64,7 @@ class DataSocket:
         res += waveform_data.tobytes()
         return res
 
-    def open_socket(self, arg1):
+    def open_socket(self):
         """The main server loop that listens for connections and commands."""
         self.runthethread = True
         while self.runthethread:

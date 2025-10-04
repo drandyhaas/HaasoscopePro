@@ -1,14 +1,11 @@
 # main_window.py
 
-import sys, time, math, warnings
+import time, math
 import numpy as np
 import threading
-from collections import deque
-from scipy.signal import resample
 from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
-import pyqtgraph as pg
-from PyQt5.QtWidgets import QMessageBox, QColorDialog, QFrame, QAction
-from PyQt5.QtGui import QPalette, QIcon, QStandardItemModel, QStandardItem, QCursor
+from PyQt5.QtWidgets import QMessageBox, QColorDialog, QFrame
+from PyQt5.QtGui import QPalette
 
 # Import all the refactored components
 from scope_state import ScopeState
@@ -23,7 +20,7 @@ from calibration import autocalibration, do_meanrms_calibration
 # Import remaining dependencies
 from FFTWindow import FFTWindow
 from SCPIsocket import DataSocket
-from board import setupboard, gettemps
+from board import setupboard
 from utils import get_pwd
 import ftd2xx
 
@@ -1107,7 +1104,7 @@ class MainWindow(TemplateBaseClass):
     # ## Slot Implementations (Callbacks for UI events)
     # #########################################################################
 
-    def toggle_xy_view_slot(self, checked, board_num=0):
+    def toggle_xy_view_slot(self, checked):
         """Slot for the 'XY Plot' menu action."""
         board = self.state.activeboard
         if checked:
@@ -1116,7 +1113,7 @@ class MainWindow(TemplateBaseClass):
             self.plot_manager.set_xy_pen(pen)
         self.plot_manager.toggle_xy_view(checked, board)
 
-    def take_reference_waveform(self, checked):
+    def take_reference_waveform(self):
         """
         Slot for 'Take Reference'. Captures the active waveform's data,
         converts its time axis to absolute nanoseconds, and stores it.
