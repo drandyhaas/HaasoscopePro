@@ -29,7 +29,7 @@ To use a different branch, do <code>git pull && git checkout "branchname"</code>
 
 ### Quick start (Windows/Mac)
 
-1) [Download code](https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/main.zip) and unzip it (or another zip file version like [v29](https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/v29.zip))
+1) [Download code](https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/main.zip) and unzip it (or another zip file version from another branch).
 2) Rename directory HaasoscopePro-main to HaasoscopePro (for consistency with git below)
 3) Install [FTDI D2xx driver](https://ftdichip.com/drivers/d2xx-drivers/) 
 - for Windows: install by running the setup exe at <code>HaasoscopePro/software/ftdi_setup.exe</code>
@@ -51,7 +51,7 @@ To use a different branch, do <code>git pull && git checkout "branchname"</code>
 
 ### Tips
 
-- If not enough power is supplied or issues happen during readout, plug in via a powered USB hub, a USB-A to C cable, or use an external 12V power adapter
+- If not enough power is being supplied, plug in via a powered USB hub, a [USB PD hub with 15W reserved for ports](https://a.co/d/174I3v8), or use an external 12V power adapter
 - If you get security issues on Mac, do: <code>xattr -cr Mac_HaasoscopeProQt</code>
 - If the board is not found on Linux, use this udev rule and then plug it in: <code>sudo cp HaasoscopePro/software/ft245.rules /etc/udev/rules.d/</code>
 - If you get an error like "qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found", try: <code>sudo apt install libxcb-xinerama0</code>
