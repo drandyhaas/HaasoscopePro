@@ -272,9 +272,15 @@ class DataProcessor:
                 fitwidth *= s.distcorrsamp / xc.size
                 xc = thed[0][(thed[0] > vline_time - fitwidth) & (thed[0] < vline_time + fitwidth)]
                 yc = thed[1][(thed[0] > vline_time - fitwidth) & (thed[0] < vline_time + fitwidth)]
-                if s.fallingedge[board_idx]: yc = -yc
+
+                # For falling edges, invert both the signal and the threshold
+                threshold_to_use = hline_threshold
+                if s.fallingedge[board_idx]:
+                    yc = -yc
+                    threshold_to_use = -hline_threshold
+
                 if xc.size > 1:
-                    distcorrtemp = find_crossing_distance(yc, hline_threshold, vline_time, xc[0], xc[1] - xc[0])
+                    distcorrtemp = find_crossing_distance(yc, threshold_to_use, vline_time, xc[0], xc[1] - xc[0])
 
         if distcorrtemp is not None and abs(distcorrtemp) < s.distcorrtol * s.downsamplefactor / s.nsunits:
             s.distcorr[board_idx] = distcorrtemp

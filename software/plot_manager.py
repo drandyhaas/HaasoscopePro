@@ -214,10 +214,15 @@ class PlotManager(pg.QtCore.QObject):
 
                         xc = xdatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]
                         yc = ydatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]
-                        if s.fallingedge[li // 2]: yc = -yc
+
+                        # For falling edges, invert both the signal and the threshold
+                        threshold_to_use = hline_threshold
+                        if s.fallingedge[li // 2]:
+                            yc = -yc
+                            threshold_to_use = -hline_threshold
 
                         if xc.size > 1:
-                            distcorrtemp = find_crossing_distance(yc, hline_threshold, vline_time, xc[0], xc[1] - xc[0])
+                            distcorrtemp = find_crossing_distance(yc, threshold_to_use, vline_time, xc[0], xc[1] - xc[0])
                             if distcorrtemp is not None and abs(
                                     distcorrtemp) < s.distcorrtol * s.downsamplefactor / s.nsunits:
                                 xdatanew -= distcorrtemp
