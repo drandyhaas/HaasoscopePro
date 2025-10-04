@@ -532,6 +532,8 @@ class MainWindow(TemplateBaseClass):
         # If 'getone' (Single) mode is active, call dostartstop() immediately
         # after successfully processing one event. This will pause the acquisition.
         if self.state.getone:
+            # Update measurements for the newly acquired event before pausing
+            self.measurements.update_measurements_display()
             self.dostartstop()
 
     def update_status_bar(self):
