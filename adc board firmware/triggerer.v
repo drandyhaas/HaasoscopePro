@@ -170,6 +170,7 @@ always @ (posedge clklvds) begin
       sample2_triggered <= 0;
       sample3_triggered <= 0;
       sample4_triggered <= 0;
+      gotzerobit <= 0;
       triggerphase <= -9'd1;
       forwardsbackwardsexttrig <= 2'b11; // tell state 250 to fire forwards and backwards for one extra clock tick after trigger
       downsamplemergingcounter_triggered <= -8'd1;

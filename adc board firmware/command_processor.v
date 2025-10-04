@@ -289,8 +289,8 @@ always @ (posedge clk) begin
          17: o_tdata <= {12'd0, sample3_triggered_sync};
          18: o_tdata <= {12'd0, sample4_triggered_sync};
          19: begin
-            reloadflash = rx_data[2][0];
-            o_tdata <= {31'd0,reloadflash};
+            reloadflash <= rx_data[2][0];
+            o_tdata <= 999;
          end
          default: o_tdata <= 0;
          endcase
