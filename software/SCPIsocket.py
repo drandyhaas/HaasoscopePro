@@ -64,7 +64,7 @@ class DataSocket:
         res += waveform_data.tobytes()
         return res
 
-    def open_socket(self):
+    def open_socket(self, arg1): # need arg1 here or an error is thrown by threading
         """The main server loop that listens for connections and commands."""
         self.runthethread = True
         while self.runthethread:
