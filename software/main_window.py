@@ -646,7 +646,11 @@ class MainWindow(TemplateBaseClass):
         # 2. Disable the run button to prevent the user from restarting
         self.ui.runButton.setEnabled(False)
 
-        # 3. Show the critical error message box
+        # 3. Prevent firmware methods
+        self.ui.actionUpdate_firmware.setEnabled(False)
+        self.ui.actionVerify_firmware.setEnabled(False)
+
+        # 4. Show the critical error message box
         QMessageBox.critical(self, title, message)
 
     def closeEvent(self, event):

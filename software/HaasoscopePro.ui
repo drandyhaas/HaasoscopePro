@@ -2565,7 +2565,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Edge fit method</string>
+    <string>Edge fit for rise/fall time</string>
    </property>
   </action>
  </widget>
