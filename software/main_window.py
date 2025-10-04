@@ -95,6 +95,8 @@ class MainWindow(TemplateBaseClass):
                 self.ui.actionUpdate_firmware.setEnabled(False)
                 self.ui.actionVerify_firmware.setEnabled(False)
                 self.ui.runButton.setEnabled(False)
+                QMessageBox.warning(self, "Board Setup Failed",
+                                    "Please fix power to all boards and restart.")
 
             # Firmware Version Check (only if setup passed)
             if self.setup_successful:
@@ -113,8 +115,10 @@ class MainWindow(TemplateBaseClass):
             self.ui.runButton.setEnabled(False)
             self.ui.statusBar.showMessage("No hardware detected. Connect a device and restart.")
             self.setup_successful = False
-            # Use a QTimer to show the message after the main window is fully loaded
-            QtCore.QTimer.singleShot(100, self.show_no_hardware_error)
+            QMessageBox.warning(self, "Hardware Not Found",
+                                "No Haasoscope Pro boards were detected.\n\n"
+                                "The application is running in a disconnected state. "
+                                "Please connect a device and restart the program to continue.")
 
         self.last_time = time.time()
         self.fps = None
@@ -169,13 +173,6 @@ class MainWindow(TemplateBaseClass):
             self.controller.set_acdc(board_idx, chan_on_board, s.acdc[global_chan_idx])
             self.controller.set_mohm(board_idx, chan_on_board, s.mohm[global_chan_idx])
             self.controller.set_att(board_idx, chan_on_board, s.att[global_chan_idx])
-
-    def show_no_hardware_error(self):
-        """Displays a non-blocking warning message to the user."""
-        QMessageBox.warning(self, "Hardware Not Found",
-                            "No Haasoscope Pro boards were detected.\n\n"
-                            "The application is running in a disconnected state. "
-                            "Please connect a device and restart the program to continue.")
 
     def _connect_signals(self):
         """Connect all UI element signals to their corresponding slots."""
