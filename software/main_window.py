@@ -16,6 +16,7 @@ from data_recorder import DataRecorder
 from histogram_window import HistogramWindow
 from measurements_manager import MeasurementsManager
 from calibration import autocalibration, do_meanrms_calibration
+from settings_manager import save_setup, load_setup
 
 # Import remaining dependencies
 from FFTWindow import FFTWindow
@@ -254,6 +255,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionAbout.triggered.connect(self.about_dialog)
         self.ui.actionTake_screenshot.triggered.connect(self.take_screenshot)
         self.ui.actionRecord.triggered.connect(self.toggle_recording)
+        self.ui.actionSave_setup.triggered.connect(self.save_setup)
+        self.ui.actionLoad_setup.triggered.connect(self.load_setup)
         self.ui.actionVerify_firmware.triggered.connect(self.verify_firmware)
         self.ui.actionUpdate_firmware.triggered.connect(self.update_firmware)
         self.ui.actionDo_autocalibration.triggered.connect(lambda: autocalibration(self))
@@ -1039,6 +1042,14 @@ class MainWindow(TemplateBaseClass):
         else:
             self.recorder.stop()
             self.ui.actionRecord.setText("Record to file")
+
+    def save_setup(self):
+        """Save current scope setup to a JSON file."""
+        save_setup(self)
+
+    def load_setup(self):
+        """Load scope setup from a JSON file and restore the state."""
+        load_setup(self)
 
     def update_firmware(self):
         board = self.state.activeboard
