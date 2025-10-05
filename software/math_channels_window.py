@@ -82,16 +82,27 @@ class MathChannelsWindow(QWidget):
         self.math_list = QListWidget()
         list_layout.addWidget(self.math_list)
 
-        # Buttons layout
-        buttons_layout = QHBoxLayout()
+        # Buttons layout - Row 1
+        buttons_layout_1 = QHBoxLayout()
         self.remove_button = QPushButton("Remove Selected")
         self.remove_button.clicked.connect(self.remove_math_channel)
-        buttons_layout.addWidget(self.remove_button)
+        buttons_layout_1.addWidget(self.remove_button)
 
         self.color_button = QPushButton("Change Color")
         self.color_button.clicked.connect(self.change_color)
-        buttons_layout.addWidget(self.color_button)
-        list_layout.addLayout(buttons_layout)
+        buttons_layout_1.addWidget(self.color_button)
+        list_layout.addLayout(buttons_layout_1)
+
+        # Buttons layout - Row 2
+        buttons_layout_2 = QHBoxLayout()
+        self.measure_button = QPushButton("Use for Measurements")
+        self.measure_button.clicked.connect(self.use_for_measurements)
+        buttons_layout_2.addWidget(self.measure_button)
+
+        self.measure_active_button = QPushButton("Measure Active Channel")
+        self.measure_active_button.clicked.connect(self.measure_active_channel)
+        buttons_layout_2.addWidget(self.measure_active_button)
+        list_layout.addLayout(buttons_layout_2)
 
         list_group.setLayout(list_layout)
         layout.addWidget(list_group)
@@ -209,6 +220,17 @@ class MathChannelsWindow(QWidget):
 
                 # Emit signal to update plots
                 self.math_channels_changed.emit()
+
+    def use_for_measurements(self):
+        """Use the selected math channel for measurements."""
+        current_row = self.math_list.currentRow()
+        if current_row >= 0 and current_row < len(self.math_channels):
+            math_channel_name = self.math_channels[current_row]['name']
+            self.main_window.measurements.select_math_channel_for_measurement(math_channel_name)
+
+    def measure_active_channel(self):
+        """Switch back to measuring the active channel."""
+        self.main_window.measurements.select_math_channel_for_measurement(None)
 
     def calculate_math_channels(self, xy_data_array):
         """Calculate all math channels based on current data.

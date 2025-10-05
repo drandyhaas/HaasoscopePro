@@ -29,6 +29,9 @@ class MeasurementsManager:
         self.measurement_items = {}
         self.measurement_history = {}
 
+        # Track which channel/math channel is being measured
+        self.selected_math_channel = None  # None means use active channel
+
         # Temperature caching
         self.cached_temps = (0, 0)
         self.last_temp_update_time = 0
@@ -43,6 +46,32 @@ class MeasurementsManager:
 
         # Connect table selection changes
         self.ui.tableView.selectionModel().selectionChanged.connect(self.on_measurement_selection_changed)
+
+        # Set initial header
+        self.update_measurement_header()
+
+    def update_measurement_header(self):
+        """Update the measurement table header to show which channel is being measured."""
+        if self.selected_math_channel is not None:
+            header_text = f"{self.selected_math_channel}"
+        else:
+            # Show active channel
+            board = self.state.activexychannel // self.state.num_chan_per_board
+            chan = self.state.activexychannel % self.state.num_chan_per_board
+            header_text = f"Board {board} Channel {chan}"
+
+        self.measurement_model.setHorizontalHeaderLabels([header_text, 'Value', 'Average', 'RMS'])
+
+    def select_math_channel_for_measurement(self, math_channel_name):
+        """Select a math channel for measurement display.
+
+        Args:
+            math_channel_name: Name of the math channel (e.g., 'Math1') or None for active channel
+        """
+        self.selected_math_channel = math_channel_name
+        self.update_measurement_header()
+        # Clear measurement history when switching channels
+        self.measurement_history.clear()
 
     def on_measurement_selection_changed(self):
         """Handle measurement table selection changes."""
@@ -162,8 +191,22 @@ class MeasurementsManager:
                     _set_measurement("Board temp", self.cached_temps[1], "\u00b0C")
 
             if hasattr(self.main_window, 'xydata'):
-                x_data_for_analysis = self.plot_manager.lines[self.state.activexychannel].xData
-                y_data_for_analysis = self.plot_manager.lines[self.state.activexychannel].yData
+                # Get data from math channel or active channel
+                if self.selected_math_channel is not None:
+                    # Use math channel data
+                    if self.selected_math_channel in self.plot_manager.math_channel_lines:
+                        x_data_for_analysis = self.plot_manager.math_channel_lines[self.selected_math_channel].xData
+                        y_data_for_analysis = self.plot_manager.math_channel_lines[self.selected_math_channel].yData
+                    else:
+                        # Math channel doesn't exist anymore, reset to active channel
+                        self.selected_math_channel = None
+                        self.update_measurement_header()
+                        x_data_for_analysis = self.plot_manager.lines[self.state.activexychannel].xData
+                        y_data_for_analysis = self.plot_manager.lines[self.state.activexychannel].yData
+                else:
+                    # Use active channel data
+                    x_data_for_analysis = self.plot_manager.lines[self.state.activexychannel].xData
+                    y_data_for_analysis = self.plot_manager.lines[self.state.activexychannel].yData
 
                 if y_data_for_analysis is not None and len(y_data_for_analysis) > 0:
                     vline_val = self.plot_manager.otherlines['vline'].value()

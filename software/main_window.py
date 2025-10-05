@@ -867,6 +867,10 @@ class MainWindow(TemplateBaseClass):
         # Update Show Reference menu checkbox to reflect active channel's reference visibility
         self.update_reference_checkbox_state()
 
+        # Update measurement table header to reflect new active channel (if not measuring a math channel)
+        if self.measurements.selected_math_channel is None:
+            self.measurements.update_measurement_header()
+
     def trigger_pos_changed(self, value):
         """
         Handles the trigger position slider.
