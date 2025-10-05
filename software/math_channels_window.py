@@ -2,9 +2,9 @@
 """Window for creating and managing math channel operations."""
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QComboBox,
-                             QPushButton, QListWidget, QLabel, QGroupBox, QColorDialog)
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QColor
+                             QPushButton, QListWidget, QLabel, QGroupBox, QColorDialog, QListWidgetItem)
+from PyQt5.QtCore import Qt, pyqtSignal, QSize
+from PyQt5.QtGui import QColor, QPixmap, QIcon
 import numpy as np
 
 
@@ -31,6 +31,19 @@ class MathChannelsWindow(QWidget):
         self.setGeometry(100, 100, 400, 500)
 
         self.setup_ui()
+
+    def create_color_icon(self, color_string):
+        """Create a colored square icon for the list item.
+
+        Args:
+            color_string: Hex color string like '#00FFFF'
+
+        Returns:
+            QIcon with a colored square
+        """
+        pixmap = QPixmap(16, 16)
+        pixmap.fill(QColor(color_string))
+        return QIcon(pixmap)
 
     def setup_ui(self):
         """Setup the UI layout."""
@@ -135,9 +148,13 @@ class MathChannelsWindow(QWidget):
         for i in range(num_channels):
             board = i // self.state.num_chan_per_board
             chan = i % self.state.num_chan_per_board
-            channel_name = f"Board {board} CH{chan}"
+            channel_name = f"Board {board} Channel {chan}"
             self.channel_a_combo.addItem(channel_name, i)
             self.channel_b_combo.addItem(channel_name, i)
+
+        # Set default: Channel A = 0, Channel B = 1 (if available)
+        if num_channels > 1:
+            self.channel_b_combo.setCurrentIndex(1)
 
         self.update_preview()
 
@@ -190,7 +207,10 @@ class MathChannelsWindow(QWidget):
         ch_a_text = self.channel_a_combo.currentText()
         ch_b_text = self.channel_b_combo.currentText()
         display_text = f"{math_name}: {ch_a_text} {op} {ch_b_text}"
-        self.math_list.addItem(display_text)
+
+        # Create list item with colored icon
+        item = QListWidgetItem(self.create_color_icon(color), display_text)
+        self.math_list.addItem(item)
 
         # Emit signal to update plots
         self.math_channels_changed.emit()
@@ -209,10 +229,13 @@ class MathChannelsWindow(QWidget):
             # Update display
             self.math_list.clear()
             for math_def in self.math_channels:
-                ch_a_text = f"Board {math_def['ch1'] // self.state.num_chan_per_board} CH{math_def['ch1'] % self.state.num_chan_per_board}"
-                ch_b_text = f"Board {math_def['ch2'] // self.state.num_chan_per_board} CH{math_def['ch2'] % self.state.num_chan_per_board}"
+                ch_a_text = f"Board {math_def['ch1'] // self.state.num_chan_per_board} Channel {math_def['ch1'] % self.state.num_chan_per_board}"
+                ch_b_text = f"Board {math_def['ch2'] // self.state.num_chan_per_board} Channel {math_def['ch2'] % self.state.num_chan_per_board}"
                 display_text = f"{math_def['name']}: {ch_a_text} {math_def['operation']} {ch_b_text}"
-                self.math_list.addItem(display_text)
+
+                # Create list item with colored icon
+                item = QListWidgetItem(self.create_color_icon(math_def['color']), display_text)
+                self.math_list.addItem(item)
 
             # Emit signal to update plots
             self.math_channels_changed.emit()
@@ -231,6 +254,10 @@ class MathChannelsWindow(QWidget):
                 # Update the math channel definition
                 self.math_channels[current_row]['color'] = color.name()
 
+                # Update the icon for this list item
+                item = self.math_list.item(current_row)
+                item.setIcon(self.create_color_icon(color.name()))
+
                 # Emit signal to update plots
                 self.math_channels_changed.emit()
 
@@ -244,6 +271,18 @@ class MathChannelsWindow(QWidget):
     def measure_active_channel(self):
         """Switch back to measuring the active channel."""
         self.main_window.measurements.select_math_channel_for_measurement(None)
+
+    def select_math_channel_in_list(self, math_channel_name):
+        """Select a specific math channel in the list by name.
+
+        Args:
+            math_channel_name: Name of the math channel to select (e.g., 'Math1')
+        """
+        # Find the index of the math channel with this name
+        for i, math_def in enumerate(self.math_channels):
+            if math_def['name'] == math_channel_name:
+                self.math_list.setCurrentRow(i)
+                return
 
     def calculate_math_channels(self, xy_data_array):
         """Calculate all math channels based on current data.

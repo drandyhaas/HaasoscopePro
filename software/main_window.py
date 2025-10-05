@@ -270,6 +270,7 @@ class MainWindow(TemplateBaseClass):
         self.plot_manager.vline_dragged_signal.connect(self.on_vline_dragged)
         self.plot_manager.hline_dragged_signal.connect(self.on_hline_dragged)
         self.plot_manager.curve_clicked_signal.connect(self.on_curve_clicked)
+        self.plot_manager.math_curve_clicked_signal.connect(self.on_math_curve_clicked)
 
         # Reference menu actions
         self.ui.actionTake_Reference.triggered.connect(self.take_reference_waveform)
@@ -706,6 +707,22 @@ class MainWindow(TemplateBaseClass):
         self.ui.boardBox.setValue(board)
         self.ui.chanBox.setValue(channel)
         # select_channel is called automatically by the valueChanged signal
+
+    def on_math_curve_clicked(self, math_channel_name):
+        """Slot for when a math channel waveform on the plot is clicked."""
+        # Open the math channels window if not already open
+        if self.math_window is None:
+            self.math_window = MathChannelsWindow(self)
+            self.math_window.math_channels_changed.connect(lambda: self.update_math_channels())
+        self.math_window.show()
+        self.math_window.raise_()
+        self.math_window.activateWindow()
+
+        # Select this math channel in the list
+        self.math_window.select_math_channel_in_list(math_channel_name)
+
+        # Select this math channel for measurements
+        self.measurements.select_math_channel_for_measurement(math_channel_name)
 
     def toggle_pll_controls(self):
         """Shows or hides the manual PLL adjustment buttons."""

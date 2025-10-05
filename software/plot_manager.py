@@ -50,6 +50,7 @@ class PlotManager(pg.QtCore.QObject):
     vline_dragged_signal = pg.QtCore.Signal(float)
     hline_dragged_signal = pg.QtCore.Signal(float)
     curve_clicked_signal = pg.QtCore.Signal(int)
+    math_curve_clicked_signal = pg.QtCore.Signal(str)  # Emits math channel name
 
     def __init__(self, ui, state):
         super().__init__()
@@ -78,6 +79,12 @@ class PlotManager(pg.QtCore.QObject):
         """Creates a unique click handler function that remembers the channel index."""
         def handler(curve_item):
             self.curve_clicked_signal.emit(channel_index)
+        return handler
+
+    def _create_math_click_handler(self, math_channel_name):
+        """Creates a unique click handler function that remembers the math channel name."""
+        def handler(curve_item):
+            self.math_curve_clicked_signal.emit(math_channel_name)
         return handler
 
     def setup_plots(self):
@@ -309,6 +316,9 @@ class PlotManager(pg.QtCore.QObject):
                 # Create a new dashed line with the specified color
                 pen = pg.mkPen(color=color, width=2, style=QtCore.Qt.DashLine)
                 line = self.plot.plot(pen=pen, name=math_name, skipFiniteCheck=True, connect="finite")
+                # Make the line clickable
+                line.curve.setClickable(True)
+                line.curve.sigClicked.connect(self._create_math_click_handler(math_name))
                 self.math_channel_lines[math_name] = line
             else:
                 # Update the color of existing line
