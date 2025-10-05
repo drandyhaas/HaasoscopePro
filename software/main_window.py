@@ -17,6 +17,7 @@ from histogram_window import HistogramWindow
 from measurements_manager import MeasurementsManager
 from calibration import autocalibration, do_meanrms_calibration
 from settings_manager import save_setup, load_setup
+from math_channels_window import MathChannelsWindow
 
 # Import remaining dependencies
 from FFTWindow import FFTWindow
@@ -56,6 +57,7 @@ class MainWindow(TemplateBaseClass):
         self.socket = None
         self.socket_thread = None
         self.fftui = None
+        self.math_window = None
         self.ui.boardBox.setMaximum(self.state.num_board - 1)
         self.setup_successful = False
         self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
@@ -276,6 +278,7 @@ class MainWindow(TemplateBaseClass):
 
         # View menu actions
         self.ui.actionXY_Plot.triggered.connect(self.toggle_xy_view_slot)
+        self.ui.actionMath_channels.triggered.connect(self.open_math_channels)
 
         # Plot manager signals
         self.plot_manager.curve_clicked_signal.connect(self.on_curve_clicked)
@@ -482,6 +485,11 @@ class MainWindow(TemplateBaseClass):
                 self.plot_manager.update_xy_plot(x_data=x_data_ch1, y_data=y_data_ch0)
         else:
             self.plot_manager.update_plots(self.xydata, self.xydatainterleaved)
+
+        # Calculate and display math channels if any are defined
+        if self.math_window and len(self.math_window.math_channels) > 0:
+            math_results = self.math_window.calculate_math_channels(self.xydata)
+            self.plot_manager.update_math_channel_data(math_results)
 
         if self.recorder.is_recording:
             lines_vis = [line.isVisible() for line in self.plot_manager.lines]
@@ -1137,6 +1145,29 @@ class MainWindow(TemplateBaseClass):
             pen = self.plot_manager.linepens[ch0_index]
             self.plot_manager.set_xy_pen(pen)
         self.plot_manager.toggle_xy_view(checked, board)
+
+    def open_math_channels(self):
+        """Slot for the 'Math Channels' menu action."""
+        if self.math_window is None:
+            self.math_window = MathChannelsWindow(self)
+            # Connect the signal to update plots when math channels change
+            self.math_window.math_channels_changed.connect(lambda: self.update_math_channels())
+        self.math_window.show()
+        self.math_window.raise_()
+        self.math_window.activateWindow()
+
+    def update_math_channels(self):
+        """Update math channel plot lines and calculate current data."""
+        if self.math_window is None:
+            return
+
+        # Update the plot lines (create/remove as needed)
+        self.plot_manager.update_math_channel_lines(self.math_window)
+
+        # Calculate and display current data if we have data
+        if hasattr(self, 'xydata') and len(self.math_window.math_channels) > 0:
+            math_results = self.math_window.calculate_math_channels(self.xydata)
+            self.plot_manager.update_math_channel_data(math_results)
 
     def take_reference_waveform(self):
         """

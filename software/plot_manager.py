@@ -58,6 +58,7 @@ class PlotManager(pg.QtCore.QObject):
         self.plot = self.ui.plot
         self.lines = []
         self.reference_lines = []
+        self.math_channel_lines = {}  # Dictionary: {math_name: plot_line}
         self.xy_line = None
         self.linepens = []
         self.otherlines = {}  # For trigger lines, fit lines etc.
@@ -279,6 +280,44 @@ class PlotManager(pg.QtCore.QObject):
         """Hides a specific reference plot."""
         if 0 <= channel_index < len(self.reference_lines):
             self.reference_lines[channel_index].setVisible(False)
+
+    def update_math_channel_lines(self, math_window=None):
+        """Updates the set of math channel plot lines based on current math channel definitions.
+
+        Args:
+            math_window: The MathChannelsWindow instance (optional, will try to find it if not provided)
+        """
+        # Get the math window if not provided
+        if math_window is None:
+            return  # Can't update without math window reference
+
+        current_math_names = {m['name'] for m in math_window.math_channels}
+
+        # Remove lines for math channels that no longer exist
+        for math_name in list(self.math_channel_lines.keys()):
+            if math_name not in current_math_names:
+                line = self.math_channel_lines[math_name]
+                self.plot.removeItem(line)
+                del self.math_channel_lines[math_name]
+
+        # Create lines for new math channels
+        for math_def in math_window.math_channels:
+            math_name = math_def['name']
+            if math_name not in self.math_channel_lines:
+                # Create a cyan dashed line for math channels
+                pen = pg.mkPen(color='c', width=2, style=QtCore.Qt.DashLine)
+                line = self.plot.plot(pen=pen, name=math_name, skipFiniteCheck=True, connect="finite")
+                self.math_channel_lines[math_name] = line
+
+    def update_math_channel_data(self, math_results):
+        """Update the math channel plot lines with calculated data.
+
+        Args:
+            math_results: Dictionary mapping math channel names to (x_data, y_data) tuples
+        """
+        for math_name, (x_data, y_data) in math_results.items():
+            if math_name in self.math_channel_lines:
+                self.math_channel_lines[math_name].setData(x_data, y_data)
 
     def update_xy_plot(self, x_data, y_data):
         """Updates the XY plot with new data."""
