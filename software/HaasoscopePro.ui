@@ -2101,6 +2101,15 @@ Outlined if triggering on this channel</string>
          <height>231</height>
         </rect>
        </property>
+       <property name="frameShape">
+        <enum>QFrame::Box</enum>
+       </property>
+       <property name="frameShadow">
+        <enum>QFrame::Sunken</enum>
+       </property>
+       <property name="lineWidth">
+        <number>1</number>
+       </property>
        <property name="alternatingRowColors">
         <bool>true</bool>
        </property>

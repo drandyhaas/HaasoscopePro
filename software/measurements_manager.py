@@ -5,7 +5,7 @@ import math
 import numpy as np
 from collections import deque
 from pyqtgraph.Qt import QtCore
-from PyQt5.QtGui import QStandardItemModel, QStandardItem
+from PyQt5.QtGui import QStandardItemModel, QStandardItem, QColor
 from data_processor import format_freq
 from board import gettemps
 
@@ -54,13 +54,30 @@ class MeasurementsManager:
         """Update the measurement table header to show which channel is being measured."""
         if self.selected_math_channel is not None:
             header_text = f"{self.selected_math_channel}"
+            # Get color from math channel line
+            if self.selected_math_channel in self.plot_manager.math_channel_lines:
+                color = self.plot_manager.math_channel_lines[self.selected_math_channel].opts['pen'].color()
+            else:
+                color = QColor('white')  # Default if not found
         else:
             # Show active channel
             board = self.state.activexychannel // self.state.num_chan_per_board
             chan = self.state.activexychannel % self.state.num_chan_per_board
             header_text = f"Board {board} Channel {chan}"
+            # Get color from active channel line
+            color = self.plot_manager.linepens[self.state.activexychannel].color()
 
+        # Update table headers
         self.measurement_model.setHorizontalHeaderLabels([header_text, 'Value', 'Average', 'RMS'])
+
+        # Set the table frame/border color
+        color_str = color.name()
+        stylesheet = f"""
+            QTableView {{
+                border: 1px solid {color_str};
+            }}
+        """
+        self.ui.tableView.setStyleSheet(stylesheet)
 
     def select_math_channel_for_measurement(self, math_channel_name):
         """Select a math channel for measurement display.
