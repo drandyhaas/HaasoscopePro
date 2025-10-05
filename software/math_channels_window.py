@@ -86,10 +86,12 @@ class MathChannelsWindow(QWidget):
         buttons_layout_1 = QHBoxLayout()
         self.remove_button = QPushButton("Remove Selected")
         self.remove_button.clicked.connect(self.remove_math_channel)
+        self.remove_button.setEnabled(False)  # Initially disabled
         buttons_layout_1.addWidget(self.remove_button)
 
         self.color_button = QPushButton("Change Color")
         self.color_button.clicked.connect(self.change_color)
+        self.color_button.setEnabled(False)  # Initially disabled
         buttons_layout_1.addWidget(self.color_button)
         list_layout.addLayout(buttons_layout_1)
 
@@ -97,6 +99,7 @@ class MathChannelsWindow(QWidget):
         buttons_layout_2 = QHBoxLayout()
         self.measure_button = QPushButton("Use for Measurements")
         self.measure_button.clicked.connect(self.use_for_measurements)
+        self.measure_button.setEnabled(False)  # Initially disabled
         buttons_layout_2.addWidget(self.measure_button)
 
         self.measure_active_button = QPushButton("Measure Active Channel")
@@ -118,6 +121,9 @@ class MathChannelsWindow(QWidget):
         self.channel_a_combo.currentIndexChanged.connect(self.update_preview)
         self.channel_b_combo.currentIndexChanged.connect(self.update_preview)
         self.operation_combo.currentIndexChanged.connect(self.update_preview)
+
+        # Connect list selection change to enable/disable buttons
+        self.math_list.itemSelectionChanged.connect(self.update_button_states)
 
     def update_channel_list(self):
         """Update the available channels in the combo boxes."""
@@ -145,6 +151,13 @@ class MathChannelsWindow(QWidget):
             ch_a_text = self.channel_a_combo.currentText()
             ch_b_text = self.channel_b_combo.currentText()
             self.preview_label.setText(f"Result: {ch_a_text} {op} {ch_b_text}")
+
+    def update_button_states(self):
+        """Enable or disable buttons based on whether a math channel is selected."""
+        has_selection = self.math_list.currentRow() >= 0
+        self.remove_button.setEnabled(has_selection)
+        self.color_button.setEnabled(has_selection)
+        self.measure_button.setEnabled(has_selection)
 
     def add_math_channel(self):
         """Add a new math channel to the list."""
