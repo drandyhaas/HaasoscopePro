@@ -52,7 +52,11 @@ class MeasurementsManager:
 
     def update_measurement_header(self):
         """Update the measurement table header to show which channel is being measured."""
-        if self.selected_math_channel is not None:
+        # Default values for when no boards are connected
+        if self.state.num_board < 1 or len(self.plot_manager.linepens) == 0:
+            header_text = "No Board"
+            color = QColor('white')
+        elif self.selected_math_channel is not None:
             header_text = f"{self.selected_math_channel}"
             # Get color from math channel line
             if self.selected_math_channel in self.plot_manager.math_channel_lines:
@@ -207,7 +211,7 @@ class MeasurementsManager:
                     _set_measurement("ADC temp", self.cached_temps[0], "\u00b0C")
                     _set_measurement("Board temp", self.cached_temps[1], "\u00b0C")
 
-            if hasattr(self.main_window, 'xydata'):
+            if hasattr(self.main_window, 'xydata') and self.state.num_board > 0:
                 # Get data from math channel or active channel
                 if self.selected_math_channel is not None:
                     # Use math channel data
