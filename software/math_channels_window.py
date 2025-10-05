@@ -2,8 +2,9 @@
 """Window for creating and managing math channel operations."""
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QComboBox,
-                             QPushButton, QListWidget, QLabel, QGroupBox)
+                             QPushButton, QListWidget, QLabel, QGroupBox, QColorDialog)
 from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QColor
 import numpy as np
 
 
@@ -13,14 +14,18 @@ class MathChannelsWindow(QWidget):
     # Signal emitted when math channels are updated
     math_channels_changed = pyqtSignal()
 
+    # Default colors for math channels (cycle through these)
+    DEFAULT_COLORS = ['#00FFFF', '#FF00FF', '#FFFF00', '#00FF00', '#FF8000', '#FF0080']
+
     def __init__(self, main_window):
         super().__init__()
         self.main_window = main_window
         self.state = main_window.state
 
         # Storage for math channel definitions
-        # Each entry: {'name': 'Math1', 'ch1': 0, 'ch2': 1, 'operation': '-'}
+        # Each entry: {'name': 'Math1', 'ch1': 0, 'ch2': 1, 'operation': '-', 'color': '#00FFFF'}
         self.math_channels = []
+        self.next_color_index = 0  # Track which color to use next
 
         self.setWindowTitle("Math Channels")
         self.setGeometry(100, 100, 400, 500)
@@ -77,13 +82,24 @@ class MathChannelsWindow(QWidget):
         self.math_list = QListWidget()
         list_layout.addWidget(self.math_list)
 
-        # Remove button
+        # Buttons layout
+        buttons_layout = QHBoxLayout()
         self.remove_button = QPushButton("Remove Selected")
         self.remove_button.clicked.connect(self.remove_math_channel)
-        list_layout.addWidget(self.remove_button)
+        buttons_layout.addWidget(self.remove_button)
+
+        self.color_button = QPushButton("Change Color")
+        self.color_button.clicked.connect(self.change_color)
+        buttons_layout.addWidget(self.color_button)
+        list_layout.addLayout(buttons_layout)
 
         list_group.setLayout(list_layout)
         layout.addWidget(list_group)
+
+        # Close button at the bottom
+        self.close_button = QPushButton("Close")
+        self.close_button.clicked.connect(self.close)
+        layout.addWidget(self.close_button)
 
         self.setLayout(layout)
 
@@ -131,12 +147,17 @@ class MathChannelsWindow(QWidget):
         # Create a unique name for this math channel
         math_name = f"Math{len(self.math_channels) + 1}"
 
+        # Assign a unique color from the default palette
+        color = self.DEFAULT_COLORS[self.next_color_index % len(self.DEFAULT_COLORS)]
+        self.next_color_index += 1
+
         # Create the math channel definition
         math_def = {
             'name': math_name,
             'ch1': ch_a,
             'ch2': ch_b,
-            'operation': op
+            'operation': op,
+            'color': color
         }
 
         self.math_channels.append(math_def)
@@ -171,6 +192,23 @@ class MathChannelsWindow(QWidget):
 
             # Emit signal to update plots
             self.math_channels_changed.emit()
+
+    def change_color(self):
+        """Change the color of the selected math channel."""
+        current_row = self.math_list.currentRow()
+        if current_row >= 0 and current_row < len(self.math_channels):
+            # Get the current color
+            current_color = QColor(self.math_channels[current_row]['color'])
+
+            # Open color dialog
+            color = QColorDialog.getColor(current_color, self, "Select Math Channel Color")
+
+            if color.isValid():
+                # Update the math channel definition
+                self.math_channels[current_row]['color'] = color.name()
+
+                # Emit signal to update plots
+                self.math_channels_changed.emit()
 
     def calculate_math_channels(self, xy_data_array):
         """Calculate all math channels based on current data.

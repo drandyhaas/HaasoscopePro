@@ -300,14 +300,20 @@ class PlotManager(pg.QtCore.QObject):
                 self.plot.removeItem(line)
                 del self.math_channel_lines[math_name]
 
-        # Create lines for new math channels
+        # Create or update lines for math channels
         for math_def in math_window.math_channels:
             math_name = math_def['name']
+            color = math_def.get('color', '#00FFFF')  # Default to cyan if no color specified
+
             if math_name not in self.math_channel_lines:
-                # Create a cyan dashed line for math channels
-                pen = pg.mkPen(color='c', width=2, style=QtCore.Qt.DashLine)
+                # Create a new dashed line with the specified color
+                pen = pg.mkPen(color=color, width=2, style=QtCore.Qt.DashLine)
                 line = self.plot.plot(pen=pen, name=math_name, skipFiniteCheck=True, connect="finite")
                 self.math_channel_lines[math_name] = line
+            else:
+                # Update the color of existing line
+                pen = pg.mkPen(color=color, width=2, style=QtCore.Qt.DashLine)
+                self.math_channel_lines[math_name].setPen(pen)
 
     def update_math_channel_data(self, math_results):
         """Update the math channel plot lines with calculated data.
