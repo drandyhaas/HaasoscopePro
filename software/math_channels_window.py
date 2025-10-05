@@ -167,12 +167,24 @@ class MathChannelsWindow(QWidget):
 
         num_channels = self.state.num_board * self.state.num_chan_per_board
 
+        # Add regular channels
         for i in range(num_channels):
             board = i // self.state.num_chan_per_board
             chan = i % self.state.num_chan_per_board
             channel_name = f"Board {board} Channel {chan}"
             self.channel_a_combo.addItem(channel_name, i)
             self.channel_b_combo.addItem(channel_name, i)
+
+        # Add separator if there are math channels
+        if len(self.math_channels) > 0:
+            self.channel_a_combo.insertSeparator(num_channels)
+            self.channel_b_combo.insertSeparator(num_channels)
+
+            # Add math channels (use string identifier to distinguish from regular channels)
+            for math_def in self.math_channels:
+                math_name = math_def['name']
+                self.channel_a_combo.addItem(f"🔢 {math_name}", math_name)  # Use string as data
+                self.channel_b_combo.addItem(f"🔢 {math_name}", math_name)
 
         # Set default: Channel A = 0, Channel B = 1 (if available)
         if num_channels > 1:
@@ -205,18 +217,36 @@ class MathChannelsWindow(QWidget):
         # Update preview
         self.update_preview()
 
+    def get_channel_display_name(self, ch_data):
+        """Get display name for a channel (regular or math).
+
+        Args:
+            ch_data: Either an integer (regular channel) or string (math channel name)
+
+        Returns:
+            Display name string
+        """
+        if isinstance(ch_data, str):
+            # Math channel
+            return ch_data
+        else:
+            # Regular channel
+            board = ch_data // self.state.num_chan_per_board
+            chan = ch_data % self.state.num_chan_per_board
+            return f"Board {board} Channel {chan}"
+
     def update_preview(self):
         """Update the preview label showing what the math channel will be."""
         ch_a = self.channel_a_combo.currentData()
         op = self.operation_combo.currentText()
 
         if ch_a is not None:
-            ch_a_text = self.channel_a_combo.currentText()
+            ch_a_text = self.get_channel_display_name(ch_a)
 
             if self.is_two_channel_operation(op):
                 ch_b = self.channel_b_combo.currentData()
                 if ch_b is not None:
-                    ch_b_text = self.channel_b_combo.currentText()
+                    ch_b_text = self.get_channel_display_name(ch_b)
                     self.preview_label.setText(f"Result: {ch_a_text} {op} {ch_b_text}")
                 else:
                     self.preview_label.setText(f"Result: {ch_a_text} {op} CH?")
@@ -231,6 +261,48 @@ class MathChannelsWindow(QWidget):
         self.measure_button.setEnabled(has_selection)
         # Replace button is always enabled/disabled based on selection (now in top section)
         self.replace_button.setEnabled(has_selection)
+
+    def check_circular_dependency(self, math_name, ch1, ch2, exclude_name=None):
+        """Check if using ch1 and ch2 would create a circular dependency.
+
+        Args:
+            math_name: Name of the math channel being created/updated
+            ch1: First channel (int or string)
+            ch2: Second channel (int or string) or None
+            exclude_name: Name to exclude from dependency check (for replace operation)
+
+        Returns:
+            True if circular dependency detected, False otherwise
+        """
+        def get_dependencies(ch):
+            """Get all dependencies for a channel recursively."""
+            if not isinstance(ch, str):  # Regular channel, no dependencies
+                return set()
+
+            deps = {ch}
+            # Find the math channel definition
+            for math_def in self.math_channels:
+                if math_def['name'] == ch:
+                    if math_def['name'] == exclude_name:
+                        # Skip this one during replace operation
+                        continue
+                    # Add dependencies of ch1
+                    if isinstance(math_def['ch1'], str):
+                        deps.update(get_dependencies(math_def['ch1']))
+                    # Add dependencies of ch2
+                    if math_def['ch2'] is not None and isinstance(math_def['ch2'], str):
+                        deps.update(get_dependencies(math_def['ch2']))
+                    break
+            return deps
+
+        # Check if using ch1 or ch2 creates a circular dependency
+        deps = set()
+        if isinstance(ch1, str):
+            deps.update(get_dependencies(ch1))
+        if ch2 is not None and isinstance(ch2, str):
+            deps.update(get_dependencies(ch2))
+
+        return math_name in deps
 
     def add_math_channel(self):
         """Add a new math channel to the list."""
@@ -251,6 +323,13 @@ class MathChannelsWindow(QWidget):
         # Create a unique name for this math channel
         math_name = f"Math{len(self.math_channels) + 1}"
 
+        # Check for circular dependencies
+        if self.check_circular_dependency(math_name, ch_a, ch_b):
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Circular Dependency",
+                              f"Cannot create {math_name}: would create a circular dependency!")
+            return
+
         # Assign a unique color from the default palette
         color = self.DEFAULT_COLORS[self.next_color_index % len(self.DEFAULT_COLORS)]
         self.next_color_index += 1
@@ -270,9 +349,9 @@ class MathChannelsWindow(QWidget):
         self.running_minmax[math_name] = None
 
         # Update the list display
-        ch_a_text = self.channel_a_combo.currentText()
+        ch_a_text = self.get_channel_display_name(ch_a)
         if self.is_two_channel_operation(op):
-            ch_b_text = self.channel_b_combo.currentText()
+            ch_b_text = self.get_channel_display_name(ch_b)
             display_text = f"{math_name}: {ch_a_text} {op} {ch_b_text}"
         else:
             display_text = f"{math_name}: {op}({ch_a_text})"
@@ -280,6 +359,9 @@ class MathChannelsWindow(QWidget):
         # Create list item with colored icon
         item = QListWidgetItem(self.create_color_icon(color), display_text)
         self.math_list.addItem(item)
+
+        # Update channel lists to include new math channel
+        self.update_channel_list()
 
         # Emit signal to update plots
         self.math_channels_changed.emit()
@@ -304,19 +386,28 @@ class MathChannelsWindow(QWidget):
         else:
             ch_b = None  # Single-channel operation
 
+        # Get the math channel name
+        math_name = self.math_channels[current_row]['name']
+
+        # Check for circular dependencies (exclude current channel from check)
+        if self.check_circular_dependency(math_name, ch_a, ch_b, exclude_name=math_name):
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Circular Dependency",
+                              f"Cannot update {math_name}: would create a circular dependency!")
+            return
+
         # Update the math channel definition
         self.math_channels[current_row]['ch1'] = ch_a
         self.math_channels[current_row]['ch2'] = ch_b
         self.math_channels[current_row]['operation'] = op
 
         # Reset running min/max tracking for this channel
-        math_name = self.math_channels[current_row]['name']
         self.running_minmax[math_name] = None
 
         # Update the list display
-        ch_a_text = self.channel_a_combo.currentText()
+        ch_a_text = self.get_channel_display_name(ch_a)
         if self.is_two_channel_operation(op):
-            ch_b_text = self.channel_b_combo.currentText()
+            ch_b_text = self.get_channel_display_name(ch_b)
             display_text = f"{math_name}: {ch_a_text} {op} {ch_b_text}"
         else:
             display_text = f"{math_name}: {op}({ch_a_text})"
@@ -335,15 +426,17 @@ class MathChannelsWindow(QWidget):
             self.math_list.takeItem(current_row)
             del self.math_channels[current_row]
 
-            # Rebuild running_minmax with renumbered names
+            # Rebuild running_minmax with renumbered names and update references
             old_minmax = self.running_minmax.copy()
             self.running_minmax = {}
+            name_mapping = {}  # Map old names to new names
 
             # Renumber remaining math channels and update running_minmax
             for i, math_def in enumerate(self.math_channels):
                 old_name = math_def['name']
                 new_name = f"Math{i + 1}"
                 math_def['name'] = new_name
+                name_mapping[old_name] = new_name
 
                 # Preserve running min/max data if it exists
                 if old_name in old_minmax:
@@ -351,13 +444,20 @@ class MathChannelsWindow(QWidget):
                 else:
                     self.running_minmax[new_name] = None
 
+            # Update references in all math channels
+            for math_def in self.math_channels:
+                if isinstance(math_def['ch1'], str) and math_def['ch1'] in name_mapping:
+                    math_def['ch1'] = name_mapping[math_def['ch1']]
+                if math_def['ch2'] is not None and isinstance(math_def['ch2'], str) and math_def['ch2'] in name_mapping:
+                    math_def['ch2'] = name_mapping[math_def['ch2']]
+
             # Update display
             self.math_list.clear()
             for math_def in self.math_channels:
-                ch_a_text = f"Board {math_def['ch1'] // self.state.num_chan_per_board} Channel {math_def['ch1'] % self.state.num_chan_per_board}"
+                ch_a_text = self.get_channel_display_name(math_def['ch1'])
 
                 if self.is_two_channel_operation(math_def['operation']):
-                    ch_b_text = f"Board {math_def['ch2'] // self.state.num_chan_per_board} Channel {math_def['ch2'] % self.state.num_chan_per_board}"
+                    ch_b_text = self.get_channel_display_name(math_def['ch2'])
                     display_text = f"{math_def['name']}: {ch_a_text} {math_def['operation']} {ch_b_text}"
                 else:
                     display_text = f"{math_def['name']}: {math_def['operation']}({ch_a_text})"
@@ -365,6 +465,9 @@ class MathChannelsWindow(QWidget):
                 # Create list item with colored icon
                 item = QListWidgetItem(self.create_color_icon(math_def['color']), display_text)
                 self.math_list.addItem(item)
+
+            # Update channel lists since math channels changed
+            self.update_channel_list()
 
             # Emit signal to update plots
             self.math_channels_changed.emit()
@@ -413,6 +516,58 @@ class MathChannelsWindow(QWidget):
                 self.math_list.setCurrentRow(i)
                 return
 
+    def _topological_sort(self):
+        """Sort math channels by dependencies using topological sort.
+
+        Returns:
+            List of math channel definitions sorted so dependencies come first
+        """
+        if not self.math_channels:
+            return []
+
+        # Build adjacency list (math_name -> list of math channels that depend on it)
+        # and in-degree count (math_name -> number of dependencies)
+        graph = {math_def['name']: [] for math_def in self.math_channels}
+        in_degree = {math_def['name']: 0 for math_def in self.math_channels}
+
+        # Build the dependency graph
+        for math_def in self.math_channels:
+            math_name = math_def['name']
+            dependencies = []
+
+            # Check if ch1 is a math channel
+            if isinstance(math_def['ch1'], str):
+                dependencies.append(math_def['ch1'])
+
+            # Check if ch2 is a math channel
+            if math_def['ch2'] is not None and isinstance(math_def['ch2'], str):
+                dependencies.append(math_def['ch2'])
+
+            # For each dependency, add an edge and increment in-degree
+            for dep in dependencies:
+                if dep in graph:  # Only if the dependency is a math channel we know about
+                    graph[dep].append(math_name)
+                    in_degree[math_name] += 1
+
+        # Kahn's algorithm for topological sort
+        queue = [math_def['name'] for math_def in self.math_channels if in_degree[math_def['name']] == 0]
+        sorted_names = []
+
+        while queue:
+            # Remove a node with no incoming edges
+            current = queue.pop(0)
+            sorted_names.append(current)
+
+            # For each node that depends on current
+            for dependent in graph[current]:
+                in_degree[dependent] -= 1
+                if in_degree[dependent] == 0:
+                    queue.append(dependent)
+
+        # Convert sorted names back to math definitions
+        name_to_def = {math_def['name']: math_def for math_def in self.math_channels}
+        return [name_to_def[name] for name in sorted_names]
+
     def calculate_math_channels(self, xy_data_array):
         """Calculate all math channels based on current data.
 
@@ -424,12 +579,21 @@ class MathChannelsWindow(QWidget):
         """
         results = {}
 
-        for math_def in self.math_channels:
+        # Sort math channels by dependencies (topological sort)
+        sorted_channels = self._topological_sort()
+
+        for math_def in sorted_channels:
             ch1_idx = math_def['ch1']
             operation = math_def['operation']
 
-            # Get the data for channel 1
-            x1, y1 = xy_data_array[ch1_idx]
+            # Get the data for channel 1 - check if it's a math channel or regular channel
+            if isinstance(ch1_idx, str):
+                # It's a math channel - get from results
+                x1, y1 = results[ch1_idx]
+            else:
+                # It's a regular channel
+                x1, y1 = xy_data_array[ch1_idx]
+
             x_result = x1.copy()
 
             # Perform the operation
@@ -437,7 +601,14 @@ class MathChannelsWindow(QWidget):
                 if self.is_two_channel_operation(operation):
                     # Two-channel operations
                     ch2_idx = math_def['ch2']
-                    x2, y2 = xy_data_array[ch2_idx]
+
+                    # Get the data for channel 2 - check if it's a math channel or regular channel
+                    if isinstance(ch2_idx, str):
+                        # It's a math channel - get from results
+                        x2, y2 = results[ch2_idx]
+                    else:
+                        # It's a regular channel
+                        x2, y2 = xy_data_array[ch2_idx]
 
                     if operation == '-' or operation == 'A-B':
                         y_result = y1 - y2
