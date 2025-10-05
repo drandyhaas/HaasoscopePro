@@ -2,8 +2,9 @@
 """Handles saving and loading scope setup configurations to/from JSON files."""
 
 import json
-from PyQt5.QtWidgets import QMessageBox, QFileDialog
+from PyQt5.QtWidgets import QMessageBox, QFileDialog, QListWidgetItem
 from PyQt5.QtGui import QColor
+from math_channels_window import MathChannelsWindow
 
 
 def save_setup(main_window):
@@ -114,6 +115,11 @@ def save_setup(main_window):
         'trig_stabilizer_enabled': s.trig_stabilizer_enabled,
         'extra_trig_stabilizer_enabled': s.extra_trig_stabilizer_enabled,
     }
+
+    # Math channels
+    if main_window.math_window is not None and len(main_window.math_window.math_channels) > 0:
+        setup['math_channels'] = main_window.math_window.math_channels
+        setup['math_channels_next_color_index'] = main_window.math_window.next_color_index
 
     try:
         with open(filename, 'w') as f:
@@ -350,6 +356,36 @@ def load_setup(main_window):
 
     # Update persistence display after restoring visibility and persistence settings
     main_window.set_average_line_pen()
+
+    # Restore math channels
+    if 'math_channels' in setup and len(setup['math_channels']) > 0:
+        # Create math window if it doesn't exist
+        if main_window.math_window is None:
+            main_window.math_window = MathChannelsWindow(main_window)
+            main_window.math_window.math_channels_changed.connect(lambda: main_window.update_math_channels())
+
+        # Clear existing math channels
+        main_window.math_window.math_channels.clear()
+        main_window.math_window.math_list.clear()
+
+        # Restore the math channels list
+        main_window.math_window.math_channels = setup['math_channels']
+
+        # Restore the color index counter
+        if 'math_channels_next_color_index' in setup:
+            main_window.math_window.next_color_index = setup['math_channels_next_color_index']
+
+        # Rebuild the list display
+        for math_def in main_window.math_window.math_channels:
+            ch_a_text = f"Board {math_def['ch1'] // s.num_chan_per_board} Channel {math_def['ch1'] % s.num_chan_per_board}"
+            ch_b_text = f"Board {math_def['ch2'] // s.num_chan_per_board} Channel {math_def['ch2'] % s.num_chan_per_board}"
+            display_text = f"{math_def['name']}: {ch_a_text} {math_def['operation']} {ch_b_text}"
+
+            item = QListWidgetItem(main_window.math_window.create_color_icon(math_def['color']), display_text)
+            main_window.math_window.math_list.addItem(item)
+
+        # Update the plot manager with the math channels
+        main_window.plot_manager.update_math_channel_lines(main_window.math_window)
 
     # Resume acquisition if it was running
     if not was_paused:
