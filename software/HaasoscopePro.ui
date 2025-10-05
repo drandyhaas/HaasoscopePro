@@ -2199,11 +2199,14 @@ Outlined if triggering on this channel</string>
     <addaction name="actionDrawing"/>
     <addaction name="actionHigh_resolution"/>
     <addaction name="actionGrid"/>
+    <addaction name="actionVoltage_axis"/>
     <addaction name="actionMarkers"/>
-    <addaction name="actionXY_Plot"/>
     <addaction name="actionLine_color"/>
     <addaction name="actionPan_and_zoom"/>
-    <addaction name="actionVoltage_axis"/>
+    <addaction name="separator"/>
+    <addaction name="actionXY_Plot"/>
+    <addaction name="separator"/>
+    <addaction name="actionMath_channels"/>
    </widget>
    <widget class="QMenu" name="menuReference">
     <property name="title">
@@ -2585,6 +2588,11 @@ Outlined if triggering on this channel</string>
   <action name="actionLoad_setup">
    <property name="text">
     <string>Load setup</string>
+   </property>
+  </action>
+  <action name="actionMath_channels">
+   <property name="text">
+    <string>Math channels</string>
    </property>
   </action>
  </widget>
