@@ -8,6 +8,20 @@ from PyQt5.QtGui import QColor, QPixmap, QIcon
 import numpy as np
 
 
+class RefreshingComboBox(QComboBox):
+    """A QComboBox that refreshes its contents before showing the popup."""
+
+    def __init__(self, refresh_callback=None, parent=None):
+        super().__init__(parent)
+        self.refresh_callback = refresh_callback
+
+    def showPopup(self):
+        """Override to refresh contents before showing popup."""
+        if self.refresh_callback:
+            self.refresh_callback()
+        super().showPopup()
+
+
 class MathChannelsWindow(QWidget):
     """Window for creating mathematical operations between channels."""
 
@@ -61,7 +75,7 @@ class MathChannelsWindow(QWidget):
         # Channel A selector
         ch_a_layout = QHBoxLayout()
         ch_a_layout.addWidget(QLabel("Channel A:"))
-        self.channel_a_combo = QComboBox()
+        self.channel_a_combo = RefreshingComboBox(refresh_callback=self.update_channel_list)
         ch_a_layout.addWidget(self.channel_a_combo)
         selection_layout.addLayout(ch_a_layout)
 
@@ -87,7 +101,7 @@ class MathChannelsWindow(QWidget):
         ch_b_layout = QHBoxLayout()
         self.channel_b_label = QLabel("Channel B:")
         ch_b_layout.addWidget(self.channel_b_label)
-        self.channel_b_combo = QComboBox()
+        self.channel_b_combo = RefreshingComboBox(refresh_callback=self.update_channel_list)
         ch_b_layout.addWidget(self.channel_b_combo)
         selection_layout.addLayout(ch_b_layout)
 
@@ -160,6 +174,10 @@ class MathChannelsWindow(QWidget):
 
     def update_channel_list(self):
         """Update the available channels in the combo boxes."""
+        # Save current selections
+        current_a_data = self.channel_a_combo.currentData()
+        current_b_data = self.channel_b_combo.currentData()
+
         self.channel_a_combo.clear()
         self.channel_b_combo.clear()
 
@@ -173,10 +191,25 @@ class MathChannelsWindow(QWidget):
             self.channel_a_combo.addItem(channel_name, i)
             self.channel_b_combo.addItem(channel_name, i)
 
+        # Add reference channels if they exist
+        if len(self.main_window.reference_data) > 0:
+            separator_pos = self.channel_a_combo.count()
+            self.channel_a_combo.insertSeparator(separator_pos)
+            self.channel_b_combo.insertSeparator(separator_pos)
+
+            for ref_idx in sorted(self.main_window.reference_data.keys()):
+                board = ref_idx // self.state.num_chan_per_board
+                chan = ref_idx % self.state.num_chan_per_board
+                ref_identifier = f"Ref{ref_idx}"  # Use string identifier like "Ref0", "Ref1"
+                ref_display_name = f"📌 Ref Board {board} Channel {chan}"
+                self.channel_a_combo.addItem(ref_display_name, ref_identifier)
+                self.channel_b_combo.addItem(ref_display_name, ref_identifier)
+
         # Add separator if there are math channels
         if len(self.math_channels) > 0:
-            self.channel_a_combo.insertSeparator(num_channels)
-            self.channel_b_combo.insertSeparator(num_channels)
+            separator_pos = self.channel_a_combo.count()
+            self.channel_a_combo.insertSeparator(separator_pos)
+            self.channel_b_combo.insertSeparator(separator_pos)
 
             # Add math channels (use string identifier to distinguish from regular channels)
             for math_def in self.math_channels:
@@ -184,8 +217,22 @@ class MathChannelsWindow(QWidget):
                 self.channel_a_combo.addItem(f"🔢 {math_name}", math_name)  # Use string as data
                 self.channel_b_combo.addItem(f"🔢 {math_name}", math_name)
 
-        # Set default: Channel A = 0, Channel B = 1 (if available)
-        if num_channels > 1:
+        # Restore previous selections if they still exist
+        if current_a_data is not None:
+            index_a = self.channel_a_combo.findData(current_a_data)
+            if index_a >= 0:
+                self.channel_a_combo.setCurrentIndex(index_a)
+            # Otherwise keep default (index 0)
+
+        if current_b_data is not None:
+            index_b = self.channel_b_combo.findData(current_b_data)
+            if index_b >= 0:
+                self.channel_b_combo.setCurrentIndex(index_b)
+            elif num_channels > 1:
+                # Set default to channel 1 if previous selection not found
+                self.channel_b_combo.setCurrentIndex(1)
+        elif num_channels > 1:
+            # Set default: Channel B = 1 (if available)
             self.channel_b_combo.setCurrentIndex(1)
 
         self.update_preview()
@@ -217,17 +264,25 @@ class MathChannelsWindow(QWidget):
         self.update_preview()
 
     def get_channel_display_name(self, ch_data):
-        """Get display name for a channel (regular or math).
+        """Get display name for a channel (regular, reference, or math).
 
         Args:
-            ch_data: Either an integer (regular channel) or string (math channel name)
+            ch_data: Either an integer (regular channel) or string (reference/math channel name)
 
         Returns:
             Display name string
         """
         if isinstance(ch_data, str):
-            # Math channel
-            return ch_data
+            # Check if it's a reference channel
+            if ch_data.startswith("Ref"):
+                # Extract the channel index from "Ref0", "Ref1", etc.
+                ref_idx = int(ch_data[3:])
+                board = ref_idx // self.state.num_chan_per_board
+                chan = ref_idx % self.state.num_chan_per_board
+                return f"Ref Board {board} Channel {chan}"
+            else:
+                # Math channel
+                return ch_data
         else:
             # Regular channel
             board = ch_data // self.state.num_chan_per_board
@@ -291,6 +346,9 @@ class MathChannelsWindow(QWidget):
             if not isinstance(ch, str):  # Regular channel, no dependencies
                 return set()
 
+            if ch.startswith("Ref"):  # Reference channel, no dependencies
+                return set()
+
             thedeps = {ch}
             # Find the math channel definition
             for math_def in self.math_channels:
@@ -299,10 +357,10 @@ class MathChannelsWindow(QWidget):
                         # Skip this one during replace operation
                         continue
                     # Add dependencies of ch1
-                    if isinstance(math_def['ch1'], str):
+                    if isinstance(math_def['ch1'], str) and not math_def['ch1'].startswith("Ref"):
                         thedeps.update(get_dependencies(math_def['ch1']))
                     # Add dependencies of ch2
-                    if math_def['ch2'] is not None and isinstance(math_def['ch2'], str):
+                    if math_def['ch2'] is not None and isinstance(math_def['ch2'], str) and not math_def['ch2'].startswith("Ref"):
                         thedeps.update(get_dependencies(math_def['ch2']))
                     break
             return thedeps
@@ -590,12 +648,12 @@ class MathChannelsWindow(QWidget):
             math_name = math_def['name']
             dependencies = []
 
-            # Check if ch1 is a math channel
-            if isinstance(math_def['ch1'], str):
+            # Check if ch1 is a math channel (but not a reference channel)
+            if isinstance(math_def['ch1'], str) and not math_def['ch1'].startswith("Ref"):
                 dependencies.append(math_def['ch1'])
 
-            # Check if ch2 is a math channel
-            if math_def['ch2'] is not None and isinstance(math_def['ch2'], str):
+            # Check if ch2 is a math channel (but not a reference channel)
+            if math_def['ch2'] is not None and isinstance(math_def['ch2'], str) and not math_def['ch2'].startswith("Ref"):
                 dependencies.append(math_def['ch2'])
 
             # For each dependency, add an edge and increment in-degree
@@ -641,10 +699,23 @@ class MathChannelsWindow(QWidget):
             ch1_idx = math_def['ch1']
             operation = math_def['operation']
 
-            # Get the data for channel 1 - check if it's a math channel or regular channel
+            # Get the data for channel 1 - check if it's a math channel, reference channel, or regular channel
             if isinstance(ch1_idx, str):
-                # It's a math channel - get from results
-                x1, y1 = results[ch1_idx]
+                if ch1_idx.startswith("Ref"):
+                    # It's a reference channel - get from reference_data
+                    ref_idx = int(ch1_idx[3:])
+                    if ref_idx in self.main_window.reference_data:
+                        ref_data = self.main_window.reference_data[ref_idx]
+                        # Convert x from ns to current time units
+                        x1 = ref_data['x_ns'] / self.state.nsunits
+                        y1 = ref_data['y']
+                    else:
+                        # Reference doesn't exist, use zeros
+                        x1, y1 = xy_data_array[0]  # Get array shape from first channel
+                        y1 = np.zeros_like(y1)
+                else:
+                    # It's a math channel - get from results
+                    x1, y1 = results[ch1_idx]
             else:
                 # It's a regular channel
                 x1, y1 = xy_data_array[ch1_idx]
@@ -657,10 +728,23 @@ class MathChannelsWindow(QWidget):
                     # Two-channel operations
                     ch2_idx = math_def['ch2']
 
-                    # Get the data for channel 2 - check if it's a math channel or regular channel
+                    # Get the data for channel 2 - check if it's a math channel, reference channel, or regular channel
                     if isinstance(ch2_idx, str):
-                        # It's a math channel - get from results
-                        x2, y2 = results[ch2_idx]
+                        if ch2_idx.startswith("Ref"):
+                            # It's a reference channel - get from reference_data
+                            ref_idx = int(ch2_idx[3:])
+                            if ref_idx in self.main_window.reference_data:
+                                ref_data = self.main_window.reference_data[ref_idx]
+                                # Convert x from ns to current time units
+                                x2 = ref_data['x_ns'] / self.state.nsunits
+                                y2 = ref_data['y']
+                            else:
+                                # Reference doesn't exist, use zeros
+                                x2, y2 = xy_data_array[0]  # Get array shape from first channel
+                                y2 = np.zeros_like(y2)
+                        else:
+                            # It's a math channel - get from results
+                            x2, y2 = results[ch2_idx]
                     else:
                         # It's a regular channel
                         x2, y2 = xy_data_array[ch2_idx]
