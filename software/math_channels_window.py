@@ -3,7 +3,7 @@
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QComboBox,
                              QPushButton, QListWidget, QLabel, QGroupBox, QColorDialog, QListWidgetItem)
-from PyQt5.QtCore import Qt, pyqtSignal, QSize
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QPixmap, QIcon
 import numpy as np
 
@@ -36,7 +36,8 @@ class MathChannelsWindow(QWidget):
 
         self.setup_ui()
 
-    def create_color_icon(self, color_string):
+    @staticmethod
+    def create_color_icon(color_string):
         """Create a colored square icon for the list item.
 
         Args:
@@ -192,7 +193,8 @@ class MathChannelsWindow(QWidget):
 
         self.update_preview()
 
-    def is_two_channel_operation(self, operation):
+    @staticmethod
+    def is_two_channel_operation(operation):
         """Check if an operation requires two channels.
 
         Args:
@@ -279,7 +281,7 @@ class MathChannelsWindow(QWidget):
             if not isinstance(ch, str):  # Regular channel, no dependencies
                 return set()
 
-            deps = {ch}
+            thedeps = {ch}
             # Find the math channel definition
             for math_def in self.math_channels:
                 if math_def['name'] == ch:
@@ -288,12 +290,12 @@ class MathChannelsWindow(QWidget):
                         continue
                     # Add dependencies of ch1
                     if isinstance(math_def['ch1'], str):
-                        deps.update(get_dependencies(math_def['ch1']))
+                        thedeps.update(get_dependencies(math_def['ch1']))
                     # Add dependencies of ch2
                     if math_def['ch2'] is not None and isinstance(math_def['ch2'], str):
-                        deps.update(get_dependencies(math_def['ch2']))
+                        thedeps.update(get_dependencies(math_def['ch2']))
                     break
-            return deps
+            return thedeps
 
         # Check if using ch1 or ch2 creates a circular dependency
         deps = set()
@@ -475,7 +477,7 @@ class MathChannelsWindow(QWidget):
     def change_color(self):
         """Change the color of the selected math channel."""
         current_row = self.math_list.currentRow()
-        if current_row >= 0 and current_row < len(self.math_channels):
+        if 0 <= current_row < len(self.math_channels):
             # Get the current color
             current_color = QColor(self.math_channels[current_row]['color'])
 
@@ -496,7 +498,7 @@ class MathChannelsWindow(QWidget):
     def use_for_measurements(self):
         """Use the selected math channel for measurements."""
         current_row = self.math_list.currentRow()
-        if current_row >= 0 and current_row < len(self.math_channels):
+        if 0 <= current_row < len(self.math_channels):
             math_channel_name = self.math_channels[current_row]['name']
             self.main_window.measurements.select_math_channel_for_measurement(math_channel_name)
 
