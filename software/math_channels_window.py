@@ -147,6 +147,12 @@ class MathChannelsWindow(QWidget):
 
         # Buttons layout - Row 2
         buttons_layout_2 = QHBoxLayout()
+        self.displayed_button = QCheckBox("Displayed")
+        self.displayed_button.setChecked(True)
+        self.displayed_button.clicked.connect(self.toggle_displayed)
+        self.displayed_button.setEnabled(False)  # Initially disabled until a math channel is selected
+        buttons_layout_2.addWidget(self.displayed_button)
+
         self.measure_button = QCheckBox("Use for Measurements Menu")
         self.measure_button.setChecked(False)
         self.measure_button.clicked.connect(self.toggle_use_for_measurements)
@@ -183,13 +189,21 @@ class MathChannelsWindow(QWidget):
 
         num_channels = self.state.num_board * self.state.num_chan_per_board
 
-        # Add regular channels
+        # Add regular channels and track available (non-disabled) indices
+        available_channels = []
         for i in range(num_channels):
             board = i // self.state.num_chan_per_board
             chan = i % self.state.num_chan_per_board
             channel_name = f"Board {board} Channel {chan}"
-            self.channel_a_combo.addItem(channel_name, i)
-            self.channel_b_combo.addItem(channel_name, i)
+
+            # Check if this channel should be disabled
+            is_disabled = chan == 1 and not self.state.dotwochannel[board]
+
+            # Only add non-disabled channels
+            if not is_disabled:
+                self.channel_a_combo.addItem(channel_name, i)
+                self.channel_b_combo.addItem(channel_name, i)
+                available_channels.append(i)
 
         # Add reference channels if they exist
         if len(self.main_window.reference_data) > 0:
@@ -217,23 +231,38 @@ class MathChannelsWindow(QWidget):
                 self.channel_a_combo.addItem(f"🔢 {math_name}", math_name)  # Use string as data
                 self.channel_b_combo.addItem(f"🔢 {math_name}", math_name)
 
-        # Restore previous selections if they still exist
+        # Restore previous selections if they still exist and are not disabled
+        restored_a = False
+        restored_b = False
+
         if current_a_data is not None:
-            index_a = self.channel_a_combo.findData(current_a_data)
-            if index_a >= 0:
-                self.channel_a_combo.setCurrentIndex(index_a)
-            # Otherwise keep default (index 0)
+            # Check if the previous selection was a disabled channel
+            if not self.uses_disabled_channel(current_a_data):
+                index_a = self.channel_a_combo.findData(current_a_data)
+                if index_a >= 0:
+                    self.channel_a_combo.setCurrentIndex(index_a)
+                    restored_a = True
 
         if current_b_data is not None:
-            index_b = self.channel_b_combo.findData(current_b_data)
+            # Check if the previous selection was a disabled channel
+            if not self.uses_disabled_channel(current_b_data):
+                index_b = self.channel_b_combo.findData(current_b_data)
+                if index_b >= 0:
+                    self.channel_b_combo.setCurrentIndex(index_b)
+                    restored_b = True
+
+        # Set defaults to first and next available channels if not restored
+        if not restored_a and len(available_channels) > 0:
+            # Channel A defaults to first available
+            index_a = self.channel_a_combo.findData(available_channels[0])
+            if index_a >= 0:
+                self.channel_a_combo.setCurrentIndex(index_a)
+
+        if not restored_b and len(available_channels) > 1:
+            # Channel B defaults to second available
+            index_b = self.channel_b_combo.findData(available_channels[1])
             if index_b >= 0:
                 self.channel_b_combo.setCurrentIndex(index_b)
-            elif num_channels > 1:
-                # Set default to channel 1 if previous selection not found
-                self.channel_b_combo.setCurrentIndex(1)
-        elif num_channels > 1:
-            # Set default: Channel B = 1 (if available)
-            self.channel_b_combo.setCurrentIndex(1)
 
         self.update_preview()
 
@@ -320,6 +349,25 @@ class MathChannelsWindow(QWidget):
         # Replace button is always enabled/disabled based on selection (now in top section)
         self.replace_button.setEnabled(has_selection)
 
+        # Update displayed button state to match selected math channel
+        if has_selection:
+            current_row = self.math_list.currentRow()
+            if 0 <= current_row < len(self.math_channels):
+                math_def = self.math_channels[current_row]
+
+                # Check if this math channel uses disabled channels
+                uses_disabled = self.uses_disabled_channel(math_def['ch1']) or \
+                               (math_def['ch2'] is not None and self.uses_disabled_channel(math_def['ch2']))
+
+                # Disable the displayed button if using disabled channels
+                self.displayed_button.setEnabled(has_selection and not uses_disabled)
+
+                self.displayed_button.blockSignals(True)
+                self.displayed_button.setChecked(math_def.get('displayed', True))
+                self.displayed_button.blockSignals(False)
+        else:
+            self.displayed_button.setEnabled(False)
+
         # If the measure button is checked and a math channel is selected, update the measurement channel
         if self.measure_button.isChecked() and has_selection:
             current_row = self.math_list.currentRow()
@@ -328,6 +376,31 @@ class MathChannelsWindow(QWidget):
                 # Check if we need to update (avoid unnecessary updates)
                 if self.main_window.measurements.selected_math_channel != math_channel_name:
                     self.main_window.measurements.select_math_channel_for_measurement(math_channel_name)
+
+    def uses_disabled_channel(self, ch_data):
+        """Check if a channel is disabled (channel 1 on boards not in two-channel mode).
+
+        Args:
+            ch_data: Either an integer (regular channel) or string (reference/math channel)
+
+        Returns:
+            True if the channel is disabled, False otherwise
+        """
+        # Only regular channels can be disabled
+        if not isinstance(ch_data, int):
+            return False
+
+        # Check if this is channel 1 on a board (odd channel index per board)
+        num_chan_per_board = self.state.num_chan_per_board
+        board = ch_data // num_chan_per_board
+        chan = ch_data % num_chan_per_board
+
+        # Channel 1 is the second channel (index 1) on each board
+        if chan == 1:
+            # Check if board is NOT in two-channel mode
+            return not self.state.dotwochannel[board]
+
+        return False
 
     def check_circular_dependency(self, math_name, ch1, ch2, exclude_name=None):
         """Check if using ch1 and ch2 would create a circular dependency.
@@ -404,13 +477,17 @@ class MathChannelsWindow(QWidget):
         color = self.DEFAULT_COLORS[self.next_color_index % len(self.DEFAULT_COLORS)]
         self.next_color_index += 1
 
+        # Check if using disabled channels (channel 1 on boards not in two-channel mode)
+        uses_disabled_channel = self.uses_disabled_channel(ch_a) or (ch_b is not None and self.uses_disabled_channel(ch_b))
+
         # Create the math channel definition
         math_def = {
             'name': math_name,
             'ch1': ch_a,
             'ch2': ch_b,  # Will be None for single-channel operations
             'operation': op,
-            'color': color
+            'color': color,
+            'displayed': not uses_disabled_channel  # False if using disabled channel, True otherwise
         }
 
         self.math_channels.append(math_def)
@@ -468,10 +545,16 @@ class MathChannelsWindow(QWidget):
                               f"Cannot update {math_name}: would create a circular dependency!")
             return
 
+        # Check if using disabled channels
+        uses_disabled_channel = self.uses_disabled_channel(ch_a) or (ch_b is not None and self.uses_disabled_channel(ch_b))
+
         # Update the math channel definition
         self.math_channels[current_row]['ch1'] = ch_a
         self.math_channels[current_row]['ch2'] = ch_b
         self.math_channels[current_row]['operation'] = op
+        # Update displayed state if using disabled channel
+        if uses_disabled_channel:
+            self.math_channels[current_row]['displayed'] = False
 
         # Reset running min/max tracking for this channel
         self.running_minmax[math_name] = None
@@ -489,6 +572,9 @@ class MathChannelsWindow(QWidget):
         # Update the item in the list
         item = self.math_list.item(current_row)
         item.setText(display_text)
+
+        # Update button states to reflect new displayed state
+        self.update_button_states()
 
         # Emit signal to update plots
         self.math_channels_changed.emit()
@@ -583,6 +669,18 @@ class MathChannelsWindow(QWidget):
 
                 # Emit signal to update plots
                 self.math_channels_changed.emit()
+
+    def toggle_displayed(self, checked):
+        """Toggle the displayed state of the selected math channel.
+
+        Args:
+            checked: True if channel should be displayed, False otherwise
+        """
+        current_row = self.math_list.currentRow()
+        if 0 <= current_row < len(self.math_channels):
+            self.math_channels[current_row]['displayed'] = checked
+            # Emit signal to update plots
+            self.math_channels_changed.emit()
 
     def toggle_use_for_measurements(self, checked):
         """Toggle between using selected math channel or active channel for measurements.
@@ -730,8 +828,6 @@ class MathChannelsWindow(QWidget):
                     # No data available yet, return empty results
                     return results
 
-            x_result = x1.copy()
-
             # Perform the operation
             try:
                 if self.is_two_channel_operation(operation):
@@ -769,6 +865,21 @@ class MathChannelsWindow(QWidget):
                             # No data available yet, skip this math channel
                             continue
 
+                    # Ensure arrays have matching lengths (handle two-channel mode differences)
+                    if len(y1) != len(y2):
+                        # Upsample the shorter array to match the longer one
+                        if len(y1) < len(y2):
+                            # Interpolate y1 to match y2's length
+                            y1 = np.interp(x2, x1, y1)
+                            x1 = x2.copy()
+                        else:
+                            # Interpolate y2 to match y1's length
+                            y2 = np.interp(x1, x2, y2)
+                            x2 = x1.copy()
+
+                    # Use x1 as the x-axis for the result (both are now the same length)
+                    x_result = x1.copy()
+
                     if operation == '-' or operation == 'A-B':
                         y_result = y1 - y2
                     elif operation == '+' or operation == 'A+B':
@@ -787,6 +898,9 @@ class MathChannelsWindow(QWidget):
                         y_result = np.zeros_like(y1)
                 else:
                     # Single-channel operations
+                    # Use x1 as the x-axis for the result
+                    x_result = x1.copy()
+
                     if operation == 'Invert':
                         y_result = -y1
                     elif operation == 'Abs':

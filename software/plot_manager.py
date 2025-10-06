@@ -273,6 +273,11 @@ class PlotManager(pg.QtCore.QObject):
             line.setVisible(is_time_domain_visible and line.xData is not None)
         for key, line in self.otherlines.items():
             line.setVisible(is_time_domain_visible)
+        # Hide/show math channel lines (only if they're marked as displayed)
+        # We need to check with the math window to get the displayed state
+        for math_name, line in self.math_channel_lines.items():
+            # Default to showing in time domain if we can't check displayed state
+            line.setVisible(is_time_domain_visible)
         # Also hide/show the right axis
         if self.right_axis:
             self.right_axis.setVisible(is_time_domain_visible)
@@ -329,6 +334,7 @@ class PlotManager(pg.QtCore.QObject):
         for math_def in math_window.math_channels:
             math_name = math_def['name']
             color = math_def.get('color', '#00FFFF')  # Default to cyan if no color specified
+            displayed = math_def.get('displayed', True)  # Default to displayed if not specified
 
             if math_name not in self.math_channel_lines:
                 # Create a new dashed line with the specified color
@@ -338,10 +344,14 @@ class PlotManager(pg.QtCore.QObject):
                 line.curve.setClickable(True)
                 line.curve.sigClicked.connect(self._create_math_click_handler(math_name))
                 self.math_channel_lines[math_name] = line
+                # Set initial visibility
+                line.setVisible(displayed and not self.state.xy_mode)
             else:
                 # Update the color of existing line
                 pen = pg.mkPen(color=color, width=2, style=QtCore.Qt.DashLine)
                 self.math_channel_lines[math_name].setPen(pen)
+                # Update visibility
+                self.math_channel_lines[math_name].setVisible(displayed and not self.state.xy_mode)
 
     def update_math_channel_data(self, math_results):
         """Update the math channel plot lines with calculated data.

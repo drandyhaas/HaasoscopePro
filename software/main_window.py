@@ -1322,9 +1322,47 @@ class MainWindow(TemplateBaseClass):
         # The next event after a mode switch can be glitchy, so we'll skip it.
         s.skip_next_event = True
 
+        # Store the old state before updating
+        old_two_channel_state = s.dotwochannel[active_board]
 
         # 1. Update the state for the active board ONLY
         s.dotwochannel[active_board] = is_two_channel
+
+        # Handle math channel display updates after state change
+        if self.math_window:
+            ch1_index = active_board * s.num_chan_per_board + 1
+            needs_ui_update = False
+
+            # Check all math channels to see if they use Ch 1 of this board
+            for math_def in self.math_window.math_channels:
+                ch1 = math_def['ch1']
+                ch2 = math_def.get('ch2')
+
+                # Check if either input uses this channel
+                uses_ch1 = (ch1 == ch1_index) or (ch2 == ch1_index)
+
+                if uses_ch1:
+                    # If switching to two-channel mode, only re-enable if it was displayed before
+                    if not old_two_channel_state and is_two_channel:
+                        # Only re-enable display if it was previously auto-disabled (not manually unchecked)
+                        # We track this with 'auto_disabled' flag
+                        if math_def.get('auto_disabled', False):
+                            math_def['displayed'] = True
+                            math_def['auto_disabled'] = False
+                        needs_ui_update = True
+                    # If switching to single-channel mode, disable display and mark as auto-disabled
+                    elif old_two_channel_state and not is_two_channel:
+                        # Only mark as auto-disabled if it was currently displayed
+                        if math_def.get('displayed', True):
+                            math_def['auto_disabled'] = True
+                        math_def['displayed'] = False
+                        needs_ui_update = True
+
+            # Update the math window UI if changes were made
+            if needs_ui_update:
+                if self.math_window.isVisible():
+                    self.math_window.update_button_states()
+                self.math_window.math_channels_changed.emit()
 
         # 2. Reconfigure the hardware for the active board. This can reset settings.
         setupboard(self.controller.usbs[active_board], s.dopattern, is_two_channel, s.dooverrange, s.basevoltage == 200)
@@ -1341,6 +1379,10 @@ class MainWindow(TemplateBaseClass):
         self.time_changed()
         self._update_channel_mode_ui()
         self.select_channel()
+
+        # 6. Update math window channel lists (availability of Ch 1 changed)
+        if self.math_window:
+            self.math_window.update_channel_list()
 
     def gain_changed(self):
         """Handles changes to the gain slider."""
