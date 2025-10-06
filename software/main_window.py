@@ -682,6 +682,7 @@ class MainWindow(TemplateBaseClass):
         self.timer2.stop()
         self.recorder.stop()
         self.histogram_window.close()
+        if self.math_window: self.math_window.close()
         self.close_socket()
         self.controller.cleanup()
         if self.fftui: self.fftui.close()
