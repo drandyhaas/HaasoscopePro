@@ -685,7 +685,7 @@ class MathChannelsWindow(QWidget):
         """Calculate all math channels based on current data.
 
         Args:
-            xy_data_array: The main xydata array containing channel data
+            xy_data_array: The stabilized xydata array (list of tuples) or raw xydata array containing channel data
 
         Returns:
             Dictionary mapping math channel names to (x_data, y_data) tuples
@@ -711,14 +711,24 @@ class MathChannelsWindow(QWidget):
                         y1 = ref_data['y']
                     else:
                         # Reference doesn't exist, use zeros
-                        x1, y1 = xy_data_array[0]  # Get array shape from first channel
-                        y1 = np.zeros_like(y1)
+                        # Check if data is available
+                        if xy_data_array[0] is not None:
+                            x1, y1 = xy_data_array[0]  # Get array shape from first channel
+                            y1 = np.zeros_like(y1)
+                        else:
+                            # No data available yet, return empty results
+                            return results
                 else:
                     # It's a math channel - get from results
                     x1, y1 = results[ch1_idx]
             else:
                 # It's a regular channel
-                x1, y1 = xy_data_array[ch1_idx]
+                # Check if data is available
+                if ch1_idx < len(xy_data_array) and xy_data_array[ch1_idx] is not None:
+                    x1, y1 = xy_data_array[ch1_idx]
+                else:
+                    # No data available yet, return empty results
+                    return results
 
             x_result = x1.copy()
 
@@ -740,14 +750,24 @@ class MathChannelsWindow(QWidget):
                                 y2 = ref_data['y']
                             else:
                                 # Reference doesn't exist, use zeros
-                                x2, y2 = xy_data_array[0]  # Get array shape from first channel
-                                y2 = np.zeros_like(y2)
+                                # Check if data is available
+                                if xy_data_array[0] is not None:
+                                    x2, y2 = xy_data_array[0]  # Get array shape from first channel
+                                    y2 = np.zeros_like(y2)
+                                else:
+                                    # No data available yet, skip this math channel
+                                    continue
                         else:
                             # It's a math channel - get from results
                             x2, y2 = results[ch2_idx]
                     else:
                         # It's a regular channel
-                        x2, y2 = xy_data_array[ch2_idx]
+                        # Check if data is available
+                        if ch2_idx < len(xy_data_array) and xy_data_array[ch2_idx] is not None:
+                            x2, y2 = xy_data_array[ch2_idx]
+                        else:
+                            # No data available yet, skip this math channel
+                            continue
 
                     if operation == '-' or operation == 'A-B':
                         y_result = y1 - y2

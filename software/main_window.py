@@ -492,7 +492,8 @@ class MainWindow(TemplateBaseClass):
 
         # Calculate and display math channels if any are defined
         if self.math_window and len(self.math_window.math_channels) > 0:
-            math_results = self.math_window.calculate_math_channels(self.xydata)
+            # Use stabilized data (after trigger stabilizers are applied)
+            math_results = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data)
             self.plot_manager.update_math_channel_data(math_results)
 
         if self.recorder.is_recording:
@@ -1194,7 +1195,8 @@ class MainWindow(TemplateBaseClass):
 
         # Calculate and display current data if we have data
         if hasattr(self, 'xydata') and len(self.math_window.math_channels) > 0:
-            math_results = self.math_window.calculate_math_channels(self.xydata)
+            # Use stabilized data (after trigger stabilizers are applied)
+            math_results = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data)
             self.plot_manager.update_math_channel_data(math_results)
 
     def take_reference_waveform(self):

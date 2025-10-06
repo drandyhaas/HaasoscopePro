@@ -69,6 +69,9 @@ class PlotManager(pg.QtCore.QObject):
         self.nlines = state.num_board * state.num_chan_per_board
         self.current_vline_pos = 0.0
 
+        # Stabilized data for math channel calculations (after trigger stabilizers)
+        self.stabilized_data = [None] * self.nlines
+
         # Cursor manager (will be initialized after linepens are created)
         self.cursor_manager = None
 
@@ -165,6 +168,9 @@ class PlotManager(pg.QtCore.QObject):
             return
         s = self.state
 
+        # Create a copy to store stabilized data for math channels
+        self.stabilized_data = [None] * self.nlines
+
         for li in range(self.nlines):
             board_idx = li // s.num_chan_per_board
             xdatanew, ydatanew = None, None
@@ -245,6 +251,10 @@ class PlotManager(pg.QtCore.QObject):
 
             # --- Final plotting and persistence ---
             self.lines[li].setData(xdatanew, ydatanew)
+
+            # Store stabilized data for math channel calculations
+            self.stabilized_data[li] = (xdatanew, ydatanew)
+
             if li == s.activexychannel and self.persist_time > 0 and self.ui.chanonCheck.isChecked():
                 self._add_to_persistence(xdatanew, ydatanew, li)
 
