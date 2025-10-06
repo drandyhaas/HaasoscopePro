@@ -2,7 +2,7 @@
 """Window for creating and managing math channel operations."""
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QComboBox,
-                             QPushButton, QListWidget, QLabel, QGroupBox, QColorDialog, QListWidgetItem)
+                             QPushButton, QListWidget, QLabel, QGroupBox, QColorDialog, QListWidgetItem, QCheckBox)
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QPixmap, QIcon
 import numpy as np
@@ -133,14 +133,11 @@ class MathChannelsWindow(QWidget):
 
         # Buttons layout - Row 2
         buttons_layout_2 = QHBoxLayout()
-        self.measure_button = QPushButton("Use for Measurements")
-        self.measure_button.clicked.connect(self.use_for_measurements)
-        self.measure_button.setEnabled(False)  # Initially disabled
+        self.measure_button = QCheckBox("Use for Measurements Menu")
+        self.measure_button.setChecked(False)
+        self.measure_button.clicked.connect(self.toggle_use_for_measurements)
+        self.measure_button.setEnabled(False)  # Initially disabled until a math channel is selected
         buttons_layout_2.addWidget(self.measure_button)
-
-        self.measure_active_button = QPushButton("Measure Active Channel")
-        self.measure_active_button.clicked.connect(self.measure_active_channel)
-        buttons_layout_2.addWidget(self.measure_active_button)
         list_layout.addLayout(buttons_layout_2)
 
         list_group.setLayout(list_layout)
@@ -263,6 +260,15 @@ class MathChannelsWindow(QWidget):
         self.measure_button.setEnabled(has_selection)
         # Replace button is always enabled/disabled based on selection (now in top section)
         self.replace_button.setEnabled(has_selection)
+
+        # If the measure button is checked and a math channel is selected, update the measurement channel
+        if self.measure_button.isChecked() and has_selection:
+            current_row = self.math_list.currentRow()
+            if 0 <= current_row < len(self.math_channels):
+                math_channel_name = self.math_channels[current_row]['name']
+                # Check if we need to update (avoid unnecessary updates)
+                if self.main_window.measurements.selected_math_channel != math_channel_name:
+                    self.main_window.measurements.select_math_channel_for_measurement(math_channel_name)
 
     def check_circular_dependency(self, math_name, ch1, ch2, exclude_name=None):
         """Check if using ch1 and ch2 would create a circular dependency.
@@ -425,6 +431,10 @@ class MathChannelsWindow(QWidget):
         """Remove the selected math channel from the list."""
         current_row = self.math_list.currentRow()
         if current_row >= 0:
+            # Check if the removed channel is being used for measurements
+            removed_channel_name = self.math_channels[current_row]['name']
+            was_used_for_measurements = (self.main_window.measurements.selected_math_channel == removed_channel_name)
+
             self.math_list.takeItem(current_row)
             del self.math_channels[current_row]
 
@@ -452,6 +462,17 @@ class MathChannelsWindow(QWidget):
                     math_def['ch1'] = name_mapping[math_def['ch1']]
                 if math_def['ch2'] is not None and isinstance(math_def['ch2'], str) and math_def['ch2'] in name_mapping:
                     math_def['ch2'] = name_mapping[math_def['ch2']]
+
+            # If the removed channel was being used for measurements, switch to active channel
+            if was_used_for_measurements:
+                self.main_window.measurements.select_math_channel_for_measurement(None)
+                self.measure_button.setChecked(False)
+            # If a different channel was being used for measurements and it was renamed, update the reference
+            elif self.main_window.measurements.selected_math_channel in name_mapping:
+                old_selected = self.main_window.measurements.selected_math_channel
+                new_selected = name_mapping[old_selected]
+                self.main_window.measurements.selected_math_channel = new_selected
+                self.main_window.measurements.update_measurement_header()
 
             # Update display
             self.math_list.clear()
@@ -495,16 +516,38 @@ class MathChannelsWindow(QWidget):
                 # Emit signal to update plots
                 self.math_channels_changed.emit()
 
-    def use_for_measurements(self):
-        """Use the selected math channel for measurements."""
-        current_row = self.math_list.currentRow()
-        if 0 <= current_row < len(self.math_channels):
-            math_channel_name = self.math_channels[current_row]['name']
-            self.main_window.measurements.select_math_channel_for_measurement(math_channel_name)
+    def toggle_use_for_measurements(self, checked):
+        """Toggle between using selected math channel or active channel for measurements.
 
-    def measure_active_channel(self):
-        """Switch back to measuring the active channel."""
-        self.main_window.measurements.select_math_channel_for_measurement(None)
+        Args:
+            checked: True if button is checked (use math channel), False otherwise (use active channel)
+        """
+        if checked:
+            # Use the selected math channel
+            current_row = self.math_list.currentRow()
+            if 0 <= current_row < len(self.math_channels):
+                math_channel_name = self.math_channels[current_row]['name']
+                self.main_window.measurements.select_math_channel_for_measurement(math_channel_name)
+        else:
+            # Use the active channel
+            self.main_window.measurements.select_math_channel_for_measurement(None)
+
+    def sync_measure_button_state(self):
+        """Synchronize the measure button state with the current measurement channel selection."""
+        selected_math_channel = self.main_window.measurements.selected_math_channel
+
+        if selected_math_channel is not None:
+            # A math channel is selected for measurements
+            self.measure_button.setChecked(True)
+            # Select it in the list if it's not already selected
+            for i, math_def in enumerate(self.math_channels):
+                if math_def['name'] == selected_math_channel:
+                    if self.math_list.currentRow() != i:
+                        self.math_list.setCurrentRow(i)
+                    break
+        else:
+            # Active channel is selected for measurements
+            self.measure_button.setChecked(False)
 
     def select_math_channel_in_list(self, math_channel_name):
         """Select a specific math channel in the list by name.
@@ -710,3 +753,15 @@ class MathChannelsWindow(QWidget):
         """Called when window is shown."""
         super().showEvent(event)
         self.update_channel_list()
+        self.sync_measure_button_state()
+
+        # Position the window to the right of the main window
+        main_geometry = self.main_window.geometry()
+
+        # Calculate position: 10 pixels to the right of main window's right edge
+        x = main_geometry.x() + main_geometry.width() + 10
+
+        # Align bottom edges
+        y = main_geometry.y() + main_geometry.height() - self.height() - 25
+
+        self.move(x, y)

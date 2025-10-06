@@ -2179,6 +2179,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionADC_temperature"/>
     <addaction name="actionBoard_temperature"/>
     <addaction name="separator"/>
+    <addaction name="action_For_Board_X_Channel_Y"/>
     <addaction name="actionMean"/>
     <addaction name="actionRMS"/>
     <addaction name="actionMaximum"/>
@@ -2188,6 +2189,10 @@ Outlined if triggering on this channel</string>
     <addaction name="actionRisetime"/>
     <addaction name="actionRisetime_error"/>
     <addaction name="actionRisetime_fit_lines"/>
+    <addaction name="separator"/>
+    <addaction name="actionAdd_all_for_this_channel"/>
+    <addaction name="actionClear_all_for_this_channel"/>
+    <addaction name="actionClear_all_for_all_channels"/>
     <addaction name="separator"/>
     <addaction name="actionEdge_fit_method"/>
    </widget>
@@ -2583,7 +2588,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Edge fit method</string>
+    <string>Edge fit rise/fall method</string>
    </property>
   </action>
   <action name="actionClear_all">
@@ -2636,6 +2641,29 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Board temperature</string>
+   </property>
+  </action>
+  <action name="action_For_Board_X_Channel_Y">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>--- For Board X Channel Y ---</string>
+   </property>
+  </action>
+  <action name="actionAdd_all_for_this_channel">
+   <property name="text">
+    <string>Add all for this channel</string>
+   </property>
+  </action>
+  <action name="actionClear_all_for_this_channel">
+   <property name="text">
+    <string>Clear all for this channel</string>
+   </property>
+  </action>
+  <action name="actionClear_all_for_all_channels">
+   <property name="text">
+    <string>Clear all measurements</string>
    </property>
   </action>
  </widget>

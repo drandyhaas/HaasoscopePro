@@ -58,6 +58,11 @@ class MeasurementsManager:
         # Connect menu actions to add measurements
         self.connect_measurement_actions()
 
+        # Connect bulk operation actions
+        self.ui.actionAdd_all_for_this_channel.triggered.connect(self.add_all_measurements_for_channel)
+        self.ui.actionClear_all_for_this_channel.triggered.connect(self.clear_all_measurements_for_channel)
+        self.ui.actionClear_all_for_all_channels.triggered.connect(self.clear_all_measurements)
+
     def create_measurement_name_widget(self, display_name, remove_callback, color=None):
         """Create a widget combining X button and measurement name.
 
@@ -224,6 +229,66 @@ class MeasurementsManager:
         elif measurement_name == "Board temp":
             self.ui.actionBoard_temperature.setChecked(False)
 
+    def add_all_measurements_for_channel(self):
+        """Add all available measurements for the current channel."""
+        # Manually add each measurement (setting checkbox doesn't trigger the signal)
+        measurement_types = ["Mean", "RMS", "Min", "Max", "Vpp", "Freq", "Risetime", "Risetime error"]
+
+        for measurement_name in measurement_types:
+            self.toggle_measurement(measurement_name, True)
+
+        # Update menu checkboxes to reflect the changes
+        self.update_menu_checkboxes()
+
+        # Force an immediate update to show the measurements
+        self.update_measurements_display()
+
+    def clear_all_measurements_for_channel(self):
+        """Clear all measurements for the current channel."""
+        channel_key = self.get_current_channel_key()
+
+        # Find all measurements for this channel
+        measurements_to_remove = [key for key in list(self.active_measurements.keys())
+                                   if key[1] == channel_key]
+
+        # Remove each measurement
+        for key in measurements_to_remove:
+            if key in self.active_measurements:
+                del self.active_measurements[key]
+            if key in self.measurement_items:
+                name_widget = self.measurement_items[key][0]
+                for row in range(self.measurement_model.rowCount()):
+                    if self.ui.tableView.indexWidget(self.measurement_model.index(row, 0)) == name_widget:
+                        self.measurement_model.removeRow(row)
+                        break
+                del self.measurement_items[key]
+            if key in self.measurement_history:
+                del self.measurement_history[key]
+
+        # Update menu checkboxes
+        self.update_menu_checkboxes()
+
+    def clear_all_measurements(self):
+        """Clear all measurements for all channels."""
+        # Clear all active measurements
+        self.active_measurements.clear()
+
+        # Clear the table
+        self.measurement_model.removeRows(0, self.measurement_model.rowCount())
+
+        # Clear tracking dictionaries
+        self.measurement_items.clear()
+        self.measurement_history.clear()
+
+        # Clear global measurement checkboxes
+        self.ui.actionTrigger_thresh.setChecked(False)
+        self.ui.actionN_persist_lines.setChecked(False)
+        self.ui.actionADC_temperature.setChecked(False)
+        self.ui.actionBoard_temperature.setChecked(False)
+
+        # Update menu checkboxes for current channel
+        self.update_menu_checkboxes()
+
     def update_menu_checkboxes(self):
         """Update measurement menu checkboxes based on current channel's active measurements."""
         channel_key = self.get_current_channel_key()
@@ -240,6 +305,19 @@ class MeasurementsManager:
 
     def update_measurement_header(self):
         """Update the measurement table header and menu checkboxes."""
+        # Update the menu separator text to show the current channel
+        channel_key = self.get_current_channel_key()
+        if channel_key.startswith("Math"):
+            menu_text = f"--- For {channel_key} ---"
+        else:
+            # Parse the channel key to get board and channel
+            parts = channel_key.split()
+            board = parts[0][1:]  # Remove 'B' prefix
+            chan = parts[1][2:]   # Remove 'Ch' prefix
+            menu_text = f"--- For Board {board} Channel {chan} ---"
+
+        self.ui.action_For_Board_X_Channel_Y.setText(menu_text)
+
         # Update menu checkboxes for current channel
         self.update_menu_checkboxes()
 
@@ -253,6 +331,10 @@ class MeasurementsManager:
         self.update_measurement_header()
         # Clear measurement history when switching channels
         self.measurement_history.clear()
+
+        # Update the math window button state if it exists
+        if hasattr(self.main_window, 'math_window') and self.main_window.math_window is not None:
+            self.main_window.math_window.sync_measure_button_state()
 
     def on_measurement_selection_changed(self):
         """Handle measurement table selection changes."""
