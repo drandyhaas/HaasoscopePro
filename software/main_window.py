@@ -224,6 +224,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionPan_and_zoom.triggered.connect(lambda checked: self.plot_manager.set_pan_and_zoom(checked))
         self.ui.actionVoltage_axis.triggered.connect(lambda checked: self.plot_manager.right_axis.setVisible(checked))
         self.ui.actionCursors.triggered.connect(lambda checked: self.plot_manager.show_cursors(checked))
+        self.ui.actionSnap_to_waveform.triggered.connect(lambda checked: self.plot_manager.on_snap_toggled(checked))
+        self.ui.actionTime_relative.triggered.connect(lambda checked: self.plot_manager.update_cursor_display())
         self.ui.linewidthBox.valueChanged.connect(self.plot_manager.set_line_width)
         self.ui.lpfBox.currentIndexChanged.connect(self.lpf_changed)
         self.ui.resampBox.valueChanged.connect(lambda val: setattr(self.state, 'doresamp', val))
@@ -847,6 +849,9 @@ class MainWindow(TemplateBaseClass):
         # Update the secondary Y-axis
         self.plot_manager.update_right_axis()
 
+        # Update cursor display to reflect new active channel
+        self.plot_manager.update_cursor_display()
+
         # Update hardware LEDs
         all_colors = [pen.color() for pen in self.plot_manager.linepens]
         self.controller.do_leds(all_colors)
@@ -1379,6 +1384,7 @@ class MainWindow(TemplateBaseClass):
             self.ui.gainBox.setSingleStep(6)
 
         self.plot_manager.update_right_axis()
+        self.plot_manager.update_cursor_display()
 
     def offset_changed(self):
         """Handles changes to the offset slider."""

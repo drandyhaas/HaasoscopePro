@@ -144,8 +144,8 @@ class PlotManager(pg.QtCore.QObject):
         self.xy_line = self.plot.plot(pen=pg.mkPen(color="w"), name="XY_Plot", skipFiniteCheck=True, connect="finite")
         self.xy_line.setVisible(False)
 
-        # Cursor manager (initialized after linepens are created)
-        self.cursor_manager = CursorManager(self.plot, self.state, self.linepens, self.ui, self.otherlines)
+        # Cursor manager (initialized after linepens and lines are created)
+        self.cursor_manager = CursorManager(self.plot, self.state, self.linepens, self.ui, self.otherlines, self.lines)
         self.cursor_manager.setup_cursors()
 
         # Secondary Y-Axis
@@ -513,6 +513,16 @@ class PlotManager(pg.QtCore.QObject):
         """Show or hide cursor lines and labels."""
         if self.cursor_manager:
             self.cursor_manager.show_cursors(visible)
+
+    def update_cursor_display(self):
+        """Update cursor display when active channel changes."""
+        if self.cursor_manager:
+            self.cursor_manager.update_active_channel()
+
+    def on_snap_toggled(self, checked):
+        """Handle snap to waveform toggle."""
+        if self.cursor_manager and checked:
+            self.cursor_manager.snap_all_cursors()
 
     def update_right_axis(self):
         if not self.right_axis: return

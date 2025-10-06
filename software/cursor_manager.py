@@ -4,28 +4,32 @@
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore
 from PyQt5.QtGui import QColor
+import numpy as np
 
 
 class CursorManager:
     """Manages cursor lines and value readouts."""
 
-    def __init__(self, plot, state, linepens, ui=None, otherlines=None):
+    def __init__(self, plot, state, linepens, ui=None, otherlines=None, lines=None):
         """Initialize cursor manager.
 
         Args:
             plot: The pyqtgraph PlotItem
             state: The application state object
             linepens: List of pens for each channel (for color matching)
-            ui: The UI object (for accessing actionTime_relative)
+            ui: The UI object (for accessing actionTime_relative, actionSnap_to_waveform)
             otherlines: Dictionary of other plot lines (for accessing vline position)
+            lines: List of plot lines (for snapping to waveform data)
         """
         self.plot = plot
         self.state = state
         self.linepens = linepens
         self.ui = ui
         self.otherlines = otherlines
+        self.lines = lines
         self.cursor_lines = {}
         self.cursor_labels = {}
+        self._snapping_in_progress = False  # Flag to prevent infinite recursion
 
     def setup_cursors(self):
         """Initialize cursor lines and labels."""
@@ -52,6 +56,13 @@ class CursorManager:
         for cursor in self.cursor_lines.values():
             self.plot.addItem(cursor)
             cursor.setVisible(False)
+
+        # Connect signals - snap first, then update readout
+        self.cursor_lines['t1'].sigPositionChanged.connect(lambda: self.snap_cursor_to_waveform('t1', 'v1'))
+        self.cursor_lines['t2'].sigPositionChanged.connect(lambda: self.snap_cursor_to_waveform('t2', 'v2'))
+
+        # Update readout when any cursor moves
+        for cursor in self.cursor_lines.values():
             cursor.sigPositionChanged.connect(self.update_cursor_readout)
 
         # Create text labels for cursor readouts
@@ -135,6 +146,55 @@ class CursorManager:
         # Update readout position to stay in visible area
         self.cursor_labels['readout'].setPos(self.state.min_x + 0.1*(self.state.max_x-self.state.min_x), self.state.max_y - 0.1)
 
+    def snap_cursor_to_waveform(self, t_cursor_name, v_cursor_name):
+        """Snap cursor to nearest waveform point.
+
+        Args:
+            t_cursor_name: Name of the time cursor ('t1' or 't2')
+            v_cursor_name: Name of the voltage cursor ('v1' or 'v2')
+        """
+        # Prevent infinite recursion
+        if self._snapping_in_progress:
+            return
+
+        # Check if snap is enabled
+        if not self.ui or not hasattr(self.ui, 'actionSnap_to_waveform'):
+            return
+        if not self.ui.actionSnap_to_waveform.isChecked():
+            return
+
+        # Check if we have lines and a valid active channel
+        if not self.lines or self.state.num_board < 1:
+            return
+        if self.state.activexychannel >= len(self.lines):
+            return
+
+        # Get waveform data from active channel
+        active_line = self.lines[self.state.activexychannel]
+        x_data = active_line.xData
+        y_data = active_line.yData
+
+        if x_data is None or y_data is None or len(x_data) == 0:
+            return
+
+        # Get current time cursor position
+        t_pos = self.cursor_lines[t_cursor_name].value()
+
+        # Find nearest x point on waveform
+        idx = np.argmin(np.abs(x_data - t_pos))
+        snap_x = x_data[idx]
+        snap_y = y_data[idx]
+
+        # Set flag to prevent recursion
+        self._snapping_in_progress = True
+
+        # Snap both cursors to the waveform point
+        self.cursor_lines[t_cursor_name].setValue(snap_x)
+        self.cursor_lines[v_cursor_name].setValue(snap_y)
+
+        # Clear flag
+        self._snapping_in_progress = False
+
     def show_cursors(self, visible):
         """Show or hide cursor lines and labels."""
         if visible:
@@ -153,6 +213,21 @@ class CursorManager:
 
         if visible:
             self.update_cursor_readout()
+
+    def update_active_channel(self):
+        """Update cursor display when active channel changes."""
+        if self.cursor_lines and self.cursor_lines['t1'].isVisible():
+            self.update_cursor_readout()
+
+    def snap_all_cursors(self):
+        """Snap all cursors to waveform when snap is toggled on."""
+        if not self.cursor_lines or not self.cursor_lines['t1'].isVisible():
+            return
+
+        # Snap T1/V1
+        self.snap_cursor_to_waveform('t1', 'v1')
+        # Snap T2/V2
+        self.snap_cursor_to_waveform('t2', 'v2')
 
     def adjust_cursor_positions(self):
         """Adjust cursor positions to keep them within the visible window."""
