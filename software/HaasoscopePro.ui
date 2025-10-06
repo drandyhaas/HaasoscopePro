@@ -2101,15 +2101,6 @@ Outlined if triggering on this channel</string>
          <height>231</height>
         </rect>
        </property>
-       <property name="frameShape">
-        <enum>QFrame::Box</enum>
-       </property>
-       <property name="frameShadow">
-        <enum>QFrame::Sunken</enum>
-       </property>
-       <property name="lineWidth">
-        <number>1</number>
-       </property>
        <property name="alternatingRowColors">
         <bool>true</bool>
        </property>
@@ -2185,7 +2176,9 @@ Outlined if triggering on this channel</string>
     </property>
     <addaction name="actionTrigger_thresh"/>
     <addaction name="actionN_persist_lines"/>
-    <addaction name="actionTemperatures"/>
+    <addaction name="actionADC_temperature"/>
+    <addaction name="actionBoard_temperature"/>
+    <addaction name="separator"/>
     <addaction name="actionMean"/>
     <addaction name="actionRMS"/>
     <addaction name="actionMaximum"/>
@@ -2344,7 +2337,7 @@ Outlined if triggering on this channel</string>
     <string>Trigger threshold</string>
    </property>
   </action>
-  <action name="actionTemperatures">
+  <action name="actionADC_temperature">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -2352,7 +2345,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Temperatures</string>
+    <string>ADC temperature</string>
    </property>
   </action>
   <action name="actionMaximum">
@@ -2635,6 +2628,14 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Snap to active waveform</string>
+   </property>
+  </action>
+  <action name="actionBoard_temperature">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Board temperature</string>
    </property>
   </action>
  </widget>

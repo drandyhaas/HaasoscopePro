@@ -6,6 +6,8 @@ import numpy as np
 from collections import deque
 from pyqtgraph.Qt import QtCore
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QColor
+from PyQt5.QtWidgets import QPushButton, QWidget, QHBoxLayout, QLabel
+from PyQt5.QtCore import Qt
 from data_processor import format_freq
 from board import gettemps
 
@@ -29,6 +31,9 @@ class MeasurementsManager:
         self.measurement_items = {}
         self.measurement_history = {}
 
+        # Track active measurements per channel: {(measurement_name, channel_key): True}
+        self.active_measurements = {}
+
         # Track which channel/math channel is being measured
         self.selected_math_channel = None  # None means use active channel
 
@@ -50,38 +55,193 @@ class MeasurementsManager:
         # Set initial header
         self.update_measurement_header()
 
-    def update_measurement_header(self):
-        """Update the measurement table header to show which channel is being measured."""
-        # Default values for when no boards are connected
-        if self.state.num_board < 1 or len(self.plot_manager.linepens) == 0:
-            header_text = "No Board"
-            color = QColor('white')
-        elif self.selected_math_channel is not None:
-            header_text = f"{self.selected_math_channel}"
-            # Get color from math channel line
-            if self.selected_math_channel in self.plot_manager.math_channel_lines:
-                color = self.plot_manager.math_channel_lines[self.selected_math_channel].opts['pen'].color()
-            else:
-                color = QColor('white')  # Default if not found
+        # Connect menu actions to add measurements
+        self.connect_measurement_actions()
+
+    def create_measurement_name_widget(self, display_name, remove_callback, color=None):
+        """Create a widget combining X button and measurement name.
+
+        Args:
+            display_name: The measurement name to display
+            remove_callback: Callback function when X button is clicked
+            color: QColor for the button border (optional, defaults to white)
+
+        Returns:
+            QWidget containing the button and label
+        """
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        layout.setContentsMargins(2, 0, 2, 0)
+        layout.setSpacing(5)
+
+        # Create X button with colored border
+        remove_button = QPushButton("✕")
+        remove_button.setFixedSize(20, 20)
+
+        if color is None:
+            color_str = "#FFFFFF"
         else:
-            # Show active channel
+            color_str = color.name()
+
+        remove_button.setStyleSheet(
+            f"QPushButton {{ font-size: 14px; font-weight: bold; border: 2px solid {color_str}; }}"
+        )
+        remove_button.clicked.connect(remove_callback)
+
+        # Create label for name
+        label = QLabel(display_name)
+
+        layout.addWidget(remove_button)
+        layout.addWidget(label)
+        layout.addStretch()
+
+        widget.label = label  # Store reference to update text later
+        widget.button = remove_button  # Store reference to update color later
+        return widget
+
+    def get_current_channel_key(self):
+        """Get the current channel identifier for measurements."""
+        if self.selected_math_channel is not None:
+            return self.selected_math_channel
+        else:
             board = self.state.activexychannel // self.state.num_chan_per_board
             chan = self.state.activexychannel % self.state.num_chan_per_board
-            header_text = f"Board {board} Channel {chan}"
-            # Get color from active channel line
-            color = self.plot_manager.linepens[self.state.activexychannel].color()
+            return f"B{board} Ch{chan}"
 
-        # Update table headers
-        self.measurement_model.setHorizontalHeaderLabels([header_text, 'Value', 'Average', 'RMS'])
+    def get_channel_color(self, channel_key):
+        """Get the color for a given channel key.
 
-        # Set the table frame/border color
-        color_str = color.name()
-        stylesheet = f"""
-            QTableView {{
-                border: 1px solid {color_str};
-            }}
+        Args:
+            channel_key: Channel identifier (e.g., "B0 Ch1" or "Math1")
+
+        Returns:
+            QColor for the channel
         """
-        self.ui.tableView.setStyleSheet(stylesheet)
+        if channel_key.startswith("Math"):
+            # Math channel
+            if channel_key in self.plot_manager.math_channel_lines:
+                return self.plot_manager.math_channel_lines[channel_key].opts['pen'].color()
+            else:
+                return QColor('white')
+        else:
+            # Regular channel (format: "B0 Ch1")
+            parts = channel_key.split()
+            board = int(parts[0][1:])  # Remove 'B' prefix
+            chan = int(parts[1][2:])  # Get channel number (remove 'Ch' prefix)
+            channel_index = board * self.state.num_chan_per_board + chan
+            if channel_index < len(self.plot_manager.linepens):
+                return self.plot_manager.linepens[channel_index].color()
+            else:
+                return QColor('white')
+
+    def connect_measurement_actions(self):
+        """Connect menu actions to toggle measurements for current channel."""
+        # Per-channel measurement actions
+        measurement_actions = [
+            (self.ui.actionMean, "Mean"),
+            (self.ui.actionRMS, "RMS"),
+            (self.ui.actionMinimum, "Min"),
+            (self.ui.actionMaximum, "Max"),
+            (self.ui.actionVpp, "Vpp"),
+            (self.ui.actionFreq, "Freq"),
+            (self.ui.actionRisetime, "Risetime"),  # Special: also handles Falltime
+            (self.ui.actionRisetime_error, "Risetime error"),  # Special: also handles Falltime error
+        ]
+
+        for action, name in measurement_actions:
+            action.triggered.connect(lambda checked, n=name: self.toggle_measurement(n, checked))
+
+        # Global measurements (Trigger threshold, Persist lines, Temperatures) are handled in update_measurements_display
+
+    def toggle_measurement(self, measurement_name, checked):
+        """Add or remove a measurement for the current channel."""
+        channel_key = self.get_current_channel_key()
+
+        # Special handling for Risetime/Falltime - determine based on edge direction
+        if measurement_name in ["Risetime", "Risetime error"]:
+            # Check edge direction for the active board
+            if not channel_key.startswith("Math"):
+                parts = channel_key.split()
+                board = int(parts[0][1:])
+                is_falling = self.state.fallingedge[board]
+                if measurement_name == "Risetime":
+                    actual_name = "Falltime" if is_falling else "Risetime"
+                else:  # "Risetime error"
+                    actual_name = "Falltime error" if is_falling else "Risetime error"
+            else:
+                # For math channels, default to Risetime
+                actual_name = measurement_name
+            key = (actual_name, channel_key)
+        else:
+            key = (measurement_name, channel_key)
+
+        if checked:
+            # Add measurement
+            self.active_measurements[key] = True
+        else:
+            # Remove measurement
+            if key in self.active_measurements:
+                del self.active_measurements[key]
+            # Also remove from items and history
+            if key in self.measurement_items:
+                # Find and remove the row by matching the widget
+                name_widget = self.measurement_items[key][0]  # Index 0 is the name widget
+                for row in range(self.measurement_model.rowCount()):
+                    if self.ui.tableView.indexWidget(self.measurement_model.index(row, 0)) == name_widget:
+                        self.measurement_model.removeRow(row)
+                        break
+                del self.measurement_items[key]
+            if key in self.measurement_history:
+                del self.measurement_history[key]
+
+    def remove_measurement(self, measurement_key):
+        """Remove a measurement by its key."""
+        if measurement_key in self.active_measurements:
+            del self.active_measurements[measurement_key]
+        if measurement_key in self.measurement_items:
+            # Find and remove the row by matching the widget
+            name_widget = self.measurement_items[measurement_key][0]  # Index 0 is the name widget
+            for row in range(self.measurement_model.rowCount()):
+                if self.ui.tableView.indexWidget(self.measurement_model.index(row, 0)) == name_widget:
+                    self.measurement_model.removeRow(row)
+                    break
+            del self.measurement_items[measurement_key]
+        if measurement_key in self.measurement_history:
+            del self.measurement_history[measurement_key]
+
+        # Update menu checkbox
+        measurement_name = measurement_key[0]
+        self.update_menu_checkboxes()
+
+    def remove_global_measurement(self, measurement_name):
+        """Remove a global measurement by unchecking its menu item."""
+        if measurement_name == "Trig threshold":
+            self.ui.actionTrigger_thresh.setChecked(False)
+        elif measurement_name == "Persist lines":
+            self.ui.actionN_persist_lines.setChecked(False)
+        elif measurement_name == "ADC temp":
+            self.ui.actionADC_temperature.setChecked(False)
+        elif measurement_name == "Board temp":
+            self.ui.actionBoard_temperature.setChecked(False)
+
+    def update_menu_checkboxes(self):
+        """Update measurement menu checkboxes based on current channel's active measurements."""
+        channel_key = self.get_current_channel_key()
+
+        # Check which measurements are active for this channel
+        self.ui.actionMean.setChecked((("Mean", channel_key) in self.active_measurements))
+        self.ui.actionRMS.setChecked((("RMS", channel_key) in self.active_measurements))
+        self.ui.actionMinimum.setChecked((("Min", channel_key) in self.active_measurements))
+        self.ui.actionMaximum.setChecked((("Max", channel_key) in self.active_measurements))
+        self.ui.actionVpp.setChecked((("Vpp", channel_key) in self.active_measurements))
+        self.ui.actionFreq.setChecked((("Freq", channel_key) in self.active_measurements))
+        self.ui.actionRisetime.setChecked((("Risetime", channel_key) in self.active_measurements or ("Falltime", channel_key) in self.active_measurements))
+        self.ui.actionRisetime_error.setChecked((("Risetime error", channel_key) in self.active_measurements or ("Falltime error", channel_key) in self.active_measurements))
+
+    def update_measurement_header(self):
+        """Update the measurement table header and menu checkboxes."""
+        # Update menu checkboxes for current channel
+        self.update_menu_checkboxes()
 
     def select_math_channel_for_measurement(self, math_channel_name):
         """Select a math channel for measurement display.
@@ -100,30 +260,42 @@ class MeasurementsManager:
         indexes = self.ui.tableView.selectionModel().selectedIndexes()
 
         if indexes:
-            # Get the first selected row (column 0 = measurement name)
+            # Get the first selected row (column 0 = measurement name widget)
             row = indexes[0].row()
-            name_item = self.measurement_model.item(row, 0)
+            name_widget = self.ui.tableView.indexWidget(self.measurement_model.index(row, 0))
 
-            if name_item:
-                full_text = name_item.text()
-                measurement_name = full_text.split(' (')[0]  # Remove unit suffix
-                # Extract unit if present
-                unit = ""
-                if ' (' in full_text and ')' in full_text:
-                    unit = full_text.split(' (')[1].split(')')[0]
+            if name_widget:
+                # Find the measurement key by matching the name_widget
+                measurement_key = None
+                for key, items in self.measurement_items.items():
+                    if items[0] == name_widget:  # items[0] is the name widget
+                        measurement_key = key
+                        break
 
-                if measurement_name in self.measurement_history:
-                    self.current_histogram_measurement = measurement_name
+                if measurement_key and measurement_key in self.measurement_history:
+                    measurement_name, channel_key = measurement_key
+                    self.current_histogram_measurement = measurement_key
+                    # Extract unit from display name if present
+                    full_text = name_widget.label.text()
+                    unit = ""
+                    # Look for last parentheses which contains unit (not channel)
+                    parts = full_text.split(')')
+                    if len(parts) > 2:  # Has both channel and unit
+                        unit_part = parts[-2].split('(')[-1].strip()
+                        if unit_part not in ["B", "Ch", "Math"]:  # Not part of channel name
+                            unit = unit_part
                     self.current_histogram_unit = unit
+
                     self.histogram_window.position_relative_to_table(self.ui.tableView, self.ui.plot)
                     self.histogram_window.show()
 
                     # Get color from active channel
                     brush_color = self.plot_manager.linepens[self.state.activexychannel].color()
-                    self.histogram_window.update_histogram(measurement_name,
-                                                          self.measurement_history[measurement_name],
-                                                          brush_color,
-                                                          unit)
+                    self.histogram_window.update_histogram(
+                        f"{measurement_name} ({channel_key})",
+                        self.measurement_history[measurement_key],
+                        brush_color,
+                        unit)
                     if not self.histogram_timer.isActive():
                         self.histogram_timer.start(100)  # Update at 10 Hz
         else:
@@ -134,10 +306,11 @@ class MeasurementsManager:
         """Update the histogram window with current data."""
         if self.current_histogram_measurement and self.histogram_window.isVisible():
             if self.current_histogram_measurement in self.measurement_history:
+                measurement_name, channel_key = self.current_histogram_measurement
                 # Get color from active channel
                 brush_color = self.plot_manager.linepens[self.state.activexychannel].color()
                 self.histogram_window.update_histogram(
-                    self.current_histogram_measurement,
+                    f"{measurement_name} ({channel_key})",
                     self.measurement_history[self.current_histogram_measurement],
                     brush_color,
                     self.current_histogram_unit
@@ -151,130 +324,262 @@ class MeasurementsManager:
 
     def update_measurements_display(self):
         """Slow timer callback to update measurements in the table view without clearing it."""
-        active_measurements = set()
 
-        def _set_measurement(name, value, value_unit=""):
-            """Helper to add or update a measurement row in the table."""
-            active_measurements.add(name)
+        # Helper for global measurements (not tied to a specific channel)
+        def _set_global_measurement(name, value, value_unit=""):
+            """Helper to add or update a global measurement row."""
+            key = (name, "Global")  # Use "Global" as channel_key for global measurements
             value = round(value, 2)
+            display_name = name
             if value_unit != "":
-                value_unit = " (" + value_unit + ")"
+                display_name += f" ({value_unit})"
 
-            # Initialize history deque if this is a new measurement
-            if name not in self.measurement_history:
-                self.measurement_history[name] = deque(maxlen=100)
+            if key not in self.measurement_history:
+                self.measurement_history[key] = deque(maxlen=100)
 
-            # Add current value to history
-            self.measurement_history[name].append(value)
-
-            # Calculate average and RMS
-            history = self.measurement_history[name]
+            self.measurement_history[key].append(value)
+            history = self.measurement_history[key]
             avg_value = round(np.mean(history), 2)
             rms_value = round(np.std(history), 2)
 
-            if name in self.measurement_items:
-                # Update existing item's value, average, and RMS
-                self.measurement_items[name][1].setText(str(value))
-                self.measurement_items[name][0].setText(name + value_unit)
-                self.measurement_items[name][2].setText(str(avg_value))
-                self.measurement_items[name][3].setText(str(rms_value))
+            if key in self.measurement_items:
+                name_widget, value_item, avg_item, rms_item = self.measurement_items[key]
+                value_item.setText(str(value))
+                name_widget.label.setText(display_name)
+                avg_item.setText(str(avg_value))
+                rms_item.setText(str(rms_value))
             else:
-                # Add new row and store items
-                name_item = QStandardItem(name + value_unit)
+                name_item = QStandardItem("")
                 value_item = QStandardItem(str(value))
                 avg_item = QStandardItem(str(avg_value))
                 rms_item = QStandardItem(str(rms_value))
                 self.measurement_model.appendRow([name_item, value_item, avg_item, rms_item])
-                self.measurement_items[name] = (name_item, value_item, avg_item, rms_item)
 
-        if self.state.dodrawing:
-            if self.ui.actionTrigger_thresh.isChecked():
-                hline_val = self.plot_manager.otherlines['hline'].value()
-                _set_measurement("Trig threshold", hline_val, "div")
+                # Create name widget with X button for global measurements
+                row = self.measurement_model.rowCount() - 1
+                name_widget = self.create_measurement_name_widget(display_name, lambda checked=False, n=name: self.remove_global_measurement(n))
+                self.ui.tableView.setIndexWidget(self.measurement_model.index(row, 0), name_widget)
 
-            if self.ui.actionN_persist_lines.isChecked():
-                num_persist = len(self.plot_manager.persist_lines)
-                _set_measurement("Persist lines", num_persist)
+                self.measurement_items[key] = (name_widget, value_item, avg_item, rms_item)
 
-            if self.ui.actionTemperatures.isChecked():
-                # Only read temperatures once per second (slow USB operation)
-                current_time = time.time()
-                if current_time - self.last_temp_update_time >= 1.0:
-                    if self.state.num_board > 0:
-                        active_usb = self.controller.usbs[self.state.activeboard]
-                        adctemp, boardtemp = gettemps(active_usb)
-                        self.cached_temps = (adctemp, boardtemp)
-                        self.last_temp_update_time = current_time
+        def _set_measurement(measurement_key, value, value_unit=""):
+            """Helper to add or update a measurement row in the table.
 
-                # Always call _set_measurement with cached values to keep the row active
+            Args:
+                measurement_key: Tuple of (measurement_name, channel_key)
+                value: The measurement value
+                value_unit: Optional unit string (e.g., "mV", "ns")
+            """
+            measurement_name, channel_key = measurement_key
+            value = round(value, 2)
+
+            # Display name includes channel
+            display_name = f"{measurement_name} ({channel_key})"
+            if value_unit != "":
+                display_name += f" {value_unit}"
+
+            # Initialize history deque if this is a new measurement
+            if measurement_key not in self.measurement_history:
+                self.measurement_history[measurement_key] = deque(maxlen=100)
+
+            # Add current value to history
+            self.measurement_history[measurement_key].append(value)
+
+            # Calculate average and RMS
+            history = self.measurement_history[measurement_key]
+            avg_value = round(np.mean(history), 2)
+            rms_value = round(np.std(history), 2)
+
+            # Get the color for this channel
+            channel_color = self.get_channel_color(channel_key)
+
+            if measurement_key in self.measurement_items:
+                # Update existing item's value, average, and RMS
+                name_widget, value_item, avg_item, rms_item = self.measurement_items[measurement_key]
+                value_item.setText(str(value))
+                name_widget.label.setText(display_name)
+                avg_item.setText(str(avg_value))
+                rms_item.setText(str(rms_value))
+                # Update button color in case channel color changed
+                name_widget.button.setStyleSheet(
+                    f"QPushButton {{ font-size: 14px; font-weight: bold; border: 2px solid {channel_color.name()}; }}"
+                )
+            else:
+                # Add new row
+                name_item = QStandardItem("")
+                value_item = QStandardItem(str(value))
+                avg_item = QStandardItem(str(avg_value))
+                rms_item = QStandardItem(str(rms_value))
+
+                self.measurement_model.appendRow([name_item, value_item, avg_item, rms_item])
+
+                # Create name widget with X button
+                row = self.measurement_model.rowCount() - 1
+                name_widget = self.create_measurement_name_widget(
+                    display_name,
+                    lambda checked=False, mk=measurement_key: self.remove_measurement(mk),
+                    channel_color
+                )
+                self.ui.tableView.setIndexWidget(self.measurement_model.index(row, 0), name_widget)
+
+                self.measurement_items[measurement_key] = (name_widget, value_item, avg_item, rms_item)
+
+        if not self.state.dodrawing:
+            return
+
+        # Handle global measurements (not tied to specific channel)
+        if self.ui.actionTrigger_thresh.isChecked():
+            hline_val = self.plot_manager.otherlines['hline'].value()
+            _set_global_measurement("Trig threshold", hline_val, "div")
+
+        if self.ui.actionN_persist_lines.isChecked():
+            num_persist = len(self.plot_manager.persist_lines)
+            _set_global_measurement("Persist lines", num_persist)
+
+        # Handle temperature measurements
+        if self.ui.actionADC_temperature.isChecked() or self.ui.actionBoard_temperature.isChecked():
+            # Only read temperatures once per second (slow USB operation)
+            current_time = time.time()
+            if current_time - self.last_temp_update_time >= 1.0:
                 if self.state.num_board > 0:
-                    _set_measurement("ADC temp", self.cached_temps[0], "\u00b0C")
-                    _set_measurement("Board temp", self.cached_temps[1], "\u00b0C")
+                    active_usb = self.controller.usbs[self.state.activeboard]
+                    adctemp, boardtemp = gettemps(active_usb)
+                    self.cached_temps = (adctemp, boardtemp)
+                    self.last_temp_update_time = current_time
 
-            if hasattr(self.main_window, 'xydata') and self.state.num_board > 0:
-                # Get data from math channel or active channel
-                if self.selected_math_channel is not None:
-                    # Use math channel data
-                    if self.selected_math_channel in self.plot_manager.math_channel_lines:
-                        x_data_for_analysis = self.plot_manager.math_channel_lines[self.selected_math_channel].xData
-                        y_data_for_analysis = self.plot_manager.math_channel_lines[self.selected_math_channel].yData
-                    else:
-                        # Math channel doesn't exist anymore, reset to active channel
-                        self.selected_math_channel = None
-                        self.update_measurement_header()
-                        x_data_for_analysis = self.plot_manager.lines[self.state.activexychannel].xData
-                        y_data_for_analysis = self.plot_manager.lines[self.state.activexychannel].yData
-                else:
-                    # Use active channel data
-                    x_data_for_analysis = self.plot_manager.lines[self.state.activexychannel].xData
-                    y_data_for_analysis = self.plot_manager.lines[self.state.activexychannel].yData
+            # Call _set_global_measurement for each checked temperature
+            if self.state.num_board > 0:
+                if self.ui.actionADC_temperature.isChecked():
+                    _set_global_measurement("ADC temp", self.cached_temps[0], "\u00b0C")
+                if self.ui.actionBoard_temperature.isChecked():
+                    _set_global_measurement("Board temp", self.cached_temps[1], "\u00b0C")
 
-                if y_data_for_analysis is not None and len(y_data_for_analysis) > 0:
+        # Remove global measurements that are no longer checked
+        global_measurements_to_remove = []
+        for key in self.measurement_items.keys():
+            if key[1] == "Global":
+                name = key[0]
+                if name == "Trig threshold" and not self.ui.actionTrigger_thresh.isChecked():
+                    global_measurements_to_remove.append(key)
+                elif name == "Persist lines" and not self.ui.actionN_persist_lines.isChecked():
+                    global_measurements_to_remove.append(key)
+                elif name == "ADC temp" and not self.ui.actionADC_temperature.isChecked():
+                    global_measurements_to_remove.append(key)
+                elif name == "Board temp" and not self.ui.actionBoard_temperature.isChecked():
+                    global_measurements_to_remove.append(key)
+
+        for key in global_measurements_to_remove:
+            if key in self.measurement_items:
+                name_widget = self.measurement_items[key][0]
+                for row in range(self.measurement_model.rowCount()):
+                    if self.ui.tableView.indexWidget(self.measurement_model.index(row, 0)) == name_widget:
+                        self.measurement_model.removeRow(row)
+                        break
+                del self.measurement_items[key]
+            if key in self.measurement_history:
+                del self.measurement_history[key]
+
+        # Process each active measurement
+        for measurement_key in list(self.active_measurements.keys()):
+            measurement_name, channel_key = measurement_key
+
+            # Determine which channel's data to use
+            if channel_key.startswith("Math"):
+                # Math channel measurement
+                if channel_key not in self.plot_manager.math_channel_lines:
+                    continue  # Math channel no longer exists
+                x_data = self.plot_manager.math_channel_lines[channel_key].xData
+                y_data = self.plot_manager.math_channel_lines[channel_key].yData
+            else:
+                # Regular channel measurement (format: "B0 Ch1")
+                parts = channel_key.split()
+                board = int(parts[0][1:])  # Remove 'B' prefix
+                chan = int(parts[1][2:])  # Get channel number (remove 'Ch' prefix)
+                channel_index = board * self.state.num_chan_per_board + chan
+
+                if channel_index >= len(self.plot_manager.lines):
+                    continue  # Invalid channel
+
+                x_data = self.plot_manager.lines[channel_index].xData
+                y_data = self.plot_manager.lines[channel_index].yData
+
+            if y_data is None or len(y_data) == 0:
+                continue
+
+            # Calculate measurements based on type
+            vline_val = self.plot_manager.otherlines['vline'].value()
+
+            # Determine if we need risetime calculation for this measurement
+            needs_risetime = measurement_name in ["Risetime", "Falltime", "Risetime error", "Falltime error"]
+
+            measurements, fit_results = self.processor.calculate_measurements(
+                x_data, y_data, vline_val,
+                do_risetime_calc=needs_risetime,
+                use_edge_fit=self.ui.actionEdge_fit_method.isChecked()
+            )
+
+            # Set the measurement value based on type
+            if measurement_name == "Mean":
+                _set_measurement(measurement_key, measurements.get('Mean', 0), "mV")
+            elif measurement_name == "RMS":
+                _set_measurement(measurement_key, measurements.get('RMS', 0), "mV")
+            elif measurement_name == "Min":
+                _set_measurement(measurement_key, measurements.get('Min', 0), "mV")
+            elif measurement_name == "Max":
+                _set_measurement(measurement_key, measurements.get('Max', 0), "mV")
+            elif measurement_name == "Vpp":
+                _set_measurement(measurement_key, measurements.get('Vpp', 0), "mV")
+            elif measurement_name == "Freq":
+                freq = measurements.get('Freq', 0)
+                freq, unit = format_freq(freq, "Hz", False)
+                _set_measurement(measurement_key, freq, unit)
+            elif measurement_name in ["Risetime", "Falltime"]:
+                val = measurements.get(measurement_name, 0)
+                if math.isfinite(val):
+                    _set_measurement(measurement_key, val, "ns")
+            elif measurement_name in ["Risetime error", "Falltime error"]:
+                val = measurements.get(measurement_name, 0)
+                if math.isfinite(val):
+                    _set_measurement(measurement_key, val, "ns")
+
+        # Update fit lines if risetime is being measured for active channel
+        if hasattr(self.main_window, 'xydata') and self.state.num_board > 0:
+            current_channel_key = self.get_current_channel_key()
+            if (("Risetime", current_channel_key) in self.active_measurements or
+                ("Falltime", current_channel_key) in self.active_measurements):
+                # Get active channel data
+                x_data = self.plot_manager.lines[self.state.activexychannel].xData
+                y_data = self.plot_manager.lines[self.state.activexychannel].yData
+                if y_data is not None and len(y_data) > 0:
                     vline_val = self.plot_manager.otherlines['vline'].value()
-                    measurements, fit_results = self.processor.calculate_measurements(
-                        x_data_for_analysis, y_data_for_analysis, vline_val,
-                        do_risetime_calc=self.ui.actionRisetime.isChecked(),
+                    _, fit_results = self.processor.calculate_measurements(
+                        x_data, y_data, vline_val,
+                        do_risetime_calc=True,
                         use_edge_fit=self.ui.actionEdge_fit_method.isChecked()
                     )
+                    self.plot_manager.update_risetime_fit_lines(fit_results)
+            else:
+                self.plot_manager.update_risetime_fit_lines(None)
 
-                    if self.ui.actionMean.isChecked(): _set_measurement("Mean", measurements.get('Mean', 0), "mV")
-                    if self.ui.actionRMS.isChecked(): _set_measurement("RMS", measurements.get('RMS', 0), "mV")
-                    if self.ui.actionMinimum.isChecked(): _set_measurement("Min", measurements.get('Min', 0), "mV")
-                    if self.ui.actionMaximum.isChecked(): _set_measurement("Max", measurements.get('Max', 0), "mV")
-                    if self.ui.actionVpp.isChecked(): _set_measurement("Vpp", measurements.get('Vpp', 0), "mV")
-                    if self.ui.actionFreq.isChecked():
-                        freq = measurements.get('Freq', 0)
-                        freq, unit = format_freq(freq, "Hz", False)
-                        _set_measurement("Freq", freq, unit)
-                    # Always update fit lines (will hide them if fit_results is None or risetime is unchecked)
-                    self.plot_manager.update_risetime_fit_lines(fit_results if self.ui.actionRisetime.isChecked() else None)
-
-                    if self.ui.actionRisetime.isChecked():
-                        # Check if this is a falling edge to use correct label
-                        time_label = "Falltime" if self.state.fallingedge[self.state.activeboard] else "Risetime"
-                        error_label = f"{time_label} error"
-
-                        risetime_val = measurements.get(time_label, 0)
-                        if math.isfinite(risetime_val): _set_measurement(time_label, risetime_val, "ns")
-                        if self.ui.actionRisetime_error.isChecked():
-                            risetime_err_val = measurements.get(error_label, 0)
-                            if math.isfinite(risetime_err_val):_set_measurement(error_label, risetime_err_val, "ns")
-
-        # Remove stale measurements that are no longer selected
-        stale_keys = list(self.measurement_items.keys() - active_measurements)
+        # Remove measurements that are no longer in active_measurements (exclude global measurements)
+        stale_keys = [key for key in self.measurement_items.keys()
+                      if key not in self.active_measurements.keys() and key[1] != "Global"]
 
         rows_to_remove = []
         for key in stale_keys:
-            # Find the item in the model by its text to avoid accessing a deleted C++ object
-            items = self.measurement_model.findItems(key, QtCore.Qt.MatchStartsWith)
-            if items:
-                rows_to_remove.append(items[0].row())
+            if key in self.measurement_items:
+                # Find the row by the name widget
+                name_widget = self.measurement_items[key][0]
+                for row in range(self.measurement_model.rowCount()):
+                    if self.ui.tableView.indexWidget(self.measurement_model.index(row, 0)) == name_widget:
+                        rows_to_remove.append(row)
+                        break
 
-        # Remove rows from the model, from bottom to top, to avoid index shifting issues
-        for row in sorted(list(set(rows_to_remove)), reverse=True):
+        # Remove rows from bottom to top to avoid index shifting
+        for row in sorted(set(rows_to_remove), reverse=True):
             self.measurement_model.removeRow(row)
 
-        # Now, clean up the tracking dictionary and history
+        # Clean up tracking dictionaries
         for key in stale_keys:
             if key in self.measurement_items:
                 del self.measurement_items[key]

@@ -108,7 +108,8 @@ def save_setup(main_window):
         'measure_edge_fit': main_window.ui.actionEdge_fit_method.isChecked(),
         'measure_trig_thresh': main_window.ui.actionTrigger_thresh.isChecked(),
         'measure_n_persist': main_window.ui.actionN_persist_lines.isChecked(),
-        'measure_temps': main_window.ui.actionTemperatures.isChecked(),
+        'measure_adc_temp': main_window.ui.actionADC_temperature.isChecked(),
+        'measure_board_temp': main_window.ui.actionBoard_temperature.isChecked(),
 
         # Other settings
         'high_resolution': main_window.ui.actionHigh_resolution.isChecked(),
@@ -321,8 +322,17 @@ def load_setup(main_window):
         main_window.ui.actionTrigger_thresh.setChecked(setup['measure_trig_thresh'])
     if 'measure_n_persist' in setup:
         main_window.ui.actionN_persist_lines.setChecked(setup['measure_n_persist'])
-    if 'measure_temps' in setup:
-        main_window.ui.actionTemperatures.setChecked(setup['measure_temps'])
+    # Handle new separate temperature settings
+    if 'measure_adc_temp' in setup:
+        main_window.ui.actionADC_temperature.setChecked(setup['measure_adc_temp'])
+    elif 'measure_temps' in setup:
+        # Backward compatibility: if old setting exists, apply to both
+        main_window.ui.actionADC_temperature.setChecked(setup['measure_temps'])
+    if 'measure_board_temp' in setup:
+        main_window.ui.actionBoard_temperature.setChecked(setup['measure_board_temp'])
+    elif 'measure_temps' in setup:
+        # Backward compatibility: if old setting exists, apply to both
+        main_window.ui.actionBoard_temperature.setChecked(setup['measure_temps'])
 
     # Other settings
     if 'high_resolution' in setup:
