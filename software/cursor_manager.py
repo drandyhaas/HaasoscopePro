@@ -212,6 +212,9 @@ class CursorManager:
         self.cursor_labels['readout'].setVisible(visible)
 
         if visible:
+            # Snap cursors to waveform if snap option is enabled
+            if self.ui and hasattr(self.ui, 'actionSnap_to_waveform') and self.ui.actionSnap_to_waveform.isChecked():
+                self.snap_all_cursors()
             self.update_cursor_readout()
 
     def update_active_channel(self):
