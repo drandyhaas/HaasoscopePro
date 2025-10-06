@@ -10,3 +10,4 @@
 /adc board firmware/coincidence.qws
 .idea
 software/dist/*.zip
+/.claude/settings.local.json
