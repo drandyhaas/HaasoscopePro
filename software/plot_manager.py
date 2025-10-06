@@ -10,6 +10,7 @@ import matplotlib.cm as cm
 from scipy.signal import resample
 from scipy.interpolate import interp1d
 from data_processor import find_crossing_distance
+from cursor_manager import CursorManager
 import math
 
 
@@ -67,6 +68,9 @@ class PlotManager(pg.QtCore.QObject):
         self.right_axis = None
         self.nlines = state.num_board * state.num_chan_per_board
         self.current_vline_pos = 0.0
+
+        # Cursor manager (will be initialized after linepens are created)
+        self.cursor_manager = None
 
         # Persistence attributes
         self.max_persist_lines = 16
@@ -139,6 +143,10 @@ class PlotManager(pg.QtCore.QObject):
         # XY plot line (initially hidden)
         self.xy_line = self.plot.plot(pen=pg.mkPen(color="w"), name="XY_Plot", skipFiniteCheck=True, connect="finite")
         self.xy_line.setVisible(False)
+
+        # Cursor manager (initialized after linepens are created)
+        self.cursor_manager = CursorManager(self.plot, self.state, self.linepens)
+        self.cursor_manager.setup_cursors()
 
         # Secondary Y-Axis
         if self.state.num_board > 0:
@@ -373,6 +381,8 @@ class PlotManager(pg.QtCore.QObject):
         self.plot.setRange(xRange=(state.min_x, state.max_x), yRange=(state.min_y, state.max_y), padding=0.01)
 
         self.draw_trigger_lines()
+        if self.cursor_manager:
+            self.cursor_manager.adjust_cursor_positions()
 
     def draw_trigger_lines(self):
         """Draws the horizontal and vertical trigger lines on the plot."""
@@ -498,6 +508,11 @@ class PlotManager(pg.QtCore.QObject):
 
     def on_hline_dragged(self, line):
         self.hline_dragged_signal.emit(line.value())
+
+    def show_cursors(self, visible):
+        """Show or hide cursor lines and labels."""
+        if self.cursor_manager:
+            self.cursor_manager.show_cursors(visible)
 
     def update_right_axis(self):
         if not self.right_axis: return

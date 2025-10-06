@@ -1425,7 +1425,7 @@ Outlined if triggering on this channel</string>
          <enum>QFrame::Plain</enum>
         </property>
         <property name="lineWidth">
-         <number>2</number>
+         <number>1</number>
         </property>
        </widget>
        <widget class="QCheckBox" name="interleavedCheck">
@@ -2216,6 +2216,8 @@ Outlined if triggering on this channel</string>
     <addaction name="actionXY_Plot"/>
     <addaction name="separator"/>
     <addaction name="actionMath_channels"/>
+    <addaction name="separator"/>
+    <addaction name="actionCursors"/>
    </widget>
    <widget class="QMenu" name="menuReference">
     <property name="title">
@@ -2602,6 +2604,14 @@ Outlined if triggering on this channel</string>
   <action name="actionMath_channels">
    <property name="text">
     <string>Math channels</string>
+   </property>
+  </action>
+  <action name="actionCursors">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Cursors</string>
    </property>
   </action>
  </widget>

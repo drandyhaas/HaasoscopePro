@@ -223,6 +223,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionMarkers.triggered.connect(lambda checked: self.plot_manager.set_markers(checked))
         self.ui.actionPan_and_zoom.triggered.connect(lambda checked: self.plot_manager.set_pan_and_zoom(checked))
         self.ui.actionVoltage_axis.triggered.connect(lambda checked: self.plot_manager.right_axis.setVisible(checked))
+        self.ui.actionCursors.triggered.connect(lambda checked: self.plot_manager.show_cursors(checked))
         self.ui.linewidthBox.valueChanged.connect(self.plot_manager.set_line_width)
         self.ui.lpfBox.currentIndexChanged.connect(self.lpf_changed)
         self.ui.resampBox.valueChanged.connect(lambda val: setattr(self.state, 'doresamp', val))
