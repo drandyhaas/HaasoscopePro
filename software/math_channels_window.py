@@ -246,9 +246,13 @@ class MathChannelsWindow(QWidget):
                 ch_b = self.channel_b_combo.currentData()
                 if ch_b is not None:
                     ch_b_text = self.get_channel_display_name(ch_b)
-                    self.preview_label.setText(f"Result: {ch_a_text} {op} {ch_b_text}")
+                    # Replace A and B in the operation string with actual channel names
+                    op_display = op.replace('B', " "+ch_b_text).replace('A', ch_a_text+" ")
+                    self.preview_label.setText(f"Result: {op_display}")
                 else:
-                    self.preview_label.setText(f"Result: {ch_a_text} {op} CH?")
+                    # Replace A with channel name, keep B as placeholder
+                    op_display = op.replace('B', ' CH?').replace('A', ch_a_text+" ")
+                    self.preview_label.setText(f"Result: {op_display}")
             else:
                 self.preview_label.setText(f"Result: {op}({ch_a_text})")
 
@@ -360,7 +364,9 @@ class MathChannelsWindow(QWidget):
         ch_a_text = self.get_channel_display_name(ch_a)
         if self.is_two_channel_operation(op):
             ch_b_text = self.get_channel_display_name(ch_b)
-            display_text = f"{math_name}: {ch_a_text} {op} {ch_b_text}"
+            # Replace A and B in the operation string with actual channel names
+            op_display = op.replace('B', " "+ch_b_text).replace('A', ch_a_text+" ")
+            display_text = f"{math_name}: {op_display}"
         else:
             display_text = f"{math_name}: {op}({ch_a_text})"
 
@@ -416,7 +422,9 @@ class MathChannelsWindow(QWidget):
         ch_a_text = self.get_channel_display_name(ch_a)
         if self.is_two_channel_operation(op):
             ch_b_text = self.get_channel_display_name(ch_b)
-            display_text = f"{math_name}: {ch_a_text} {op} {ch_b_text}"
+            # Replace A and B in the operation string with actual channel names
+            op_display = op.replace('B', " "+ch_b_text).replace('A', ch_a_text+" ")
+            display_text = f"{math_name}: {op_display}"
         else:
             display_text = f"{math_name}: {op}({ch_a_text})"
 
@@ -481,7 +489,9 @@ class MathChannelsWindow(QWidget):
 
                 if self.is_two_channel_operation(math_def['operation']):
                     ch_b_text = self.get_channel_display_name(math_def['ch2'])
-                    display_text = f"{math_def['name']}: {ch_a_text} {math_def['operation']} {ch_b_text}"
+                    # Replace A and B in the operation string with actual channel names
+                    op_display = math_def['operation'].replace('B', " "+ch_b_text).replace('A', ch_a_text+" ")
+                    display_text = f"{math_def['name']}: {op_display}"
                 else:
                     display_text = f"{math_def['name']}: {math_def['operation']}({ch_a_text})"
 
@@ -762,6 +772,6 @@ class MathChannelsWindow(QWidget):
         x = main_geometry.x() + main_geometry.width() + 10
 
         # Align bottom edges
-        y = main_geometry.y() + main_geometry.height() - self.height() - 25
+        y = main_geometry.y() + main_geometry.height() - self.height() - 32
 
         self.move(x, y)

@@ -1254,7 +1254,7 @@ class MainWindow(TemplateBaseClass):
         self.state.fft_enabled[active_channel_name] = is_checked
 
         if self.fftui is None:
-            self.fftui = FFTWindow()
+            self.fftui = FFTWindow(self)
             # Connect the window_closed signal to our handler
             self.fftui.window_closed.connect(self.on_fft_window_closed)
         should_show = any(self.state.fft_enabled.values())

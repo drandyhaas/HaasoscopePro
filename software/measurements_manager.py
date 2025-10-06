@@ -458,7 +458,7 @@ class MeasurementsManager:
             # Display name includes channel
             display_name = f"{measurement_name} ({channel_key})"
             if value_unit != "":
-                display_name += f" {value_unit}"
+                display_name += f" ({value_unit})"
 
             # Initialize history deque if this is a new measurement
             if measurement_key not in self.measurement_history:

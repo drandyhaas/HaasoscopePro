@@ -26,8 +26,9 @@ class FFTWindow(FFTTemplateBaseClass):
     # Signal emitted when window is closed by user
     window_closed = QtCore.pyqtSignal()
 
-    def __init__(self):
+    def __init__(self, main_window=None):
         super().__init__()
+        self.main_window = main_window
         self.ui = FFTWindowTemplate()
         self.ui.setupUi(self)
 
@@ -262,3 +263,19 @@ class FFTWindow(FFTTemplateBaseClass):
     def closeEvent(self, event):
         """Override closeEvent to emit signal before closing."""
         self.window_closed.emit()
+
+    def showEvent(self, event):
+        """Called when window is shown."""
+        super().showEvent(event)
+
+        # Position the window to the left of the main window
+        if self.main_window is not None:
+            main_geometry = self.main_window.geometry()
+
+            # Calculate position: 10 pixels to the left of main window's left edge
+            x = main_geometry.x() - self.width() + 400
+
+            # Align top edges
+            y = main_geometry.y() + 100
+
+            self.move(x, y)
