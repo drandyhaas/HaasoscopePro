@@ -9,17 +9,21 @@ from PyQt5.QtGui import QColor
 class CursorManager:
     """Manages cursor lines and value readouts."""
 
-    def __init__(self, plot, state, linepens):
+    def __init__(self, plot, state, linepens, ui=None, otherlines=None):
         """Initialize cursor manager.
 
         Args:
             plot: The pyqtgraph PlotItem
             state: The application state object
             linepens: List of pens for each channel (for color matching)
+            ui: The UI object (for accessing actionTime_relative)
+            otherlines: Dictionary of other plot lines (for accessing vline position)
         """
         self.plot = plot
         self.state = state
         self.linepens = linepens
+        self.ui = ui
+        self.otherlines = otherlines
         self.cursor_lines = {}
         self.cursor_labels = {}
 
@@ -104,9 +108,26 @@ class CursorManager:
             v1_volts = v2_volts = delta_v_volts = 0
             active_color = "#ffffff"
 
+        # Check if time should be displayed relative to trigger
+        show_relative = False
+        if self.ui and self.otherlines and hasattr(self.ui, 'actionTime_relative'):
+            show_relative = self.ui.actionTime_relative.isChecked()
+
+        # Format time cursor positions
+        if show_relative and 'vline' in self.otherlines:
+            vline_pos = self.otherlines['vline'].value()
+            t1_rel = t1_pos - vline_pos
+            t2_rel = t2_pos - vline_pos
+            # Format with explicit + or - sign
+            t1_str = f"{t1_rel:+.2f} {self.state.units}"
+            t2_str = f"{t2_rel:+.2f} {self.state.units}"
+        else:
+            t1_str = f"{t1_pos:.2f} {self.state.units}"
+            t2_str = f"{t2_pos:.2f} {self.state.units}"
+
         # Format the readout text with current time units and colored voltage values
         # Use &nbsp; for spacing and <br> for line breaks in HTML
-        readout_text = f"T1: {t1_pos:.2f} {self.state.units}&nbsp;&nbsp;&nbsp;&nbsp;T2: {t2_pos:.2f} {self.state.units}&nbsp;&nbsp;&nbsp;&nbsp;ΔT: {delta_t:.2f} {self.state.units}&nbsp;&nbsp;&nbsp;&nbsp;Freq: {freq:.3f} {freq_unit}<br>"
+        readout_text = f"T1: {t1_str}&nbsp;&nbsp;&nbsp;&nbsp;T2: {t2_str}&nbsp;&nbsp;&nbsp;&nbsp;ΔT: {delta_t:.2f} {self.state.units}&nbsp;&nbsp;&nbsp;&nbsp;Freq: {freq:.3f} {freq_unit}<br>"
         readout_text += f"V1: {v1_pos:.3f} div <span style='color:{active_color}'>({v1_volts:.3f} V)</span>&nbsp;&nbsp;&nbsp;&nbsp;V2: {v2_pos:.3f} div <span style='color:{active_color}'>({v2_volts:.3f} V)</span>&nbsp;&nbsp;&nbsp;&nbsp;ΔV: {delta_v:.3f} div <span style='color:{active_color}'>({delta_v_volts:.3f} V)</span>"
 
         self.cursor_labels['readout'].setHtml(readout_text)

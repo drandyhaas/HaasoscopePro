@@ -145,7 +145,7 @@ class PlotManager(pg.QtCore.QObject):
         self.xy_line.setVisible(False)
 
         # Cursor manager (initialized after linepens are created)
-        self.cursor_manager = CursorManager(self.plot, self.state, self.linepens)
+        self.cursor_manager = CursorManager(self.plot, self.state, self.linepens, self.ui, self.otherlines)
         self.cursor_manager.setup_cursors()
 
         # Secondary Y-Axis

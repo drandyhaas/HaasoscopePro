@@ -2214,10 +2214,8 @@ Outlined if triggering on this channel</string>
     <addaction name="actionPan_and_zoom"/>
     <addaction name="separator"/>
     <addaction name="actionXY_Plot"/>
-    <addaction name="separator"/>
     <addaction name="actionMath_channels"/>
     <addaction name="separator"/>
-    <addaction name="actionCursors"/>
    </widget>
    <widget class="QMenu" name="menuReference">
     <property name="title">
@@ -2227,11 +2225,20 @@ Outlined if triggering on this channel</string>
     <addaction name="actionShow_Reference"/>
     <addaction name="actionClear_all"/>
    </widget>
+   <widget class="QMenu" name="menuCursors">
+    <property name="title">
+     <string>Cursors</string>
+    </property>
+    <addaction name="actionCursors"/>
+    <addaction name="actionTime_relative"/>
+    <addaction name="actionSnap_to_waveform"/>
+   </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
    <addaction name="menuView"/>
    <addaction name="menuMeasurements"/>
    <addaction name="menuReference"/>
+   <addaction name="menuCursors"/>
    <addaction name="menuAdvanced"/>
    <addaction name="menuHelp"/>
   </widget>
@@ -2611,7 +2618,23 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Cursors</string>
+    <string>Show cursors</string>
+   </property>
+  </action>
+  <action name="actionTime_relative">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Time relative to trigger</string>
+   </property>
+  </action>
+  <action name="actionSnap_to_waveform">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Snap to active waveform</string>
    </property>
   </action>
  </widget>
