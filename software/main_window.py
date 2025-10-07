@@ -18,6 +18,7 @@ from measurements_manager import MeasurementsManager
 from calibration import autocalibration, do_meanrms_calibration
 from settings_manager import save_setup, load_setup
 from math_channels_window import MathChannelsWindow
+from reference_manager import save_reference_lines, load_reference_lines
 
 # Import remaining dependencies
 from FFTWindow import FFTWindow
@@ -280,6 +281,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionTake_Reference.triggered.connect(self.take_reference_waveform)
         self.ui.actionShow_Reference.triggered.connect(self.toggle_reference_waveform_visibility)
         self.ui.actionClear_all.triggered.connect(self.clear_all_references)
+        self.ui.actionSave_reference_lines.triggered.connect(self.save_reference_lines_slot)
+        self.ui.actionLoad_reference_lines.triggered.connect(self.load_reference_lines_slot)
 
         # View menu actions
         self.ui.actionXY_Plot.triggered.connect(self.toggle_xy_view_slot)
@@ -1249,6 +1252,19 @@ class MainWindow(TemplateBaseClass):
 
         # Trigger a redraw to hide all references
         self.time_changed()
+
+    def save_reference_lines_slot(self):
+        """Slot for saving reference waveforms to a file."""
+        save_reference_lines(self, self.reference_data, self.reference_visible)
+
+    def load_reference_lines_slot(self):
+        """Slot for loading reference waveforms from a file."""
+        success = load_reference_lines(self, self.reference_data, self.reference_visible)
+        if success:
+            # Update the checkbox for the active channel
+            self.update_reference_checkbox_state()
+            # Trigger a redraw to show the loaded references
+            self.time_changed()
 
     def fft_clicked(self):
         """Toggles the FFT window state for the active channel."""
