@@ -1539,9 +1539,62 @@ class MainWindow(TemplateBaseClass):
         self.set_channel_frame()
 
     def rising_falling_changed(self, index):
-        self.state.fallingedge[self.state.activeboard] = (index == 1)
+        s = self.state
+        active_board = s.activeboard
+        is_falling = (index == 1)
+
+        s.fallingedge[active_board] = is_falling
         # Assuming trigger types 1=rising, 2=falling
-        self.state.triggertype[self.state.activeboard] = 2 if (index == 1) else 1
+        s.triggertype[active_board] = 2 if is_falling else 1
+
+        # Swap Risetime/Falltime measurements for channels on this board
+        if self.measurements:
+            # Determine which measurement names to swap
+            old_time_name = "Risetime" if is_falling else "Falltime"
+            new_time_name = "Falltime" if is_falling else "Risetime"
+            old_error_name = "Risetime error" if is_falling else "Falltime error"
+            new_error_name = "Falltime error" if is_falling else "Risetime error"
+
+            # Find all measurements for channels on the active board
+            measurements_to_swap = []
+            for measurement_key in list(self.measurements.active_measurements.keys()):
+                measurement_name, channel_key = measurement_key
+
+                # Skip global measurements
+                if channel_key == "Global":
+                    continue
+
+                # Check if this is a regular channel (not math/reference)
+                if channel_key.startswith("B") and " Ch" in channel_key:
+                    # Parse board number from channel_key like "B0 Ch0"
+                    board_num = int(channel_key.split("B")[1].split(" ")[0])
+
+                    # Only swap for channels on the active board
+                    if board_num == active_board:
+                        if measurement_name in [old_time_name, old_error_name]:
+                            measurements_to_swap.append(measurement_key)
+
+            # Perform the swap
+            for old_key in measurements_to_swap:
+                measurement_name, channel_key = old_key
+
+                # Determine new measurement name
+                if measurement_name == old_time_name:
+                    new_measurement_name = new_time_name
+                else:  # old_error_name
+                    new_measurement_name = new_error_name
+
+                # Remove old measurement
+                del self.measurements.active_measurements[old_key]
+
+                # Add new measurement
+                new_key = (new_measurement_name, channel_key)
+                self.measurements.active_measurements[new_key] = True
+
+            # Update the display and menu checkboxes if anything was swapped
+            if measurements_to_swap:
+                self.measurements.update_measurements_display()
+                self.measurements.update_menu_checkboxes()
 
     def tot_changed(self, value):
         self.state.triggertimethresh = value
