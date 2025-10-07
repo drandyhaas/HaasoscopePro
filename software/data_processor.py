@@ -331,6 +331,9 @@ class DataProcessor:
 
         sampling_rate = (state.samplerate * 1e9) / state.downsamplefactor
         if state.dotwochannel[state.activeboard]: sampling_rate /= 2
+        # Account for resampling - if resampling is applied, effective sampling rate is reduced
+        if state.doresamp > 1:
+            sampling_rate *= state.doresamp
         found_freq = find_fundamental_frequency_scipy(y_data, sampling_rate)
         measurements["Freq"] = found_freq
 
@@ -393,8 +396,9 @@ class DataProcessor:
         vline_idx = np.argmin(np.abs(xc - vline))
         closest_crossing_idx = crossings[np.argmin(np.abs(crossings - vline_idx))]
 
-        # Define search region: within ~10 samples of the trigger crossing
-        search_range = 10
+        # Define search region: scale with data size for faster signals
+        # Use 10% of data or at least 5 samples, whichever is larger
+        search_range = max(5, xc.size // 10)
         search_start = max(0, closest_crossing_idx - search_range)
         search_end = min(len(xc), closest_crossing_idx + search_range)
 
@@ -406,15 +410,20 @@ class DataProcessor:
         found_valid_edge = False
 
         # Try multiple window sizes from small to large
-        min_window = max(3, xc.size // 20)  # At least 3 points, or 5% of data
+        # For very fast signals, allow smaller minimum windows
+        min_window = max(3, xc.size // 40)  # At least 3 points, or 2.5% of data (was 5%)
         max_window = xc.size  # Can use full width for very slow signals
 
-        # Try window sizes: small, medium, large, and full
+        # Try window sizes: very small, small, medium, large, and full
+        # Add more granularity at the small end for fast signals
         window_sizes_to_try = [
             min_window,
-            max(5, xc.size // 10),
-            max(10, xc.size // 5),
-            max(20, xc.size // 3),
+            max(3, xc.size // 30),  # ~3.3% for fast signals
+            max(4, xc.size // 20),  # 5%
+            max(5, xc.size // 15),  # ~6.7%
+            max(7, xc.size // 10),  # 10%
+            max(10, xc.size // 5),  # 20%
+            max(20, xc.size // 3),  # 33%
             max_window
         ]
         # Remove duplicates and sort
@@ -424,14 +433,17 @@ class DataProcessor:
             if window_size > xc.size:
                 continue
 
-            # Only check windows that overlap with the search region (±10 samples of crossing)
+            # Only check windows that overlap with the search region
             window_start = max(0, search_start - window_size + 1)
             window_end = min(len(xc) - window_size + 1, search_end + 1)
 
-            # Use adaptive step size: larger steps for larger windows
-            # For small windows, check every position (step=1)
-            # For large windows, skip positions to speed up search
-            step = max(1, window_size // 20)  # Check every ~5% of window size
+            # Use adaptive step size: finer for small windows (fast signals)
+            # For very small windows (< 10 points), check every position
+            # For larger windows, skip positions to speed up search
+            if window_size < 10:
+                step = 1  # Check every position for very fast signals
+            else:
+                step = max(1, window_size // 20)  # Check every ~5% of window size
 
             for i in range(window_start, window_end, step):
                 # Get this window
