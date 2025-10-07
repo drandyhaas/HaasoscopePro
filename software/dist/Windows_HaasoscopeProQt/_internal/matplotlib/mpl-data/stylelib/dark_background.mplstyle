@@ -18,6 +18,9 @@ grid.color: white
 figure.facecolor: black
 figure.edgecolor: black
 
+savefig.facecolor: black
+savefig.edgecolor: black
+
 ### Boxplots
 boxplot.boxprops.color: white
 boxplot.capprops.color: white

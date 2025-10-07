@@ -419,7 +419,7 @@
           <number>0</number>
          </property>
          <property name="maximum">
-          <number>100</number>
+          <number>255</number>
          </property>
          <property name="value">
           <number>2</number>
@@ -1425,7 +1425,7 @@ Outlined if triggering on this channel</string>
          <enum>QFrame::Plain</enum>
         </property>
         <property name="lineWidth">
-         <number>2</number>
+         <number>1</number>
         </property>
        </widget>
        <widget class="QCheckBox" name="interleavedCheck">
@@ -2128,6 +2128,9 @@ Outlined if triggering on this channel</string>
     <addaction name="actionRecord"/>
     <addaction name="actionTake_screenshot"/>
     <addaction name="separator"/>
+    <addaction name="actionSave_setup"/>
+    <addaction name="actionLoad_setup"/>
+    <addaction name="separator"/>
     <addaction name="actionVerify_firmware"/>
     <addaction name="actionUpdate_firmware"/>
    </widget>
@@ -2173,7 +2176,10 @@ Outlined if triggering on this channel</string>
     </property>
     <addaction name="actionTrigger_thresh"/>
     <addaction name="actionN_persist_lines"/>
-    <addaction name="actionTemperatures"/>
+    <addaction name="actionADC_temperature"/>
+    <addaction name="actionBoard_temperature"/>
+    <addaction name="separator"/>
+    <addaction name="action_For_Board_X_Channel_Y"/>
     <addaction name="actionMean"/>
     <addaction name="actionRMS"/>
     <addaction name="actionMaximum"/>
@@ -2182,7 +2188,13 @@ Outlined if triggering on this channel</string>
     <addaction name="actionFreq"/>
     <addaction name="actionRisetime"/>
     <addaction name="actionRisetime_error"/>
+    <addaction name="separator"/>
+    <addaction name="actionAdd_all_for_this_channel"/>
+    <addaction name="actionClear_all_for_this_channel"/>
+    <addaction name="actionClear_all_for_all_channels"/>
+    <addaction name="separator"/>
     <addaction name="actionRisetime_fit_lines"/>
+    <addaction name="actionEdge_fit_method"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -2194,11 +2206,15 @@ Outlined if triggering on this channel</string>
     <addaction name="actionDrawing"/>
     <addaction name="actionHigh_resolution"/>
     <addaction name="actionGrid"/>
+    <addaction name="actionVoltage_axis"/>
     <addaction name="actionMarkers"/>
-    <addaction name="actionXY_Plot"/>
     <addaction name="actionLine_color"/>
     <addaction name="actionPan_and_zoom"/>
-    <addaction name="actionVoltage_axis"/>
+    <addaction name="separator"/>
+    <addaction name="actionXY_Plot"/>
+    <addaction name="actionMath_channels"/>
+    <addaction name="separator"/>
+    <addaction name="actionTrigger_thresh_mV"/>
    </widget>
    <widget class="QMenu" name="menuReference">
     <property name="title">
@@ -2206,12 +2222,25 @@ Outlined if triggering on this channel</string>
     </property>
     <addaction name="actionTake_Reference"/>
     <addaction name="actionShow_Reference"/>
+    <addaction name="actionClear_all"/>
+    <addaction name="separator"/>
+    <addaction name="actionSave_reference_lines"/>
+    <addaction name="actionLoad_reference_lines"/>
+   </widget>
+   <widget class="QMenu" name="menuCursors">
+    <property name="title">
+     <string>Cursors</string>
+    </property>
+    <addaction name="actionCursors"/>
+    <addaction name="actionTime_relative"/>
+    <addaction name="actionSnap_to_waveform"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
    <addaction name="menuView"/>
    <addaction name="menuMeasurements"/>
    <addaction name="menuReference"/>
+   <addaction name="menuCursors"/>
    <addaction name="menuAdvanced"/>
    <addaction name="menuHelp"/>
   </widget>
@@ -2303,7 +2332,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Risetime</string>
+    <string>Rise or fall time</string>
    </property>
   </action>
   <action name="actionTrigger_thresh">
@@ -2314,10 +2343,10 @@ Outlined if triggering on this channel</string>
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Trigger threshold</string>
+    <string>Trigger threshold (div)</string>
    </property>
   </action>
-  <action name="actionTemperatures">
+  <action name="actionADC_temperature">
    <property name="checkable">
     <bool>true</bool>
    </property>
@@ -2325,7 +2354,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Temperatures</string>
+    <string>ADC temperature</string>
    </property>
   </action>
   <action name="actionMaximum">
@@ -2385,7 +2414,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Risetime fit lines</string>
+    <string>Rise or fall time fit lines</string>
    </property>
   </action>
   <action name="actionTake_screenshot">
@@ -2514,7 +2543,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Show reference(s)</string>
+    <string>Show reference</string>
    </property>
   </action>
   <action name="actionVoltage_axis">
@@ -2541,7 +2570,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Risetime error</string>
+    <string>Rise or fall time error</string>
    </property>
   </action>
   <action name="actionAuto_oversample_alignment">
@@ -2553,6 +2582,110 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Auto oversample alignment and interleave</string>
+   </property>
+  </action>
+  <action name="actionEdge_fit_method">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Edge fit rise/fall method</string>
+   </property>
+  </action>
+  <action name="actionClear_all">
+   <property name="text">
+    <string>Clear all</string>
+   </property>
+  </action>
+  <action name="actionSave_setup">
+   <property name="text">
+    <string>Save setup</string>
+   </property>
+  </action>
+  <action name="actionLoad_setup">
+   <property name="text">
+    <string>Load setup</string>
+   </property>
+  </action>
+  <action name="actionMath_channels">
+   <property name="text">
+    <string>Math channels</string>
+   </property>
+  </action>
+  <action name="actionCursors">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Show cursors</string>
+   </property>
+  </action>
+  <action name="actionTime_relative">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Time relative to trigger</string>
+   </property>
+  </action>
+  <action name="actionSnap_to_waveform">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Snap to active waveform</string>
+   </property>
+  </action>
+  <action name="actionBoard_temperature">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Board temperature</string>
+   </property>
+  </action>
+  <action name="action_For_Board_X_Channel_Y">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>--- For Board X Channel Y ---</string>
+   </property>
+  </action>
+  <action name="actionAdd_all_for_this_channel">
+   <property name="text">
+    <string>Add all for this channel</string>
+   </property>
+  </action>
+  <action name="actionClear_all_for_this_channel">
+   <property name="text">
+    <string>Clear all for this channel</string>
+   </property>
+  </action>
+  <action name="actionClear_all_for_all_channels">
+   <property name="text">
+    <string>Clear all measurements</string>
+   </property>
+  </action>
+  <action name="actionTrigger_thresh_mV">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Trigger threshold (mV)</string>
+   </property>
+  </action>
+  <action name="actionSave_reference_lines">
+   <property name="text">
+    <string>Save reference lines</string>
+   </property>
+  </action>
+  <action name="actionLoad_reference_lines">
+   <property name="text">
+    <string>Load reference lines</string>
    </property>
   </action>
  </widget>
