@@ -573,9 +573,16 @@ https://fpgasoftware.intel.com/eula.
 	(port
 		(pt 368 800)
 		(output)
+		(text "trigger_delay[7..0]" (rect 0 0 71 12)(font "Arial" ))
+		(text "trigger_delay[7..0]" (rect 276 795 347 807)(font "Arial" ))
+		(line (pt 368 800)(pt 352 800)(line_width 3))
+	)
+	(port
+		(pt 368 816)
+		(output)
 		(text "reloadflash" (rect 0 0 42 12)(font "Arial" ))
-		(text "reloadflash" (rect 305 795 347 807)(font "Arial" ))
-		(line (pt 368 800)(pt 352 800)(line_width 1))
+		(text "reloadflash" (rect 305 811 347 823)(font "Arial" ))
+		(line (pt 368 816)(pt 352 816)(line_width 1))
 	)
 	(drawing
 		(rectangle (rect 16 16 352 832)(line_width 1))

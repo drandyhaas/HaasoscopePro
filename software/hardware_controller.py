@@ -192,6 +192,12 @@ class HardwareController:
         self.usbs[board_idx].send(bytes([2, 7] + inttobytes(prelengthtotake) + [0, 0]))
         self.usbs[board_idx].recv(4)
 
+    def send_trigger_delay(self, board_idx):
+        trigger_delay = self.state.trigger_delay[board_idx]
+        self.usbs[board_idx].send(bytes([2, 20, trigger_delay, 0,0,0,0,0]))
+        res = self.usbs[board_idx].recv(4)
+        print("trigger_delay",trigger_delay,"got",res[0])
+
     def tell_downsample(self, usb, ds, board):
         state = self.state
         merging = 1

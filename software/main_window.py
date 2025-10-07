@@ -201,6 +201,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.trigchan_comboBox.currentIndexChanged.connect(self.trigger_chan_changed)
         self.ui.risingfalling_comboBox.currentIndexChanged.connect(self.rising_falling_changed)
         self.ui.totBox.valueChanged.connect(self.tot_changed)
+        self.ui.trigger_delay_box.valueChanged.connect(self.trigger_delay_changed)
         self.ui.exttrigCheck.stateChanged.connect(self.exttrig_changed)
         self.ui.extsmatrigCheck.stateChanged.connect(self.extsmatrig_changed)
 
@@ -841,6 +842,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.tenxCheck.setChecked(s.tenx[s.activexychannel] == 10)
         self.ui.chanonCheck.setChecked(self.plot_manager.lines[s.activexychannel].isVisible())
         self.ui.tadBox.setValue(s.tad[s.activeboard])
+        self.ui.trigger_delay_box.setValue(s.trigger_delay[s.activeboard])
 
         # Update rising/falling trigger
         is_falling = s.fallingedge[s.activeboard]
@@ -1615,6 +1617,12 @@ class MainWindow(TemplateBaseClass):
     def tot_changed(self, value):
         self.state.triggertimethresh = value
         self.controller.send_trigger_info_all()
+
+    def trigger_delay_changed(self, value):
+        """Handle changes to trigger delay spinbox."""
+        board = self.state.activeboard
+        self.state.trigger_delay[board] = value
+        self.controller.send_trigger_delay(board)
 
     def exttrig_changed(self, checked):
         board = self.state.activeboard

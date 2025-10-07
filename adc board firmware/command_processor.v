@@ -84,6 +84,7 @@ module command_processor (
    output reg        highres,
    output reg [4:0]  downsample,
    output reg [1:0]  firstlast,
+   output reg [7:0]  trigger_delay=0,
    
    output reg reloadflash=0,
    
@@ -105,7 +106,7 @@ module command_processor (
 
 );
 
-integer version = 29; // firmware version
+integer version = 30; // firmware version
 
 // these first 10 debugout's go to LEDs on the board
 assign debugout[0] = clkswitch;
@@ -291,6 +292,10 @@ always @ (posedge clk) begin
          19: begin
             reloadflash <= rx_data[2][0];
             o_tdata <= 999;
+         end
+         20: begin
+            trigger_delay <= rx_data[2];
+            o_tdata <= 127;
          end
          default: o_tdata <= 0;
          endcase
