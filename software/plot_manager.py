@@ -336,10 +336,11 @@ class PlotManager(pg.QtCore.QObject):
             math_name = math_def['name']
             color = math_def.get('color', '#00FFFF')  # Default to cyan if no color specified
             displayed = math_def.get('displayed', True)  # Default to displayed if not specified
+            width = math_def.get('width', 2)  # Use stored width, default to 2 if not specified
 
             if math_name not in self.math_channel_lines:
-                # Create a new dashed line with the specified color
-                pen = pg.mkPen(color=color, width=2, style=QtCore.Qt.DashLine)
+                # Create a new dashed line with the specified color and width
+                pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DashLine)
                 line = self.plot.plot(pen=pen, name=math_name, skipFiniteCheck=True, connect="finite")
                 # Make the line clickable
                 line.curve.setClickable(True)
@@ -348,8 +349,8 @@ class PlotManager(pg.QtCore.QObject):
                 # Set initial visibility
                 line.setVisible(displayed and not self.state.xy_mode)
             else:
-                # Update the color of existing line
-                pen = pg.mkPen(color=color, width=2, style=QtCore.Qt.DashLine)
+                # Update the color and width of existing line
+                pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DashLine)
                 self.math_channel_lines[math_name].setPen(pen)
                 # Update visibility
                 self.math_channel_lines[math_name].setVisible(displayed and not self.state.xy_mode)

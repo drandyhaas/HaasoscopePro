@@ -484,6 +484,9 @@ class MathChannelsWindow(QWidget):
         # Check if using disabled channels (channel 1 on boards not in two-channel mode)
         uses_disabled_channel = self.uses_disabled_channel(ch_a) or (ch_b is not None and self.uses_disabled_channel(ch_b))
 
+        # Get the current line width from the main window
+        line_width = self.main_window.ui.linewidthBox.value()
+
         # Create the math channel definition
         math_def = {
             'name': math_name,
@@ -491,7 +494,8 @@ class MathChannelsWindow(QWidget):
             'ch2': ch_b,  # Will be None for single-channel operations
             'operation': op,
             'color': color,
-            'displayed': not uses_disabled_channel  # False if using disabled channel, True otherwise
+            'displayed': not uses_disabled_channel,  # False if using disabled channel, True otherwise
+            'width': line_width  # Store the line width that was active when math channel was created
         }
 
         self.math_channels.append(math_def)
