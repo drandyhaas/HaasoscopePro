@@ -1,14 +1,11 @@
 # main_window.py
 
-import sys, time, math, warnings
+import time, math
 import numpy as np
 import threading
-from collections import deque
-from scipy.signal import resample
 from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
-import pyqtgraph as pg
-from PyQt5.QtWidgets import QMessageBox, QColorDialog, QFrame, QAction
-from PyQt5.QtGui import QPalette, QIcon, QStandardItemModel, QStandardItem, QCursor
+from PyQt5.QtWidgets import QMessageBox, QColorDialog, QFrame
+from PyQt5.QtGui import QPalette
 
 # Import all the refactored components
 from scope_state import ScopeState
@@ -19,11 +16,14 @@ from data_recorder import DataRecorder
 from histogram_window import HistogramWindow
 from measurements_manager import MeasurementsManager
 from calibration import autocalibration, do_meanrms_calibration
+from settings_manager import save_setup, load_setup
+from math_channels_window import MathChannelsWindow
+from reference_manager import save_reference_lines, load_reference_lines
 
 # Import remaining dependencies
 from FFTWindow import FFTWindow
 from SCPIsocket import DataSocket
-from board import setupboard, gettemps
+from board import setupboard
 from utils import get_pwd
 import ftd2xx
 
@@ -58,9 +58,14 @@ class MainWindow(TemplateBaseClass):
         self.socket = None
         self.socket_thread = None
         self.fftui = None
+        self.math_window = None
         self.ui.boardBox.setMaximum(self.state.num_board - 1)
         self.setup_successful = False
         self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
+
+        # Initialize reference visibility to True for all channels by default
+        num_channels = self.state.num_board * self.state.num_chan_per_board
+        self.reference_visible = {i: True for i in range(num_channels)}
 
         # Histogram window for measurements
         self.histogram_window = HistogramWindow(self, self.plot_manager)
@@ -98,6 +103,8 @@ class MainWindow(TemplateBaseClass):
                 self.ui.actionUpdate_firmware.setEnabled(False)
                 self.ui.actionVerify_firmware.setEnabled(False)
                 self.ui.runButton.setEnabled(False)
+                QMessageBox.warning(self, "Board Setup Failed",
+                                    "Please fix power to all boards and restart.")
 
             # Firmware Version Check (only if setup passed)
             if self.setup_successful:
@@ -116,8 +123,10 @@ class MainWindow(TemplateBaseClass):
             self.ui.runButton.setEnabled(False)
             self.ui.statusBar.showMessage("No hardware detected. Connect a device and restart.")
             self.setup_successful = False
-            # Use a QTimer to show the message after the main window is fully loaded
-            QtCore.QTimer.singleShot(100, self.show_no_hardware_error)
+            QMessageBox.warning(self, "Hardware Not Found",
+                                "No Haasoscope Pro boards were detected.\n\n"
+                                "The application is running in a disconnected state. "
+                                "Please connect a device and restart the program to continue.")
 
         self.last_time = time.time()
         self.fps = None
@@ -129,10 +138,10 @@ class MainWindow(TemplateBaseClass):
         self.measurements.adjust_table_view_geometry()
 
         # Set column widths for the measurement table
-        self.ui.tableView.setColumnWidth(0, 135)  # Measurement name column
-        self.ui.tableView.setColumnWidth(1, 80)  # Measurement value column
-        self.ui.tableView.setColumnWidth(2, 80)  # Measurement avg column
-        self.ui.tableView.setColumnWidth(3, 80)  # Measurement rms column
+        self.ui.tableView.setColumnWidth(0, 215)  # Measurement name column, wider for X button + name
+        self.ui.tableView.setColumnWidth(1, 50)  # Measurement value column
+        self.ui.tableView.setColumnWidth(2, 50)  # Measurement avg column
+        self.ui.tableView.setColumnWidth(3, 50)  # Measurement rms column
         self.show()
 
 
@@ -172,13 +181,6 @@ class MainWindow(TemplateBaseClass):
             self.controller.set_acdc(board_idx, chan_on_board, s.acdc[global_chan_idx])
             self.controller.set_mohm(board_idx, chan_on_board, s.mohm[global_chan_idx])
             self.controller.set_att(board_idx, chan_on_board, s.att[global_chan_idx])
-
-    def show_no_hardware_error(self):
-        """Displays a non-blocking warning message to the user."""
-        QMessageBox.warning(self, "Hardware Not Found",
-                            "No Haasoscope Pro boards were detected.\n\n"
-                            "The application is running in a disconnected state. "
-                            "Please connect a device and restart the program to continue.")
 
     def _connect_signals(self):
         """Connect all UI element signals to their corresponding slots."""
@@ -222,6 +224,10 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionMarkers.triggered.connect(lambda checked: self.plot_manager.set_markers(checked))
         self.ui.actionPan_and_zoom.triggered.connect(lambda checked: self.plot_manager.set_pan_and_zoom(checked))
         self.ui.actionVoltage_axis.triggered.connect(lambda checked: self.plot_manager.right_axis.setVisible(checked))
+        self.ui.actionCursors.triggered.connect(lambda checked: self.plot_manager.show_cursors(checked))
+        self.ui.actionSnap_to_waveform.triggered.connect(lambda checked: self.plot_manager.on_snap_toggled(checked))
+        self.ui.actionTime_relative.triggered.connect(lambda checked: self.plot_manager.update_cursor_display())
+        self.ui.actionTrigger_thresh_mV.triggered.connect(lambda checked: self.plot_manager.update_trigger_threshold_display())
         self.ui.linewidthBox.valueChanged.connect(self.plot_manager.set_line_width)
         self.ui.lpfBox.currentIndexChanged.connect(self.lpf_changed)
         self.ui.resampBox.valueChanged.connect(lambda val: setattr(self.state, 'doresamp', val))
@@ -256,6 +262,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionAbout.triggered.connect(self.about_dialog)
         self.ui.actionTake_screenshot.triggered.connect(self.take_screenshot)
         self.ui.actionRecord.triggered.connect(self.toggle_recording)
+        self.ui.actionSave_setup.triggered.connect(self.save_setup)
+        self.ui.actionLoad_setup.triggered.connect(self.load_setup)
         self.ui.actionVerify_firmware.triggered.connect(self.verify_firmware)
         self.ui.actionUpdate_firmware.triggered.connect(self.update_firmware)
         self.ui.actionDo_autocalibration.triggered.connect(lambda: autocalibration(self))
@@ -267,13 +275,18 @@ class MainWindow(TemplateBaseClass):
         self.plot_manager.vline_dragged_signal.connect(self.on_vline_dragged)
         self.plot_manager.hline_dragged_signal.connect(self.on_hline_dragged)
         self.plot_manager.curve_clicked_signal.connect(self.on_curve_clicked)
+        self.plot_manager.math_curve_clicked_signal.connect(self.on_math_curve_clicked)
 
         # Reference menu actions
         self.ui.actionTake_Reference.triggered.connect(self.take_reference_waveform)
         self.ui.actionShow_Reference.triggered.connect(self.toggle_reference_waveform_visibility)
+        self.ui.actionClear_all.triggered.connect(self.clear_all_references)
+        self.ui.actionSave_reference_lines.triggered.connect(self.save_reference_lines_slot)
+        self.ui.actionLoad_reference_lines.triggered.connect(self.load_reference_lines_slot)
 
         # View menu actions
         self.ui.actionXY_Plot.triggered.connect(self.toggle_xy_view_slot)
+        self.ui.actionMath_channels.triggered.connect(self.open_math_channels)
 
         # Plot manager signals
         self.plot_manager.curve_clicked_signal.connect(self.on_curve_clicked)
@@ -481,6 +494,12 @@ class MainWindow(TemplateBaseClass):
         else:
             self.plot_manager.update_plots(self.xydata, self.xydatainterleaved)
 
+        # Calculate and display math channels if any are defined
+        if self.math_window and len(self.math_window.math_channels) > 0:
+            # Use stabilized data (after trigger stabilizers are applied)
+            math_results = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data)
+            self.plot_manager.update_math_channel_data(math_results)
+
         if self.recorder.is_recording:
             lines_vis = [line.isVisible() for line in self.plot_manager.lines]
             self.recorder.record_event(self.xydata, self.plot_manager.otherlines['vline'].value(), lines_vis)
@@ -628,16 +647,19 @@ class MainWindow(TemplateBaseClass):
             for c in range(s.num_chan_per_board * s.num_board):
                 self.xydatainterleaved[c][0] = interleaved_time_axis
 
-        # --- Update reference waveforms with new scaling and visibility ---
-        show_refs_is_checked = self.ui.actionShow_Reference.isChecked()
+        # --- Update reference waveforms with new scaling and per-channel visibility ---
         for i in range(self.plot_manager.nlines):
-            if i in self.reference_data and show_refs_is_checked:
+            # Check if this specific channel has a reference and it's set to visible
+            has_reference = i in self.reference_data
+            is_visible = self.reference_visible.get(i, False)
+
+            if has_reference and is_visible:
                 # This channel has a reference and it should be visible
                 data = self.reference_data[i]
                 x_display = data['x_ns'] / s.nsunits
                 self.plot_manager.update_reference_plot(i, x_display, data['y'])
             else:
-                # This channel either has no reference or refs are turned off
+                # This channel either has no reference or its reference is hidden
                 self.plot_manager.hide_reference_plot(i)
 
     def handle_critical_error(self, title, message):
@@ -652,7 +674,11 @@ class MainWindow(TemplateBaseClass):
         # 2. Disable the run button to prevent the user from restarting
         self.ui.runButton.setEnabled(False)
 
-        # 3. Show the critical error message box
+        # 3. Prevent firmware methods
+        self.ui.actionUpdate_firmware.setEnabled(False)
+        self.ui.actionVerify_firmware.setEnabled(False)
+
+        # 4. Show the critical error message box
         QMessageBox.critical(self, title, message)
 
     def closeEvent(self, event):
@@ -661,6 +687,7 @@ class MainWindow(TemplateBaseClass):
         self.timer2.stop()
         self.recorder.stop()
         self.histogram_window.close()
+        if self.math_window: self.math_window.close()
         self.close_socket()
         self.controller.cleanup()
         if self.fftui: self.fftui.close()
@@ -689,6 +716,22 @@ class MainWindow(TemplateBaseClass):
         self.ui.boardBox.setValue(board)
         self.ui.chanBox.setValue(channel)
         # select_channel is called automatically by the valueChanged signal
+
+    def on_math_curve_clicked(self, math_channel_name):
+        """Slot for when a math channel waveform on the plot is clicked."""
+        # Open the math channels window if not already open
+        if self.math_window is None:
+            self.math_window = MathChannelsWindow(self)
+            self.math_window.math_channels_changed.connect(lambda: self.update_math_channels())
+        self.math_window.show()
+        self.math_window.raise_()
+        self.math_window.activateWindow()
+
+        # Select this math channel in the list
+        self.math_window.select_math_channel_in_list(math_channel_name)
+
+        # Select this math channel for measurements
+        self.measurements.select_math_channel_for_measurement(math_channel_name)
 
     def toggle_pll_controls(self):
         """Shows or hides the manual PLL adjustment buttons."""
@@ -812,6 +855,9 @@ class MainWindow(TemplateBaseClass):
         # Update the secondary Y-axis
         self.plot_manager.update_right_axis()
 
+        # Update cursor display to reflect new active channel
+        self.plot_manager.update_cursor_display()
+
         # Update hardware LEDs
         all_colors = [pen.color() for pen in self.plot_manager.linepens]
         self.controller.do_leds(all_colors)
@@ -846,6 +892,13 @@ class MainWindow(TemplateBaseClass):
         # Reset FFT analysis when channel changes
         if self.fftui:
             self.fftui.reset_analysis_state()
+
+        # Update Show Reference menu checkbox to reflect active channel's reference visibility
+        self.update_reference_checkbox_state()
+
+        # Update measurement table header to reflect new active channel (if not measuring a math channel)
+        if self.measurements.selected_math_channel is None:
+            self.measurements.update_measurement_header()
 
     def trigger_pos_changed(self, value):
         """
@@ -1031,6 +1084,14 @@ class MainWindow(TemplateBaseClass):
             self.recorder.stop()
             self.ui.actionRecord.setText("Record to file")
 
+    def save_setup(self):
+        """Save current scope setup to a JSON file."""
+        save_setup(self)
+
+    def load_setup(self):
+        """Load scope setup from a JSON file and restore the state."""
+        load_setup(self)
+
     def update_firmware(self):
         board = self.state.activeboard
         reply = QMessageBox.question(self, 'Confirmation', f'Update firmware on board {board} to mine?',
@@ -1109,7 +1170,7 @@ class MainWindow(TemplateBaseClass):
     # ## Slot Implementations (Callbacks for UI events)
     # #########################################################################
 
-    def toggle_xy_view_slot(self, checked, board_num=0):
+    def toggle_xy_view_slot(self, checked):
         """Slot for the 'XY Plot' menu action."""
         board = self.state.activeboard
         if checked:
@@ -1118,7 +1179,31 @@ class MainWindow(TemplateBaseClass):
             self.plot_manager.set_xy_pen(pen)
         self.plot_manager.toggle_xy_view(checked, board)
 
-    def take_reference_waveform(self, checked):
+    def open_math_channels(self):
+        """Slot for the 'Math Channels' menu action."""
+        if self.math_window is None:
+            self.math_window = MathChannelsWindow(self)
+            # Connect the signal to update plots when math channels change
+            self.math_window.math_channels_changed.connect(lambda: self.update_math_channels())
+        self.math_window.show()
+        self.math_window.raise_()
+        self.math_window.activateWindow()
+
+    def update_math_channels(self):
+        """Update math channel plot lines and calculate current data."""
+        if self.math_window is None:
+            return
+
+        # Update the plot lines (create/remove as needed)
+        self.plot_manager.update_math_channel_lines(self.math_window)
+
+        # Calculate and display current data if we have data
+        if hasattr(self, 'xydata') and len(self.math_window.math_channels) > 0:
+            # Use stabilized data (after trigger stabilizers are applied)
+            math_results = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data)
+            self.plot_manager.update_math_channel_data(math_results)
+
+    def take_reference_waveform(self):
         """
         Slot for 'Take Reference'. Captures the active waveform's data,
         converts its time axis to absolute nanoseconds, and stores it.
@@ -1135,13 +1220,51 @@ class MainWindow(TemplateBaseClass):
 
             self.reference_data[active_channel] = {'x_ns': x_data_in_ns, 'y': y_data}
 
+            # Set the reference visibility to True for this channel
+            self.reference_visible[active_channel] = True
+
+            # Update the checkbox to reflect the new visibility state
+            self.update_reference_checkbox_state()
+
             # Trigger a redraw to show the new reference immediately
             self.time_changed()
 
     def toggle_reference_waveform_visibility(self):
-        """Slot for 'Show Reference'. Triggers a redraw to apply visibility."""
-        self.time_changed() # Re-running time_changed will handle the visibility flag
+        """Slot for 'Show Reference'. Toggles visibility for the active channel's reference."""
+        s = self.state
+        active_channel = s.activexychannel
 
+        # Toggle the visibility state for the active channel
+        is_checked = self.ui.actionShow_Reference.isChecked()
+        self.reference_visible[active_channel] = is_checked
+
+        # Trigger a redraw to apply the visibility change
+        self.time_changed()
+
+    def clear_all_references(self):
+        """Slot for 'Clear all'. Hides all reference waveforms for all channels."""
+        # Set all reference visibility flags to False
+        for channel_idx in range(self.plot_manager.nlines):
+            self.reference_visible[channel_idx] = False
+
+        # Update the checkbox for the active channel
+        self.update_reference_checkbox_state()
+
+        # Trigger a redraw to hide all references
+        self.time_changed()
+
+    def save_reference_lines_slot(self):
+        """Slot for saving reference waveforms to a file."""
+        save_reference_lines(self, self.reference_data, self.reference_visible)
+
+    def load_reference_lines_slot(self):
+        """Slot for loading reference waveforms from a file."""
+        success = load_reference_lines(self, self.reference_data, self.reference_visible)
+        if success:
+            # Update the checkbox for the active channel
+            self.update_reference_checkbox_state()
+            # Trigger a redraw to show the loaded references
+            self.time_changed()
 
     def fft_clicked(self):
         """Toggles the FFT window state for the active channel."""
@@ -1150,7 +1273,7 @@ class MainWindow(TemplateBaseClass):
         self.state.fft_enabled[active_channel_name] = is_checked
 
         if self.fftui is None:
-            self.fftui = FFTWindow()
+            self.fftui = FFTWindow(self)
             # Connect the window_closed signal to our handler
             self.fftui.window_closed.connect(self.on_fft_window_closed)
         should_show = any(self.state.fft_enabled.values())
@@ -1175,6 +1298,18 @@ class MainWindow(TemplateBaseClass):
         self.ui.fftCheck.blockSignals(True)
         self.ui.fftCheck.setChecked(self.state.fft_enabled[active_channel_name])
         self.ui.fftCheck.blockSignals(False)
+
+    def update_reference_checkbox_state(self):
+        """Updates the 'Show Reference' checkbox to reflect the active channel's reference visibility."""
+        s = self.state
+        active_channel = s.activexychannel
+
+        # Check if this channel has a reference and if it's visible
+        is_visible = self.reference_visible.get(active_channel, False)
+
+        self.ui.actionShow_Reference.blockSignals(True)
+        self.ui.actionShow_Reference.setChecked(is_visible)
+        self.ui.actionShow_Reference.blockSignals(False)
 
     def twochan_changed(self):
         """Switches between single and dual channel mode FOR THE ACTIVE BOARD."""
@@ -1204,9 +1339,47 @@ class MainWindow(TemplateBaseClass):
         # The next event after a mode switch can be glitchy, so we'll skip it.
         s.skip_next_event = True
 
+        # Store the old state before updating
+        old_two_channel_state = s.dotwochannel[active_board]
 
         # 1. Update the state for the active board ONLY
         s.dotwochannel[active_board] = is_two_channel
+
+        # Handle math channel display updates after state change
+        if self.math_window:
+            ch1_index = active_board * s.num_chan_per_board + 1
+            needs_ui_update = False
+
+            # Check all math channels to see if they use Ch 1 of this board
+            for math_def in self.math_window.math_channels:
+                ch1 = math_def['ch1']
+                ch2 = math_def.get('ch2')
+
+                # Check if either input uses this channel
+                uses_ch1 = (ch1 == ch1_index) or (ch2 == ch1_index)
+
+                if uses_ch1:
+                    # If switching to two-channel mode, only re-enable if it was displayed before
+                    if not old_two_channel_state and is_two_channel:
+                        # Only re-enable display if it was previously auto-disabled (not manually unchecked)
+                        # We track this with 'auto_disabled' flag
+                        if math_def.get('auto_disabled', False):
+                            math_def['displayed'] = True
+                            math_def['auto_disabled'] = False
+                        needs_ui_update = True
+                    # If switching to single-channel mode, disable display and mark as auto-disabled
+                    elif old_two_channel_state and not is_two_channel:
+                        # Only mark as auto-disabled if it was currently displayed
+                        if math_def.get('displayed', True):
+                            math_def['auto_disabled'] = True
+                        math_def['displayed'] = False
+                        needs_ui_update = True
+
+            # Update the math window UI if changes were made
+            if needs_ui_update:
+                if self.math_window.isVisible():
+                    self.math_window.update_button_states()
+                self.math_window.math_channels_changed.emit()
 
         # 2. Reconfigure the hardware for the active board. This can reset settings.
         setupboard(self.controller.usbs[active_board], s.dopattern, is_two_channel, s.dooverrange, s.basevoltage == 200)
@@ -1223,6 +1396,10 @@ class MainWindow(TemplateBaseClass):
         self.time_changed()
         self._update_channel_mode_ui()
         self.select_channel()
+
+        # 6. Update math window channel lists (availability of Ch 1 changed)
+        if self.math_window:
+            self.math_window.update_channel_list()
 
     def gain_changed(self):
         """Handles changes to the gain slider."""
@@ -1269,6 +1446,7 @@ class MainWindow(TemplateBaseClass):
             self.ui.gainBox.setSingleStep(6)
 
         self.plot_manager.update_right_axis()
+        self.plot_manager.update_cursor_display()
 
     def offset_changed(self):
         """Handles changes to the offset slider."""
@@ -1377,9 +1555,62 @@ class MainWindow(TemplateBaseClass):
         self.set_channel_frame()
 
     def rising_falling_changed(self, index):
-        self.state.fallingedge[self.state.activeboard] = (index == 1)
+        s = self.state
+        active_board = s.activeboard
+        is_falling = (index == 1)
+
+        s.fallingedge[active_board] = is_falling
         # Assuming trigger types 1=rising, 2=falling
-        self.state.triggertype[self.state.activeboard] = 2 if (index == 1) else 1
+        s.triggertype[active_board] = 2 if is_falling else 1
+
+        # Swap Risetime/Falltime measurements for channels on this board
+        if self.measurements:
+            # Determine which measurement names to swap
+            old_time_name = "Risetime" if is_falling else "Falltime"
+            new_time_name = "Falltime" if is_falling else "Risetime"
+            old_error_name = "Risetime error" if is_falling else "Falltime error"
+            new_error_name = "Falltime error" if is_falling else "Risetime error"
+
+            # Find all measurements for channels on the active board
+            measurements_to_swap = []
+            for measurement_key in list(self.measurements.active_measurements.keys()):
+                measurement_name, channel_key = measurement_key
+
+                # Skip global measurements
+                if channel_key == "Global":
+                    continue
+
+                # Check if this is a regular channel (not math/reference)
+                if channel_key.startswith("B") and " Ch" in channel_key:
+                    # Parse board number from channel_key like "B0 Ch0"
+                    board_num = int(channel_key.split("B")[1].split(" ")[0])
+
+                    # Only swap for channels on the active board
+                    if board_num == active_board:
+                        if measurement_name in [old_time_name, old_error_name]:
+                            measurements_to_swap.append(measurement_key)
+
+            # Perform the swap
+            for old_key in measurements_to_swap:
+                measurement_name, channel_key = old_key
+
+                # Determine new measurement name
+                if measurement_name == old_time_name:
+                    new_measurement_name = new_time_name
+                else:  # old_error_name
+                    new_measurement_name = new_error_name
+
+                # Remove old measurement
+                del self.measurements.active_measurements[old_key]
+
+                # Add new measurement
+                new_key = (new_measurement_name, channel_key)
+                self.measurements.active_measurements[new_key] = True
+
+            # Update the display and menu checkboxes if anything was swapped
+            if measurements_to_swap:
+                self.measurements.update_measurements_display()
+                self.measurements.update_menu_checkboxes()
 
     def tot_changed(self, value):
         self.state.triggertimethresh = value

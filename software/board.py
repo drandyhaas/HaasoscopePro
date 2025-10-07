@@ -404,14 +404,14 @@ def send_leds(usb, r1, g1, b1, r2, g2, b2):
         time.sleep(.001)
 
 
-def gettemps(usb) -> [float, float]:
+def gettemps(usb) -> list[float]:
     """Reads temperatures from the ADC die and a board thermistor."""
     set_spi_mode(usb, 0)
 
     # Read ADC die temperature sensor
     spicommand(usb, "ADC Temp Conv", 0x00, 0x00, 0, True, cs=6, nbyte=2, quiet=True)  # Dummy
     slowdac1 = spicommand(usb, "ADC Temp Read", 0x00, 0x00, 0, True, cs=6, nbyte=2, quiet=True)
-    if not slowdac1 or len(slowdac1) < 2: return "Temp Read Error"
+    if not slowdac1 or len(slowdac1) < 2: return [0,0]
 
     slowdac1_val = (256 * slowdac1[1] + slowdac1[0])
     slowdac1_mv = slowdac1_val * 3300 / pow(2, 12) / 4.0
@@ -420,13 +420,13 @@ def gettemps(usb) -> [float, float]:
     # Read board thermistor
     spicommand(usb, "Board Temp Conv", 0x08, 0x00, 0, True, cs=6, nbyte=2, quiet=True)  # Dummy
     slowdac2 = spicommand(usb, "Board Temp Read", 0x08, 0x00, 0, True, cs=6, nbyte=2, quiet=True)
-    if not slowdac2 or len(slowdac2) < 2: return "Temp Read Error"
+    if not slowdac2 or len(slowdac2) < 2: return [0,0]
 
     slowdac2_mv = (256 * slowdac2[1] + slowdac2[0]) * 3300 / pow(2, 12) / 1.1
-    if slowdac2_mv == 0: return "Temp Read Error"
+    if slowdac2_mv == 0: return [0,0]
 
     r_board = 10000 * (3300 / slowdac2_mv - 1)
-    if r_board <= 0: return "Temp Read Error"
+    if r_board <= 0: return [0,0]
 
     # Steinhart-Hart equation for thermistor
     t0, beta = 273.15 + 25, 3380.0

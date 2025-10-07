@@ -1,7 +1,7 @@
 # plot_manager.py
 
 import pyqtgraph as pg
-from pyqtgraph.Qt import QtCore, QtWidgets
+from pyqtgraph.Qt import QtCore
 from PyQt5.QtGui import QColor, QPen
 import numpy as np
 import time
@@ -10,6 +10,7 @@ import matplotlib.cm as cm
 from scipy.signal import resample
 from scipy.interpolate import interp1d
 from data_processor import find_crossing_distance
+from cursor_manager import CursorManager
 import math
 
 
@@ -50,6 +51,7 @@ class PlotManager(pg.QtCore.QObject):
     vline_dragged_signal = pg.QtCore.Signal(float)
     hline_dragged_signal = pg.QtCore.Signal(float)
     curve_clicked_signal = pg.QtCore.Signal(int)
+    math_curve_clicked_signal = pg.QtCore.Signal(str)  # Emits math channel name
 
     def __init__(self, ui, state):
         super().__init__()
@@ -58,6 +60,7 @@ class PlotManager(pg.QtCore.QObject):
         self.plot = self.ui.plot
         self.lines = []
         self.reference_lines = []
+        self.math_channel_lines = {}  # Dictionary: {math_name: plot_line}
         self.xy_line = None
         self.linepens = []
         self.otherlines = {}  # For trigger lines, fit lines etc.
@@ -65,6 +68,12 @@ class PlotManager(pg.QtCore.QObject):
         self.right_axis = None
         self.nlines = state.num_board * state.num_chan_per_board
         self.current_vline_pos = 0.0
+
+        # Stabilized data for math channel calculations (after trigger stabilizers)
+        self.stabilized_data = [None] * self.nlines
+
+        # Cursor manager (will be initialized after linepens are created)
+        self.cursor_manager = None
 
         # Persistence attributes
         self.max_persist_lines = 16
@@ -77,6 +86,12 @@ class PlotManager(pg.QtCore.QObject):
         """Creates a unique click handler function that remembers the channel index."""
         def handler(curve_item):
             self.curve_clicked_signal.emit(channel_index)
+        return handler
+
+    def _create_math_click_handler(self, math_channel_name):
+        """Creates a unique click handler function that remembers the math channel name."""
+        def handler(curve_item):
+            self.math_curve_clicked_signal.emit(math_channel_name)
         return handler
 
     def setup_plots(self):
@@ -115,6 +130,7 @@ class PlotManager(pg.QtCore.QObject):
         self.plot.addItem(self.otherlines['vline'])
         self.plot.addItem(self.otherlines['hline'])
         self.otherlines['vline'].sigDragged.connect(self.on_vline_dragged)
+        self.otherlines['vline'].sigPositionChangeFinished.connect(self.on_vline_drag_finished)
         self.otherlines['hline'].sigPositionChanged.connect(self.on_hline_dragged)
 
         # Risetime fit lines (initially invisible)
@@ -132,6 +148,10 @@ class PlotManager(pg.QtCore.QObject):
         self.xy_line = self.plot.plot(pen=pg.mkPen(color="w"), name="XY_Plot", skipFiniteCheck=True, connect="finite")
         self.xy_line.setVisible(False)
 
+        # Cursor manager (initialized after linepens and lines are created)
+        self.cursor_manager = CursorManager(self.plot, self.state, self.linepens, self.ui, self.otherlines, self.lines)
+        self.cursor_manager.setup_cursors()
+
         # Secondary Y-Axis
         if self.state.num_board > 0:
             self.right_axis = add_secondary_axis(
@@ -148,6 +168,9 @@ class PlotManager(pg.QtCore.QObject):
         if not self.state.dodrawing:
             return
         s = self.state
+
+        # Create a copy to store stabilized data for math channels
+        self.stabilized_data = [None] * self.nlines
 
         for li in range(self.nlines):
             board_idx = li // s.num_chan_per_board
@@ -214,16 +237,25 @@ class PlotManager(pg.QtCore.QObject):
 
                         xc = xdatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]
                         yc = ydatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]
-                        if s.fallingedge[li // 2]: yc = -yc
+
+                        # For falling edges, invert both the signal and the threshold
+                        threshold_to_use = hline_threshold
+                        if s.fallingedge[li // 2]:
+                            yc = -yc
+                            threshold_to_use = -hline_threshold
 
                         if xc.size > 1:
-                            distcorrtemp = find_crossing_distance(yc, hline_threshold, vline_time, xc[0], xc[1] - xc[0])
+                            distcorrtemp = find_crossing_distance(yc, threshold_to_use, vline_time, xc[0], xc[1] - xc[0])
                             if distcorrtemp is not None and abs(
                                     distcorrtemp) < s.distcorrtol * s.downsamplefactor / s.nsunits:
                                 xdatanew -= distcorrtemp
 
             # --- Final plotting and persistence ---
             self.lines[li].setData(xdatanew, ydatanew)
+
+            # Store stabilized data for math channel calculations
+            self.stabilized_data[li] = (xdatanew, ydatanew)
+
             if li == s.activexychannel and self.persist_time > 0 and self.ui.chanonCheck.isChecked():
                 self._add_to_persistence(xdatanew, ydatanew, li)
 
@@ -241,6 +273,11 @@ class PlotManager(pg.QtCore.QObject):
             # Only show reference lines if they have data and we are in time domain
             line.setVisible(is_time_domain_visible and line.xData is not None)
         for key, line in self.otherlines.items():
+            line.setVisible(is_time_domain_visible)
+        # Hide/show math channel lines (only if they're marked as displayed)
+        # We need to check with the math window to get the displayed state
+        for math_name, line in self.math_channel_lines.items():
+            # Default to showing in time domain if we can't check displayed state
             line.setVisible(is_time_domain_visible)
         # Also hide/show the right axis
         if self.right_axis:
@@ -274,6 +311,59 @@ class PlotManager(pg.QtCore.QObject):
         """Hides a specific reference plot."""
         if 0 <= channel_index < len(self.reference_lines):
             self.reference_lines[channel_index].setVisible(False)
+
+    def update_math_channel_lines(self, math_window=None):
+        """Updates the set of math channel plot lines based on current math channel definitions.
+
+        Args:
+            math_window: The MathChannelsWindow instance (optional, will try to find it if not provided)
+        """
+        # Get the math window if not provided
+        if math_window is None:
+            return  # Can't update without math window reference
+
+        current_math_names = {m['name'] for m in math_window.math_channels}
+
+        # Remove lines for math channels that no longer exist
+        for math_name in list(self.math_channel_lines.keys()):
+            if math_name not in current_math_names:
+                line = self.math_channel_lines[math_name]
+                self.plot.removeItem(line)
+                del self.math_channel_lines[math_name]
+
+        # Create or update lines for math channels
+        for math_def in math_window.math_channels:
+            math_name = math_def['name']
+            color = math_def.get('color', '#00FFFF')  # Default to cyan if no color specified
+            displayed = math_def.get('displayed', True)  # Default to displayed if not specified
+            width = math_def.get('width', 2)  # Use stored width, default to 2 if not specified
+
+            if math_name not in self.math_channel_lines:
+                # Create a new dashed line with the specified color and width
+                pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DashLine)
+                line = self.plot.plot(pen=pen, name=math_name, skipFiniteCheck=True, connect="finite")
+                # Make the line clickable
+                line.curve.setClickable(True)
+                line.curve.sigClicked.connect(self._create_math_click_handler(math_name))
+                self.math_channel_lines[math_name] = line
+                # Set initial visibility
+                line.setVisible(displayed and not self.state.xy_mode)
+            else:
+                # Update the color and width of existing line
+                pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DashLine)
+                self.math_channel_lines[math_name].setPen(pen)
+                # Update visibility
+                self.math_channel_lines[math_name].setVisible(displayed and not self.state.xy_mode)
+
+    def update_math_channel_data(self, math_results):
+        """Update the math channel plot lines with calculated data.
+
+        Args:
+            math_results: Dictionary mapping math channel names to (x_data, y_data) tuples
+        """
+        for math_name, (x_data, y_data) in math_results.items():
+            if math_name in self.math_channel_lines:
+                self.math_channel_lines[math_name].setData(x_data, y_data)
 
     def update_xy_plot(self, x_data, y_data):
         """Updates the XY plot with new data."""
@@ -313,6 +403,8 @@ class PlotManager(pg.QtCore.QObject):
         self.plot.setRange(xRange=(state.min_x, state.max_x), yRange=(state.min_y, state.max_y), padding=0.01)
 
         self.draw_trigger_lines()
+        if self.cursor_manager:
+            self.cursor_manager.adjust_cursor_positions()
 
     def draw_trigger_lines(self):
         """Draws the horizontal and vertical trigger lines on the plot."""
@@ -436,8 +528,37 @@ class PlotManager(pg.QtCore.QObject):
     def on_vline_dragged(self, line):
         self.vline_dragged_signal.emit(line.value())
 
+    def on_vline_drag_finished(self, line):
+        """Called when vline dragging is finished - update cursor positions and display."""
+        if self.cursor_manager:
+            self.cursor_manager.adjust_cursor_positions()
+
     def on_hline_dragged(self, line):
         self.hline_dragged_signal.emit(line.value())
+        # Update trigger threshold text if it's enabled
+        if self.cursor_manager:
+            self.cursor_manager.update_trigger_threshold_text()
+
+    def show_cursors(self, visible):
+        """Show or hide cursor lines and labels."""
+        if self.cursor_manager:
+            self.cursor_manager.show_cursors(visible)
+
+    def update_cursor_display(self):
+        """Update cursor display when active channel changes."""
+        if self.cursor_manager:
+            self.cursor_manager.update_active_channel()
+            self.cursor_manager.update_trigger_threshold_text()
+
+    def update_trigger_threshold_display(self):
+        """Update trigger threshold text display."""
+        if self.cursor_manager:
+            self.cursor_manager.update_trigger_threshold_text()
+
+    def on_snap_toggled(self, checked):
+        """Handle snap to waveform toggle."""
+        if self.cursor_manager and checked:
+            self.cursor_manager.snap_all_cursors()
 
     def update_right_axis(self):
         if not self.right_axis: return

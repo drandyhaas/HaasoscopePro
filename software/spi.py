@@ -42,7 +42,7 @@ def spicommand(usb, name: str, first: int, second: int, third: int, read: bool,
 
     if read:
         return spires
-    return None
+    return bytes([0])
 
 def spicommand2(usb, name: str, first: int, second: int, third: int, fourth: int, read: bool,
                 cs: int = 0, nbyte: int = 3, quiet: bool = True) -> bytes:
@@ -66,7 +66,7 @@ def spicommand2(usb, name: str, first: int, second: int, third: int, fourth: int
     if read:
         # Per original behavior, returns only the result of the first transaction.
         return spires
-    return None
+    return bytes([0])
 
 def set_spi_mode(usb, mode: int):
     """

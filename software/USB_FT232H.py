@@ -7,6 +7,7 @@ try:
 
     FTD2XX_IMPORTED = True
 except ImportError:
+    ftd2xx = None
     FTD2XX_IMPORTED = False
 
 
@@ -50,6 +51,7 @@ class UsbFt232hSync245mode:
             device_name (str): The expected device description (e.g., 'HaasoscopePro USB2').
             serial (bytes): The serial number of the device.
         """
+        self.beta = None
         self._usb, message = open_ft_usb_device(device_name, serial)
         print(message)
 
