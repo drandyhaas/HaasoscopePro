@@ -130,6 +130,7 @@ class PlotManager(pg.QtCore.QObject):
         self.plot.addItem(self.otherlines['vline'])
         self.plot.addItem(self.otherlines['hline'])
         self.otherlines['vline'].sigDragged.connect(self.on_vline_dragged)
+        self.otherlines['vline'].sigPositionChangeFinished.connect(self.on_vline_drag_finished)
         self.otherlines['hline'].sigPositionChanged.connect(self.on_hline_dragged)
 
         # Risetime fit lines (initially invisible)
@@ -525,6 +526,11 @@ class PlotManager(pg.QtCore.QObject):
 
     def on_vline_dragged(self, line):
         self.vline_dragged_signal.emit(line.value())
+
+    def on_vline_drag_finished(self, line):
+        """Called when vline dragging is finished - update cursor positions and display."""
+        if self.cursor_manager:
+            self.cursor_manager.adjust_cursor_positions()
 
     def on_hline_dragged(self, line):
         self.hline_dragged_signal.emit(line.value())
