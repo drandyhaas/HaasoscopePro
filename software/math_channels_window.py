@@ -139,6 +139,10 @@ class MathChannelsWindow(QWidget):
         self.remove_button.setEnabled(False)  # Initially disabled
         buttons_layout_1.addWidget(self.remove_button)
 
+        self.remove_all_button = QPushButton("Remove All")
+        self.remove_all_button.clicked.connect(self.remove_all_math_channels)
+        buttons_layout_1.addWidget(self.remove_all_button)
+
         self.color_button = QPushButton("Change Color")
         self.color_button.clicked.connect(self.change_color)
         self.color_button.setEnabled(False)  # Initially disabled
@@ -648,6 +652,30 @@ class MathChannelsWindow(QWidget):
 
             # Emit signal to update plots
             self.math_channels_changed.emit()
+
+    def remove_all_math_channels(self):
+        """Remove all math channels from the list."""
+        if len(self.math_channels) == 0:
+            return
+
+        # Check if any channel was being used for measurements
+        was_used_for_measurements = (self.main_window.measurements.selected_math_channel is not None)
+
+        # Clear all data
+        self.math_channels.clear()
+        self.running_minmax.clear()
+        self.math_list.clear()
+
+        # If a math channel was being used for measurements, switch back to active channel
+        if was_used_for_measurements:
+            self.main_window.measurements.select_math_channel_for_measurement(None)
+            self.measure_button.setChecked(False)
+
+        # Update button states
+        self.update_button_states()
+
+        # Emit signal to update plots
+        self.math_channels_changed.emit()
 
     def change_color(self):
         """Change the color of the selected math channel."""

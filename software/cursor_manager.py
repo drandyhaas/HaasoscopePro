@@ -73,6 +73,11 @@ class CursorManager:
         # Position the readout in top-left corner
         self.cursor_labels['readout'].setPos(self.state.min_x, self.state.max_y - 0.5)
 
+        # Create text label for trigger threshold
+        self.cursor_labels['trigger_thresh'] = pg.TextItem(anchor=(0, 1), color='w')
+        self.plot.addItem(self.cursor_labels['trigger_thresh'])
+        self.cursor_labels['trigger_thresh'].setVisible(False)
+
     def update_cursor_readout(self):
         """Update cursor value display when cursors are moved."""
         if not self.cursor_lines['t1'].isVisible():
@@ -145,6 +150,46 @@ class CursorManager:
 
         # Update readout position to stay in visible area
         self.cursor_labels['readout'].setPos(self.state.min_x + 0.1*(self.state.max_x-self.state.min_x), self.state.max_y - 0.1)
+
+    def update_trigger_threshold_text(self):
+        """Update trigger threshold display when hline moves or action is toggled."""
+        # Check if the action is enabled
+        if not self.ui or not hasattr(self.ui, 'actionTrigger_thresh_mV'):
+            return
+
+        if not self.ui.actionTrigger_thresh_mV.isChecked():
+            self.cursor_labels['trigger_thresh'].setVisible(False)
+            return
+
+        # Get hline position
+        if not self.otherlines or 'hline' not in self.otherlines:
+            return
+
+        hline_pos = self.otherlines['hline'].value()
+
+        # Convert to voltage (mV) using VperD for active channel
+        if self.state.num_board > 0 and len(self.state.VperD) > 0:
+            v_per_div = self.state.VperD[self.state.activexychannel]
+            threshold_mV = hline_pos * v_per_div * 1000
+        else:
+            threshold_mV = 0
+
+        # Get active board and channel numbers
+        active_board = self.state.activeboard
+        num_chan_per_board = self.state.num_chan_per_board
+        active_channel = self.state.activexychannel % num_chan_per_board
+
+        # Format the text
+        thresh_text = f"Trigger threshold (Board {active_board} Channel {active_channel}): {threshold_mV:.1f} (mV)"
+        self.cursor_labels['trigger_thresh'].setHtml(thresh_text)
+
+        # Position in lower left corner, same x as cursor text, same distance from bottom as cursor text from top
+        self.cursor_labels['trigger_thresh'].setPos(
+            self.state.min_x + 0.1*(self.state.max_x - self.state.min_x),
+            self.state.min_y + 0.1
+        )
+
+        self.cursor_labels['trigger_thresh'].setVisible(True)
 
     def snap_cursor_to_waveform(self, t_cursor_name, v_cursor_name):
         """Snap cursor to nearest waveform point.
@@ -275,3 +320,6 @@ class CursorManager:
         # Update readout position and values
         if self.cursor_lines['t1'].isVisible():
             self.update_cursor_readout()
+
+        # Update trigger threshold text position
+        self.update_trigger_threshold_text()

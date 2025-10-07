@@ -2214,6 +2214,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionXY_Plot"/>
     <addaction name="actionMath_channels"/>
     <addaction name="separator"/>
+    <addaction name="actionTrigger_thresh_mV"/>
    </widget>
    <widget class="QMenu" name="menuReference">
     <property name="title">
@@ -2339,7 +2340,7 @@ Outlined if triggering on this channel</string>
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Trigger threshold</string>
+    <string>Trigger threshold (div)</string>
    </property>
   </action>
   <action name="actionADC_temperature">
@@ -2664,6 +2665,14 @@ Outlined if triggering on this channel</string>
   <action name="actionClear_all_for_all_channels">
    <property name="text">
     <string>Clear all measurements</string>
+   </property>
+  </action>
+  <action name="actionTrigger_thresh_mV">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Trigger threshold (mV)</string>
    </property>
   </action>
  </widget>

@@ -226,6 +226,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionCursors.triggered.connect(lambda checked: self.plot_manager.show_cursors(checked))
         self.ui.actionSnap_to_waveform.triggered.connect(lambda checked: self.plot_manager.on_snap_toggled(checked))
         self.ui.actionTime_relative.triggered.connect(lambda checked: self.plot_manager.update_cursor_display())
+        self.ui.actionTrigger_thresh_mV.triggered.connect(lambda checked: self.plot_manager.update_trigger_threshold_display())
         self.ui.linewidthBox.valueChanged.connect(self.plot_manager.set_line_width)
         self.ui.lpfBox.currentIndexChanged.connect(self.lpf_changed)
         self.ui.resampBox.valueChanged.connect(lambda val: setattr(self.state, 'doresamp', val))

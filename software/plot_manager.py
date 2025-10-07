@@ -528,6 +528,9 @@ class PlotManager(pg.QtCore.QObject):
 
     def on_hline_dragged(self, line):
         self.hline_dragged_signal.emit(line.value())
+        # Update trigger threshold text if it's enabled
+        if self.cursor_manager:
+            self.cursor_manager.update_trigger_threshold_text()
 
     def show_cursors(self, visible):
         """Show or hide cursor lines and labels."""
@@ -538,6 +541,12 @@ class PlotManager(pg.QtCore.QObject):
         """Update cursor display when active channel changes."""
         if self.cursor_manager:
             self.cursor_manager.update_active_channel()
+            self.cursor_manager.update_trigger_threshold_text()
+
+    def update_trigger_threshold_display(self):
+        """Update trigger threshold text display."""
+        if self.cursor_manager:
+            self.cursor_manager.update_trigger_threshold_text()
 
     def on_snap_toggled(self, checked):
         """Handle snap to waveform toggle."""
