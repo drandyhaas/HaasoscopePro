@@ -104,6 +104,7 @@ def save_setup(main_window):
         'time_relative': main_window.ui.actionTime_relative.isChecked(),
         'snap_to_waveform': main_window.ui.actionSnap_to_waveform.isChecked(),
         'risetime_fit_lines': main_window.ui.actionRisetime_fit_lines.isChecked(),
+        'trigger_info': main_window.ui.actionTrigger_info.isChecked(),
 
         # Measurement menu states
         'measure_mean': main_window.ui.actionMean.isChecked(),
@@ -331,6 +332,8 @@ def load_setup(main_window):
         main_window.ui.actionSnap_to_waveform.setChecked(setup['snap_to_waveform'])
     if 'risetime_fit_lines' in setup:
         main_window.ui.actionRisetime_fit_lines.setChecked(setup['risetime_fit_lines'])
+    if 'trigger_info' in setup:
+        main_window.ui.actionTrigger_info.setChecked(setup['trigger_info'])
 
     # Measurement menu states
     if 'measure_mean' in setup:

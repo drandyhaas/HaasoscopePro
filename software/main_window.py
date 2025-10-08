@@ -230,7 +230,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionCursors.triggered.connect(lambda checked: self.plot_manager.show_cursors(checked))
         self.ui.actionSnap_to_waveform.triggered.connect(lambda checked: self.plot_manager.on_snap_toggled(checked))
         self.ui.actionTime_relative.triggered.connect(lambda checked: self.plot_manager.update_cursor_display())
-        self.ui.actionTrigger_thresh_mV.triggered.connect(lambda checked: self.plot_manager.update_trigger_threshold_display())
+        self.ui.actionTrigger_info.triggered.connect(lambda checked: self.plot_manager.update_trigger_threshold_display())
         self.ui.linewidthBox.valueChanged.connect(self.plot_manager.set_line_width)
         self.ui.lpfBox.currentIndexChanged.connect(self.lpf_changed)
         self.ui.resampBox.valueChanged.connect(lambda val: setattr(self.state, 'doresamp', val))
@@ -1666,6 +1666,10 @@ class MainWindow(TemplateBaseClass):
         self.state.trigger_delay[board] = value
         self.controller.send_trigger_delay(board)
         self.update_trigger_spinbox_tooltip(self.ui.trigger_delay_box, "Time to wait before actually firing trigger")
+
+        # Update trigger info text if it's enabled (includes trigger time)
+        if self.plot_manager.cursor_manager:
+            self.plot_manager.cursor_manager.update_trigger_threshold_text()
 
     def trigger_holdoff_changed(self, value):
         """Handle changes to trigger holdoff spinbox."""

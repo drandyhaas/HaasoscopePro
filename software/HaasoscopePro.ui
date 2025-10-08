@@ -2291,7 +2291,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionXY_Plot"/>
     <addaction name="actionMath_channels"/>
     <addaction name="separator"/>
-    <addaction name="actionTrigger_thresh_mV"/>
+    <addaction name="actionTrigger_info"/>
    </widget>
    <widget class="QMenu" name="menuReference">
     <property name="title">
@@ -2747,12 +2747,12 @@ Outlined if triggering on this channel</string>
     <string>Clear all measurements</string>
    </property>
   </action>
-  <action name="actionTrigger_thresh_mV">
+  <action name="actionTrigger_info">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Trigger threshold (mV)</string>
+    <string>Trigger info</string>
    </property>
   </action>
   <action name="actionSave_reference_lines">

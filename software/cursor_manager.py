@@ -152,20 +152,21 @@ class CursorManager:
         self.cursor_labels['readout'].setPos(self.state.min_x + 0.1*(self.state.max_x-self.state.min_x), self.state.max_y - 0.1)
 
     def update_trigger_threshold_text(self):
-        """Update trigger threshold display when hline moves or action is toggled."""
+        """Update trigger info display when hline/vline moves or action is toggled."""
         # Check if the action is enabled
-        if not self.ui or not hasattr(self.ui, 'actionTrigger_thresh_mV'):
+        if not self.ui or not hasattr(self.ui, 'actionTrigger_info'):
             return
 
-        if not self.ui.actionTrigger_thresh_mV.isChecked():
+        if not self.ui.actionTrigger_info.isChecked():
             self.cursor_labels['trigger_thresh'].setVisible(False)
             return
 
-        # Get hline position
-        if not self.otherlines or 'hline' not in self.otherlines:
+        # Get hline and vline positions
+        if not self.otherlines or 'hline' not in self.otherlines or 'vline' not in self.otherlines:
             return
 
         hline_pos = self.otherlines['hline'].value()
+        vline_pos = self.otherlines['vline'].value()
 
         # Convert to voltage (mV) using VperD for active channel
         if self.state.num_board > 0 and len(self.state.VperD) > 0:
@@ -179,9 +180,29 @@ class CursorManager:
         num_chan_per_board = self.state.num_chan_per_board
         active_channel = self.state.activexychannel % num_chan_per_board
 
-        # Format the text
-        thresh_text = f"Trigger threshold (Board {active_board} Channel {active_channel}): {threshold_mV:.1f} (mV)"
-        self.cursor_labels['trigger_thresh'].setHtml(thresh_text)
+        # Calculate trigger time from vline position (trigger time is at vline)
+        # The vline represents the trigger point in time
+        trigger_time_ns = vline_pos * self.state.nsunits
+
+        # Calculate trigger time with delay
+        # trigger_delay is in units where 1 = downsamplefactor*40/samplerate nanoseconds
+        trigger_delay_value = self.state.trigger_delay[active_board]
+        trigger_delay_ns = trigger_delay_value * self.state.downsamplefactor * 40.0 / self.state.samplerate
+        trigger_time_with_delay_ns = trigger_time_ns + trigger_delay_ns
+
+        # Format with appropriate units
+        from data_processor import format_period
+        trig_time_val, trig_time_unit = format_period(trigger_time_ns, "s", False)
+        trig_delay_time_val, trig_delay_time_unit = format_period(trigger_time_with_delay_ns, "s", False)
+
+        # Format the text with multiple lines
+        info_lines = [
+            f"Trigger info (Board {active_board} Channel {active_channel}):",
+            f"  Threshold: {threshold_mV:.1f} mV",
+            f"  Trigger time: {trig_time_val:.2f} {trig_time_unit}"]
+        if trigger_delay_value>0: info_lines.append(f"  Trigger time + delay: {trig_delay_time_val:.2f} {trig_delay_time_unit}")
+        info_text = "<br>".join(info_lines)
+        self.cursor_labels['trigger_thresh'].setHtml(info_text)
 
         # Position in lower left corner, same x as cursor text, same distance from bottom as cursor text from top
         self.cursor_labels['trigger_thresh'].setPos(

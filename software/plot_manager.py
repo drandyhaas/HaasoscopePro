@@ -527,6 +527,9 @@ class PlotManager(pg.QtCore.QObject):
 
     def on_vline_dragged(self, line):
         self.vline_dragged_signal.emit(line.value())
+        # Update trigger info text if it's enabled (includes trigger time)
+        if self.cursor_manager:
+            self.cursor_manager.update_trigger_threshold_text()
 
     def on_vline_drag_finished(self, line):
         """Called when vline dragging is finished - update cursor positions and display."""
