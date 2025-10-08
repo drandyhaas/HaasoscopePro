@@ -312,6 +312,10 @@ always @ (posedge clklvds) begin
                // not enough holdoff, reset and go back
                trigger_holdoff_counter <= 0;
                downsamplemergingcounter_triggered <= -8'd1;
+               sample1_triggered <= 0;
+               sample2_triggered <= 0;
+               sample3_triggered <= 0;
+               sample4_triggered <= 0;
                acqstate <= 8'd1;
             end
          end
