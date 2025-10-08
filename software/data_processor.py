@@ -71,6 +71,25 @@ def format_freq(freq_hz: float, suffix="Hz", dostr=True):
         else: return freq_hz / 1_000_000_000, "GHz"
 
 
+def format_period(period_ns: float, suffix="s", dostr=True):
+    """Formats a period in nanoseconds to a string with appropriate units (ns, us, ms, s)."""
+    if period_ns is None or period_ns <= 0:
+        if dostr: return f"{period_ns:.2f} n{suffix}"
+        else: return period_ns, "ns"
+    if period_ns < 1000:  # Less than 1 us
+        if dostr: return f"{period_ns:.3f} n{suffix}"
+        else: return period_ns, "ns"
+    elif period_ns < 1_000_000:  # Less than 1 ms
+        if dostr: return f"{period_ns / 1000:.3f} u{suffix}"
+        else: return period_ns / 1000, "us"
+    elif period_ns < 1_000_000_000:  # Less than 1 s
+        if dostr: return f"{period_ns / 1_000_000:.3f} m{suffix}"
+        else: return period_ns / 1_000_000, "ms"
+    else:
+        if dostr: return f"{period_ns / 1_000_000_000:.3f} {suffix}"
+        else: return period_ns / 1_000_000_000, "s"
+
+
 def find_crossing_distance(y_data, y_threshold, x_ref, x0=0.0, dx=1.0, rising=True):
     """Calculates the horizontal distance from a reference x-position to the closest threshold crossing.
 

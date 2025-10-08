@@ -2765,6 +2765,9 @@ Outlined if triggering on this channel</string>
    </property>
   </action>
   <action name="actionPeriod">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Period</string>
    </property>
