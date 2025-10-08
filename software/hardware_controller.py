@@ -171,6 +171,7 @@ class HardwareController:
         """Sends the current trigger info to all connected boards."""
         for i in range(self.num_board):
             self.send_trigger_info(i)
+            self.send_trigger_delay(i)
 
     def tell_downsample_all(self, ds):
         """Sends the current downsample setting to all connected boards."""
