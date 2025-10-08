@@ -204,6 +204,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.risingfalling_comboBox.currentIndexChanged.connect(self.rising_falling_changed)
         self.ui.totBox.valueChanged.connect(self.tot_changed)
         self.ui.trigger_delay_box.valueChanged.connect(self.trigger_delay_changed)
+        self.ui.trigger_holdoff_box.valueChanged.connect(self.trigger_holdoff_changed)
 
         # Channel controls
         self.ui.boardBox.valueChanged.connect(self.select_channel)
@@ -1643,6 +1644,12 @@ class MainWindow(TemplateBaseClass):
         """Handle changes to trigger delay spinbox."""
         board = self.state.activeboard
         self.state.trigger_delay[board] = value
+        self.controller.send_trigger_delay(board)
+
+    def trigger_holdoff_changed(self, value):
+        """Handle changes to trigger holdoff spinbox."""
+        board = self.state.activeboard
+        self.state.trigger_holdoff[board] = value
         self.controller.send_trigger_delay(board)
 
     def lpf_changed(self):

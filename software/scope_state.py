@@ -60,6 +60,7 @@ class ScopeState:
         self.triggertimethresh = 0
         self.toff = 100
         self.trigger_delay = [0] * self.num_board
+        self.trigger_holdoff = [0] * self.num_board
 
         # Data Processing and Display Parameters
         self.downsample = 0

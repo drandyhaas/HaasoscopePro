@@ -339,7 +339,7 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>135</y>
+           <y>60</y>
            <width>51</width>
            <height>22</height>
           </rect>
@@ -351,6 +351,9 @@
          </property>
          <property name="toolTip">
           <string>Time over threshold required to trigger (samples)</string>
+         </property>
+         <property name="accelerated">
+          <bool>true</bool>
          </property>
          <property name="minimum">
           <number>0</number>
@@ -366,8 +369,8 @@
          <property name="geometry">
           <rect>
            <x>70</x>
-           <y>135</y>
-           <width>41</width>
+           <y>60</y>
+           <width>51</width>
            <height>16</height>
           </rect>
          </property>
@@ -384,9 +387,9 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>160</y>
+           <y>85</y>
            <width>51</width>
-           <height>20</height>
+           <height>22</height>
           </rect>
          </property>
          <property name="font">
@@ -396,6 +399,9 @@
          </property>
          <property name="toolTip">
           <string>Amount needed over threshold to trigger (ADC values)</string>
+         </property>
+         <property name="accelerated">
+          <bool>true</bool>
          </property>
          <property name="minimum">
           <number>0</number>
@@ -411,8 +417,8 @@
          <property name="geometry">
           <rect>
            <x>70</x>
-           <y>160</y>
-           <width>41</width>
+           <y>85</y>
+           <width>51</width>
            <height>16</height>
           </rect>
          </property>
@@ -481,8 +487,8 @@
          <property name="geometry">
           <rect>
            <x>70</x>
-           <y>185</y>
-           <width>41</width>
+           <y>110</y>
+           <width>51</width>
            <height>16</height>
           </rect>
          </property>
@@ -499,9 +505,9 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>185</y>
+           <y>110</y>
            <width>51</width>
-           <height>20</height>
+           <height>22</height>
           </rect>
          </property>
          <property name="font">
@@ -510,7 +516,10 @@
           </font>
          </property>
          <property name="toolTip">
-          <string>Amount needed over threshold to trigger (ADC values)</string>
+          <string>Time to wait before actually firing trigger</string>
+         </property>
+         <property name="accelerated">
+          <bool>true</bool>
          </property>
          <property name="minimum">
           <number>0</number>
@@ -520,6 +529,54 @@
          </property>
          <property name="value">
           <number>0</number>
+         </property>
+        </widget>
+        <widget class="QSpinBox" name="trigger_holdoff_box">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>135</y>
+           <width>51</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <family>Arial</family>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Time needed failing threshold before passing threshold</string>
+         </property>
+         <property name="accelerated">
+          <bool>true</bool>
+         </property>
+         <property name="minimum">
+          <number>0</number>
+         </property>
+         <property name="maximum">
+          <number>255</number>
+         </property>
+         <property name="value">
+          <number>0</number>
+         </property>
+        </widget>
+        <widget class="QLabel" name="label_27">
+         <property name="geometry">
+          <rect>
+           <x>70</x>
+           <y>135</y>
+           <width>51</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <family>Arial</family>
+          </font>
+         </property>
+         <property name="text">
+          <string>Holdoff</string>
          </property>
         </widget>
        </widget>
@@ -532,7 +589,7 @@
           <x>10</x>
           <y>380</y>
           <width>71</width>
-          <height>20</height>
+          <height>22</height>
          </rect>
         </property>
         <property name="font">
@@ -686,6 +743,9 @@
         </property>
         <property name="toolTip">
          <string>Memory depth / 40</string>
+        </property>
+        <property name="accelerated">
+         <bool>true</bool>
         </property>
         <property name="suffix">
          <string/>
@@ -2201,6 +2261,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionMinimum"/>
     <addaction name="actionVpp"/>
     <addaction name="actionFreq"/>
+    <addaction name="actionPeriod"/>
     <addaction name="actionRisetime"/>
     <addaction name="actionRisetime_error"/>
     <addaction name="separator"/>
@@ -2404,7 +2465,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Freq</string>
+    <string>Frequency</string>
    </property>
   </action>
   <action name="actionToggle_trig_stabilizer">
@@ -2701,6 +2762,11 @@ Outlined if triggering on this channel</string>
   <action name="actionLoad_reference_lines">
    <property name="text">
     <string>Load reference lines</string>
+   </property>
+  </action>
+  <action name="actionPeriod">
+   <property name="text">
+    <string>Period</string>
    </property>
   </action>
  </widget>

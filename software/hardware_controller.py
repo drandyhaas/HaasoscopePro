@@ -195,7 +195,8 @@ class HardwareController:
 
     def send_trigger_delay(self, board_idx):
         trigger_delay = self.state.trigger_delay[board_idx]
-        self.usbs[board_idx].send(bytes([2, 20, trigger_delay, 0,0,0,0,0]))
+        trigger_holdoff = self.state.trigger_holdoff[board_idx]
+        self.usbs[board_idx].send(bytes([2, 20, trigger_delay, trigger_holdoff, 0,0,0,0]))
         self.usbs[board_idx].recv(4)
 
     def tell_downsample(self, usb, ds, board):

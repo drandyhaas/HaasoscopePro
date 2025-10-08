@@ -1,4 +1,5 @@
 Warning (292013): Feature LogicLock is only available with a valid subscription license. You can purchase a software subscription to gain full access to this feature.
+Warning (169143): Ignored configuration mode setting -- set configuration mode to remote update mode operating in Active Serial programming mode File: C:/gitwork/master/HaasoscopePro/adc board firmware/db/ip/remoteupdate/submodules/altera_remote_update_core.v Line: 743
 Warning (15714): Some pins have incomplete I/O assignments. Refer to the I/O Assignment Warnings report for details
 Warning (176674): Following 64 pins are differential I/O pins but do not have their complement pins. Hence, the Fitter automatically created the complement pins.
 Critical Warning (169085): No exact pin location assignment(s) for 6 pins of 143 total pins. For the list of pins please refer to the I/O Assignment Warnings table in the fitter report.

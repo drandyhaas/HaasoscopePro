@@ -174,8 +174,8 @@ https://fpgasoftware.intel.com/eula.
 	(port
 		(pt 0 368)
 		(input)
-		(text "trigger_delay[7..0]" (rect 0 0 71 12)(font "Arial" ))
-		(text "trigger_delay[7..0]" (rect 21 363 92 375)(font "Arial" ))
+		(text "trigger_options[0..1][7..0]" (rect 0 0 96 12)(font "Arial" ))
+		(text "trigger_options[0..1][7..0]" (rect 21 363 117 375)(font "Arial" ))
 		(line (pt 0 368)(pt 16 368)(line_width 3))
 	)
 	(port

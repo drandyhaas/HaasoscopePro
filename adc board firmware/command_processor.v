@@ -84,7 +84,7 @@ module command_processor (
    output reg        highres,
    output reg [4:0]  downsample,
    output reg [1:0]  firstlast,
-   output reg [7:0]  trigger_delay=0,
+   output reg [7:0]  trigger_options [2], // trigger_delay, trigger_holdoff
    
    output reg reloadflash=0,
    
@@ -294,8 +294,9 @@ always @ (posedge clk) begin
             o_tdata <= 999;
          end
          20: begin
-            trigger_delay <= rx_data[2];
-            o_tdata <= 127;
+            trigger_options[0] <= rx_data[2];
+            trigger_options[1] <= rx_data[3];
+            o_tdata <= 120;
          end
          default: o_tdata <= 0;
          endcase

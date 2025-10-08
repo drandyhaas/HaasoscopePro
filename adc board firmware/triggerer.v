@@ -44,7 +44,9 @@ module triggerer(
    input reg [4:0]   downsample,
    input reg [1:0]   firstlast, // 1 for first, 2 for last, 0 for neither
    
-   input reg [7:0]   trigger_delay // clock ticks to wait before firing trigger (going to acqstate 250)
+   input reg [7:0]   trigger_options [2] // 0: trigger_delay: clock ticks to wait before firing trigger (going to acqstate 250)
+                                         // 1: trigger_holdoff: clock ticks of quiet before firing trigger
+   
 );
 
 //exttrigin is boardin[4], SMA in on back panel
@@ -59,7 +61,8 @@ assign auxout =
    1'b0;
 
 integer     rollingtriggercounter = 0;
-reg [7:0]   tot_counter = 0, trigger_delay_counter = 0;
+reg [7:0]   tot_counter = 0;
+reg [7:0]   trigger_delay_counter = 0, trigger_holdoff_counter = 0;
 reg [7:0]   downsamplemergingcounter = 0;
 reg [15:0]  triggercounter = 0;
 reg         firingsecondstep = 0;
@@ -69,6 +72,7 @@ reg         auxtrigout = 0;
 integer     eventtimecounter = 0;
 reg [1:0]   forwardsbackwardsexttrig = 0;
 reg thebit, gotzerobit;
+reg [3:0]   extra_trigger_delay = 0;
 
 // synced inputs from other clocks
 reg signed [11:0] lowerthresh_sync = 0;
@@ -77,7 +81,7 @@ reg [15:0]  lengthtotake_sync = 0;
 reg [15:0]  prelengthtotake_sync= 0;
 reg [ 7:0]  triggertype_sync = 0;
 reg [ 7:0]  triggerToT_sync = 0;
-reg [ 7:0]  trigger_delay_sync = 0;
+reg [ 7:0]  trigger_delay_sync = 0, trigger_holdoff_sync = 0;
 reg         triggerchan_sync = 0;
 reg         dorolling_sync = 0;
 reg [3:0]   auxoutselector_sync = 0;
@@ -102,7 +106,8 @@ always @ (posedge clklvds) begin
    lowerthresh_sync       <= lowerthresh;
    upperthresh_sync       <= upperthresh;
    triggerToT_sync        <= triggerToT;
-   trigger_delay_sync     <= trigger_delay;
+   trigger_delay_sync     <= trigger_options[0];
+   trigger_holdoff_sync   <= trigger_options[1];
    triggerchan_sync       <= triggerchan;
    dorolling_sync         <= dorolling;
    auxoutselector_sync    <= auxoutselector;
@@ -169,6 +174,8 @@ always @ (posedge clklvds) begin
    0 : begin // ready
       auxtrigout <= 0;
       tot_counter <= 0;
+      trigger_holdoff_counter <= 0;
+      extra_trigger_delay <= 0;
       sample_triggered = 0;
       sample1_triggered <= 0;
       sample2_triggered <= 0;
@@ -210,7 +217,10 @@ always @ (posedge clklvds) begin
             8'd2 : acqstate <= 8'd1; // threshold trigger falling edge
             8'd3 : acqstate <= 8'd5; // external trigger from another board over LVDS
             8'd4 : acqstate <= 8'd6; // auto trigger (forces waveform capture unconditionally)
-            8'd5 : acqstate <= 8'd7; // external trigger, like from back panel SMA
+            8'd5 : begin
+               acqstate <= 8'd7; // external trigger, like from back panel SMA
+               extra_trigger_delay = 4'd3;
+            end
             8'd30: acqstate <= 8'd5; // external trigger from another board over LVDS, with echo sent back
          endcase
       end
@@ -218,6 +228,7 @@ always @ (posedge clklvds) begin
 
    // edge trigger (1)
    1 : begin // ready for first part of trigger condition to be met
+      if (downsamplecounter[downsample_sync] && (downsamplemergingcounter==downsamplemerging_sync) && (trigger_holdoff_counter!=8'hff) ) trigger_holdoff_counter <= trigger_holdoff_counter + 8'd1; // count how long we fail to pass the threshold for (but don't roll over)
       if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
       else begin
          for (i=0;i<10;i=i+1) begin
@@ -285,7 +296,7 @@ always @ (posedge clklvds) begin
                end
             end
          end
-         if (firingsecondstep) begin
+         if (firingsecondstep && (trigger_holdoff_counter >= trigger_holdoff_sync) ) begin // require holdoff to be met
             if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) tot_counter <= tot_counter + 8'd1;
             if (tot_counter>=triggerToT_sync && (triggerToT_sync==0 || downsamplemergingcounter==downsamplemergingcounter_triggered) ) begin
                if (trigger_delay_sync==8'd0) begin
@@ -296,6 +307,10 @@ always @ (posedge clklvds) begin
                end
                else acqstate <= 8'd242; // wait, then trigger
             end
+         end
+         else begin
+            trigger_holdoff_counter <= 0;
+            acqstate <= 8'd1; // not enough holdoff, go back
          end
       end
    end
@@ -337,28 +352,31 @@ always @ (posedge clklvds) begin
          if (exttrig_rising && exttrigin_sync) tot_counter <= tot_counter + 8'd1; // keep counting while exttrigin is high
          else tot_counter<=0; // if exttrigin goes low, reset counter
          if (exttrig_rising && tot_counter>=triggerToT_sync) begin
-            ram_address_triggered <= ram_wr_address - triggerToT_sync + 10'd3; // remember where the trigger happened, + trigger delay
-            lvdsout_trig = 1'b1; // tell the others forwards
-            lvdsout_trig_b = 1'b1; // tell the others backwards
-            sample_triggered = 0; // we didn't measure the trigger edge - going to be some jitter unfortunately
             downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
-            acqstate <= 8'd250;
+            sample_triggered = 0; // we didn't measure the trigger edge - going to be some jitter unfortunately
+            if (trigger_delay_sync==8'd0) begin
+               ram_address_triggered <= ram_wr_address - triggerToT_sync + extra_trigger_delay; // remember where the trigger happened, + trigger delay
+               lvdsout_trig = 1'b1; // tell the others forwards
+               lvdsout_trig_b = 1'b1; // tell the others backwards
+               acqstate <= 8'd250;
+            end
+            else acqstate <= 8'd242; // wait, then trigger
          end
       end
    end
 
    242 : begin // wait before actually firing edge trigger, if trigger_delay>0
-      //if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) begin
+      if (downsamplecounter[downsample_sync]) begin // && downsamplemergingcounter==downsamplemerging_sync
          if (downsamplemergingcounter==downsamplemergingcounter_triggered) begin
             if (trigger_delay_counter>=trigger_delay_sync) begin
-               ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+               ram_address_triggered <= ram_wr_address - triggerToT_sync + extra_trigger_delay; // remember where the trigger happened
                lvdsout_trig = 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
                lvdsout_trig_b = 1'b1; // and backwards
                acqstate <= 8'd250; // trigger
             end
             else trigger_delay_counter <= trigger_delay_counter+8'd1;
          end
-      //end
+      end
    end
 
    250 : begin // triggered, now taking more data
