@@ -41,6 +41,8 @@ def save_setup(main_window):
         'fallingedge': s.fallingedge,
         'triggertype': s.triggertype,
         'triggertimethresh': s.triggertimethresh,
+        'trigger_delay': s.trigger_delay,
+        'trigger_holdoff': s.trigger_holdoff,
         'doexttrig': s.doexttrig,
         'doextsmatrig': s.doextsmatrig,
 
@@ -77,6 +79,7 @@ def save_setup(main_window):
         # FFT and reference settings
         'fft_enabled': s.fft_enabled,
         'reference_visible': main_window.reference_visible,
+        'show_reference': main_window.ui.actionShow_Reference.isChecked(),
 
         # Plot manager settings
         'line_width': main_window.ui.linewidthBox.value(),
@@ -96,6 +99,12 @@ def save_setup(main_window):
         'voltage_axis_visible': main_window.ui.actionVoltage_axis.isChecked(),
         'pan_and_zoom': main_window.ui.actionPan_and_zoom.isChecked(),
 
+        # Cursor menu states
+        'cursors_visible': main_window.ui.actionCursors.isChecked(),
+        'time_relative': main_window.ui.actionTime_relative.isChecked(),
+        'snap_to_waveform': main_window.ui.actionSnap_to_waveform.isChecked(),
+        'risetime_fit_lines': main_window.ui.actionRisetime_fit_lines.isChecked(),
+
         # Measurement menu states
         'measure_mean': main_window.ui.actionMean.isChecked(),
         'measure_rms': main_window.ui.actionRMS.isChecked(),
@@ -103,18 +112,24 @@ def save_setup(main_window):
         'measure_max': main_window.ui.actionMaximum.isChecked(),
         'measure_vpp': main_window.ui.actionVpp.isChecked(),
         'measure_freq': main_window.ui.actionFreq.isChecked(),
+        'measure_period': main_window.ui.actionPeriod.isChecked(),
         'measure_risetime': main_window.ui.actionRisetime.isChecked(),
         'measure_risetime_error': main_window.ui.actionRisetime_error.isChecked(),
         'measure_edge_fit': main_window.ui.actionEdge_fit_method.isChecked(),
         'measure_trig_thresh': main_window.ui.actionTrigger_thresh.isChecked(),
+        'measure_trig_thresh_mv': main_window.ui.actionTrigger_thresh_mV.isChecked(),
         'measure_n_persist': main_window.ui.actionN_persist_lines.isChecked(),
         'measure_adc_temp': main_window.ui.actionADC_temperature.isChecked(),
         'measure_board_temp': main_window.ui.actionBoard_temperature.isChecked(),
+
+        # Active measurements in table
+        'active_measurements': [(k[0], k[1]) for k in main_window.measurements.active_measurements.keys()],
 
         # Other settings
         'high_resolution': main_window.ui.actionHigh_resolution.isChecked(),
         'trig_stabilizer_enabled': s.trig_stabilizer_enabled,
         'extra_trig_stabilizer_enabled': s.extra_trig_stabilizer_enabled,
+        'oversampling_controls': main_window.ui.actionOversampling_controls.isChecked(),
     }
 
     # Math channels
@@ -194,6 +209,12 @@ def load_setup(main_window):
     if 'triggertimethresh' in setup:
         s.triggertimethresh = setup['triggertimethresh']
         main_window.ui.totBox.setValue(s.triggertimethresh)
+    if 'trigger_delay' in setup:
+        s.trigger_delay = setup['trigger_delay']
+        main_window.ui.trigger_delay_box.setValue(s.trigger_delay[s.activeboard])
+    if 'trigger_holdoff' in setup:
+        s.trigger_holdoff = setup['trigger_holdoff']
+        main_window.ui.trigger_holdoff_box.setValue(s.trigger_holdoff[s.activeboard])
     if 'doexttrig' in setup:
         s.doexttrig = setup['doexttrig']
     if 'doextsmatrig' in setup:
@@ -262,6 +283,8 @@ def load_setup(main_window):
     if 'reference_visible' in setup:
         # Convert string keys to integers
         main_window.reference_visible = {int(k): v for k, v in setup['reference_visible'].items()}
+    if 'show_reference' in setup:
+        main_window.ui.actionShow_Reference.setChecked(setup['show_reference'])
 
     # Plot manager settings
     if 'line_width' in setup:
@@ -299,6 +322,16 @@ def load_setup(main_window):
         main_window.ui.actionPan_and_zoom.setChecked(setup['pan_and_zoom'])
         main_window.plot_manager.set_pan_and_zoom(setup['pan_and_zoom'])
 
+    # Cursor menu states
+    if 'cursors_visible' in setup:
+        main_window.ui.actionCursors.setChecked(setup['cursors_visible'])
+    if 'time_relative' in setup:
+        main_window.ui.actionTime_relative.setChecked(setup['time_relative'])
+    if 'snap_to_waveform' in setup:
+        main_window.ui.actionSnap_to_waveform.setChecked(setup['snap_to_waveform'])
+    if 'risetime_fit_lines' in setup:
+        main_window.ui.actionRisetime_fit_lines.setChecked(setup['risetime_fit_lines'])
+
     # Measurement menu states
     if 'measure_mean' in setup:
         main_window.ui.actionMean.setChecked(setup['measure_mean'])
@@ -312,6 +345,8 @@ def load_setup(main_window):
         main_window.ui.actionVpp.setChecked(setup['measure_vpp'])
     if 'measure_freq' in setup:
         main_window.ui.actionFreq.setChecked(setup['measure_freq'])
+    if 'measure_period' in setup:
+        main_window.ui.actionPeriod.setChecked(setup['measure_period'])
     if 'measure_risetime' in setup:
         main_window.ui.actionRisetime.setChecked(setup['measure_risetime'])
     if 'measure_risetime_error' in setup:
@@ -320,6 +355,8 @@ def load_setup(main_window):
         main_window.ui.actionEdge_fit_method.setChecked(setup['measure_edge_fit'])
     if 'measure_trig_thresh' in setup:
         main_window.ui.actionTrigger_thresh.setChecked(setup['measure_trig_thresh'])
+    if 'measure_trig_thresh_mv' in setup:
+        main_window.ui.actionTrigger_thresh_mV.setChecked(setup['measure_trig_thresh_mv'])
     if 'measure_n_persist' in setup:
         main_window.ui.actionN_persist_lines.setChecked(setup['measure_n_persist'])
     # Handle new separate temperature settings
@@ -334,6 +371,13 @@ def load_setup(main_window):
         # Backward compatibility: if old setting exists, apply to both
         main_window.ui.actionBoard_temperature.setChecked(setup['measure_temps'])
 
+    # Active measurements in table
+    if 'active_measurements' in setup:
+        # Restore active measurements
+        main_window.measurements.active_measurements.clear()
+        for measurement_name, channel_key in setup['active_measurements']:
+            main_window.measurements.active_measurements[(measurement_name, channel_key)] = True
+
     # Other settings
     if 'high_resolution' in setup:
         main_window.ui.actionHigh_resolution.setChecked(setup['high_resolution'])
@@ -344,6 +388,12 @@ def load_setup(main_window):
     if 'extra_trig_stabilizer_enabled' in setup:
         s.extra_trig_stabilizer_enabled = setup['extra_trig_stabilizer_enabled']
         main_window.ui.actionToggle_extra_trig_stabilizer.setChecked(s.extra_trig_stabilizer_enabled)
+    if 'oversampling_controls' in setup:
+        main_window.ui.actionOversampling_controls.setChecked(setup['oversampling_controls'])
+        # Apply the oversampling controls state
+        is_enabled = setup['oversampling_controls']
+        main_window.ui.ToffBox.setEnabled(is_enabled)
+        main_window.ui.tadBox.setEnabled(is_enabled)
 
     # Active board/channel (restore last to trigger UI updates)
     if 'activeboard' in setup:
@@ -357,6 +407,9 @@ def load_setup(main_window):
     for board_idx in range(s.num_board):
         main_window._sync_board_settings_to_hardware(board_idx)
         main_window.controller.send_trigger_info(board_idx)
+        # Send trigger delay and holdoff if they were restored
+        if 'trigger_delay' in setup or 'trigger_holdoff' in setup:
+            main_window.controller.send_trigger_delay(board_idx)
 
     # Update the display
     main_window.select_channel()  # This will update all UI elements
