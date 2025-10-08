@@ -469,22 +469,13 @@ always @ (posedge clk) begin
       end
 
       14 : begin // read-register function
-         // Returns "register" (some are wires) value indentified by a number in rx_data[1]
+         // Returns register or wire value indentified by a number in rx_data[1]
          case (rx_data[1])
             0 : o_tdata <= {22'd0, ram_preoffset};
             1 : o_tdata <= {22'd0, ram_address_triggered_sync};
             2 : o_tdata <= {28'd0, spistate};
-            3 : o_tdata <= version;
-            4 : o_tdata <= {24'd0, boardin_sync};
-            5 : o_tdata <= {24'd0, acqstate_sync};
-            6 : o_tdata <= eventcounter_sync;
-            7 : o_tdata <= {12'd0, sample_triggered_sync};
-            8 : o_tdata <= {24'd0, downsamplemergingcounter_triggered_sync};
-            9 : o_tdata <= {24'd0, downsamplemerging};
-            10: o_tdata <= {27'd0, downsample};
-            11: o_tdata <= {31'd0, highres};
-            12: o_tdata <= {20'd0, upperthresh};
-            13: o_tdata <= {31'd0, flash_busy};
+            // ...
+            13: o_tdata <= {31'd0, flash_busy}; // actually using this one
             default: o_tdata <= 0;
          endcase
          `SEND_STD_USB_RESPONSE

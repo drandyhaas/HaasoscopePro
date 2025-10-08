@@ -189,7 +189,7 @@ always @ (posedge clklvds) begin
       downsamplecounter <= 1;
       downsamplemergingcounter <= 1;
       triggercounter <= 0; // set to 0 as this register will be used to count in pre-aquisition
-      trigger_delay_counter <= 8'd1; // set to 1 so it will go to 250 right away if trigger_delay is 1
+      trigger_delay_counter <= 8'd1; // set to 1 so it will go to 250 right away if trigger_delay is 1... we already had a 1 clock tick delay from going to 242
       current_active_trigger_type <= triggertype_sync;
       case(triggertype_sync)
          8'd0 : ; // disable conditional triggering
@@ -227,68 +227,67 @@ always @ (posedge clklvds) begin
    end
 
    // edge trigger (1)
-   1 : begin // ready for first part of trigger condition to be met
-      if (downsamplecounter[downsample_sync] && (downsamplemergingcounter==downsamplemerging_sync) && (trigger_holdoff_counter!=8'hff) ) trigger_holdoff_counter <= trigger_holdoff_counter + 8'd1; // count how long we fail to pass the threshold for (but don't roll over)
+   1 : begin // ready for first part of trigger condition to be met: be below the threshold at some sample if rising edge, or above the threshold at some sample if falling edge
       if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
       else begin
          for (i=0;i<10;i=i+1) begin
             if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && // if in single channel mode OR triggering on channel 0
                ( (samplevalue[ 0+i]<lowerthresh_sync && rising) || (samplevalue[ 0+i]>upperthresh_sync && !rising) ) ) acqstate <= 8'd2;
-            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
+            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && // see if we actually also pass the second step in this step (there are 40 samples per clock tick!)
                ( (samplevalue[ 0+i]<lowerthresh_sync && !rising) || (samplevalue[ 0+i]>upperthresh_sync && rising) ) ) sample1_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
             else sample1_triggered[9-i] <= 1'b0;
             
             if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && // if in single channel mode OR triggering on channel 1
                ( (samplevalue[10+i]<lowerthresh_sync && rising) || (samplevalue[10+i]>upperthresh_sync && !rising) ) ) acqstate <= 8'd2;
-            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
+            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && // see if we actually also pass the second step in this step (there are 40 samples per clock tick!)
                ( (samplevalue[10+i]<lowerthresh_sync && !rising) || (samplevalue[10+i]>upperthresh_sync && rising) ) ) sample2_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
             else sample2_triggered[9-i] <= 1'b0;
             
             if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && // if in single channel mode OR triggering on channel 0
                ( (samplevalue[20+i]<lowerthresh_sync && rising) || (samplevalue[20+i]>upperthresh_sync && !rising) ) ) acqstate <= 8'd2;
-            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
+            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && // see if we actually also pass the second step in this step (there are 40 samples per clock tick!)
                ( (samplevalue[20+i]<lowerthresh_sync && !rising) || (samplevalue[20+i]>upperthresh_sync && rising) ) ) sample3_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
             else sample3_triggered[9-i] <= 1'b0;
             
             if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && // if in single channel mode OR triggering on channel 1
                ( (samplevalue[30+i]<lowerthresh_sync && rising) || (samplevalue[30+i]>upperthresh_sync && !rising) ) ) acqstate <= 8'd2;
-            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
+            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && // see if we actually also pass the second step in this step (there are 40 samples per clock tick!)
                ( (samplevalue[30+i]<lowerthresh_sync && !rising) || (samplevalue[30+i]>upperthresh_sync && rising) ) ) sample4_triggered[9-i] <= 1'b1; // remember the samples that caused the trigger
             else sample4_triggered[9-i] <= 1'b0;
          end
       end
    end
-   2 : begin // ready for second part of trigger condition to be met
+   2 : begin // ready for second part of trigger condition to be met: be above the threshold at some sample if rising edge, or below the threshold at some sample if falling edge
       if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
       else begin
          firingsecondstep=1'b0;
          for (i=0;i<10;i=i+1) begin
-            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
-               ( (samplevalue[ 0+i]<lowerthresh_sync && !rising) || (samplevalue[ 0+i]>upperthresh_sync && rising) ) ) begin
+            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && // if in single channel mode OR triggering on channel 0
+               ( (samplevalue[ 0+i]<lowerthresh_sync && !rising) || (samplevalue[ 0+i]>upperthresh_sync && rising) ) ) begin // see if we pass
                firingsecondstep=1'b1;
                if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
                   sample1_triggered[10+9-i] <= 1'b1; // remember the samples that caused the trigger
                   downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
                end
             end
-            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
-               ( (samplevalue[10+i]<lowerthresh_sync && !rising) || (samplevalue[10+i]>upperthresh_sync && rising) ) ) begin
+            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && // if in single channel mode OR triggering on channel 1
+               ( (samplevalue[10+i]<lowerthresh_sync && !rising) || (samplevalue[10+i]>upperthresh_sync && rising) ) ) begin // see if we pass
                firingsecondstep=1'b1;
                if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
                   sample2_triggered[10+9-i] <= 1'b1; // remember the samples that caused the trigger
                   downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
                end
             end
-            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && 
-               ( (samplevalue[20+i]<lowerthresh_sync && !rising) || (samplevalue[20+i]>upperthresh_sync && rising) ) ) begin
+            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b0) && // if in single channel mode OR triggering on channel 0
+               ( (samplevalue[20+i]<lowerthresh_sync && !rising) || (samplevalue[20+i]>upperthresh_sync && rising) ) ) begin // see if we pass
                firingsecondstep=1'b1;
                if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
                   sample3_triggered[10+9-i] <= 1'b1; // remember the samples that caused the trigger
                   downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
                end
             end
-            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && 
-               ( (samplevalue[30+i]<lowerthresh_sync && !rising) || (samplevalue[30+i]>upperthresh_sync && rising) ) ) begin
+            if ( (channeltype_sync[0]==1'b0 || triggerchan_sync==1'b1) && // if in single channel mode OR triggering on channel 1
+               ( (samplevalue[30+i]<lowerthresh_sync && !rising) || (samplevalue[30+i]>upperthresh_sync && rising) ) ) begin // see if we pass
                firingsecondstep=1'b1;
                if (downsamplemergingcounter_triggered == -8'd1) begin // just the first time
                   sample4_triggered[10+9-i] <= 1'b1; // remember the samples that caused the trigger
@@ -296,21 +295,30 @@ always @ (posedge clklvds) begin
                end
             end
          end
-         if (firingsecondstep && (trigger_holdoff_counter >= trigger_holdoff_sync) ) begin // require holdoff to be met
-            if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) tot_counter <= tot_counter + 8'd1;
-            if (tot_counter>=triggerToT_sync && (triggerToT_sync==0 || downsamplemergingcounter==downsamplemergingcounter_triggered) ) begin
-               if (trigger_delay_sync==8'd0) begin
-                  ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-                  lvdsout_trig = 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
-                  lvdsout_trig_b = 1'b1; // and backwards
-                  acqstate <= 8'd250;
+         if (firingsecondstep) begin // we decided we passed
+            if (trigger_holdoff_counter >= trigger_holdoff_sync) begin // require holdoff to be met
+               if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) tot_counter <= tot_counter + 8'd1; // count for ToT
+               if (tot_counter>=triggerToT_sync && (triggerToT_sync==0 || downsamplemergingcounter==downsamplemergingcounter_triggered) ) begin // if triggerToT_sync is 0 then downsamplemergingcounter_triggered was set to downsamplemergingcounter in this clock tick... we just don't know it yet because of <=
+                  if (trigger_delay_sync==8'd0) begin // if we're not doing trigger delay, fire immediately
+                     ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+                     lvdsout_trig = 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
+                     lvdsout_trig_b = 1'b1; // and backwards
+                     acqstate <= 8'd250; // fire trigger
+                  end
+                  else acqstate <= 8'd242; // wait, then fire trigger
                end
-               else acqstate <= 8'd242; // wait, then trigger
+            end
+            else begin
+               // not enough holdoff, reset and go back
+               trigger_holdoff_counter <= 0;
+               acqstate <= 8'd1;
             end
          end
          else begin
-            trigger_holdoff_counter <= 0;
-            acqstate <= 8'd1; // not enough holdoff, go back
+            tot_counter<=0; // if we didn't pass, reset the counter
+            
+            // count how long we fail to pass the threshold for (but don't roll over)
+            if (downsamplecounter[downsample_sync] && (downsamplemergingcounter==downsamplemerging_sync) && (trigger_holdoff_counter!=8'hff) ) trigger_holdoff_counter <= trigger_holdoff_counter + 8'd1;
          end
       end
    end
@@ -319,17 +327,17 @@ always @ (posedge clklvds) begin
       if (current_active_trigger_type != triggertype_sync) acqstate <= 0;
       else begin
          if (lvdsin_trig_sync && firstlast_sync!=2'd1) begin // don't pay attention if we're the first board
-            ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
             sample_triggered = 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
             downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
+            ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
             if (current_active_trigger_type==30) lvdsout_trig_b = 1; // echo back, if we're supposed to, for measuring time offset
             forwardsbackwardsexttrig <= 2'b01; // tell next state to only fire forwards still
             acqstate <= 8'd250;
          end
          if (lvdsin_trig_b_sync && firstlast_sync!=2'd2) begin // don't pay attention if we're the last board
-            ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
             sample_triggered = 0; // not used, since we didn't measure the trigger edge - will take it from the board that caused the trigger
             downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
+            ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
             if (current_active_trigger_type==30) lvdsout_trig = 1; // echo back, if we're supposed to, for measuring time offset
             forwardsbackwardsexttrig <= 2'b10; // tell next state to only fire backwards still
             acqstate <= 8'd250;
@@ -338,10 +346,11 @@ always @ (posedge clklvds) begin
    end
 
    6: begin // force waveform capture (4)         
+      downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
+      sample_triggered = 0; // we didn't measure the trigger edge
       ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
       lvdsout_trig = 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
       lvdsout_trig_b = 1'b1; // and backwards
-      downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that caused this trigger
       acqstate <= 8'd250;
    end
    
@@ -354,13 +363,13 @@ always @ (posedge clklvds) begin
          if (exttrig_rising && tot_counter>=triggerToT_sync) begin
             downsamplemergingcounter_triggered <= downsamplemergingcounter; // remember the downsample that we were on when we got this trigger
             sample_triggered = 0; // we didn't measure the trigger edge - going to be some jitter unfortunately
-            if (trigger_delay_sync==8'd0) begin
+            if (trigger_delay_sync==8'd0) begin // if we're not doing trigger delay, fire immediately
                ram_address_triggered <= ram_wr_address - triggerToT_sync + extra_trigger_delay; // remember where the trigger happened, + trigger delay
                lvdsout_trig = 1'b1; // tell the others forwards
                lvdsout_trig_b = 1'b1; // tell the others backwards
-               acqstate <= 8'd250;
+               acqstate <= 8'd250; // fire trigger
             end
-            else acqstate <= 8'd242; // wait, then trigger
+            else acqstate <= 8'd242; // wait, then fire trigger
          end
       end
    end
