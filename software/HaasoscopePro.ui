@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>1225</width>
-    <height>895</height>
+    <height>983</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -339,7 +339,7 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>60</y>
+           <y>85</y>
            <width>51</width>
            <height>22</height>
           </rect>
@@ -350,7 +350,7 @@
           </font>
          </property>
          <property name="toolTip">
-          <string>Time over threshold required to trigger (samples)</string>
+          <string>Time over threshold required to trigger</string>
          </property>
          <property name="accelerated">
           <bool>true</bool>
@@ -369,7 +369,7 @@
          <property name="geometry">
           <rect>
            <x>70</x>
-           <y>60</y>
+           <y>85</y>
            <width>51</width>
            <height>16</height>
           </rect>
@@ -387,7 +387,7 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>85</y>
+           <y>60</y>
            <width>51</width>
            <height>22</height>
           </rect>
@@ -417,7 +417,7 @@
          <property name="geometry">
           <rect>
            <x>70</x>
-           <y>85</y>
+           <y>60</y>
            <width>51</width>
            <height>16</height>
           </rect>

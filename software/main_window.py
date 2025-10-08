@@ -663,6 +663,11 @@ class MainWindow(TemplateBaseClass):
                 # This channel either has no reference or its reference is hidden
                 self.plot_manager.hide_reference_plot(i)
 
+        # Update trigger spinbox tooltips with new timing
+        self.update_trigger_spinbox_tooltip(self.ui.totBox, "Time over threshold required to trigger")
+        self.update_trigger_spinbox_tooltip(self.ui.trigger_delay_box, "Time to wait before actually firing trigger")
+        self.update_trigger_spinbox_tooltip(self.ui.trigger_holdoff_box, "Time needed failing threshold before passing threshold")
+
     def handle_critical_error(self, title, message):
         """
         This slot is called when the hardware controller signals an unrecoverable error.
@@ -902,6 +907,11 @@ class MainWindow(TemplateBaseClass):
         # Update measurement table header to reflect new active channel (if not measuring a math channel)
         if self.measurements.selected_math_channel is None:
             self.measurements.update_measurement_header()
+
+        # Update trigger spinbox tooltips
+        self.update_trigger_spinbox_tooltip(self.ui.totBox, "Time over threshold required to trigger")
+        self.update_trigger_spinbox_tooltip(self.ui.trigger_delay_box, "Time to wait before actually firing trigger")
+        self.update_trigger_spinbox_tooltip(self.ui.trigger_holdoff_box, "Time needed failing threshold before passing threshold")
 
     def trigger_pos_changed(self, value):
         """
@@ -1639,18 +1649,47 @@ class MainWindow(TemplateBaseClass):
     def tot_changed(self, value):
         self.state.triggertimethresh = value
         self.controller.send_trigger_info_all()
+        self.update_trigger_spinbox_tooltip(self.ui.totBox, "Time over threshold required to trigger")
 
     def trigger_delay_changed(self, value):
         """Handle changes to trigger delay spinbox."""
         board = self.state.activeboard
         self.state.trigger_delay[board] = value
         self.controller.send_trigger_delay(board)
+        self.update_trigger_spinbox_tooltip(self.ui.trigger_delay_box, "Time to wait before actually firing trigger")
 
     def trigger_holdoff_changed(self, value):
         """Handle changes to trigger holdoff spinbox."""
         board = self.state.activeboard
         self.state.trigger_holdoff[board] = value
         self.controller.send_trigger_delay(board)
+        self.update_trigger_spinbox_tooltip(self.ui.trigger_holdoff_box, "Time needed failing threshold before passing threshold")
+
+    def update_trigger_spinbox_tooltip(self, spinbox, base_text):
+        """Update tooltip for trigger-related spinboxes to show time duration.
+
+        Args:
+            spinbox: The QSpinBox widget to update
+            base_text: The base tooltip text
+        """
+        if self.state.num_board < 1:
+            return
+
+        value = spinbox.value()
+        if value == 0:
+            spinbox.setToolTip(base_text)
+            return
+
+        # Calculate time in nanoseconds: value * downsamplefactor * 40 / samplerate
+        time_ns = value * self.state.downsamplefactor * 40.0 / self.state.samplerate
+
+        # Format with appropriate units
+        from data_processor import format_period
+        time_val, unit = format_period(time_ns, "s", False)
+
+        # Update tooltip
+        tooltip = f"{time_val:.2f} {unit}: {base_text}"
+        spinbox.setToolTip(tooltip)
 
     def lpf_changed(self):
         thetext = self.ui.lpfBox.currentText()
