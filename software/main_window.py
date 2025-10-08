@@ -119,7 +119,8 @@ class MainWindow(TemplateBaseClass):
                                         "Data acquisition has been disabled.")
                 if self.state.firmwareversion < 30:
                     self.ui.trigger_delay_box.setEnabled(False)
-                    print("Warning: Firmware v30+ needed for trigger delay, disabling control.")
+                    self.ui.trigger_holdoff_box.setEnabled(False)
+                    print("Warning: Firmware v30+ needed for trigger delay and holdoff, disabling control.")
 
         else:  # Handle the case where no boards were found
             print("WARNING: No Haasoscope Pro boards found. Running in offline mode.")
