@@ -248,6 +248,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.ToffBox.valueChanged.connect(lambda val: setattr(self.state, 'toff', val))
         self.ui.Auxout_comboBox.currentIndexChanged.connect(self.auxout_changed)
         self.ui.actionToggle_PLL_controls.triggered.connect(self.toggle_pll_controls)
+        self.ui.actionOversampling_controls.triggered.connect(self.toggle_oversampling_controls)
         self.ui.upposButton0.clicked.connect(self.uppos)
         self.ui.upposButton1.clicked.connect(self.uppos1)
         self.ui.upposButton2.clicked.connect(self.uppos2)
@@ -747,6 +748,12 @@ class MainWindow(TemplateBaseClass):
         for i in range(5):
             getattr(self.ui, f"upposButton{i}").setEnabled(not is_enabled)
             getattr(self.ui, f"downposButton{i}").setEnabled(not is_enabled)
+
+    def toggle_oversampling_controls(self):
+        """Shows or hides the oversampling delay and fine delay adjustment buttons."""
+        is_enabled = self.ui.actionOversampling_controls.isChecked()
+        self.ui.ToffBox.setEnabled(is_enabled)
+        self.ui.tadBox.setEnabled(is_enabled)
 
     def force_split_toggled(self, checked):
         self.controller.force_split(self.state.activeboard, checked)

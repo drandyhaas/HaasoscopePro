@@ -2230,6 +2230,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionForce_switch_clocks"/>
     <addaction name="actionClock_reset"/>
     <addaction name="actionToggle_PLL_controls"/>
+    <addaction name="actionOversampling_controls"/>
     <addaction name="actionToggle_trig_stabilizer"/>
     <addaction name="actionToggle_extra_trig_stabilizer"/>
    </widget>
@@ -2770,6 +2771,14 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Period</string>
+   </property>
+  </action>
+  <action name="actionOversampling_controls">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Oversampling controls</string>
    </property>
   </action>
  </widget>
