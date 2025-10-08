@@ -32,10 +32,11 @@ class HardwareController:
     def setup_connection(self, board_idx, usb):
         print(f"Setting up board {board_idx}")
         ver = version(usb, False)
-        if self.state.firmwareversion < 0: self.state.firmwareversion = ver
-        if ver < self.state.firmwareversion:
-            print("Warning - this board has older firmware than another being used!")
-            self.state.firmwareversion = ver
+        self.state.firmwareversion[board_idx] = ver
+        if ver < max(self.state.firmwareversion):
+            print("Warning - this board has older firmware than another being used:",max(self.state.firmwareversion))
+        if ver > min(self.state.firmwareversion) and min(self.state.firmwareversion) > -1:
+            print("Warning - this board has newer firmware than another being used:",min(self.state.firmwareversion))
         self.adfreset(board_idx)
         if setupboard(usb, self.state.dopattern, self.state.dotwochannel[board_idx], self.state.dooverrange,
                       self.state.basevoltage == 200) > 0:

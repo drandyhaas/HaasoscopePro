@@ -109,15 +109,16 @@ class MainWindow(TemplateBaseClass):
             # Firmware Version Check (only if setup passed)
             if self.setup_successful:
                 req_firmware_ver = 28
-                if self.state.firmwareversion < req_firmware_ver:
+                min_firmware_ver = min(self.state.firmwareversion)
+                if min_firmware_ver < req_firmware_ver:
                     if not self.state.paused: self.dostartstop()
                     self.ui.runButton.setEnabled(False)
                     QMessageBox.warning(self, "Firmware Update Required",
                                         f"The firmware on a board is outdated.\n"
-                                        f"Firmware {self.state.firmwareversion} found but v{req_firmware_ver}+ required\n\n"
+                                        f"Firmware {min_firmware_ver} found but v{req_firmware_ver}+ required\n\n"
                                         "Please update to the latest firmware.\n"
                                         "Data acquisition has been disabled.")
-                if self.state.firmwareversion < 30:
+                if min_firmware_ver < 30:
                     self.ui.trigger_delay_box.setEnabled(False)
                     self.ui.trigger_holdoff_box.setEnabled(False)
                     print("Warning: Firmware v30+ needed for trigger delay and holdoff, disabling control.")
@@ -1115,7 +1116,7 @@ class MainWindow(TemplateBaseClass):
 
     def update_firmware(self):
         board = self.state.activeboard
-        reply = QMessageBox.question(self, 'Confirmation', f'Update firmware on board {board} to mine?',
+        reply = QMessageBox.question(self, 'Confirmation', f'Update firmware on board {board} with firmware {self.state.firmwareversion[board]}\nto the one in this software?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.No: return
         if not self.state.paused: self.dostartstop()  # Pause
@@ -1125,7 +1126,7 @@ class MainWindow(TemplateBaseClass):
 
     def verify_firmware(self):
         board = self.state.activeboard
-        reply = QMessageBox.question(self, 'Confirmation', f'Verify firmware on board {board} matches mine?',
+        reply = QMessageBox.question(self, 'Confirmation', f'Verify firmware on board {board} with firmware {self.state.firmwareversion[board]}\nmatches the one in this software?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.No: return
         if not self.state.paused: self.dostartstop()  # Pause
