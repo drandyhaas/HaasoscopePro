@@ -62,7 +62,7 @@ if __name__ == '__main__':
     font = app.font()
     font.setPixelSize(11)
     app.setFont(font)
-    if sys.platform.startswith('win'): app.setWindowIcon(QIcon(get_pwd()+'\icon.png'))
+    if sys.platform.startswith('win'): app.setWindowIcon(QIcon(get_pwd()+'\\icon.png'))
     else: app.setWindowIcon(QIcon(get_pwd()+'/icon.png'))
 
     win = None
