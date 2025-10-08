@@ -18,4 +18,4 @@ copy icon.png ..\..\HaasoscopePro_Windows\Windows_HaasoscopeProQt\
 rmdir /s /q build
 rmdir /s /q  dist
 
-tar -a -c -f "..\..\HaasoscopePro_Windows\HaasoscopePro_Windows.zip" "..\..\HaasoscopePro_Windows"
+powershell Compress-Archive -Path "..\..\HaasoscopePro_Windows" -DestinationPath "..\..\HaasoscopePro_Windows\HaasoscopePro_Windows.zip"
