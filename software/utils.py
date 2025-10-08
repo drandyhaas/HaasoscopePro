@@ -13,7 +13,7 @@ def get_pwd() -> str:
     path_string = sys.path[0]
     pwd = path_string
     # Handle cases where the script is run from a bundled executable folder
-    for target in ["Mac_HaasoscopeProQt", "Windows_HaasoscopeProQt"]:
+    for target in ["Mac_HaasoscopeProQt", "Windows_HaasoscopeProQt", "Linux_HaasoscopeProQt"]:
         index = path_string.find(target)
         if index != -1:
             pwd = path_string[:index + len(target)]
