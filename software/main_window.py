@@ -1572,6 +1572,7 @@ class MainWindow(TemplateBaseClass):
     def rising_falling_changed(self, index):
         s = self.state
         active_board = s.activeboard
+        if s.num_board<1: return
 
         # Index mapping:
         # 0: Rising (Ch 0), 1: Falling (Ch 0), 2: Rising (Ch 1), 3: Falling (Ch 1)
