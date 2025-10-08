@@ -44,7 +44,7 @@ module triggerer(
    input reg [4:0]   downsample,
    input reg [1:0]   firstlast, // 1 for first, 2 for last, 0 for neither
    
-   input reg [7:0]   trigger_delay // clock ticks to wait in acqstate 249 before firing trigger (going to acqstate 250)
+   input reg [7:0]   trigger_delay // clock ticks to wait before firing trigger (going to acqstate 250)
 );
 
 //exttrigin is boardin[4], SMA in on back panel
@@ -138,7 +138,7 @@ always @ (posedge clklvds) begin
          end
       end
       else begin
-         downsamplecounter <= downsamplecounter  +1;
+         downsamplecounter <= downsamplecounter + 1;
          ram_wr <= 1'b0;
       end
    end
@@ -182,7 +182,7 @@ always @ (posedge clklvds) begin
       downsamplecounter <= 1;
       downsamplemergingcounter <= 1;
       triggercounter <= 0; // set to 0 as this register will be used to count in pre-aquisition
-      trigger_delay_counter <= 8'd1; // set to 1 so it will go to 250 right after 249 if trigger_delay is 1
+      trigger_delay_counter <= 8'd1; // set to 1 so it will go to 250 right away if trigger_delay is 1
       current_active_trigger_type <= triggertype_sync;
       case(triggertype_sync)
          8'd0 : ; // disable conditional triggering
@@ -348,15 +348,17 @@ always @ (posedge clklvds) begin
    end
 
    242 : begin // wait before actually firing edge trigger, if trigger_delay>0
-      if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) begin
-         if (trigger_delay_counter>=trigger_delay_sync) begin
-            ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
-            lvdsout_trig = 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
-            lvdsout_trig_b = 1'b1; // and backwards
-            acqstate <= 8'd250; // trigger
+      //if (downsamplecounter[downsample_sync] && downsamplemergingcounter==downsamplemerging_sync) begin
+         if (downsamplemergingcounter==downsamplemergingcounter_triggered) begin
+            if (trigger_delay_counter>=trigger_delay_sync) begin
+               ram_address_triggered <= ram_wr_address - triggerToT_sync; // remember where the trigger happened
+               lvdsout_trig = 1'b1; // tell the others, important to do this on the right downsamplemergingcounter
+               lvdsout_trig_b = 1'b1; // and backwards
+               acqstate <= 8'd250; // trigger
+            end
+            else trigger_delay_counter <= trigger_delay_counter+8'd1;
          end
-         else trigger_delay_counter <= trigger_delay_counter+8'd1;
-      end
+      //end
    end
 
    250 : begin // triggered, now taking more data
