@@ -690,6 +690,9 @@
         <property name="toolTip">
          <string>Memory depth / 40</string>
         </property>
+        <property name="accelerated">
+         <bool>true</bool>
+        </property>
         <property name="suffix">
          <string/>
         </property>
@@ -2186,6 +2189,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionMinimum"/>
     <addaction name="actionVpp"/>
     <addaction name="actionFreq"/>
+    <addaction name="actionPeriod"/>
     <addaction name="actionRisetime"/>
     <addaction name="actionRisetime_error"/>
     <addaction name="separator"/>
@@ -2686,6 +2690,14 @@ Outlined if triggering on this channel</string>
   <action name="actionLoad_reference_lines">
    <property name="text">
     <string>Load reference lines</string>
+   </property>
+  </action>
+  <action name="actionPeriod">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Period</string>
    </property>
   </action>
  </widget>
