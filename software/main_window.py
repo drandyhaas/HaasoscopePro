@@ -117,6 +117,9 @@ class MainWindow(TemplateBaseClass):
                                         f"Firmware {self.state.firmwareversion} found but v{req_firmware_ver}+ required\n\n"
                                         "Please update to the latest firmware.\n"
                                         "Data acquisition has been disabled.")
+                if self.state.firmwareversion < 30:
+                    self.ui.trigger_delay_box.setEnabled(False)
+                    print("Warning: Firmware v30+ needed for trigger delay, disabling control.")
 
         else:  # Handle the case where no boards were found
             print("WARNING: No Haasoscope Pro boards found. Running in offline mode.")
