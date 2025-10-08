@@ -188,7 +188,7 @@ class CursorManager:
         # trigger_delay is in units where 1 = downsamplefactor*40/samplerate nanoseconds
         trigger_delay_value = self.state.trigger_delay[active_board]
         trigger_delay_ns = trigger_delay_value * self.state.downsamplefactor * 40.0 / self.state.samplerate
-        trigger_time_with_delay_ns = trigger_time_ns + trigger_delay_ns
+        trigger_time_with_delay_ns = trigger_time_ns - trigger_delay_ns
 
         # Format with appropriate units
         from data_processor import format_period
@@ -200,7 +200,7 @@ class CursorManager:
             f"Trigger info (Board {active_board} Channel {active_channel}):",
             f"  Threshold: {threshold_mV:.1f} mV",
             f"  Trigger time: {trig_time_val:.2f} {trig_time_unit}"]
-        if trigger_delay_value>0: info_lines.append(f"  Trigger time + delay: {trig_delay_time_val:.2f} {trig_delay_time_unit}")
+        if trigger_delay_value>0: info_lines.append(f"  Trigger time - delay: {trig_delay_time_val:.2f} {trig_delay_time_unit}")
         info_text = "<br>".join(info_lines)
         self.cursor_labels['trigger_thresh'].setHtml(info_text)
 
