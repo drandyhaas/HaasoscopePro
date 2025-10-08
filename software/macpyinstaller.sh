@@ -10,12 +10,13 @@ mkdir "../../HaasoscopePro_Mac/adc board firmware"
 mkdir "../../HaasoscopePro_Mac/adc board firmware/output_files"
 cp "../adc board firmware/output_files/coincidence_auto.rpd" "../../HaasoscopePro_Mac/adc board firmware/output_files/"
 
-mv dist/HaasoscopeProQt ../../HaasoscopePro_dist/Mac_HaasoscopeProQt
+mv dist/HaasoscopeProQt ../../HaasoscopePro_Mac/Mac_HaasoscopeProQt
 
-cp *.ui ../../HaasoscopePro_dist/Mac_HaasoscopeProQt/
-cp icon.png ../../HaasoscopePro_dist/Mac_HaasoscopeProQt/
+cp *.ui ../../HaasoscopePro_Mac/Mac_HaasoscopeProQt/
+cp icon.png ../../HaasoscopePro_Mac/Mac_HaasoscopeProQt/
 
 rm -rf build
 rm -rf dist
 
-tar -a -c -f "..\..\HaasoscopePro_Mac\HaasoscopePro_Mac.zip" "..\..\HaasoscopePro_Mac"
+ditto -c -k --sequesterRsrc --keepParent ../../HaasoscopePro_Mac ../../HaasoscopePro_Mac.zip
+mv ../../HaasoscopePro_Mac.zip ../../HaasoscopePro_Mac/
