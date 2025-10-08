@@ -201,12 +201,9 @@ class MainWindow(TemplateBaseClass):
         self.ui.threshold.valueChanged.connect(self.trigger_level_changed)
         self.ui.thresholdDelta.valueChanged.connect(self.trigger_delta_changed)
         self.ui.thresholdPos.valueChanged.connect(self.trigger_pos_changed)
-        self.ui.trigchan_comboBox.currentIndexChanged.connect(self.trigger_chan_changed)
         self.ui.risingfalling_comboBox.currentIndexChanged.connect(self.rising_falling_changed)
         self.ui.totBox.valueChanged.connect(self.tot_changed)
         self.ui.trigger_delay_box.valueChanged.connect(self.trigger_delay_changed)
-        self.ui.exttrigCheck.stateChanged.connect(self.exttrig_changed)
-        self.ui.extsmatrigCheck.stateChanged.connect(self.extsmatrig_changed)
 
         # Channel controls
         self.ui.boardBox.valueChanged.connect(self.select_channel)
@@ -324,16 +321,6 @@ class MainWindow(TemplateBaseClass):
         self.ui.oversampCheck.setEnabled(can_change_oversampling)
         self.ui.interleavedCheck.setEnabled(can_change_oversampling and self.ui.oversampCheck.isChecked())
 
-        # Get the model item for "Channel 1" (which is at index 1)
-        chan1_item = self.ui.trigchan_comboBox.model().item(1)
-        if chan1_item:
-            # Only enable the "Channel 1" option if two-channel mode is active
-            chan1_item.setEnabled(s.dotwochannel[s.activeboard])
-
-        # If not in two-channel mode, ensure "Channel 0" is selected
-        if not s.dotwochannel[s.activeboard] and self.ui.trigchan_comboBox.currentIndex() == 1:
-            self.ui.trigchan_comboBox.setCurrentIndex(0)
-
         # Existing logic for chanBox
         if s.dotwochannel[s.activeboard]:
             self.ui.chanBox.setMaximum(s.num_chan_per_board - 1)
@@ -341,6 +328,15 @@ class MainWindow(TemplateBaseClass):
             if self.ui.chanBox.value() != 0:
                 self.ui.chanBox.setValue(0)
             self.ui.chanBox.setMaximum(0)
+
+        # Enable/disable Ch 1 trigger options based on two-channel mode
+        model = self.ui.risingfalling_comboBox.model()
+        is_two_channel = s.dotwochannel[s.activeboard]
+        # Indices 2 and 3 are "Rising (Ch 1)" and "Falling (Ch 1)"
+        for idx in [2, 3]:
+            item = model.item(idx)
+            if item:
+                item.setEnabled(is_two_channel)
 
         # Loop through all boards to set plot line visibility
         for board_idx in range(s.num_board):
@@ -828,14 +824,6 @@ class MainWindow(TemplateBaseClass):
         is_ext = bool(s.doexttrig[s.activeboard])
         is_sma = bool(s.doextsmatrig[s.activeboard])
 
-        # Update the checked state of the boxes
-        self.ui.exttrigCheck.setChecked(is_ext)
-        self.ui.extsmatrigCheck.setChecked(is_sma)
-
-        # Ensure a box is disabled if the other trigger mode is active
-        self.ui.exttrigCheck.setEnabled(not is_sma)
-        self.ui.extsmatrigCheck.setEnabled(not is_ext)
-
         # Update UI widgets to reflect the state of the newly selected channel
         self.ui.gainBox.setValue(s.gain[s.activexychannel])
         self.ui.offsetBox.setValue(s.offset[s.activexychannel])
@@ -847,9 +835,18 @@ class MainWindow(TemplateBaseClass):
         self.ui.tadBox.setValue(s.tad[s.activeboard])
         self.ui.trigger_delay_box.setValue(s.trigger_delay[s.activeboard])
 
-        # Update rising/falling trigger
-        is_falling = s.fallingedge[s.activeboard]
-        self.ui.risingfalling_comboBox.setCurrentIndex(int(is_falling))
+        # Update the consolidated trigger combo box
+        # Index mapping: 0=Rising Ch0, 1=Falling Ch0, 2=Rising Ch1, 3=Falling Ch1, 4=Other boards, 5=External SMA
+        if is_sma:
+            trigger_index = 5
+        elif is_ext:
+            trigger_index = 4
+        else:
+            trigger_channel = s.triggerchan[s.activeboard]
+            is_falling = s.fallingedge[s.activeboard]
+            trigger_index = trigger_channel * 2 + int(is_falling)
+
+        self.ui.risingfalling_comboBox.setCurrentIndex(trigger_index)
 
         # Update channel color preview box in the UI
         p = self.ui.chanColor.palette()
@@ -1329,12 +1326,19 @@ class MainWindow(TemplateBaseClass):
             s.fft_enabled[second_chan_name] = False
             if self.fftui:
                 self.fftui.clear_plot(second_chan_name)
-            
+
             # If no other channels have FFT enabled, hide the window
             if not any(s.fft_enabled.values()):
                 self.ui.fftCheck.setChecked(False) # Uncheck the main box
                 if self.fftui:
                     self.fftui.hide()
+
+            # If trigger is on Ch 1, switch to Ch 0 with same edge direction
+            current_trigger_index = self.ui.risingfalling_comboBox.currentIndex()
+            if current_trigger_index == 2:  # Rising (Ch 1) -> Rising (Ch 0)
+                self.ui.risingfalling_comboBox.setCurrentIndex(0)
+            elif current_trigger_index == 3:  # Falling (Ch 1) -> Falling (Ch 0)
+                self.ui.risingfalling_comboBox.setCurrentIndex(1)
 
         # If we are in XY mode and two-channel is turned off, exit XY mode
         if s.xy_mode and not is_two_channel:
@@ -1554,68 +1558,82 @@ class MainWindow(TemplateBaseClass):
         self.state.triggerdelta = value
         self.controller.send_trigger_info_all()
 
-    def trigger_chan_changed(self, index):
-        self.state.triggerchan[self.state.activeboard] = index
-        self.controller.send_trigger_info(self.state.activeboard)
-        self.set_channel_frame()
-
     def rising_falling_changed(self, index):
         s = self.state
         active_board = s.activeboard
-        is_falling = (index == 1)
 
-        s.fallingedge[active_board] = is_falling
-        # Assuming trigger types 1=rising, 2=falling
-        s.triggertype[active_board] = 2 if is_falling else 1
+        # Index mapping:
+        # 0: Rising (Ch 0), 1: Falling (Ch 0), 2: Rising (Ch 1), 3: Falling (Ch 1)
+        # 4: Other boards, 5: External SMA
 
-        # Swap Risetime/Falltime measurements for channels on this board
-        if self.measurements:
-            # Determine which measurement names to swap
-            old_time_name = "Risetime" if is_falling else "Falltime"
-            new_time_name = "Falltime" if is_falling else "Risetime"
-            old_error_name = "Risetime error" if is_falling else "Falltime error"
-            new_error_name = "Falltime error" if is_falling else "Risetime error"
+        # Determine if this is an external trigger mode
+        is_other_boards = (index == 4)
+        is_external_sma = (index == 5)
 
-            # Find all measurements for channels on the active board
-            measurements_to_swap = []
-            for measurement_key in list(self.measurements.active_measurements.keys()):
-                measurement_name, channel_key = measurement_key
+        # Update external trigger states
+        old_doexttrig = s.doexttrig[active_board]
+        s.doexttrig[active_board] = is_other_boards
+        s.doextsmatrig[active_board] = is_external_sma
 
-                # Skip global measurements
-                if channel_key == "Global":
-                    continue
+        # For channel-based triggers (indices 0-3)
+        if index < 4:
+            # Determine channel: 0-1 are Ch0, 2-3 are Ch1
+            trigger_channel = 0 if index < 2 else 1
+            # Determine edge: even indices are rising, odd are falling
+            is_falling = (index % 2 == 1)
 
-                # Check if this is a regular channel (not math/reference)
-                if channel_key.startswith("B") and " Ch" in channel_key:
-                    # Parse board number from channel_key like "B0 Ch0"
-                    board_num = int(channel_key.split("B")[1].split(" ")[0])
+            s.triggerchan[active_board] = trigger_channel
+            s.fallingedge[active_board] = is_falling
+            s.triggertype[active_board] = 2 if is_falling else 1
 
-                    # Only swap for channels on the active board
-                    if board_num == active_board:
-                        if measurement_name in [old_time_name, old_error_name]:
-                            measurements_to_swap.append(measurement_key)
+            # Send trigger info to hardware
+            self.controller.send_trigger_info(active_board)
 
-            # Perform the swap
-            for old_key in measurements_to_swap:
-                measurement_name, channel_key = old_key
+            # Swap Risetime/Falltime measurements if edge direction changed
+            if self.measurements:
+                old_time_name = "Risetime" if is_falling else "Falltime"
+                new_time_name = "Falltime" if is_falling else "Risetime"
+                old_error_name = "Risetime error" if is_falling else "Falltime error"
+                new_error_name = "Falltime error" if is_falling else "Risetime error"
 
-                # Determine new measurement name
-                if measurement_name == old_time_name:
-                    new_measurement_name = new_time_name
-                else:  # old_error_name
-                    new_measurement_name = new_error_name
+                measurements_to_swap = []
+                for measurement_key in list(self.measurements.active_measurements.keys()):
+                    measurement_name, channel_key = measurement_key
 
-                # Remove old measurement
-                del self.measurements.active_measurements[old_key]
+                    if channel_key == "Global":
+                        continue
 
-                # Add new measurement
-                new_key = (new_measurement_name, channel_key)
-                self.measurements.active_measurements[new_key] = True
+                    if channel_key.startswith("B") and " Ch" in channel_key:
+                        board_num = int(channel_key.split("B")[1].split(" ")[0])
 
-            # Update the display and menu checkboxes if anything was swapped
-            if measurements_to_swap:
-                self.measurements.update_measurements_display()
-                self.measurements.update_menu_checkboxes()
+                        if board_num == active_board:
+                            if measurement_name in [old_time_name, old_error_name]:
+                                measurements_to_swap.append(measurement_key)
+
+                for old_key in measurements_to_swap:
+                    measurement_name, channel_key = old_key
+
+                    if measurement_name == old_time_name:
+                        new_measurement_name = new_time_name
+                    else:
+                        new_measurement_name = new_error_name
+
+                    del self.measurements.active_measurements[old_key]
+                    new_key = (new_measurement_name, channel_key)
+                    self.measurements.active_measurements[new_key] = True
+
+                if measurements_to_swap:
+                    self.measurements.update_measurements_display()
+                    self.measurements.update_menu_checkboxes()
+
+        # Handle external trigger mode changes
+        if is_other_boards and not old_doexttrig:
+            self.controller.set_exttrig(active_board, True)
+        elif old_doexttrig and not is_other_boards:
+            self.controller.set_exttrig(active_board, False)
+
+        # Update channel frame
+        self.set_channel_frame()
 
     def tot_changed(self, value):
         self.state.triggertimethresh = value
@@ -1626,25 +1644,6 @@ class MainWindow(TemplateBaseClass):
         board = self.state.activeboard
         self.state.trigger_delay[board] = value
         self.controller.send_trigger_delay(board)
-
-    def exttrig_changed(self, checked):
-        board = self.state.activeboard
-        self.state.doexttrig[board] = bool(checked)
-        self.controller.set_exttrig(board, bool(checked))
-        self.ui.extsmatrigCheck.setEnabled(not bool(checked))
-        self.set_channel_frame()
-
-    def extsmatrig_changed(self, checked):
-        """
-        Handles the 'External SMA Trigger' checkbox.
-        This only updates the internal state; no immediate hardware command is sent.
-        """
-        board = self.state.activeboard
-        self.state.doextsmatrig[board] = bool(checked)
-
-        # Update the UI to prevent conflicting trigger sources from being selected
-        self.ui.exttrigCheck.setEnabled(not bool(checked))
-        self.set_channel_frame()
 
     def lpf_changed(self):
         thetext = self.ui.lpfBox.currentText()

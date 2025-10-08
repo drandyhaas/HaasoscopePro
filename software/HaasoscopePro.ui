@@ -335,24 +335,6 @@
         <property name="title">
          <string>Trigger options</string>
         </property>
-        <widget class="QCheckBox" name="exttrigCheck">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>84</y>
-           <width>91</width>
-           <height>17</height>
-          </rect>
-         </property>
-         <property name="font">
-          <font>
-           <family>Arial</family>
-          </font>
-         </property>
-         <property name="text">
-          <string>Other boards</string>
-         </property>
-        </widget>
         <widget class="QSpinBox" name="totBox">
          <property name="geometry">
           <rect>
@@ -443,85 +425,55 @@
           <string>Delta</string>
          </property>
         </widget>
-        <widget class="QCheckBox" name="extsmatrigCheck">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>104</y>
-           <width>91</width>
-           <height>17</height>
-          </rect>
-         </property>
-         <property name="font">
-          <font>
-           <family>Arial</family>
-          </font>
-         </property>
-         <property name="text">
-          <string>External</string>
-         </property>
-        </widget>
         <widget class="QComboBox" name="risingfalling_comboBox">
          <property name="geometry">
           <rect>
            <x>10</x>
            <y>24</y>
-           <width>81</width>
+           <width>101</width>
            <height>21</height>
           </rect>
          </property>
          <property name="toolTip">
-          <string>Whether to use rising or falling edge for this board's trigger</string>
+          <string>Trigger type: rising/falling edge on channel 0/1, other boards, or external SMA</string>
          </property>
          <property name="currentText">
-          <string>Rising</string>
+          <string>Rising (Ch 0)</string>
          </property>
          <property name="currentIndex">
           <number>0</number>
          </property>
          <property name="maxVisibleItems">
-          <number>2</number>
+          <number>6</number>
          </property>
          <item>
           <property name="text">
-           <string>Rising</string>
+           <string>Rising (Ch 0)</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>Falling</string>
-          </property>
-         </item>
-        </widget>
-        <widget class="QComboBox" name="trigchan_comboBox">
-         <property name="geometry">
-          <rect>
-           <x>10</x>
-           <y>50</y>
-           <width>81</width>
-           <height>21</height>
-          </rect>
-         </property>
-         <property name="toolTip">
-          <string>Which channel to trigger on for this board</string>
-         </property>
-         <property name="currentText">
-          <string>Chan 0</string>
-         </property>
-         <property name="currentIndex">
-          <number>0</number>
-         </property>
-         <property name="maxVisibleItems">
-          <number>2</number>
-         </property>
-         <item>
-          <property name="text">
-           <string>Chan 0</string>
+           <string>Falling (Ch 0)</string>
           </property>
          </item>
          <item>
           <property name="text">
-           <string>Chan 1</string>
+           <string>Rising (Ch 1)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Falling (Ch 1)</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>Other boards</string>
+          </property>
+         </item>
+         <item>
+          <property name="text">
+           <string>External SMA</string>
           </property>
          </item>
         </widget>
