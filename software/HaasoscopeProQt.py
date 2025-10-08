@@ -12,6 +12,7 @@ from PyQt5.QtCore import Qt
 from main_window import MainWindow
 from usbs import connectdevices, orderusbs, tellfirstandlast, version
 from board import clkout_ena
+from utils import get_pwd
 
 # --- Hardware Discovery and Initial Setup ---
 print("Searching for Haasoscope Pro boards...")
@@ -41,7 +42,7 @@ if len(usbs) > 1:
 
 # --- Main Application Execution ---
 if __name__ == '__main__':
-    print('Argument List:', str(sys.argv))
+    #print('Argument List:', str(sys.argv))
     print("Python version", sys.version)
 
     # The most common fix for UI scaling and grid misalignment issues
@@ -61,7 +62,8 @@ if __name__ == '__main__':
     font = app.font()
     font.setPixelSize(11)
     app.setFont(font)
-    app.setWindowIcon(QIcon('icon.png'))
+    if sys.platform.startswith('win'): app.setWindowIcon(QIcon(get_pwd()+'\icon.png'))
+    else: app.setWindowIcon(QIcon(get_pwd()+'/icon.png'))
 
     win = None
     try:
