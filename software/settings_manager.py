@@ -74,6 +74,7 @@ def save_setup(main_window):
 
         # Processing settings
         'doresamp': s.doresamp,
+        'saved_doresamp': s.saved_doresamp,
         'fitwidthfraction': s.fitwidthfraction,
 
         # FFT and reference settings
@@ -271,8 +272,15 @@ def load_setup(main_window):
             main_window.plot_manager.toggle_xy_view(True, s.activeboard)
 
     # Processing settings
+    if 'saved_doresamp' in setup:
+        s.saved_doresamp = setup['saved_doresamp']
     if 'doresamp' in setup:
-        s.doresamp = setup['doresamp']
+        # If downsample >= 0, force doresamp to 0 and save the loaded value
+        if s.downsample >= 0:
+            s.saved_doresamp = setup['doresamp']
+            s.doresamp = 0
+        else:
+            s.doresamp = setup['doresamp']
         main_window.ui.resampBox.setValue(s.doresamp)
     if 'fitwidthfraction' in setup:
         s.fitwidthfraction = setup['fitwidthfraction']

@@ -86,6 +86,7 @@ class MainWindow(TemplateBaseClass):
             if self.controller.setup_all_boards():
                 self.controller.send_trigger_info_all()
                 self.ui.ToffBox.setValue(self.state.toff)
+                #self.ui.resampBox.setValue(self.state.doresamp)
                 self.allocate_xy_data()
                 self.controller.set_rolling(self.state.isrolling)
                 self.select_channel()  # Updates UI and LEDs
@@ -234,7 +235,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionTrigger_info.triggered.connect(lambda checked: self.plot_manager.update_trigger_threshold_display())
         self.ui.linewidthBox.valueChanged.connect(self.plot_manager.set_line_width)
         self.ui.lpfBox.currentIndexChanged.connect(self.lpf_changed)
-        self.ui.resampBox.valueChanged.connect(lambda val: setattr(self.state, 'doresamp', val))
+        self.ui.resampBox.valueChanged.connect(self.resamp_changed)
         self.ui.fwfBox.valueChanged.connect(lambda val: setattr(self.state, 'fitwidthfraction', val / 100.))
         self.ui.fftCheck.stateChanged.connect(self.fft_clicked)
         self.ui.persistTbox.valueChanged.connect(self.plot_manager.set_persistence)
@@ -1017,6 +1018,12 @@ class MainWindow(TemplateBaseClass):
         t = value / (self.state.yscale * 256) + 127
         self.ui.threshold.setValue(int(t))
 
+    def resamp_changed(self, value):
+        """Handle resamp value changes from the UI."""
+        self.state.doresamp = value
+        if True: #self.state.downsample < 0:
+            self.state.saved_doresamp = value
+
     def trigger_level_changed(self, value):
         self.state.triggerlevel = value
         self.controller.send_trigger_info_all()
@@ -1027,8 +1034,16 @@ class MainWindow(TemplateBaseClass):
             #print("Maximum zoom level reached.")
             self.ui.timefastButton.setEnabled(False)
 
+        old_downsample = self.state.downsample
         self.state.downsample -= 1
         self.controller.tell_downsample_all(self.state.downsample)
+
+        # When transitioning from downsample=0 to downsample=-1, restore saved resamp value
+        if old_downsample == 0 and self.state.downsample == -1:
+            self.state.doresamp = self.state.saved_doresamp
+            self.ui.resampBox.blockSignals(True)
+            self.ui.resampBox.setValue(self.state.doresamp)
+            self.ui.resampBox.blockSignals(False)
 
         is_zoomed = self.state.downsample < 0
         if is_zoomed:
@@ -1052,8 +1067,17 @@ class MainWindow(TemplateBaseClass):
 
     def time_slow(self):
         self.ui.timefastButton.setEnabled(True)
+        old_downsample = self.state.downsample
         self.state.downsample += 1
         self.controller.tell_downsample_all(self.state.downsample)
+
+        # When transitioning from downsample=-1 to downsample=0, save and turn off resamp
+        if old_downsample == -1 and self.state.downsample == 0:
+            self.state.saved_doresamp = self.state.doresamp
+            self.state.doresamp = 0
+            self.ui.resampBox.blockSignals(True)
+            self.ui.resampBox.setValue(0)
+            self.ui.resampBox.blockSignals(False)
 
         is_zoomed = self.state.downsample < 0
 

@@ -810,9 +810,6 @@
         <property name="singleStep">
          <number>2</number>
         </property>
-        <property name="value">
-         <number>4</number>
-        </property>
        </widget>
        <widget class="QLabel" name="label_21">
         <property name="geometry">

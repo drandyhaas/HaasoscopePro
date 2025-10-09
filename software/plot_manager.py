@@ -233,7 +233,7 @@ class PlotManager(pg.QtCore.QObject):
             if xdatanew is None: continue  # Skip if no data for this line (e.g., secondary interleaved line)
 
             # --- Resampling (if enabled) ---
-            if s.doresamp and s.downsample < 0:
+            if s.doresamp:
                 ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * s.doresamp, t=xdatanew)
 
             # --- Per-Line Stabilizer (Correct Location) ---
@@ -250,7 +250,7 @@ class PlotManager(pg.QtCore.QObject):
 
                     if xc.size > 2:
                         numsamp = s.distcorrsamp
-                        if s.doresamp and s.downsample < 0: numsamp *= s.doresamp
+                        if s.doresamp: numsamp *= s.doresamp
                         fitwidth *= numsamp / xc.size
 
                         xc = xdatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]
