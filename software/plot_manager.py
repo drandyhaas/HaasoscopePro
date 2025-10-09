@@ -6,7 +6,7 @@ from PyQt5.QtGui import QColor, QPen
 import numpy as np
 import time
 from collections import deque
-import matplotlib.cm as cm
+import colorsys
 from scipy.signal import resample
 from scipy.interpolate import interp1d
 from data_processor import find_crossing_distance
@@ -15,8 +15,26 @@ import math
 
 
 # #############################################################################
-# Plotting Helper Function (Moved from utils.py)
+# Plotting Helper Functions (Moved from utils.py)
 # #############################################################################
+
+def rainbow_colormap(n, start=0.0, end=0.66):
+    """Generate rainbow colors using HSV color space.
+
+    Args:
+        n: Number of colors to generate
+        start: Starting hue (0.0 = red, default)
+        end: Ending hue (0.66 = blue, default 0.66 to match matplotlib rainbow)
+
+    Returns:
+        Array of RGBA colors with shape (n, 4)
+    """
+    hues = np.linspace(start, end, n)
+    colors = np.zeros((n, 4))
+    for i, hue in enumerate(hues):
+        r, g, b = colorsys.hsv_to_rgb(hue, 1.0, 1.0)
+        colors[i] = [r, g, b, 1.0]  # RGBA
+    return colors
 
 def add_secondary_axis(plot_item, conversion_func, **axis_args):
     """Adds a secondary y-axis that is dynamically linked by a conversion function."""
@@ -104,7 +122,7 @@ class PlotManager(pg.QtCore.QObject):
         self.set_grid(self.ui.actionGrid.isChecked())
 
         # Create lines for each channel
-        colors = cm.rainbow(np.linspace(1.0, 0.1, self.nlines))
+        colors = rainbow_colormap(self.nlines, start=0.0, end=0.66)
         for i in range(self.nlines):
             c = QColor.fromRgbF(*colors[i])
             pen = pg.mkPen(color=c)
