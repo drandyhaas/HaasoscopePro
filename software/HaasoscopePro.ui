@@ -2284,11 +2284,12 @@ Outlined if triggering on this channel</string>
     <addaction name="actionMarkers"/>
     <addaction name="actionLine_color"/>
     <addaction name="actionPan_and_zoom"/>
+    <addaction name="actionTrigger_info"/>
     <addaction name="separator"/>
     <addaction name="actionXY_Plot"/>
     <addaction name="actionMath_channels"/>
     <addaction name="separator"/>
-    <addaction name="actionTrigger_info"/>
+    <addaction name="actionPeak_detect"/>
    </widget>
    <widget class="QMenu" name="menuReference">
     <property name="title">
@@ -2776,6 +2777,14 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Oversampling controls</string>
+   </property>
+  </action>
+  <action name="actionPeak_detect">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Peak detect</string>
    </property>
   </action>
  </widget>

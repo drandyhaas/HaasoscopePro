@@ -233,6 +233,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionSnap_to_waveform.triggered.connect(lambda checked: self.plot_manager.on_snap_toggled(checked))
         self.ui.actionTime_relative.triggered.connect(lambda checked: self.plot_manager.update_cursor_display())
         self.ui.actionTrigger_info.triggered.connect(lambda checked: self.plot_manager.update_trigger_threshold_display())
+        self.ui.actionPeak_detect.triggered.connect(lambda checked: self.plot_manager.set_peak_detect(checked))
         self.ui.linewidthBox.valueChanged.connect(self.plot_manager.set_line_width)
         self.ui.lpfBox.currentIndexChanged.connect(self.lpf_changed)
         self.ui.resampBox.valueChanged.connect(self.resamp_changed)
@@ -876,6 +877,9 @@ class MainWindow(TemplateBaseClass):
         # Update cursor display to reflect new active channel
         self.plot_manager.update_cursor_display()
 
+        # Update peak detect for new active channel
+        self.plot_manager.update_peak_channel()
+
         # Update hardware LEDs
         all_colors = [pen.color() for pen in self.plot_manager.linepens]
         self.controller.do_leds(all_colors)
@@ -1054,13 +1058,17 @@ class MainWindow(TemplateBaseClass):
         # Update the plot range and text box
         self.time_changed()
 
+        # Clear peak detect data when timebase changes
+        if self.plot_manager.peak_detect_enabled:
+            self.plot_manager.clear_peak_data()
+
         # If we are zoomed in, reset the pan slider to its center position.
         if is_zoomed:
             # Block signals to prevent this from triggering a pan action
             self.ui.thresholdPos.blockSignals(True)
             self.ui.thresholdPos.setValue(5000)
             self.ui.thresholdPos.blockSignals(False)
-        
+
         if self.fftui and not is_zoomed:
             self.fftui.reset_for_timescale_change()
             self.fftui.reset_analysis_state()
@@ -1088,6 +1096,10 @@ class MainWindow(TemplateBaseClass):
 
         # Update the plot range and text box
         self.time_changed()
+
+        # Clear peak detect data when timebase changes
+        if self.plot_manager.peak_detect_enabled:
+            self.plot_manager.clear_peak_data()
 
         # If we are zoomed in, reset the pan slider to its center position.
         if is_zoomed:
