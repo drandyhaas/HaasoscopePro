@@ -6,7 +6,7 @@
 
 ### [Hackaday.io Page](https://hackaday.io/project/200773-haasoscope-pro)
 
-![haasoscope_pro_adc_fpga_board.png](adc%20board%2Fhaasoscope_pro_adc_fpga_board.png)
+<img src="adc%20board%2Fhaasoscope_pro_adc_fpga_board.png" width="500">
 
 #### Schematics in PDF: [haasoscope_pro_adc_fpga_board_schematics.pdf](adc%20board%2Fhaasoscope_pro_adc_fpga_board_schematics.pdf)
 
@@ -20,23 +20,24 @@ See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiK
 
 ### Versions
 
-- v27 is the firmware that shipped with the first round of units, in the "v27" branch, now outdated!
-- v28 fixed trigger stability
-- v29 adds more new GUI features etc., found in the "main" branch
-- the "v29_cleanup" branch has a beta version of the software - new development is occuring here
+- old: v27 is the firmware that shipped with the first round of units
+- old: v28 firmware fixed trigger stability
+- "main" branch is currently v29 firmware and adds more software features
+- "v29_cleanup" branch has a beta version of the software with yet more features
+- "v30_test" branch has v30 firmware which adds trigger delay and holdoff options - new development is occuring here
 
-To use a different branch, do <code>git pull && git checkout "branchname"</code> or select the branch name in the drop down box on github and then download the zip file of the code. Then run the new software, update the firmware (if needed) on your board from that new software, and power cycle the board (automatic firmware reload in v29+ firmware).
+To use a different branch, do <code>git pull && git checkout "branchname"</code>, select the branch name in the drop down box on github and then download the zip file of the code, or (for v30+) download a release zip file. 
+Then run the new software, update the firmware (if needed) on your board from that new software, and power cycle the board (automatic firmware reload in v29+ firmware).
 
 ### Quick start (Windows/Mac)
 
-1) [Download code](https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/main.zip) and unzip it (or another zip file version from another branch).
-2) Rename directory HaasoscopePro-main to HaasoscopePro (for consistency with git below)
-3) Install [FTDI D2xx driver](https://ftdichip.com/drivers/d2xx-drivers/) 
+1) [Download code](https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/main.zip) and unzip it, or another zip file version from another branch, or (for v30+) download a release zip file.
+2) Install [FTDI D2xx driver](https://ftdichip.com/drivers/d2xx-drivers/) 
 - for Windows: install by running the setup exe at <code>HaasoscopePro/software/ftdi_setup.exe</code>
 - for Mac: <code>sudo mkdir -p /usr/local/lib; sudo cp HaasoscopePro/software/libftd2xx.dylib /usr/local/lib/</code> 
 - for Linux: <code>sudo cp HaasoscopePro/software/libftd2xx.so /usr/lib/</code>
-4) Plug Haasoscope Pro into your computer via USB (5V 2A at least!)
-5) Run **HaasoscopeProQt** in the <code>HaasoscopePro/software/dist/(OS)_HaasoscopeProQt</code> directory
+3) Plug Haasoscope Pro into your computer via USB (5V 2A at least!)
+4) Run **HaasoscopeProQt** in the <code>HaasoscopePro/software/dist/(OS)_HaasoscopeProQt</code> directory
 
 ### Fuller way of running (Windows/Mac/Linux)
 
