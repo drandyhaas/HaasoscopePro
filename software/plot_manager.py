@@ -257,8 +257,8 @@ class PlotManager(pg.QtCore.QObject):
                 if not is_oversample_secondary:
                     vline_time = self.otherlines['vline'].value()
                     hline_pos = (s.triggerlevel - 127) * s.yscale * 256
-                    # Include triggerdelta in the threshold
-                    hline_threshold = hline_pos + s.triggerdelta * s.yscale*256
+                    # Include triggerdelta in the threshold (per-board setting)
+                    hline_threshold = hline_pos + s.triggerdelta[board_idx] * s.yscale*256
 
                     fitwidth = (s.max_x - s.min_x)
                     xc = xdatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]

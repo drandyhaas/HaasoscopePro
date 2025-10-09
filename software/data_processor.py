@@ -269,8 +269,8 @@ class DataProcessor:
 
         vline_time = 4 * 10 * (s.triggerpos + 1.0) * (s.downsamplefactor / s.nsunits / s.samplerate)
         hline_pos = (s.triggerlevel - 127) * s.yscale * 256
-        # Include triggerdelta in the threshold
-        hline_threshold = hline_pos + s.triggerdelta * s.yscale*256
+        # Include triggerdelta in the threshold (per-board setting)
+        hline_threshold = hline_pos + s.triggerdelta[board_idx] * s.yscale*256
 
         # --- This is the Board-level alignment logic from the original drawchannels() ---
         if abs(s.totdistcorr[board_idx]) > s.distcorrtol * s.downsamplefactor:
@@ -396,9 +396,9 @@ class DataProcessor:
         y_20_threshold = y_min + 0.2 * (y_max - y_min)
         y_80_threshold = y_min + 0.8 * (y_max - y_min)
 
-        # Get the trigger threshold for filtering
+        # Get the trigger threshold for filtering (use active board's triggerdelta)
         hline_pos = (state.triggerlevel - 127) * state.yscale * 256
-        hline_threshold = hline_pos + state.triggerdelta * state.yscale * 256
+        hline_threshold = hline_pos + state.triggerdelta[state.activeboard] * state.yscale * 256
 
         # Find where the signal crosses the trigger threshold
         # This narrows our search significantly

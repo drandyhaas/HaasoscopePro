@@ -850,7 +850,12 @@ class MainWindow(TemplateBaseClass):
         self.ui.tenxCheck.setChecked(s.tenx[s.activexychannel] == 10)
         self.ui.chanonCheck.setChecked(self.plot_manager.lines[s.activexychannel].isVisible())
         self.ui.tadBox.setValue(s.tad[s.activeboard])
+
+        # Update per-board trigger settings
         self.ui.trigger_delay_box.setValue(s.trigger_delay[s.activeboard])
+        self.ui.trigger_holdoff_box.setValue(s.trigger_holdoff[s.activeboard])
+        self.ui.thresholdDelta.setValue(s.triggerdelta[s.activeboard])
+        self.ui.totBox.setValue(s.triggertimethresh[s.activeboard])
 
         # Update the consolidated trigger combo box
         # Index mapping: 0=Rising Ch0, 1=Falling Ch0, 2=Rising Ch1, 3=Falling Ch1, 4=Other boards, 5=External SMA
@@ -1611,8 +1616,10 @@ class MainWindow(TemplateBaseClass):
         self.controller.set_tad(self.state.activeboard, value)
 
     def trigger_delta_changed(self, value):
-        self.state.triggerdelta = value
-        self.controller.send_trigger_info_all()
+        """Handle changes to trigger delta spinbox."""
+        board = self.state.activeboard
+        self.state.triggerdelta[board] = value
+        self.controller.send_trigger_info(board)
 
     def rising_falling_changed(self, index):
         s = self.state
@@ -1693,8 +1700,10 @@ class MainWindow(TemplateBaseClass):
         self.set_channel_frame()
 
     def tot_changed(self, value):
-        self.state.triggertimethresh = value
-        self.controller.send_trigger_info_all()
+        """Handle changes to time over threshold spinbox."""
+        board = self.state.activeboard
+        self.state.triggertimethresh[board] = value
+        self.controller.send_trigger_info(board)
         self.update_trigger_spinbox_tooltip(self.ui.totBox, "Time over threshold required to trigger")
 
     def trigger_delay_changed(self, value):

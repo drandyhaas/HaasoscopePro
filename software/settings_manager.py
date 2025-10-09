@@ -196,7 +196,7 @@ def load_setup(main_window):
         main_window.ui.threshold.setValue(s.triggerlevel)
     if 'triggerdelta' in setup:
         s.triggerdelta = setup['triggerdelta']
-        main_window.ui.thresholdDelta.setValue(s.triggerdelta)
+        main_window.ui.thresholdDelta.setValue(s.triggerdelta[s.activeboard])
     if 'triggerpos' in setup:
         s.triggerpos = setup['triggerpos']
         # Calculate slider value from triggerpos
@@ -210,7 +210,7 @@ def load_setup(main_window):
         s.triggertype = setup['triggertype']
     if 'triggertimethresh' in setup:
         s.triggertimethresh = setup['triggertimethresh']
-        main_window.ui.totBox.setValue(s.triggertimethresh)
+        main_window.ui.totBox.setValue(s.triggertimethresh[s.activeboard])
     if 'trigger_delay' in setup:
         s.trigger_delay = setup['trigger_delay']
         main_window.ui.trigger_delay_box.setValue(s.trigger_delay[s.activeboard])

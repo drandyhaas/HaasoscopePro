@@ -186,9 +186,9 @@ class HardwareController:
             factor = 2 if state.dotwochannel[board_idx] else 1
             triggerpos += int(8 * state.lvdstrigdelay[board_idx] / 40 / state.downsamplefactor / factor)
 
-        self.usbs[board_idx].send(bytes([8, min(255,state.triggerlevel+1), state.triggerdelta,
+        self.usbs[board_idx].send(bytes([8, min(255,state.triggerlevel+1), state.triggerdelta[board_idx],
                                          int(triggerpos / 256), triggerpos % 256,
-                                         state.triggertimethresh, state.triggerchan[board_idx], 100]))
+                                         state.triggertimethresh[board_idx], state.triggerchan[board_idx], 100]))
         self.usbs[board_idx].recv(4)
         prelengthtotake = state.triggerpos + 5
         self.usbs[board_idx].send(bytes([2, 7] + inttobytes(prelengthtotake) + [0, 0]))
