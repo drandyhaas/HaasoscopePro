@@ -1,6 +1,7 @@
 # hardware_controller.py
 
 import os
+from concurrent.futures import ThreadPoolExecutor
 from usbs import *
 from board import *
 from pyqtgraph.Qt import QtCore
@@ -17,6 +18,8 @@ class HardwareController:
         self.state = state
         self.num_board = len(usbs)
         self.signals = HardwareControllerSignals()
+        # Thread pool for parallel board operations - use enough threads for all boards
+        self.executor = ThreadPoolExecutor(max_workers=max(4, self.num_board * 2))
 
     def setup_all_boards(self):
         success = True
@@ -281,27 +284,51 @@ class HardwareController:
 
         ready_event = [False] * self.num_board
 
+        # Process ext trig boards in parallel first using thread pool
+        def process_board(board):
+            if self._get_channels(board):  # sends trigger info and checks for ready data
+                ready_event[board] = True
+                self._get_predata(board)  # gets downsamplemergingcounter and triggerphase
+
+        futures = []
         for board in range(self.num_board):
             if state.doexttrig[board]:
-                if self._get_channels(board): # sends trigger info and checks for ready data
-                    ready_event[board] = True
-                    self._get_predata(board) # gets downsamplemergingcounter and triggerphase
+                futures.append(self.executor.submit(process_board, board))
 
+        # Wait for all ext trig boards to complete
+        for f in futures:
+            f.result()
+
+        # Then process non-ext trig boards in parallel using thread pool
+        futures = []
         for board in range(self.num_board):
             if not state.doexttrig[board]:
-                if self._get_channels(board): # sends trigger info and checks for ready data
-                    ready_event[board] = True
-                    self._get_predata(board) # gets downsamplemergingcounter and triggerphase
+                futures.append(self.executor.submit(process_board, board))
+
+        # Wait for all non-ext trig boards to complete
+        for f in futures:
+            f.result()
 
         if not any(ready_event):
             return None, 0
 
+        # Get data from all ready boards in parallel using thread pool
         thedata = [bytes([])] * self.num_board
-        for board in range(self.num_board):
+
+        def get_board_data(board):
             if ready_event[board]:
-                data = self._get_data(self.usbs[board]) # gets the actual event data
+                data = self._get_data(self.usbs[board])  # gets the actual event data
                 thedata[board] = data
 
+        futures = []
+        for board in range(self.num_board):
+            futures.append(self.executor.submit(get_board_data, board))
+
+        # Wait for all data retrieval to complete
+        for f in futures:
+            f.result()
+
+        # Build data_map and find noextboard (sequential to maintain order)
         data_map, total_len = {}, 0
         state.noextboard = -1
         for board in range(self.num_board):
@@ -310,7 +337,7 @@ class HardwareController:
             total_len += len(data)
             if not state.doexttrig[board] and ready_event[board]:
                 if state.noextboard == -1:
-                    state.noextboard = board # remember the first board which is self-triggering
+                    state.noextboard = board  # remember the first board which is self-triggering
         return (data_map, total_len) if data_map else (None, 0)
 
     def _get_channels(self, board_idx):
@@ -467,5 +494,6 @@ class HardwareController:
             send_leds(self.usbs[board], r1, g1, b1, r2, g2, b2)
 
     def cleanup(self):
+        self.executor.shutdown(wait=True)
         for usb in self.usbs:
             cleanup(usb)
