@@ -7,7 +7,6 @@ from collections import deque
 from pyqtgraph.Qt import QtCore
 from PyQt5.QtGui import QStandardItemModel, QStandardItem, QColor
 from PyQt5.QtWidgets import QPushButton, QWidget, QHBoxLayout, QLabel
-from PyQt5.QtCore import Qt
 from data_processor import format_freq, format_period
 from board import gettemps
 
@@ -234,7 +233,8 @@ class MeasurementsManager:
     def add_all_measurements_for_channel(self):
         """Add all available measurements for the current channel."""
         # Manually add each measurement (setting checkbox doesn't trigger the signal)
-        measurement_types = ["Mean", "RMS", "Min", "Max", "Vpp", "Freq", "Period", "Duty cycle", "Risetime", "Risetime error"]
+        measurement_types = ["Mean", "RMS", "Min", "Max", "Vpp", "Freq", "Period", "Duty cycle", "Risetime",
+                             "Risetime error"]
 
         for measurement_name in measurement_types:
             self.toggle_measurement(measurement_name, True)
@@ -251,7 +251,7 @@ class MeasurementsManager:
 
         # Find all measurements for this channel
         measurements_to_remove = [key for key in list(self.active_measurements.keys())
-                                   if key[1] == channel_key]
+                                  if key[1] == channel_key]
 
         # Remove each measurement
         for key in measurements_to_remove:
@@ -304,8 +304,10 @@ class MeasurementsManager:
         self.ui.actionFreq.setChecked((("Freq", channel_key) in self.active_measurements))
         self.ui.actionPeriod.setChecked((("Period", channel_key) in self.active_measurements))
         self.ui.actionDuty_cycle.setChecked((("Duty cycle", channel_key) in self.active_measurements))
-        self.ui.actionRisetime.setChecked((("Risetime", channel_key) in self.active_measurements or ("Falltime", channel_key) in self.active_measurements))
-        self.ui.actionRisetime_error.setChecked((("Risetime error", channel_key) in self.active_measurements or ("Falltime error", channel_key) in self.active_measurements))
+        self.ui.actionRisetime.setChecked((("Risetime", channel_key) in self.active_measurements or ("Falltime",
+                                                                                                     channel_key) in self.active_measurements))
+        self.ui.actionRisetime_error.setChecked((("Risetime error", channel_key) in self.active_measurements or (
+            "Falltime error", channel_key) in self.active_measurements))
 
     def update_measurement_header(self):
         """Update the measurement table header and menu checkboxes."""
@@ -317,7 +319,7 @@ class MeasurementsManager:
             # Parse the channel key to get board and channel
             parts = channel_key.split()
             board = parts[0][1:]  # Remove 'B' prefix
-            chan = parts[1][2:]   # Remove 'Ch' prefix
+            chan = parts[1][2:]  # Remove 'Ch' prefix
             menu_text = f"--- For Board {board} Channel {chan} ---"
 
         self.ui.action_For_Board_X_Channel_Y.setText(menu_text)
@@ -443,7 +445,8 @@ class MeasurementsManager:
 
                 # Create name widget with X button for global measurements
                 row = self.measurement_model.rowCount() - 1
-                name_widget = self.create_measurement_name_widget(display_name, lambda checked=False, n=name: self.remove_global_measurement(n))
+                name_widget = self.create_measurement_name_widget(display_name, lambda checked=False,
+                                                                n=name: self.remove_global_measurement(n))
                 self.ui.tableView.setIndexWidget(self.measurement_model.index(row, 0), name_widget)
 
                 self.measurement_items[key] = (name_widget, value_item, avg_item, rms_item)
@@ -643,7 +646,7 @@ class MeasurementsManager:
         if hasattr(self.main_window, 'xydata') and self.state.num_board > 0:
             current_channel_key = self.get_current_channel_key()
             if (("Risetime", current_channel_key) in self.active_measurements or
-                ("Falltime", current_channel_key) in self.active_measurements):
+                    ("Falltime", current_channel_key) in self.active_measurements):
                 # Get active channel data
                 x_data = self.plot_manager.lines[self.state.activexychannel].xData
                 y_data = self.plot_manager.lines[self.state.activexychannel].yData
@@ -684,7 +687,7 @@ class MeasurementsManager:
                 del self.measurement_history[key]
 
     def adjust_table_view_geometry(self):
-        """Sets the table view geometry to fill the bottom of the side panel."""
+        """Sets the table view geometry to fill the bottom with the side panel."""
         frame_height = self.ui.frame.height()
         table_top_y = 600  # The Y coordinate where the table should start
         table_height = frame_height - table_top_y
@@ -697,7 +700,7 @@ class MeasurementsManager:
         frame_width = self.ui.frame.width()
 
         self.ui.tableView.setGeometry(
-            0,            # x
+            0,  # x
             table_top_y,  # y
             frame_width,  # width
             table_height  # height
