@@ -53,7 +53,7 @@ class ScopeState:
 
         # Triggering Parameters
         self.triggerlevel = 127
-        self.triggerdelta = [1] * self.num_board  # Per-board trigger delta
+        self.triggerdelta = [2] * self.num_board  # Per-board trigger delta
         self.triggerpos = 50
         self.triggershift = 2
         self.triggertimethresh = [0] * self.num_board  # Per-board time over threshold
