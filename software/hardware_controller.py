@@ -292,7 +292,8 @@ class HardwareController:
             if not state.doexttrig[board]:
                 if self._get_channels(board):
                     ready_event[board] = True
-                    if state.noextboard == -1: state.noextboard = board
+                    if state.noextboard == -1 or board<state.noextboard:
+                        state.noextboard = board # remember the first board which is self-triggering
                     self._get_predata(board)
 
         if not any(ready_event):
