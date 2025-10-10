@@ -150,6 +150,7 @@ class MeasurementsManager:
             (self.ui.actionVpp, "Vpp"),
             (self.ui.actionFreq, "Freq"),
             (self.ui.actionPeriod, "Period"),
+            (self.ui.actionDuty_cycle, "Duty cycle"),
             (self.ui.actionRisetime, "Risetime"),  # Special: also handles Falltime
             (self.ui.actionRisetime_error, "Risetime error"),  # Special: also handles Falltime error
         ]
@@ -233,7 +234,7 @@ class MeasurementsManager:
     def add_all_measurements_for_channel(self):
         """Add all available measurements for the current channel."""
         # Manually add each measurement (setting checkbox doesn't trigger the signal)
-        measurement_types = ["Mean", "RMS", "Min", "Max", "Vpp", "Freq", "Period", "Risetime", "Risetime error"]
+        measurement_types = ["Mean", "RMS", "Min", "Max", "Vpp", "Freq", "Period", "Duty cycle", "Risetime", "Risetime error"]
 
         for measurement_name in measurement_types:
             self.toggle_measurement(measurement_name, True)
@@ -302,6 +303,7 @@ class MeasurementsManager:
         self.ui.actionVpp.setChecked((("Vpp", channel_key) in self.active_measurements))
         self.ui.actionFreq.setChecked((("Freq", channel_key) in self.active_measurements))
         self.ui.actionPeriod.setChecked((("Period", channel_key) in self.active_measurements))
+        self.ui.actionDuty_cycle.setChecked((("Duty cycle", channel_key) in self.active_measurements))
         self.ui.actionRisetime.setChecked((("Risetime", channel_key) in self.active_measurements or ("Falltime", channel_key) in self.active_measurements))
         self.ui.actionRisetime_error.setChecked((("Risetime error", channel_key) in self.active_measurements or ("Falltime error", channel_key) in self.active_measurements))
 
@@ -625,6 +627,9 @@ class MeasurementsManager:
                     _set_measurement(measurement_key, period, unit)
                 else:
                     _set_measurement(measurement_key, 0, "ns")
+            elif measurement_name == "Duty cycle":
+                duty_cycle = measurements.get('Duty cycle', 0)
+                _set_measurement(measurement_key, duty_cycle, "%")
             elif measurement_name in ["Risetime", "Falltime"]:
                 val = measurements.get(measurement_name, 0)
                 if math.isfinite(val):

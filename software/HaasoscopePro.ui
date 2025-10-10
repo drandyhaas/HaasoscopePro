@@ -2239,6 +2239,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionVpp"/>
     <addaction name="actionFreq"/>
     <addaction name="actionPeriod"/>
+    <addaction name="actionDuty_cycle"/>
     <addaction name="actionRisetime"/>
     <addaction name="actionRisetime_error"/>
     <addaction name="separator"/>
@@ -2776,6 +2777,14 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Persist average</string>
+   </property>
+  </action>
+  <action name="actionDuty_cycle">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Duty cycle</string>
    </property>
   </action>
  </widget>

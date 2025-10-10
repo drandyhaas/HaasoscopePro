@@ -115,6 +115,7 @@ def save_setup(main_window):
         'measure_vpp': main_window.ui.actionVpp.isChecked(),
         'measure_freq': main_window.ui.actionFreq.isChecked(),
         'measure_period': main_window.ui.actionPeriod.isChecked(),
+        'measure_duty_cycle': main_window.ui.actionDuty_cycle.isChecked(),
         'measure_risetime': main_window.ui.actionRisetime.isChecked(),
         'measure_risetime_error': main_window.ui.actionRisetime_error.isChecked(),
         'measure_edge_fit': main_window.ui.actionEdge_fit_method.isChecked(),
@@ -358,6 +359,8 @@ def load_setup(main_window):
         main_window.ui.actionFreq.setChecked(setup['measure_freq'])
     if 'measure_period' in setup:
         main_window.ui.actionPeriod.setChecked(setup['measure_period'])
+    if 'measure_duty_cycle' in setup:
+        main_window.ui.actionDuty_cycle.setChecked(setup['measure_duty_cycle'])
     if 'measure_risetime' in setup:
         main_window.ui.actionRisetime.setChecked(setup['measure_risetime'])
     if 'measure_risetime_error' in setup:

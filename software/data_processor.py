@@ -355,6 +355,14 @@ class DataProcessor:
         found_freq = find_fundamental_frequency_scipy(y_data, sampling_rate)
         measurements["Freq"] = found_freq
 
+        # Calculate duty cycle (percentage of time signal is above 50% threshold)
+        y_min = np.min(y_data)
+        y_max = np.max(y_data)
+        threshold = (y_min + y_max) / 2
+        above_threshold = np.sum(y_data > threshold)
+        duty_cycle = (above_threshold / len(y_data)) * 100 if len(y_data) > 0 else 0
+        measurements["Duty cycle"] = duty_cycle
+
         # Initialize fit results to None
         fit_results = None
 
