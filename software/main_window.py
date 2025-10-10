@@ -928,6 +928,7 @@ class MainWindow(TemplateBaseClass):
         self.set_channel_frame()
 
         # Update the secondary Y-axis
+        self.gain_changed()  # Recalculate V/div
         self.plot_manager.update_right_axis()
 
         # Update cursor display to reflect new active channel
