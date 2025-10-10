@@ -55,6 +55,7 @@ if __name__ == '__main__':
         except Exception as e:
             print(f"Could not set DPI awareness on Windows: {e}")
 
+    # noinspection PyTypeChecker
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     os.environ["QT_AUTO_SCREEN_SCALE_FACTOR"] = "1"
 

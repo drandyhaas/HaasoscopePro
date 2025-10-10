@@ -149,8 +149,9 @@ class MainWindow(TemplateBaseClass):
         self.ui.tableView.setColumnWidth(1, 50)  # Measurement value column
         self.ui.tableView.setColumnWidth(2, 50)  # Measurement avg column
         self.ui.tableView.setColumnWidth(3, 50)  # Measurement rms column
-        self.show()
 
+        # Show main window
+        self.show()
 
     def _sync_initial_ui_state(self):
         """A one-time function to sync the UI's visual state after the window has loaded."""
@@ -160,7 +161,6 @@ class MainWindow(TemplateBaseClass):
         self.ui.runButton.setText(" Run ")
         self.ui.actionPan_and_zoom.setChecked(False)
         self.plot_manager.set_pan_and_zoom(False)
-
 
     def _sync_board_settings_to_hardware(self, board_idx):
         """
@@ -380,7 +380,7 @@ class MainWindow(TemplateBaseClass):
     # ## Core Application Logic
     # #########################################################################
 
-    def _sync_depth_ui_from_state(self):
+    def sync_depth_ui_from_state(self):
         """Ensures the depthBox UI widget always matches the state.expect_samples."""
         if self.ui.depthBox.value() != self.state.expect_samples:
             self.ui.depthBox.blockSignals(True)
@@ -398,7 +398,7 @@ class MainWindow(TemplateBaseClass):
     def update_plot_loop(self):
         """Main acquisition loop, with full status bar and FFT plot updates."""
         if self.socket and self.socket.issending:
-            time.sleep(0.001)
+            time.sleep(0.001) # for sync with ngscopeclient thread
             return
 
         # If the flag is set, get and discard the next event to avoid glitches
@@ -409,7 +409,7 @@ class MainWindow(TemplateBaseClass):
             except ftd2xx.DeviceError:
                 pass # Ignore potential errors during this flush
             return
-        self.state.isdrawing = True
+        self.state.isdrawing = True # for sync with ngscopeclient thread
         try:
             raw_data_map, rx_len = self.controller.get_event()
         except ftd2xx.DeviceError as e:
@@ -439,13 +439,14 @@ class MainWindow(TemplateBaseClass):
                 s.lastrate = round(s.tinterval / elapsedtime, 2)
             s.oldnevents = s.nevents
 
+        # Creates the xydata, xydatainterleaved arrays or resizes if needed, filled next by the processor
         self.allocate_xy_data()
 
         for board_idx, raw_data in raw_data_map.items():
             nbadA, nbadB, nbadC, nbadD, nbadS = self.processor.process_board_data(raw_data, board_idx, self.xydata)
             if s.plljustreset[board_idx] > -10:
                 # If a reset is already in progress, continue it.
-                self.controller.adjustclocks(board_idx, nbadA, nbadB, nbadC, nbadD, nbadS)
+                self.controller.adjustclocks(board_idx, nbadA, nbadB, nbadC, nbadD, nbadS, self)
             elif s.pll_reset_grace_period > 0:
                 # If in the grace period, ignore any bad clock signals.
                 pass
@@ -458,10 +459,10 @@ class MainWindow(TemplateBaseClass):
         if s.pll_reset_grace_period > 0:
             s.pll_reset_grace_period -= 1
 
+        # Do mean rms calibration for oversampling boards if needed
         for board_idx in range(s.num_board):
             if s.dooversample[board_idx] and board_idx%2==0:
                 do_meanrms_calibration(self)
-                break
 
         # Check if autocalibration is collecting data
         if s.triggerautocalibration[s.activeboard]: autocalibration(self)
@@ -483,6 +484,25 @@ class MainWindow(TemplateBaseClass):
                 self.autocalib_collector = None
                 if self.ui.actionAuto_oversample_alignment.isChecked():
                     self.ui.interleavedCheck.setChecked(True)
+
+        # Use data for plot, FFT, math, etc.
+        if not s.dofast: self.update_plot_data()
+
+        now = time.time()
+        dt = now - self.last_time + 1e-9
+        self.last_time = now
+        self.fps = 1.0 / dt if self.fps is None else self.fps * 0.9 + (1.0 / dt) * 0.1
+
+        self.state.isdrawing = False # for sync with ngscopeclient thread
+
+        # If 'getone' (Single) mode is active, call dostartstop() immediately
+        # after successfully processing one event. This will pause the acquisition.
+        if self.state.getone:
+            # Update measurements for the newly acquired event before pausing
+            self.measurements.update_measurements_display()
+            self.dostartstop()
+
+    def update_plot_data(self):
 
         # --- Plotting Logic: Switch between Time Domain and XY Mode ---
         if self.state.xy_mode:
@@ -525,10 +545,12 @@ class MainWindow(TemplateBaseClass):
 
                     y_full = self.xydata[ch_idx][1]
                     midpoint = len(y_full) // 2
-                    if s.dotwochannel[board_idx]: y_data_for_analysis = y_full[:midpoint]
+                    if s.dotwochannel[board_idx]:
+                        y_data_for_analysis = y_full[:midpoint]
                     elif s.dointerleaved[board_idx]:
                         y_data_for_analysis = self.xydatainterleaved[ch_idx][1]
-                    else: y_data_for_analysis = y_full
+                    else:
+                        y_data_for_analysis = y_full
 
                     # Pass the correct board_idx to get the right sample rate
                     freq, mag = self.processor.calculate_fft(y_data_for_analysis, board_idx)
@@ -552,7 +574,7 @@ class MainWindow(TemplateBaseClass):
             if self.math_window is not None:
                 # Check if any regular channels have FFT enabled
                 has_regular_channel_fft = any(
-                    self.state.fft_enabled.get(f"CH{i+1}", False)
+                    self.state.fft_enabled.get(f"CH{i + 1}", False)
                     for i in range(self.state.num_board * self.state.num_chan_per_board)
                 )
 
@@ -598,23 +620,6 @@ class MainWindow(TemplateBaseClass):
                     else:
                         self.fftui.clear_plot(math_name)
 
-        now = time.time()
-        dt = now - self.last_time + 1e-9
-        self.last_time = now
-        self.fps = 1.0 / dt if self.fps is None else self.fps * 0.9 + (1.0 / dt) * 0.1
-
-        self.state.isdrawing = False
-
-        # Sync the Depth box UI with the state, in case it was changed by a PLL reset
-        self._sync_depth_ui_from_state()
-
-        # If 'getone' (Single) mode is active, call dostartstop() immediately
-        # after successfully processing one event. This will pause the acquisition.
-        if self.state.getone:
-            # Update measurements for the newly acquired event before pausing
-            self.measurements.update_measurements_display()
-            self.dostartstop()
-
     def update_status_bar(self):
         """Updates the status bar text at a fixed rate (5 Hz)."""
         s = self.state
@@ -628,7 +633,6 @@ class MainWindow(TemplateBaseClass):
                        f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s")
         if self.recorder.is_recording: status_text += ", Recording to "+str(self.recorder.file_handle.name)
         self.ui.statusBar.showMessage(status_text)
-
 
     def resizeEvent(self, event):
         """Handles window resize events to adjust the table view."""
@@ -659,11 +663,10 @@ class MainWindow(TemplateBaseClass):
         num_samples = 4 * 10 * s.expect_samples
         shape = (num_ch, 2, num_samples)
 
-        ishape = (num_ch, 2, 2 * num_samples)  # For interleaved data
-
         # Avoid re-allocating if the shape hasn't changed
         if not hasattr(self, 'xydata') or self.xydata.shape != shape:
             self.xydata = np.zeros(shape, dtype=float)
+            ishape = (num_ch, 2, 2 * num_samples)  # For interleaved data
             self.xydatainterleaved = np.zeros(ishape, dtype=float)
             self.time_changed()  # Initialize x-axis values
 

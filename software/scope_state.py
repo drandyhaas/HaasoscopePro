@@ -20,7 +20,7 @@ class ScopeState:
         self.isrolling = 1  # Start in Auto (rolling) mode
         self.getone = False
         self.dodrawing = True
-        self.dofast = False
+        self.dofast = False # For testing speed
         self.dopattern = 0
         self.pll_reset_grace_period = 0
         self.dooverrange = False

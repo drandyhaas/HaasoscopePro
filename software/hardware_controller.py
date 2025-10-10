@@ -35,7 +35,7 @@ class HardwareController:
         self.state.firmwareversion[board_idx] = ver
         if ver < max(self.state.firmwareversion):
             print("Warning - this board has older firmware than another being used:",max(self.state.firmwareversion))
-        if ver > min(self.state.firmwareversion) and min(self.state.firmwareversion) > -1:
+        if ver > min(self.state.firmwareversion) > -1:
             print("Warning - this board has newer firmware than another being used:",min(self.state.firmwareversion))
         self.adfreset(board_idx)
         if setupboard(usb, self.state.dopattern, self.state.dotwochannel[board_idx], self.state.dooverrange,
@@ -108,7 +108,7 @@ class HardwareController:
         s.expect_samples = 1000
         s.dodrawing = False
 
-    def adjustclocks(self, board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr):
+    def adjustclocks(self, board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr, main_window):
         """
         The feedback loop that adjusts clock phases based on bad signal counts,
         run immediately after a PLL reset.
@@ -167,6 +167,9 @@ class HardwareController:
             # Only re-enable drawing if no other board is still calibrating.
             if all_calibrations_finished:
                 s.dodrawing = True
+
+                # Sync the Depth box UI with the state, in case it was changed by a PLL reset
+                main_window.sync_depth_ui_from_state()
 
     def send_trigger_info_all(self):
         """Sends the current trigger info to all connected boards."""
