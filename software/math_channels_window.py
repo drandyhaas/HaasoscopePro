@@ -91,7 +91,7 @@ class MathChannelsWindow(QWidget):
         self.operation_combo.model().item(7).setEnabled(False)  # Make it non-selectable
         # Single-channel operations
         self.operation_combo.addItems(['Invert', 'Abs', 'Square', 'Sqrt', 'Log', 'Exp',
-                                       'Integrate', 'Differentiate', 'Envelope', 'Minimum', 'Maximum'])
+                                       'Integrate', 'Differentiate', 'Envelope', 'Smooth', 'Minimum', 'Maximum'])
         # Show all items in dropdown
         self.operation_combo.setMaxVisibleItems(20)
         op_layout.addWidget(self.operation_combo)
@@ -1051,6 +1051,15 @@ class MathChannelsWindow(QWidget):
                             start = max(0, i - window_size // 2)
                             end = min(len(y1), i + window_size // 2 + 1)
                             y_result[i] = np.max(y_abs[start:end])
+                    elif operation == 'Smooth':
+                        # Moving average smoothing
+                        window_size = 10  # this is how many samples we average
+                        if self.state.doresamp: window_size *= self.state.doresamp
+                        y_result = np.zeros_like(y1)
+                        for i in range(len(y1)):
+                            start = max(0, i - window_size // 2)
+                            end = min(len(y1), i + window_size // 2 + 1)
+                            y_result[i] = np.mean(y1[start:end])
                     elif operation == 'Minimum':
                         # Running minimum - track minimum value seen at each time point
                         math_name = math_def['name']
