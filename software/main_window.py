@@ -403,7 +403,9 @@ class MainWindow(TemplateBaseClass):
             return
 
         profile_event_loop = True
-        if profile_event_loop: start_time = time.perf_counter()
+        if profile_event_loop:
+            print("\nStarting profile for event")
+            start_time = time.perf_counter()
         else: start_time = None
 
         # If the flag is set, get and discard the next event to avoid glitches

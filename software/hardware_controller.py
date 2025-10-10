@@ -284,17 +284,17 @@ class HardwareController:
 
         for board in range(self.num_board):
             if state.doexttrig[board]:
-                if self._get_channels(board):
+                if self._get_channels(board): # sends trigger info and checks for ready data
                     ready_event[board] = True
-                    self._get_predata(board)
+                    self._get_predata(board) # gets downsamplemergingcounter and triggerphase
 
         for board in range(self.num_board):
             if not state.doexttrig[board]:
-                if self._get_channels(board):
+                if self._get_channels(board): # sends trigger info and checks for ready data
                     ready_event[board] = True
                     if state.noextboard == -1 or board<state.noextboard:
                         state.noextboard = board # remember the first board which is self-triggering
-                    self._get_predata(board)
+                    self._get_predata(board) # gets downsamplemergingcounter and triggerphase
 
         if not any(ready_event):
             return None, 0
@@ -302,7 +302,7 @@ class HardwareController:
         data_map, total_len = {}, 0
         for board in range(self.num_board):
             if ready_event[board]:
-                data = self._get_data(self.usbs[board])
+                data = self._get_data(self.usbs[board]) # gets the actual event data
                 data_map[board] = data
                 total_len += len(data)
 
