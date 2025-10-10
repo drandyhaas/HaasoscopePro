@@ -85,6 +85,11 @@ class FFTWindow(FFTTemplateBaseClass):
 
         self.update_grace_period = 0 # Counter to ignore updates after a timescale change
 
+        # Optimization: Cache UI state to avoid redundant updates
+        self.cached_title = None
+        self.cached_xlabel = None
+        self.cached_xlimits = None
+
     def reset_analysis_state(self):
         """Resets all analysis data for a clean start."""
         self.peak_hold_data = None
@@ -138,15 +143,26 @@ class FFTWindow(FFTTemplateBaseClass):
         if channel_name not in self.fft_lines:
             self.fft_lines[channel_name] = self.plot.plot(pen=pen)
 
-        self.fft_lines[channel_name].setData(x_data, y_data)
+        # Optimization: Use skipFiniteCheck for faster setData
+        self.fft_lines[channel_name].setData(x_data, y_data, skipFiniteCheck=True)
         self.channel_data_cache[channel_name] = (x_data, y_data) # Cache the data
 
-        self.plot.setTitle(title_text)
-        self.plot.setLabel('bottom', xlabel_text)
+        # Optimization: Only update title/labels if they changed
+        if self.cached_title != title_text:
+            self.plot.setTitle(title_text)
+            self.cached_title = title_text
+        if self.cached_xlabel != xlabel_text:
+            self.plot.setLabel('bottom', xlabel_text)
+            self.cached_xlabel = xlabel_text
 
-        # Set the view limits to the data range to prevent panning/zooming beyond it
+        # Optimization: Only set view limits if x range changed
         if x_data is not None and len(x_data) > 0:
-            self.viewBox.setLimits(xMin=np.min(x_data)-np.max(x_data)*0.02, xMax=np.max(x_data)*1.02)
+            x_min = np.min(x_data)
+            x_max = np.max(x_data)
+            new_limits = (x_min - x_max * 0.02, x_max * 1.02)
+            if self.cached_xlimits != new_limits:
+                self.viewBox.setLimits(xMin=new_limits[0], xMax=new_limits[1])
+                self.cached_xlimits = new_limits
 
         if not self.user_panned_zoomed:
             self.plot.enableAutoRange(axis='x')
@@ -168,7 +184,8 @@ class FFTWindow(FFTTemplateBaseClass):
                     self.peak_hold_data = y_data.copy()
                 else:
                     self.peak_hold_data = np.maximum(self.peak_hold_data, y_data)
-                self.peak_hold_line.setData(x_data, self.peak_hold_data)
+                # Optimization: Use skipFiniteCheck for faster setData
+                self.peak_hold_line.setData(x_data, self.peak_hold_data, skipFiniteCheck=True)
 
                 # --- Peak Label Logic ---
                 if self.show_labels_enabled and len(x_data) > 0:
@@ -208,7 +225,8 @@ class FFTWindow(FFTTemplateBaseClass):
 
 
             # --- START: New logic to scale other traces ---
-            if self.active_channel_name in self.channel_data_cache:
+            # Optimization: Only scale if there are multiple channels being displayed
+            if len(self.fft_lines) > 1 and self.active_channel_name in self.channel_data_cache:
                 _, active_y = self.channel_data_cache[self.active_channel_name]
                 active_avg = np.mean(active_y)
 
@@ -218,7 +236,8 @@ class FFTWindow(FFTTemplateBaseClass):
                         other_avg = np.mean(other_y)
                         if other_avg > 0: # Avoid division by zero
                             scale_factor = active_avg / other_avg
-                            line.setData(other_x, other_y * scale_factor)
+                            # Optimization: Use skipFiniteCheck for faster setData
+                            line.setData(other_x, other_y * scale_factor, skipFiniteCheck=True)
             # --- END: New logic ---
 
         # --- Y-Axis Ranging ---

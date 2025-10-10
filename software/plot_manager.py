@@ -284,7 +284,8 @@ class PlotManager(pg.QtCore.QObject):
                                 xdatanew -= distcorrtemp
 
             # --- Final plotting and persistence ---
-            self.lines[li].setData(xdatanew, ydatanew)
+            # Optimization: Use skipFiniteCheck for faster setData
+            self.lines[li].setData(xdatanew, ydatanew, skipFiniteCheck=True)
 
             # Store stabilized data for math channel calculations
             self.stabilized_data[li] = (xdatanew, ydatanew)
@@ -345,7 +346,8 @@ class PlotManager(pg.QtCore.QObject):
         """Sets the data for a channel's reference waveform."""
         if 0 <= channel_index < len(self.reference_lines):
             ref_line = self.reference_lines[channel_index]
-            ref_line.setData(x_data, y_data)
+            # Optimization: Use skipFiniteCheck for faster setData
+            ref_line.setData(x_data, y_data, skipFiniteCheck=True)
             ref_line.setVisible(True)
 
     def hide_reference_plot(self, channel_index):
@@ -404,12 +406,14 @@ class PlotManager(pg.QtCore.QObject):
         """
         for math_name, (x_data, y_data) in math_results.items():
             if math_name in self.math_channel_lines:
-                self.math_channel_lines[math_name].setData(x_data, y_data)
+                # Optimization: Use skipFiniteCheck for faster setData
+                self.math_channel_lines[math_name].setData(x_data, y_data, skipFiniteCheck=True)
 
     def update_xy_plot(self, x_data, y_data):
         """Updates the XY plot with new data."""
         if self.state.xy_mode:
-            self.xy_line.setData(x=x_data, y=y_data)
+            # Optimization: Use skipFiniteCheck for faster setData
+            self.xy_line.setData(x=x_data, y=y_data, skipFiniteCheck=True)
 
     def time_changed(self):
         """Updates the x-axis range and units, and handles zooming."""
@@ -526,7 +530,8 @@ class PlotManager(pg.QtCore.QObject):
             if self.state.doresamp:
                 y_average, common_x_axis = resample(y_average, len(common_x_axis) * self.state.doresamp,
                                                     t=common_x_axis)
-            self.average_line.setData(common_x_axis, y_average)
+            # Optimization: Use skipFiniteCheck for faster setData
+            self.average_line.setData(common_x_axis, y_average, skipFiniteCheck=True)
 
     def clear_persist(self):
         for item, _, _ in list(self.persist_lines):
@@ -609,12 +614,14 @@ class PlotManager(pg.QtCore.QObject):
         # Update max line
         if active_channel in self.peak_max_data:
             x_data, y_data = self.peak_max_data[active_channel]
-            self.peak_max_line.setData(x_data, y_data)
+            # Optimization: Use skipFiniteCheck for faster setData
+            self.peak_max_line.setData(x_data, y_data, skipFiniteCheck=True)
 
         # Update min line
         if active_channel in self.peak_min_data:
             x_data, y_data = self.peak_min_data[active_channel]
-            self.peak_min_line.setData(x_data, y_data)
+            # Optimization: Use skipFiniteCheck for faster setData
+            self.peak_min_line.setData(x_data, y_data, skipFiniteCheck=True)
 
     def update_peak_channel(self):
         """Called when the active channel changes - update peak line colors and clear data."""
@@ -752,7 +759,8 @@ class PlotManager(pg.QtCore.QObject):
                 y_fit_line = slope * x_fit + intercept
 
                 # Draw the linear fit line
-                self.otherlines['fit_1'].setData(x_fit, y_fit_line)
+                # Optimization: Use skipFiniteCheck for faster setData
+                self.otherlines['fit_1'].setData(x_fit, y_fit_line, skipFiniteCheck=True)
                 self.otherlines['fit_1'].setVisible(True)
 
                 # Optionally, draw horizontal lines at the fit endpoints to show the fit region
@@ -771,9 +779,10 @@ class PlotManager(pg.QtCore.QObject):
                 right = left + (top - bot) / slope
 
                 # Set data for the three line segments
-                self.otherlines['fit_0'].setData([right, xc[-1]], [top, top])  # Top line
-                self.otherlines['fit_1'].setData([left, right], [bot, top])  # Sloped line
-                self.otherlines['fit_2'].setData([xc[0], left], [bot, bot])  # Bottom line
+                # Optimization: Use skipFiniteCheck for faster setData
+                self.otherlines['fit_0'].setData([right, xc[-1]], [top, top], skipFiniteCheck=True)  # Top line
+                self.otherlines['fit_1'].setData([left, right], [bot, top], skipFiniteCheck=True)  # Sloped line
+                self.otherlines['fit_2'].setData([xc[0], left], [bot, bot], skipFiniteCheck=True)  # Bottom line
 
                 # Make all three segments visible
                 for i in range(3):

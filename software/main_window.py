@@ -402,7 +402,7 @@ class MainWindow(TemplateBaseClass):
             time.sleep(0.001) # for sync with ngscopeclient thread
             return
 
-        profile_event_loop = True
+        profile_event_loop = False
         if profile_event_loop:
             print("\nStarting profile for event")
             start_time = time.perf_counter()
