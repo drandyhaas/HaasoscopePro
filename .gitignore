@@ -11,3 +11,4 @@
 .idea
 software/dist/*.zip
 /.claude/settings.local.json
+/software/.claude/settings.local.json
