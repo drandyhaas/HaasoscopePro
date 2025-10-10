@@ -332,10 +332,11 @@ class HardwareController:
         data_map, total_len = {}, 0
         state.noextboard = -1
         for board in range(self.num_board):
+            if not ready_event[board]: continue
             data = thedata[board]
             data_map[board] = data
             total_len += len(data)
-            if not state.doexttrig[board] and ready_event[board]:
+            if not state.doexttrig[board]:
                 if state.noextboard == -1:
                     state.noextboard = board  # remember the first board which is self-triggering
         return (data_map, total_len) if data_map else (None, 0)
