@@ -155,7 +155,7 @@ def do_meanrms_calibration(main_window, doprint=False):
             yc2 = yf2[(xf2 > vline - fitwidth) & (xf2 < vline + fitwidth)]
 
             if len(yc1) < 10 or len(yc2) < 10:
-                print("Mean/RMS calibration failed: not enough data in window.")
+                #print("Mean/RMS calibration failed: not enough data in window.")
                 return
 
             # Calculate mean and standard deviation for each channel
