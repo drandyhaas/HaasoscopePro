@@ -319,7 +319,16 @@ class MainWindow(TemplateBaseClass):
         #    regardless of which board in the pair is currently selected.
         primary_board_of_pair = (s.activeboard // 2) * 2
         is_pair_oversampling = s.dooversample[primary_board_of_pair]
+        # Block signals to prevent triggering oversamp_changed when switching boards
+        self.ui.oversampCheck.blockSignals(True)
         self.ui.oversampCheck.setChecked(is_pair_oversampling)
+        self.ui.oversampCheck.blockSignals(False)
+
+        # Update interleavedCheck to reflect the interleaved state of the board pair
+        is_pair_interleaved = s.dointerleaved[primary_board_of_pair]
+        self.ui.interleavedCheck.blockSignals(True)
+        self.ui.interleavedCheck.setChecked(is_pair_interleaved)
+        self.ui.interleavedCheck.blockSignals(False)
 
         # 2. Determine the ENABLED state of the oversampling box.
         #    The user should only be able to CHANGE the oversampling setting
@@ -912,7 +921,10 @@ class MainWindow(TemplateBaseClass):
         self.update_fft_checkbox_state()
 
         # Update the "Two Channel" checkbox to reflect the state of the newly selected board
+        # Block signals to prevent triggering twochan_changed when switching boards
+        self.ui.twochanCheck.blockSignals(True)
         self.ui.twochanCheck.setChecked(self.state.dotwochannel[self.state.activeboard])
+        self.ui.twochanCheck.blockSignals(False)
 
         # This handles channel selector limits and other mode-dependent UI
         self._update_channel_mode_ui()
