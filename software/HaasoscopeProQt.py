@@ -20,14 +20,20 @@ usbs = connectdevices(100) # This will now return an empty list if none are foun
 print(f"Found {len(usbs)} board(s). Performing initial configuration...")
 if usbs:
     for b in range(len(usbs)):
-        if len(usbs) > 1:
-            clkout_ena(usbs[b], True, False)  # Turn on lvdsout_clk for multi-board setups
-            time.sleep(0.1)  # Wait for clocks to lock after configuration
-
         # Reading version multiple times seems to be a hardware quirk to ensure a stable read
         version(usbs[b])
         version(usbs[b])
         version(usbs[b])
+
+        # Seem to need to re-open the device?
+        usbs[b].reopen()
+        version(usbs[b])
+        version(usbs[b])
+        version(usbs[b])
+
+        if len(usbs) > 1:
+            print("Enabling clock out on board", usbs[b].serial)
+            clkout_ena(usbs[b], True, False)  # Turn on lvdsout_clk for multi-board setups
 
         # Check for special beta device serial numbers
         usbs[b].beta = 0.0  # Assign default
@@ -36,6 +42,7 @@ if usbs:
             usbs[b].beta = float(str(usbs[b].serial)[index + 2:index + 6])
             print(f"Board {b} is a special beta device: v{usbs[b].beta}")
 
+time.sleep(0.1)  # Wait for clocks to lock after configuration
 usbs = orderusbs(usbs)
 if len(usbs) > 1:
     tellfirstandlast(usbs)

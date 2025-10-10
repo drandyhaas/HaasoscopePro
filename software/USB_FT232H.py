@@ -60,6 +60,7 @@ class UsbFt232hSync245mode:
             return
 
         self.serial = serial
+        self.device_name = device_name
         self._recv_timeout = 250  # ms
         self._send_timeout = 2000  # ms
         self._chunk = 65536  # 64kB chunks for sending/receiving
@@ -74,6 +75,11 @@ class UsbFt232hSync245mode:
         if self._usb:
             self._usb.close()
             self._usb = None
+
+    def reopen(self):
+        self.close()
+        self._usb, message = open_ft_usb_device(self.device_name, self.serial)
+        #print(message)
 
     def set_latency_timer(self, latency_ms: int):
         """Sets the USB latency timer."""
