@@ -397,19 +397,24 @@ class MainWindow(TemplateBaseClass):
 
     def update_plot_loop(self):
         """Main acquisition loop, with full status bar and FFT plot updates."""
+        s = self.state
         if self.socket and self.socket.issending:
             time.sleep(0.001) # for sync with ngscopeclient thread
             return
 
+        profile_event_loop = True
+        if profile_event_loop: start_time = time.perf_counter()
+        else: start_time = None
+
         # If the flag is set, get and discard the next event to avoid glitches
-        if self.state.skip_next_event:
-            self.state.skip_next_event = False
+        if s.skip_next_event:
+            s.skip_next_event = False
             try:
                 self.controller.get_event() # Fetch and discard
             except ftd2xx.DeviceError:
                 pass # Ignore potential errors during this flush
             return
-        self.state.isdrawing = True # for sync with ngscopeclient thread
+        s.isdrawing = True # for sync with ngscopeclient thread
         try:
             raw_data_map, rx_len = self.controller.get_event()
         except ftd2xx.DeviceError as e:
@@ -424,13 +429,18 @@ class MainWindow(TemplateBaseClass):
             # Stop this loop immediately since communication has failed.
             return
         if not raw_data_map:
-            self.state.isdrawing = False
+            s.isdrawing = False
             return
 
-        s = self.state
+        if profile_event_loop:
+            end_time1 = time.perf_counter()
+            elapsed_time_seconds = end_time1 - start_time
+            elapsed_time_microseconds = elapsed_time_seconds * 1_000_000
+            print(f"Elapsed time for getting data: {elapsed_time_microseconds:.2f} microseconds")
+        else: end_time1 = None
+
         s.nevents += 1
         s.lastsize = rx_len
-
         if s.nevents - s.oldnevents >= s.tinterval:
             now = time.time()
             elapsedtime = now - s.oldtime
@@ -485,33 +495,47 @@ class MainWindow(TemplateBaseClass):
                 if self.ui.actionAuto_oversample_alignment.isChecked():
                     self.ui.interleavedCheck.setChecked(True)
 
+        if profile_event_loop:
+            end_time2 = time.perf_counter()
+            elapsed_time_seconds = end_time2 - end_time1
+            elapsed_time_microseconds = elapsed_time_seconds * 1_000_000
+            print(f"Elapsed time for processing data: {elapsed_time_microseconds:.2f} microseconds")
+        else: end_time2 = None
+
         # Use data for plot, FFT, math, etc.
-        if not s.dofast: self.update_plot_data()
+        self.update_plot_data()
+
+        if profile_event_loop:
+            end_time3 = time.perf_counter()
+            elapsed_time_seconds = end_time3 - end_time2
+            elapsed_time_microseconds = elapsed_time_seconds * 1_000_000
+            print(f"Elapsed time for updating plot data: {elapsed_time_microseconds:.2f} microseconds")
 
         now = time.time()
         dt = now - self.last_time + 1e-9
         self.last_time = now
         self.fps = 1.0 / dt if self.fps is None else self.fps * 0.9 + (1.0 / dt) * 0.1
 
-        self.state.isdrawing = False # for sync with ngscopeclient thread
+        s.isdrawing = False # for sync with ngscopeclient thread
 
         # If 'getone' (Single) mode is active, call dostartstop() immediately
         # after successfully processing one event. This will pause the acquisition.
-        if self.state.getone:
+        if s.getone:
             # Update measurements for the newly acquired event before pausing
             self.measurements.update_measurements_display()
             self.dostartstop()
 
     def update_plot_data(self):
+        s = self.state
 
         # --- Plotting Logic: Switch between Time Domain and XY Mode ---
-        if self.state.xy_mode:
+        if s.xy_mode:
             # For XY mode, we need to ensure the data lengths match.
             # We'll use the data from the first two channels of the active board.
-            board = self.state.activeboard
+            board = s.activeboard
             # Ensure channel 1 is enabled for two-channel mode to get data
-            if self.state.dotwochannel[board]:
-                ch0_index = board * self.state.num_chan_per_board
+            if s.dotwochannel[board]:
+                ch0_index = board * s.num_chan_per_board
                 ch1_index = ch0_index + 1
                 # In two-channel mode, only the first half of the buffer is valid data
                 num_valid_samples = self.xydata.shape[2] // 2
@@ -532,15 +556,15 @@ class MainWindow(TemplateBaseClass):
             self.recorder.record_event(self.xydata, self.plot_manager.otherlines['vline'].value(), lines_vis)
 
         if self.fftui and self.fftui.isVisible():
-            active_channel_name = f"CH{self.state.activexychannel + 1}"
+            active_channel_name = f"CH{s.activexychannel + 1}"
 
             # Loop through all possible channels
-            for ch_idx in range(self.state.num_board * self.state.num_chan_per_board):
+            for ch_idx in range(s.num_board * s.num_chan_per_board):
                 ch_name = f"CH{ch_idx + 1}"
-                board_idx = ch_idx // self.state.num_chan_per_board
+                board_idx = ch_idx // s.num_chan_per_board
 
                 # Update FFT if this channel is enabled
-                if self.state.fft_enabled.get(ch_name, False):
+                if s.fft_enabled.get(ch_name, False):
                     is_active = (ch_name == active_channel_name)
 
                     y_full = self.xydata[ch_idx][1]
@@ -574,8 +598,8 @@ class MainWindow(TemplateBaseClass):
             if self.math_window is not None:
                 # Check if any regular channels have FFT enabled
                 has_regular_channel_fft = any(
-                    self.state.fft_enabled.get(f"CH{i + 1}", False)
-                    for i in range(self.state.num_board * self.state.num_chan_per_board)
+                    s.fft_enabled.get(f"CH{i + 1}", False)
+                    for i in range(s.num_board * s.num_chan_per_board)
                 )
 
                 # Track if we've made a math channel active yet
@@ -585,7 +609,7 @@ class MainWindow(TemplateBaseClass):
                     math_name = math_def['name']
 
                     # Update FFT if this math channel is enabled
-                    if self.state.fft_enabled.get(math_name, False):
+                    if s.fft_enabled.get(math_name, False):
                         # Get math channel data from the plot manager
                         if math_name in self.plot_manager.math_channel_lines:
                             math_line = self.plot_manager.math_channel_lines[math_name]
@@ -593,7 +617,7 @@ class MainWindow(TemplateBaseClass):
 
                             if y_data is not None and len(y_data) > 0:
                                 # Calculate FFT using the active board's sample rate
-                                freq, mag = self.processor.calculate_fft(y_data, self.state.activeboard)
+                                freq, mag = self.processor.calculate_fft(y_data, s.activeboard)
 
                                 if freq is not None and len(freq) > 0:
                                     max_freq_mhz = np.max(freq)
