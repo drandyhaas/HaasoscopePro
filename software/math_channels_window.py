@@ -164,6 +164,15 @@ class MathChannelsWindow(QWidget):
         buttons_layout_2.addWidget(self.measure_button)
         list_layout.addLayout(buttons_layout_2)
 
+        # Buttons layout - Row 3
+        buttons_layout_3 = QHBoxLayout()
+        self.fft_button = QCheckBox("Use for FFT")
+        self.fft_button.setChecked(False)
+        self.fft_button.clicked.connect(self.toggle_use_for_fft)
+        self.fft_button.setEnabled(False)  # Initially disabled until a math channel is selected
+        buttons_layout_3.addWidget(self.fft_button)
+        list_layout.addLayout(buttons_layout_3)
+
         list_group.setLayout(list_layout)
         layout.addWidget(list_group)
 
@@ -350,6 +359,7 @@ class MathChannelsWindow(QWidget):
         self.remove_button.setEnabled(has_selection)
         self.color_button.setEnabled(has_selection)
         self.measure_button.setEnabled(has_selection)
+        self.fft_button.setEnabled(has_selection)
         # Replace button is always enabled/disabled based on selection (now in top section)
         self.replace_button.setEnabled(has_selection)
 
@@ -369,6 +379,11 @@ class MathChannelsWindow(QWidget):
                 self.displayed_button.blockSignals(True)
                 self.displayed_button.setChecked(math_def.get('displayed', True))
                 self.displayed_button.blockSignals(False)
+
+                # Update FFT button state
+                self.fft_button.blockSignals(True)
+                self.fft_button.setChecked(math_def.get('fft_enabled', False))
+                self.fft_button.blockSignals(False)
         else:
             self.displayed_button.setEnabled(False)
 
@@ -495,7 +510,8 @@ class MathChannelsWindow(QWidget):
             'operation': op,
             'color': color,
             'displayed': not uses_disabled_channel,  # False if using disabled channel, True otherwise
-            'width': line_width  # Store the line width that was active when math channel was created
+            'width': line_width,  # Store the line width that was active when math channel was created
+            'fft_enabled': False  # Track FFT state for this math channel
         }
 
         self.math_channels.append(math_def)
@@ -591,9 +607,14 @@ class MathChannelsWindow(QWidget):
         """Remove the selected math channel from the list."""
         current_row = self.math_list.currentRow()
         if current_row >= 0:
-            # Check if the removed channel is being used for measurements
+            # Check if the removed channel is being used for measurements or FFT
             removed_channel_name = self.math_channels[current_row]['name']
             was_used_for_measurements = (self.main_window.measurements.selected_math_channel == removed_channel_name)
+            was_used_for_fft = self.math_channels[current_row].get('fft_enabled', False)
+
+            # Remove from FFT state tracking
+            if removed_channel_name in self.state.fft_enabled:
+                del self.state.fft_enabled[removed_channel_name]
 
             self.math_list.takeItem(current_row)
             del self.math_channels[current_row]
@@ -603,7 +624,7 @@ class MathChannelsWindow(QWidget):
             self.running_minmax = {}
             name_mapping = {}  # Map old names to new names
 
-            # Renumber remaining math channels and update running_minmax
+            # Renumber remaining math channels and update running_minmax and FFT state
             for i, math_def in enumerate(self.math_channels):
                 old_name = math_def['name']
                 new_name = f"Math{i + 1}"
@@ -615,6 +636,11 @@ class MathChannelsWindow(QWidget):
                     self.running_minmax[new_name] = old_minmax[old_name]
                 else:
                     self.running_minmax[new_name] = None
+
+                # Update FFT state tracking with new name
+                if old_name in self.state.fft_enabled:
+                    self.state.fft_enabled[new_name] = self.state.fft_enabled[old_name]
+                    del self.state.fft_enabled[old_name]
 
             # Update references in all math channels
             for math_def in self.math_channels:
@@ -654,6 +680,14 @@ class MathChannelsWindow(QWidget):
             # Update channel lists since math channels changed
             self.update_channel_list()
 
+            # If the removed channel was used for FFT, update FFT window visibility
+            if was_used_for_fft and self.main_window.fftui is not None:
+                should_show = any(self.state.fft_enabled.values())
+                if should_show:
+                    self.main_window.fftui.show()
+                else:
+                    self.main_window.fftui.hide()
+
             # Emit signal to update plots
             self.math_channels_changed.emit()
 
@@ -662,8 +696,15 @@ class MathChannelsWindow(QWidget):
         if len(self.math_channels) == 0:
             return
 
-        # Check if any channel was being used for measurements
+        # Check if any channel was being used for measurements or FFT
         was_used_for_measurements = (self.main_window.measurements.selected_math_channel is not None)
+        had_fft_enabled = any(math_def.get('fft_enabled', False) for math_def in self.math_channels)
+
+        # Remove all math channels from FFT state tracking
+        for math_def in self.math_channels:
+            math_name = math_def['name']
+            if math_name in self.state.fft_enabled:
+                del self.state.fft_enabled[math_name]
 
         # Clear all data
         self.math_channels.clear()
@@ -674,6 +715,14 @@ class MathChannelsWindow(QWidget):
         if was_used_for_measurements:
             self.main_window.measurements.select_math_channel_for_measurement(None)
             self.measure_button.setChecked(False)
+
+        # If any math channel had FFT enabled, update FFT window visibility
+        if had_fft_enabled and self.main_window.fftui is not None:
+            should_show = any(self.state.fft_enabled.values())
+            if should_show:
+                self.main_window.fftui.show()
+            else:
+                self.main_window.fftui.hide()
 
         # Update button states
         self.update_button_states()
@@ -729,6 +778,35 @@ class MathChannelsWindow(QWidget):
         else:
             # Use the active channel
             self.main_window.measurements.select_math_channel_for_measurement(None)
+
+    def toggle_use_for_fft(self, checked):
+        """Toggle FFT for the selected math channel.
+
+        Args:
+            checked: True if FFT should be enabled for this math channel, False otherwise
+        """
+        current_row = self.math_list.currentRow()
+        if 0 <= current_row < len(self.math_channels):
+            # Update the math channel's FFT state
+            math_channel_name = self.math_channels[current_row]['name']
+            self.math_channels[current_row]['fft_enabled'] = checked
+
+            # Track this math channel in the state.fft_enabled dictionary
+            self.state.fft_enabled[math_channel_name] = checked
+
+            # Create FFT window if it doesn't exist
+            if self.main_window.fftui is None:
+                from FFTWindow import FFTWindow
+                self.main_window.fftui = FFTWindow(self.main_window)
+                # Connect the window_closed signal to our handler
+                self.main_window.fftui.window_closed.connect(self.main_window.on_fft_window_closed)
+
+            # Show or hide FFT window based on whether any channel has FFT enabled
+            should_show = any(self.state.fft_enabled.values())
+            if should_show:
+                self.main_window.fftui.show()
+            else:
+                self.main_window.fftui.hide()
 
     def sync_measure_button_state(self):
         """Synchronize the measure button state with the current measurement channel selection."""

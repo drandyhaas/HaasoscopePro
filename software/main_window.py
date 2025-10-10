@@ -3,9 +3,10 @@
 import time, math
 import numpy as np
 import threading
+import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
 from PyQt5.QtWidgets import QMessageBox, QColorDialog, QFrame
-from PyQt5.QtGui import QPalette
+from PyQt5.QtGui import QPalette, QColor
 
 # Import all the refactored components
 from scope_state import ScopeState
@@ -546,6 +547,56 @@ class MainWindow(TemplateBaseClass):
                         self.fftui.update_plot(ch_name, plot_x_data, mag, pen, title, xlabel, is_active)
                 else:
                     self.fftui.clear_plot(ch_name)
+
+            # Process math channels for FFT
+            if self.math_window is not None:
+                # Check if any regular channels have FFT enabled
+                has_regular_channel_fft = any(
+                    self.state.fft_enabled.get(f"CH{i+1}", False)
+                    for i in range(self.state.num_board * self.state.num_chan_per_board)
+                )
+
+                # Track if we've made a math channel active yet
+                made_math_active = False
+
+                for math_def in self.math_window.math_channels:
+                    math_name = math_def['name']
+
+                    # Update FFT if this math channel is enabled
+                    if self.state.fft_enabled.get(math_name, False):
+                        # Get math channel data from the plot manager
+                        if math_name in self.plot_manager.math_channel_lines:
+                            math_line = self.plot_manager.math_channel_lines[math_name]
+                            x_data, y_data = math_line.getData()
+
+                            if y_data is not None and len(y_data) > 0:
+                                # Calculate FFT using the active board's sample rate
+                                freq, mag = self.processor.calculate_fft(y_data, self.state.activeboard)
+
+                                if freq is not None and len(freq) > 0:
+                                    max_freq_mhz = np.max(freq)
+                                    if max_freq_mhz < 0.001:
+                                        plot_x_data, xlabel = freq * 1e6, 'Frequency (Hz)'
+                                    elif max_freq_mhz < 1.0:
+                                        plot_x_data, xlabel = freq * 1e3, 'Frequency (kHz)'
+                                    else:
+                                        plot_x_data, xlabel = freq, 'Frequency (MHz)'
+
+                                    title = f'Haasoscope Pro FFT Plot'
+                                    # Create a pen with the math channel's color
+                                    color = QColor(math_def['color'])
+                                    pen = pg.mkPen(color=color, width=math_def.get('width', 1))
+
+                                    # Make this math channel active if no regular channels have FFT enabled
+                                    # and this is the first math channel we're processing
+                                    is_active = False
+                                    if not has_regular_channel_fft and not made_math_active:
+                                        is_active = True
+                                        made_math_active = True
+
+                                    self.fftui.update_plot(math_name, plot_x_data, mag, pen, title, xlabel, is_active)
+                    else:
+                        self.fftui.clear_plot(math_name)
 
         now = time.time()
         dt = now - self.last_time + 1e-9
@@ -1348,6 +1399,15 @@ class MainWindow(TemplateBaseClass):
         # Disable FFT for all channels and uncheck the checkbox
         self.state.fft_enabled.clear()
         self.ui.fftCheck.setChecked(False)
+
+        # Also disable FFT for all math channels
+        if self.math_window is not None:
+            for math_def in self.math_window.math_channels:
+                math_def['fft_enabled'] = False
+            # Update the UI if the math window is visible
+            if self.math_window.isVisible():
+                self.math_window.update_button_states()
+
         should_show = any(self.state.fft_enabled.values())
         if should_show: self.fftui.show()
         else: self.fftui.hide()
