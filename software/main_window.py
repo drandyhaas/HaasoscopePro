@@ -241,7 +241,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.fwfBox.valueChanged.connect(lambda val: setattr(self.state, 'fitwidthfraction', val / 100.))
         self.ui.fftCheck.stateChanged.connect(self.fft_clicked)
         self.ui.persistTbox.valueChanged.connect(self.plot_manager.set_persistence)
-        self.ui.persistavgCheck.clicked.connect(self.set_average_line_pen)
+        self.ui.actionPersist_average.triggered.connect(self.set_average_line_pen)
         self.ui.persistlinesCheck.clicked.connect(self.set_average_line_pen)
         self.ui.actionLine_color.triggered.connect(self.change_channel_color)
         self.ui.actionHigh_resolution.triggered.connect(self.high_resolution_toggled)
@@ -1250,7 +1250,7 @@ class MainWindow(TemplateBaseClass):
         # Get the state of the relevant UI checkboxes
         is_chan_on = self.ui.chanonCheck.isChecked()
         show_persist_lines = self.ui.persistlinesCheck.isChecked()
-        show_persist_avg = self.ui.persistavgCheck.isChecked()
+        show_persist_avg = self.ui.actionPersist_average.isChecked()
 
         # Get the line objects from the plot manager
         active_line = self.plot_manager.lines[self.state.activexychannel]

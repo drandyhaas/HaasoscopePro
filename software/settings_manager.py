@@ -85,7 +85,7 @@ def save_setup(main_window):
         # Plot manager settings
         'line_width': main_window.ui.linewidthBox.value(),
         'persistence': main_window.ui.persistTbox.value(),
-        'persist_avg_enabled': main_window.ui.persistavgCheck.isChecked(),
+        'persist_avg_enabled': main_window.ui.actionPersist_average.isChecked(),
         'persist_lines_enabled': main_window.ui.persistlinesCheck.isChecked(),
 
         # Channel visibility (per-channel)
@@ -301,7 +301,7 @@ def load_setup(main_window):
     if 'persistence' in setup:
         main_window.ui.persistTbox.setValue(setup['persistence'])
     if 'persist_avg_enabled' in setup:
-        main_window.ui.persistavgCheck.setChecked(setup['persist_avg_enabled'])
+        main_window.ui.actionPersist_average.setChecked(setup['persist_avg_enabled'])
     if 'persist_lines_enabled' in setup:
         main_window.ui.persistlinesCheck.setChecked(setup['persist_lines_enabled'])
 

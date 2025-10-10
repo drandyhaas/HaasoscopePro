@@ -168,7 +168,7 @@ class PlotManager(pg.QtCore.QObject):
 
         # Persistence average line
         self.average_line = self.plot.plot(pen=pg.mkPen(color='w', width=1), name="persist_avg")
-        self.average_line.setVisible(self.ui.persistavgCheck.isChecked())
+        self.average_line.setVisible(self.ui.actionPersist_average.isChecked())
 
         # XY plot line (initially hidden)
         self.xy_line = self.plot.plot(pen=pg.mkPen(color="w"), name="XY_Plot", skipFiniteCheck=True, connect="finite")
@@ -323,7 +323,7 @@ class PlotManager(pg.QtCore.QObject):
         # Also hide/show the right axis
         if self.right_axis:
             self.right_axis.setVisible(is_time_domain_visible)
-        self.average_line.setVisible(is_time_domain_visible and self.ui.persistavgCheck.isChecked())
+        self.average_line.setVisible(is_time_domain_visible and self.ui.actionPersist_average.isChecked())
 
         if show_xy:
             self.plot.setLabel('bottom', f"Board {board_num} Ch 1 (V/div)")
