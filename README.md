@@ -24,14 +24,15 @@ See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiK
 - old: v28 firmware fixed trigger stability
 - "main" branch is currently v29 firmware and adds more software features
 - "v29_cleanup" branch has a beta version of the software with yet more features
-- "v30_test" branch has v30 firmware which adds trigger delay and holdoff options - new development is occuring here
+- "v30" branch has v30 firmware which adds trigger delay and holdoff options
+- "v30_test" branch: new development is occuring here
 
-To use a different branch, do <code>git pull && git checkout "branchname"</code>, select the branch name in the drop down box on github and then download the zip file of the code, or (for v30+) download a release zip file. 
-Then run the new software, update the firmware (if needed) on your board from that new software, and power cycle the board (automatic firmware reload in v29+ firmware).
+To use a different branch, do <code>git pull && git checkout "branchname"</code>, select the branch name in the drop down box on github and then download the zip file of the code, or (for v30+) [download a release](https://github.com/drandyhaas/HaasoscopePro/releases) zip file for your platform (Windows, Mac, Linux). 
+Then run the new software, update the firmware (if needed) on your board from that new software, and power cycle the board (automatic firmware reload for boards with v29+ firmware).
 
 ### Quick start (Windows/Mac)
 
-1) [Download code](https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/main.zip) and unzip it, or another zip file version from another branch, or (for v30+) download a release zip file.
+1) [Download code](https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/main.zip) and unzip it, or another zip file version from another branch, or (for v30+) [download a release](https://github.com/drandyhaas/HaasoscopePro/releases) zip file for your platform.
 2) Install [FTDI D2xx driver](https://ftdichip.com/drivers/d2xx-drivers/) 
 - for Windows: install by running the setup exe at <code>HaasoscopePro/software/ftdi_setup.exe</code>
 - for Mac: <code>sudo mkdir -p /usr/local/lib; sudo cp HaasoscopePro/software/libftd2xx.dylib /usr/local/lib/</code> 
