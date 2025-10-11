@@ -2,7 +2,8 @@
 """Window for creating and managing math channel operations."""
 
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QComboBox,
-                             QPushButton, QListWidget, QLabel, QGroupBox, QColorDialog, QListWidgetItem, QCheckBox)
+                             QPushButton, QListWidget, QLabel, QGroupBox, QColorDialog, QListWidgetItem, QCheckBox,
+                             QDialog, QLineEdit, QTextEdit, QDialogButtonBox, QMessageBox)
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QPixmap, QIcon
 import numpy as np
@@ -20,6 +21,90 @@ class RefreshingComboBox(QComboBox):
         if self.refresh_callback:
             self.refresh_callback()
         super().showPopup()
+
+
+class CustomOperationDialog(QDialog):
+    """Dialog for creating custom math operations."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Add Custom Operation")
+        self.setModal(True)
+        self.setup_ui()
+
+    def setup_ui(self):
+        """Setup the UI layout."""
+        layout = QVBoxLayout()
+
+        # Name input
+        name_layout = QHBoxLayout()
+        name_layout.addWidget(QLabel("Operation Name:"))
+        self.name_input = QLineEdit()
+        self.name_input.setPlaceholderText("e.g., RMS, Average, etc.")
+        name_layout.addWidget(self.name_input)
+        layout.addLayout(name_layout)
+
+        # Expression input
+        layout.addWidget(QLabel("Expression (use A for channel A, B for channel B):"))
+        self.expression_input = QTextEdit()
+        self.expression_input.setPlaceholderText(
+            "Examples:\n"
+            "- Single channel: np.sqrt(np.mean(A**2))\n"
+            "- Two channel: (A + B) / 2\n"
+            "- Complex: np.where(A > 0, A, 0)"
+        )
+        self.expression_input.setMaximumHeight(100)
+        layout.addWidget(self.expression_input)
+
+        # Help text
+        help_text = QLabel(
+            "Available functions: np (NumPy), all NumPy functions\n"
+            "For single-channel ops, only use 'A'\n"
+            "For two-channel ops, use both 'A' and 'B'"
+        )
+        help_text.setWordWrap(True)
+        help_text.setStyleSheet("color: gray; font-size: 9pt;")
+        layout.addWidget(help_text)
+
+        # Buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.validate_and_accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+        self.setLayout(layout)
+
+    def validate_and_accept(self):
+        """Validate inputs before accepting."""
+        name = self.name_input.text().strip()
+        expression = self.expression_input.toPlainText().strip()
+
+        if not name:
+            QMessageBox.warning(self, "Invalid Input", "Please enter an operation name.")
+            return
+
+        if not expression:
+            QMessageBox.warning(self, "Invalid Input", "Please enter an expression.")
+            return
+
+        # Check if expression contains 'A'
+        if 'A' not in expression:
+            QMessageBox.warning(self, "Invalid Input", "Expression must contain 'A' for channel A.")
+            return
+
+        self.accept()
+
+    def get_operation_data(self):
+        """Get the operation data entered by the user."""
+        name = self.name_input.text().strip()
+        expression = self.expression_input.toPlainText().strip()
+        # Determine if it's a two-channel operation based on presence of 'B'
+        is_two_channel = 'B' in expression
+        return {
+            'name': name,
+            'expression': expression,
+            'is_two_channel': is_two_channel
+        }
 
 
 class MathChannelsWindow(QWidget):
@@ -40,6 +125,10 @@ class MathChannelsWindow(QWidget):
         # Each entry: {'name': 'Math1', 'ch1': 0, 'ch2': 1, 'operation': '-', 'color': '#00FFFF'}
         self.math_channels = []
         self.next_color_index = 0  # Track which color to use next
+
+        # Storage for custom operations
+        # Each entry: {'name': 'RMS', 'expression': 'np.sqrt(np.mean(A**2))', 'is_two_channel': False}
+        self.custom_operations = []
 
         # Storage for running min/max tracking
         # Dictionary: {math_channel_name: {'min': array, 'max': array}}
@@ -83,19 +172,23 @@ class MathChannelsWindow(QWidget):
         op_layout = QHBoxLayout()
         op_layout.addWidget(QLabel("Operation:"))
         self.operation_combo = QComboBox()
-        # Two-channel operations
-        self.operation_combo.addItems(['A-B', 'A+B', 'A*B', 'A/B', 'min(A,B)', 'max(A,B)'])
-        # Add multiple separators for bigger visual separation
-        self.operation_combo.insertSeparator(6)
-        self.operation_combo.addItem('--- Single Channel ---')
-        self.operation_combo.model().item(7).setEnabled(False)  # Make it non-selectable
-        # Single-channel operations
-        self.operation_combo.addItems(['Invert', 'Abs', 'Square', 'Sqrt', 'Log', 'Exp',
-                                       'Integrate', 'Differentiate', 'Envelope', 'Smooth', 'Minimum', 'Maximum'])
+        self.populate_operations()
         # Show all items in dropdown
         self.operation_combo.setMaxVisibleItems(20)
         op_layout.addWidget(self.operation_combo)
         selection_layout.addLayout(op_layout)
+
+        # Custom operation buttons
+        custom_op_layout = QHBoxLayout()
+        self.add_custom_op_button = QPushButton("Add Custom Operation")
+        self.add_custom_op_button.clicked.connect(self.add_custom_operation)
+        custom_op_layout.addWidget(self.add_custom_op_button)
+
+        self.remove_custom_op_button = QPushButton("Remove Custom Operation")
+        self.remove_custom_op_button.clicked.connect(self.remove_custom_operation)
+        self.remove_custom_op_button.setEnabled(False)  # Initially disabled
+        custom_op_layout.addWidget(self.remove_custom_op_button)
+        selection_layout.addLayout(custom_op_layout)
 
         # Channel B selector
         ch_b_layout = QHBoxLayout()
@@ -279,8 +372,33 @@ class MathChannelsWindow(QWidget):
 
         self.update_preview()
 
-    @staticmethod
-    def is_two_channel_operation(operation):
+    def populate_operations(self):
+        """Populate the operations combo box with built-in and custom operations."""
+        self.operation_combo.clear()
+
+        # Two-channel operations
+        self.operation_combo.addItems(['A-B', 'A+B', 'A*B', 'A/B', 'min(A,B)', 'max(A,B)'])
+
+        # Add separator
+        self.operation_combo.insertSeparator(6)
+        self.operation_combo.addItem('--- Single Channel ---')
+        self.operation_combo.model().item(7).setEnabled(False)  # Make it non-selectable
+
+        # Single-channel operations
+        self.operation_combo.addItems(['Invert', 'Abs', 'Square', 'Sqrt', 'Log', 'Exp',
+                                       'Integrate', 'Differentiate', 'Envelope', 'Smooth', 'Minimum', 'Maximum'])
+
+        # Add custom operations if any
+        if self.custom_operations:
+            separator_idx = self.operation_combo.count()
+            self.operation_combo.insertSeparator(separator_idx)
+            self.operation_combo.addItem('--- Custom Operations ---')
+            self.operation_combo.model().item(separator_idx + 1).setEnabled(False)  # Make it non-selectable
+
+            for custom_op in self.custom_operations:
+                self.operation_combo.addItem(custom_op['name'])
+
+    def is_two_channel_operation(self, operation):
         """Check if an operation requires two channels.
 
         Args:
@@ -291,7 +409,17 @@ class MathChannelsWindow(QWidget):
         """
         two_channel_ops = ['A-B', 'A+B', 'A*B', 'A/B', 'min(A,B)', 'max(A,B)',
                           '-', '+', '*', '/']  # Include old format for backward compatibility
-        return operation in two_channel_ops
+
+        # Check built-in operations
+        if operation in two_channel_ops:
+            return True
+
+        # Check custom operations
+        for custom_op in self.custom_operations:
+            if custom_op['name'] == operation:
+                return custom_op['is_two_channel']
+
+        return False
 
     def on_operation_changed(self):
         """Called when operation selection changes."""
@@ -302,8 +430,69 @@ class MathChannelsWindow(QWidget):
         self.channel_b_label.setEnabled(needs_two)
         self.channel_b_combo.setEnabled(needs_two)
 
+        # Enable/disable remove custom operation button
+        is_custom = any(custom_op['name'] == op for custom_op in self.custom_operations)
+        self.remove_custom_op_button.setEnabled(is_custom)
+
         # Update preview
         self.update_preview()
+
+    def add_custom_operation(self):
+        """Open dialog to add a custom operation."""
+        dialog = CustomOperationDialog(self)
+        # Set dialog width to match math window width
+        dialog.resize(self.width(), dialog.height())
+
+        if dialog.exec_() == QDialog.Accepted:
+            op_data = dialog.get_operation_data()
+
+            # Check if name already exists
+            if any(custom_op['name'] == op_data['name'] for custom_op in self.custom_operations):
+                QMessageBox.warning(self, "Duplicate Name",
+                                  f"A custom operation named '{op_data['name']}' already exists.")
+                return
+
+            # Add to custom operations list
+            self.custom_operations.append(op_data)
+
+            # Repopulate the operations combo box
+            self.populate_operations()
+
+            # Select the newly added custom operation
+            index = self.operation_combo.findText(op_data['name'])
+            if index >= 0:
+                self.operation_combo.setCurrentIndex(index)
+
+    def remove_custom_operation(self):
+        """Remove the selected custom operation."""
+        current_op = self.operation_combo.currentText()
+
+        # Find and remove the custom operation
+        for i, custom_op in enumerate(self.custom_operations):
+            if custom_op['name'] == current_op:
+                # Check if this operation is being used by any math channel
+                using_channels = []
+                for math_def in self.math_channels:
+                    if math_def['operation'] == current_op:
+                        using_channels.append(math_def['name'])
+
+                if using_channels:
+                    QMessageBox.warning(self, "Operation In Use",
+                                      f"Cannot remove '{current_op}' because it's used by: {', '.join(using_channels)}\n\n"
+                                      "Please remove or update those math channels first.")
+                    return
+
+                # Remove the custom operation
+                self.custom_operations.pop(i)
+
+                # Repopulate the operations combo box
+                self.populate_operations()
+
+                # Select the first operation
+                if self.operation_combo.count() > 0:
+                    self.operation_combo.setCurrentIndex(0)
+
+                break
 
     def get_channel_display_name(self, ch_data):
         """Get display name for a channel (regular, reference, or math).
@@ -1005,7 +1194,18 @@ class MathChannelsWindow(QWidget):
                     elif operation == 'max(A,B)':
                         y_result = np.maximum(y1, y2)
                     else:
-                        y_result = np.zeros_like(y1)
+                        # Check if it's a custom two-channel operation
+                        custom_op = next((op for op in self.custom_operations if op['name'] == operation), None)
+                        if custom_op and custom_op['is_two_channel']:
+                            try:
+                                # Evaluate custom expression with A=y1, B=y2
+                                A, B = y1, y2  # noqa: F841
+                                y_result = eval(custom_op['expression'])
+                            except Exception as e:
+                                print(f"Error evaluating custom operation '{operation}': {e}")
+                                y_result = np.zeros_like(y1)
+                        else:
+                            y_result = np.zeros_like(y1)
                 else:
                     # Single-channel operations
                     # Use x1 as the x-axis for the result
@@ -1087,7 +1287,18 @@ class MathChannelsWindow(QWidget):
                             )
                             y_result = self.running_minmax[math_name]['max'].copy()
                     else:
-                        y_result = np.zeros_like(y1)
+                        # Check if it's a custom single-channel operation
+                        custom_op = next((op for op in self.custom_operations if op['name'] == operation), None)
+                        if custom_op and not custom_op['is_two_channel']:
+                            try:
+                                # Evaluate custom expression with A=y1
+                                A = y1  # noqa: F841
+                                y_result = eval(custom_op['expression'])
+                            except Exception as e:
+                                print(f"Error evaluating custom operation '{operation}': {e}")
+                                y_result = np.zeros_like(y1)
+                        else:
+                            y_result = np.zeros_like(y1)
 
                 results[math_def['name']] = (x_result, y_result)
             except Exception as e:
