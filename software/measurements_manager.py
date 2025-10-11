@@ -36,10 +36,6 @@ class MeasurementsManager:
         # Track which channel/math channel is being measured
         self.selected_math_channel = None  # None means use active channel
 
-        # Temperature caching
-        self.cached_temps = (0, 0)
-        self.last_temp_update_time = 0
-
         # Histogram tracking
         self.current_histogram_measurement = None
         self.current_histogram_unit = ""
@@ -112,11 +108,16 @@ class MeasurementsManager:
             chan = self.state.activexychannel % self.state.num_chan_per_board
             return f"B{board} Ch{chan}"
 
+    def get_current_board_key(self):
+        """Get the current board identifier for board-level measurements (e.g., temperature)."""
+        board = self.state.activeboard
+        return f"B{board}"
+
     def get_channel_color(self, channel_key):
         """Get the color for a given channel key.
 
         Args:
-            channel_key: Channel identifier (e.g., "B0 Ch1" or "Math1")
+            channel_key: Channel identifier (e.g., "B0 Ch1", "Math1", or "B0" for board-level)
 
         Returns:
             QColor for the channel
@@ -127,12 +128,21 @@ class MeasurementsManager:
                 return self.plot_manager.math_channel_lines[channel_key].opts['pen'].color()
             else:
                 return QColor('white')
-        else:
+        elif " " in channel_key:
             # Regular channel (format: "B0 Ch1")
             parts = channel_key.split()
             board = int(parts[0][1:])  # Remove 'B' prefix
             chan = int(parts[1][2:])  # Get channel number (remove 'Ch' prefix)
             channel_index = board * self.state.num_chan_per_board + chan
+            if channel_index < len(self.plot_manager.linepens):
+                return self.plot_manager.linepens[channel_index].color()
+            else:
+                return QColor('white')
+        else:
+            # Board-level measurement (format: "B0")
+            board = int(channel_key[1:])  # Remove 'B' prefix
+            # Use the color of channel 0 on this board
+            channel_index = board * self.state.num_chan_per_board
             if channel_index < len(self.plot_manager.linepens):
                 return self.plot_manager.linepens[channel_index].color()
             else:
@@ -157,7 +167,16 @@ class MeasurementsManager:
         for action, name in measurement_actions:
             action.triggered.connect(lambda checked, n=name: self.toggle_measurement(n, checked))
 
-        # Global measurements (Trigger threshold, Persist lines, Temperatures) are handled in update_measurements_display
+        # Per-board measurement actions (temperatures)
+        board_measurement_actions = [
+            (self.ui.actionADC_temperature, "ADC temp"),
+            (self.ui.actionBoard_temperature, "Board temp"),
+        ]
+
+        for action, name in board_measurement_actions:
+            action.triggered.connect(lambda checked, n=name: self.toggle_board_measurement(n, checked))
+
+        # Global measurements (Trigger threshold, Persist lines) are handled in update_measurements_display
 
     def toggle_measurement(self, measurement_name, checked):
         """Add or remove a measurement for the current channel."""
@@ -180,6 +199,30 @@ class MeasurementsManager:
             key = (actual_name, channel_key)
         else:
             key = (measurement_name, channel_key)
+
+        if checked:
+            # Add measurement
+            self.active_measurements[key] = True
+        else:
+            # Remove measurement
+            if key in self.active_measurements:
+                del self.active_measurements[key]
+            # Also remove from items and history
+            if key in self.measurement_items:
+                # Find and remove the row by matching the widget
+                name_widget = self.measurement_items[key][0]  # Index 0 is the name widget
+                for row in range(self.measurement_model.rowCount()):
+                    if self.ui.tableView.indexWidget(self.measurement_model.index(row, 0)) == name_widget:
+                        self.measurement_model.removeRow(row)
+                        break
+                del self.measurement_items[key]
+            if key in self.measurement_history:
+                del self.measurement_history[key]
+
+    def toggle_board_measurement(self, measurement_name, checked):
+        """Add or remove a board-level measurement (e.g., temperature) for the current board."""
+        board_key = self.get_current_board_key()
+        key = (measurement_name, board_key)
 
         if checked:
             # Add measurement
@@ -225,10 +268,6 @@ class MeasurementsManager:
             self.ui.actionTrigger_thresh.setChecked(False)
         elif measurement_name == "Persist lines":
             self.ui.actionN_persist_lines.setChecked(False)
-        elif measurement_name == "ADC temp":
-            self.ui.actionADC_temperature.setChecked(False)
-        elif measurement_name == "Board temp":
-            self.ui.actionBoard_temperature.setChecked(False)
 
     def add_all_measurements_for_channel(self):
         """Add all available measurements for the current channel."""
@@ -294,6 +333,7 @@ class MeasurementsManager:
     def update_menu_checkboxes(self):
         """Update measurement menu checkboxes based on current channel's active measurements."""
         channel_key = self.get_current_channel_key()
+        board_key = self.get_current_board_key()
 
         # Check which measurements are active for this channel
         self.ui.actionMean.setChecked((("Mean", channel_key) in self.active_measurements))
@@ -308,6 +348,10 @@ class MeasurementsManager:
                                                                                                      channel_key) in self.active_measurements))
         self.ui.actionRisetime_error.setChecked((("Risetime error", channel_key) in self.active_measurements or (
             "Falltime error", channel_key) in self.active_measurements))
+
+        # Check which board-level measurements are active for this board
+        self.ui.actionADC_temperature.setChecked((("ADC temp", board_key) in self.active_measurements))
+        self.ui.actionBoard_temperature.setChecked((("Board temp", board_key) in self.active_measurements))
 
     def update_measurement_header(self):
         """Update the measurement table header and menu checkboxes."""
@@ -525,23 +569,28 @@ class MeasurementsManager:
             num_persist = len(self.plot_manager.persist_lines)
             _set_global_measurement("Persist lines", num_persist)
 
-        # Handle temperature measurements
-        if self.ui.actionADC_temperature.isChecked() or self.ui.actionBoard_temperature.isChecked():
+        # Handle temperature measurements (per-board)
+        # Cache for temperature readings per board (board_index: (adc_temp, board_temp, timestamp))
+        if not hasattr(self, 'board_temp_cache'):
+            self.board_temp_cache = {}
+
+        # Check if we need to read temperatures for active board measurements
+        active_board_measurements = [key for key in self.active_measurements.keys()
+                                      if key[0] in ["ADC temp", "Board temp"]]
+
+        for measurement_key in active_board_measurements:
+            measurement_name, board_key = measurement_key
+            board_idx = int(board_key[1:])  # Extract board number from "B0", "B1", etc.
+
             # Only read temperatures once per second (slow USB operation)
             current_time = time.time()
-            if current_time - self.last_temp_update_time >= 1.0:
-                if self.state.num_board > 0:
-                    active_usb = self.controller.usbs[self.state.activeboard]
-                    adctemp, boardtemp = gettemps(active_usb)
-                    self.cached_temps = (adctemp, boardtemp)
-                    self.last_temp_update_time = current_time
+            needs_update = (board_idx not in self.board_temp_cache or
+                           current_time - self.board_temp_cache[board_idx][2] >= 1.0)
 
-            # Call _set_global_measurement for each checked temperature
-            if self.state.num_board > 0:
-                if self.ui.actionADC_temperature.isChecked():
-                    _set_global_measurement("ADC temp", self.cached_temps[0], "\u00b0C")
-                if self.ui.actionBoard_temperature.isChecked():
-                    _set_global_measurement("Board temp", self.cached_temps[1], "\u00b0C")
+            if needs_update and board_idx < self.state.num_board:
+                usb = self.controller.usbs[board_idx]
+                adctemp, boardtemp = gettemps(usb)
+                self.board_temp_cache[board_idx] = (adctemp, boardtemp, current_time)
 
         # Remove global measurements that are no longer checked
         global_measurements_to_remove = []
@@ -551,10 +600,6 @@ class MeasurementsManager:
                 if name == "Trig threshold" and not self.ui.actionTrigger_thresh.isChecked():
                     global_measurements_to_remove.append(key)
                 elif name == "Persist lines" and not self.ui.actionN_persist_lines.isChecked():
-                    global_measurements_to_remove.append(key)
-                elif name == "ADC temp" and not self.ui.actionADC_temperature.isChecked():
-                    global_measurements_to_remove.append(key)
-                elif name == "Board temp" and not self.ui.actionBoard_temperature.isChecked():
                     global_measurements_to_remove.append(key)
 
         for key in global_measurements_to_remove:
@@ -572,6 +617,16 @@ class MeasurementsManager:
         for measurement_key in list(self.active_measurements.keys()):
             measurement_name, channel_key = measurement_key
 
+            # Handle board-level measurements (temperatures)
+            if measurement_name in ["ADC temp", "Board temp"]:
+                board_idx = int(channel_key[1:])  # Extract board number from "B0", "B1", etc.
+                if board_idx in self.board_temp_cache:
+                    if measurement_name == "ADC temp":
+                        _set_measurement(measurement_key, self.board_temp_cache[board_idx][0], "\u00b0C")
+                    elif measurement_name == "Board temp":
+                        _set_measurement(measurement_key, self.board_temp_cache[board_idx][1], "\u00b0C")
+                continue  # Skip normal channel processing
+
             # Determine which channel's data to use
             if channel_key.startswith("Math"):
                 # Math channel measurement
@@ -579,7 +634,7 @@ class MeasurementsManager:
                     continue  # Math channel no longer exists
                 x_data = self.plot_manager.math_channel_lines[channel_key].xData
                 y_data = self.plot_manager.math_channel_lines[channel_key].yData
-            else:
+            elif " " in channel_key:
                 # Regular channel measurement (format: "B0 Ch1")
                 parts = channel_key.split()
                 board = int(parts[0][1:])  # Remove 'B' prefix
@@ -591,6 +646,9 @@ class MeasurementsManager:
 
                 x_data = self.plot_manager.lines[channel_index].xData
                 y_data = self.plot_manager.lines[channel_index].yData
+            else:
+                # Unknown format, skip
+                continue
 
             if y_data is None or len(y_data) == 0:
                 continue
