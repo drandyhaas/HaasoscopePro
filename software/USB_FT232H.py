@@ -67,8 +67,8 @@ class UsbFt232hSync245mode:
 
         self.set_recv_timeout(self._recv_timeout)
         self.set_send_timeout(self._send_timeout)
-        self.set_latency_timer(2)  # Lower latency for better performance
-        self._usb.setUSBParameters(self._chunk * 4, self._chunk * 4)
+        self.set_latency_timer(1)  # Lower latency for better performance
+        self._usb.setUSBParameters(self._chunk, self._chunk)
 
     def close(self):
         """Closes the USB device handle."""

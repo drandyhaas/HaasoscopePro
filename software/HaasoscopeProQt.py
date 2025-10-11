@@ -12,11 +12,12 @@ from PyQt5.QtCore import Qt
 from main_window import MainWindow
 from usbs import connectdevices, orderusbs, tellfirstandlast, version
 from board import clkout_ena
-from utils import get_pwd
+from utils import get_pwd, oldbytes
 
 # --- Hardware Discovery and Initial Setup ---
 print("Searching for Haasoscope Pro boards...")
-usbs = connectdevices(100) # This will now return an empty list if none are found
+max_devices = 100
+usbs = connectdevices(max_devices) # This will now return an empty list if none are found
 print(f"Found {len(usbs)} board(s). Performing initial configuration...")
 if usbs:
     for b in range(len(usbs)):
@@ -25,8 +26,10 @@ if usbs:
         version(usbs[b])
         version(usbs[b])
 
-        # Seem to need to re-open the device?
-        usbs[b].reopen()
+        # Clear any old data from the USB buffer just in case
+        #usbs[b].reopen()
+        oldbytes(usbs[b])
+
         version(usbs[b])
         version(usbs[b])
         version(usbs[b])
