@@ -1427,14 +1427,19 @@ class MainWindow(TemplateBaseClass):
 
     def save_reference_lines_slot(self):
         """Slot for saving reference waveforms to a file."""
-        save_reference_lines(self, self.reference_data, self.reference_visible)
+        save_reference_lines(self, self.reference_data, self.reference_visible,
+                           self.math_reference_data, self.math_reference_visible)
 
     def load_reference_lines_slot(self):
         """Slot for loading reference waveforms from a file."""
-        success = load_reference_lines(self, self.reference_data, self.reference_visible)
+        success = load_reference_lines(self, self.reference_data, self.reference_visible,
+                                      self.math_reference_data, self.math_reference_visible)
         if success:
             # Update the checkbox for the active channel
             self.update_reference_checkbox_state()
+            # Update math window button states if it's open
+            if self.math_window is not None:
+                self.math_window.update_button_states()
             # Trigger a redraw to show the loaded references
             self.time_changed()
 
