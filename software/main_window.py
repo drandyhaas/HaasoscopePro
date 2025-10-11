@@ -1685,6 +1685,7 @@ class MainWindow(TemplateBaseClass):
         board = s.activeboard
         s.dooversample[board] = bool(checked)
         s.dooversample[board + 1] = bool(checked)
+        s.skip_next_event = True  # Skip next event after oversampling change
         self.controller.set_oversampling(board, bool(checked))
         if bool(checked):
             self.ui.interleavedCheck.setEnabled(True)
