@@ -16,6 +16,7 @@ class AutocalibrationCollector:
         self.c1 = self.s.activeboard * self.s.num_chan_per_board
         self.c2 = (self.s.activeboard + 1) * self.s.num_chan_per_board
         self.events_collected = -1
+        self.bad_events = 0
         self.sample_spacing = 1.0
         self.TAD_PER_HALF_SAMPLE = 1.0 # to change unit from TAD to time (ns)
         self.was_drawing = None
@@ -59,7 +60,10 @@ class AutocalibrationCollector:
             # Return True if we've collected enough events
             return self.events_collected >= self.num_events
 
-        else: return None
+        else:
+            self.bad_events += 1
+            if self.bad_events > 50: return None # give up!
+            else: return False
 
     def apply_calibration(self, dotad=True):
         """Apply the averaged calibration after collecting all events."""
