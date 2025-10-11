@@ -5,7 +5,7 @@ class ScopeState:
 
     def __init__(self, num_boards, num_chan_per_board):
         # General and Hardware Configuration
-        self.softwareversion = 30.10
+        self.softwareversion = 30.11
         self.num_board = num_boards
         self.num_chan_per_board = num_chan_per_board
         self.samplerate = 3.2  # GHz
@@ -50,6 +50,7 @@ class ScopeState:
         self.auxoutval = [0] * self.num_board
         self.tad = [0] * self.num_board
         self.lpf = [0] * (num_boards * num_chan_per_board)
+        self.time_skew = [0] * (num_boards * num_chan_per_board)  # Time offset in nanoseconds per channel
 
         # Triggering Parameters
         self.triggerlevel = 127

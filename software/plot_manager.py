@@ -328,6 +328,10 @@ class PlotManager(pg.QtCore.QObject):
                 if not is_oversample_secondary:
                     xdatanew = xdatanew - extra_trig_correction
 
+            # Apply per-channel time skew offset
+            time_skew_offset = s.time_skew[li] / s.nsunits  # Convert ns to current time units
+            xdatanew = xdatanew + time_skew_offset
+
             # --- Final plotting and persistence ---
             # Optimization: Use skipFiniteCheck for faster setData
             self.lines[li].setData(xdatanew, ydatanew, skipFiniteCheck=True)

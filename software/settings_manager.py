@@ -54,6 +54,7 @@ def save_setup(main_window):
         'att': s.att,
         'tenx': s.tenx,
         'lpf': s.lpf,
+        'time_skew': s.time_skew,
 
         # Board mode settings
         'dotwochannel': s.dotwochannel,
@@ -139,6 +140,10 @@ def save_setup(main_window):
     if main_window.math_window is not None and len(main_window.math_window.math_channels) > 0:
         setup['math_channels'] = main_window.math_window.math_channels
         setup['math_channels_next_color_index'] = main_window.math_window.next_color_index
+
+    # Custom operations
+    if main_window.math_window is not None and len(main_window.math_window.custom_operations) > 0:
+        setup['custom_operations'] = main_window.math_window.custom_operations
 
     try:
         with open(filename, 'w') as f:
@@ -238,6 +243,8 @@ def load_setup(main_window):
         s.tenx = setup['tenx']
     if 'lpf' in setup:
         s.lpf = setup['lpf']
+    if 'time_skew' in setup:
+        s.time_skew = setup['time_skew']
 
     # Board mode settings
     if 'dotwochannel' in setup:
@@ -467,6 +474,19 @@ def load_setup(main_window):
 
         # Update the plot manager with the math channels
         main_window.plot_manager.update_math_channel_lines(main_window.math_window)
+
+    # Restore custom operations
+    if 'custom_operations' in setup and len(setup['custom_operations']) > 0:
+        # Create math window if it doesn't exist
+        if main_window.math_window is None:
+            main_window.math_window = MathChannelsWindow(main_window)
+            main_window.math_window.math_channels_changed.connect(lambda: main_window.update_math_channels())
+
+        # Restore custom operations
+        main_window.math_window.custom_operations = setup['custom_operations']
+
+        # Repopulate the operations combo box
+        main_window.math_window.populate_operations()
 
     # Resume acquisition if it was running
     if not was_paused:
