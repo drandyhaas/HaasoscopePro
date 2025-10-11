@@ -208,6 +208,10 @@ class PlotManager(pg.QtCore.QObject):
         # Create a copy to store stabilized data for math channels
         self.stabilized_data = [None] * self.nlines
 
+        # Store processed data before applying extra trig stabilizer
+        processed_data = [None] * self.nlines
+
+        # First pass: process all data (interleaving, resampling)
         for li in range(self.nlines):
             board_idx = li // s.num_chan_per_board
             xdatanew, ydatanew = None, None
@@ -248,58 +252,81 @@ class PlotManager(pg.QtCore.QObject):
                     f_int = interp1d(x_interleaved, y_interleaved, kind='linear', bounds_error=False, fill_value=0.0)
                     ydatanew = f_int(xdatanew)
 
-            if xdatanew is None: continue  # Skip if no data for this line (e.g., secondary interleaved line)
+            if xdatanew is None:
+                continue  # Skip if no data for this line (e.g., secondary interleaved line)
 
             # --- Resampling (if enabled) ---
             if s.doresamp:
                 ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * s.doresamp, t=xdatanew)
 
-            # --- Per-Line Stabilizer (Correct Location) ---
-            if s.extra_trig_stabilizer_enabled:
-                is_oversample_secondary = s.dooversample[board_idx] and board_idx%2==1
-                if not is_oversample_secondary: # and not s.doexttrig[board] # TODO: apply non-exttrig correction to other exttrig boards
-                    vline_time = self.otherlines['vline'].value()
-                    hline_pos = (s.triggerlevel - 127) * s.yscale * 256
-                    # Include triggerdelta in the threshold (per-board setting)
-                    hline_threshold = hline_pos + s.triggerdelta[board_idx] * s.yscale*256
+            # Store the processed data
+            processed_data[li] = (xdatanew, ydatanew)
 
-                    fitwidth = (s.max_x - s.min_x)
+        # Calculate extra trig stabilizer correction using noextboard
+        extra_trig_correction = None
+        if s.extra_trig_stabilizer_enabled and s.noextboard != -1:
+            # Use the first channel of the noextboard for correction calculation
+            noext_li = s.noextboard * s.num_chan_per_board
+            if s.dotwochannel: noext_li += s.triggerchan[s.noextboard]
+            if processed_data[noext_li] is not None:
+                xdatanew, ydatanew = processed_data[noext_li]
+                vline_time = self.otherlines['vline'].value()
+                hline_pos = (s.triggerlevel - 127) * s.yscale * 256
+                # Include triggerdelta in the threshold (per-board setting)
+                hline_threshold = hline_pos + s.triggerdelta[s.noextboard] * s.yscale * 256
+
+                fitwidth = (s.max_x - s.min_x)
+                xc = xdatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]
+
+                if xc.size > 2:
+                    numsamp = s.distcorrsamp
+                    if s.doresamp: numsamp *= s.doresamp
+                    fitwidth *= numsamp / xc.size
+
                     xc = xdatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]
+                    yc = ydatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]
 
-                    if xc.size > 2:
-                        numsamp = s.distcorrsamp
-                        if s.doresamp: numsamp *= s.doresamp
-                        fitwidth *= numsamp / xc.size
+                    # For falling edges, invert both the signal and the threshold
+                    threshold_to_use = hline_threshold
+                    if s.fallingedge[s.noextboard]:
+                        yc = -yc
+                        threshold_to_use = -hline_threshold
 
-                        xc = xdatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]
-                        yc = ydatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]
+                    if xc.size > 1:
+                        distcorrtemp = find_crossing_distance(yc, threshold_to_use, vline_time, xc[0], xc[1] - xc[0])
+                        if distcorrtemp is not None and abs(
+                                distcorrtemp) < s.distcorrtol * 100 * s.downsamplefactor / s.nsunits:
 
-                        # For falling edges, invert both the signal and the threshold
-                        threshold_to_use = hline_threshold
-                        if s.fallingedge[li // 2]:
-                            yc = -yc
-                            threshold_to_use = -hline_threshold
+                            # Limit cumulative correction to prevent unbounded drift
+                            max_correction = s.distcorrtol * 100 * s.downsamplefactor / s.nsunits
+                            new_cumulative = self.cumulative_correction[noext_li] + distcorrtemp
 
-                        if xc.size > 1:
-                            distcorrtemp = find_crossing_distance(yc, threshold_to_use, vline_time, xc[0], xc[1] - xc[0])
-                            if distcorrtemp is not None and abs(
-                                    distcorrtemp) < s.distcorrtol * 10 * s.downsamplefactor / s.nsunits:
+                            # Clamp the correction to stay within the limit
+                            if abs(new_cumulative) > max_correction:
+                                # Adjust distcorrtemp to reach but not exceed the limit
+                                if new_cumulative > 0:
+                                    distcorrtemp = max_correction - self.cumulative_correction[noext_li]
+                                else:
+                                    distcorrtemp = -max_correction - self.cumulative_correction[noext_li]
 
-                                # Limit cumulative correction to prevent unbounded drift
-                                max_correction = s.distcorrtol * 10 * s.downsamplefactor / s.nsunits
-                                new_cumulative = self.cumulative_correction[li] + distcorrtemp
+                            # Store the correction to apply to all boards
+                            extra_trig_correction = distcorrtemp
+                            self.cumulative_correction[noext_li] += distcorrtemp
 
-                                # Clamp the correction to stay within the limit
-                                if abs(new_cumulative) > max_correction:
-                                    # Adjust distcorrtemp to reach but not exceed the limit
-                                    if new_cumulative > 0:
-                                        distcorrtemp = max_correction - self.cumulative_correction[li]
-                                    else:
-                                        distcorrtemp = -max_correction - self.cumulative_correction[li]
+        # Second pass: apply correction and plot
+        for li in range(self.nlines):
+            board_idx = li // s.num_chan_per_board
 
-                                # Apply the (possibly clamped) correction
-                                xdatanew -= distcorrtemp
-                                self.cumulative_correction[li] += distcorrtemp
+            if processed_data[li] is None:
+                continue
+
+            xdatanew, ydatanew = processed_data[li]
+
+            # Apply extra trig stabilizer correction to non-secondary boards
+            if extra_trig_correction is not None:
+                is_oversample_secondary = s.dooversample[board_idx] and board_idx % 2 == 1
+                if not is_oversample_secondary:
+                    xdatanew = xdatanew - extra_trig_correction
 
             # --- Final plotting and persistence ---
             # Optimization: Use skipFiniteCheck for faster setData
