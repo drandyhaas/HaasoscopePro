@@ -81,6 +81,7 @@ def save_setup(main_window):
         # FFT and reference settings
         'fft_enabled': s.fft_enabled,
         'reference_visible': main_window.reference_visible,
+        'math_reference_visible': main_window.math_reference_visible,
         'show_reference': main_window.ui.actionShow_Reference.isChecked(),
 
         # Plot manager settings
@@ -300,6 +301,8 @@ def load_setup(main_window):
     if 'reference_visible' in setup:
         # Convert string keys to integers
         main_window.reference_visible = {int(k): v for k, v in setup['reference_visible'].items()}
+    if 'math_reference_visible' in setup:
+        main_window.math_reference_visible = setup['math_reference_visible']
     if 'show_reference' in setup:
         main_window.ui.actionShow_Reference.setChecked(setup['show_reference'])
 
