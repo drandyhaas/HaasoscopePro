@@ -253,8 +253,8 @@ class PlotManager(pg.QtCore.QObject):
 
             # --- Per-Line Stabilizer (Correct Location) ---
             if s.extra_trig_stabilizer_enabled:
-                is_oversample_secondary = s.dooversample[li // 4 * 2] and li % 4 != 0
-                if not is_oversample_secondary:
+                is_oversample_secondary = s.dooversample[board_idx] and board_idx%2==1
+                if not is_oversample_secondary: #and not s.doexttrig[board] ?
                     vline_time = self.otherlines['vline'].value()
                     hline_pos = (s.triggerlevel - 127) * s.yscale * 256
                     # Include triggerdelta in the threshold (per-board setting)

@@ -59,7 +59,7 @@ class AutocalibrationCollector:
             # Return True if we've collected enough events
             return self.events_collected >= self.num_events
 
-        else: return False
+        else: return None
 
     def apply_calibration(self, dotad=True):
         """Apply the averaged calibration after collecting all events."""
