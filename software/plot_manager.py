@@ -90,6 +90,9 @@ class PlotManager(pg.QtCore.QObject):
         # Stabilized data for math channel calculations (after trigger stabilizers)
         self.stabilized_data = [None] * self.nlines
 
+        # Cumulative correction tracking for extra trig stabilizer (in ns)
+        self.cumulative_correction = [0.0] * self.nlines
+
         # Cursor manager (will be initialized after linepens are created)
         self.cursor_manager = None
 
@@ -281,7 +284,22 @@ class PlotManager(pg.QtCore.QObject):
                             distcorrtemp = find_crossing_distance(yc, threshold_to_use, vline_time, xc[0], xc[1] - xc[0])
                             if distcorrtemp is not None and abs(
                                     distcorrtemp) < s.distcorrtol * s.downsamplefactor / s.nsunits:
+
+                                # Limit cumulative correction to prevent unbounded drift
+                                max_correction = s.distcorrtol * 0.1 * s.downsamplefactor / s.nsunits
+                                new_cumulative = self.cumulative_correction[li] + distcorrtemp
+
+                                # Clamp the correction to stay within the limit
+                                if abs(new_cumulative) > max_correction:
+                                    # Adjust distcorrtemp to reach but not exceed the limit
+                                    if new_cumulative > 0:
+                                        distcorrtemp = max_correction - self.cumulative_correction[li]
+                                    else:
+                                        distcorrtemp = -max_correction - self.cumulative_correction[li]
+
+                                # Apply the (possibly clamped) correction
                                 xdatanew -= distcorrtemp
+                                self.cumulative_correction[li] += distcorrtemp
 
             # --- Final plotting and persistence ---
             # Optimization: Use skipFiniteCheck for faster setData
