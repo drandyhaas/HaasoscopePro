@@ -42,7 +42,8 @@ Then run the new software, update the firmware (if needed) on your board from th
 ### Fuller way of running (Windows/Mac/Linux)
 
 1) Install python3 and git for your operating system
-2) Install dependencies: <br><code>pip3 install numpy scipy pyqtgraph PyQt5 pyftdi matplotlib ftd2xx</code>
+2) Install dependencies: <br><code>pip3 install numpy scipy pyqtgraph PyQt5 pyftdi ftd2xx matplotlib</code> <br>
+(matplotlib not needed for v30+)
 3) Get code: <br><code>git clone https://github.com/drandyhaas/HaasoscopePro.git</code>
 4) Install FTDI driver (see Quick start above)
 5) Plug Haasoscope Pro into your computer via USB (5V 2A at least!)
@@ -52,7 +53,7 @@ Then run the new software, update the firmware (if needed) on your board from th
 
 ### Tips
 
-- If not enough power is being supplied, plug in via a powered USB hub, a [USB PD hub with 15W reserved for ports](https://a.co/d/174I3v8), or use an external [12V 2A power adapter with 2.1mm plug](https://a.co/d/dgN80wn)
+- If not enough power is being supplied, plug in via a [powered USB hub](https://a.co/d/hfAtVhl), a [USB PD hub with 15W reserved for ports](https://a.co/d/174I3v8) and a USB-C cable, or use an external [12V 2A+ power adapter with 2.1mm plug](https://a.co/d/1EkzLRP)
 - If you get security issues on Mac, do: <code>xattr -cr Mac_HaasoscopeProQt</code>
 - If the board is not found on Linux, use this udev rule and then plug it in: <code>sudo cp HaasoscopePro/software/ft245.rules /etc/udev/rules.d/</code>
 - If you get an error like "qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found", try: <code>sudo apt install libxcb-xinerama0</code>
@@ -60,7 +61,7 @@ Then run the new software, update the firmware (if needed) on your board from th
 ### To remake exe for quick start
 1) <code>pip3 install pyinstaller</code>
 2) <code>cd HaasoscopePro/software</code>
-3) <code>.\windowspyinstaller.bat</code> or <code>./macpyinstaller.sh</code>
+3) <code>.\windowspyinstaller.bat</code> or <code>./macpyinstaller.sh</code> or <code>./linuxpyinstaller.sh</code>
 
 ### Repository structure
 
