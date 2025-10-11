@@ -257,7 +257,7 @@ class PlotManager(pg.QtCore.QObject):
             # --- Per-Line Stabilizer (Correct Location) ---
             if s.extra_trig_stabilizer_enabled:
                 is_oversample_secondary = s.dooversample[board_idx] and board_idx%2==1
-                if not is_oversample_secondary: #and not s.doexttrig[board] ?
+                if not is_oversample_secondary: # and not s.doexttrig[board] # TODO: apply non-exttrig correction to other exttrig boards
                     vline_time = self.otherlines['vline'].value()
                     hline_pos = (s.triggerlevel - 127) * s.yscale * 256
                     # Include triggerdelta in the threshold (per-board setting)
@@ -283,10 +283,10 @@ class PlotManager(pg.QtCore.QObject):
                         if xc.size > 1:
                             distcorrtemp = find_crossing_distance(yc, threshold_to_use, vline_time, xc[0], xc[1] - xc[0])
                             if distcorrtemp is not None and abs(
-                                    distcorrtemp) < s.distcorrtol * s.downsamplefactor / s.nsunits:
+                                    distcorrtemp) < s.distcorrtol * 10 * s.downsamplefactor / s.nsunits:
 
                                 # Limit cumulative correction to prevent unbounded drift
-                                max_correction = s.distcorrtol * 0.1 * s.downsamplefactor / s.nsunits
+                                max_correction = s.distcorrtol * 10 * s.downsamplefactor / s.nsunits
                                 new_cumulative = self.cumulative_correction[li] + distcorrtemp
 
                                 # Clamp the correction to stay within the limit
