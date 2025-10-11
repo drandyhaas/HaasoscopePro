@@ -498,13 +498,17 @@ class MainWindow(TemplateBaseClass):
                     self.controller.do_phase(s.activeboard + 1, plloutnum=2, updown=1, pllnum=0)
                     s.extraphasefortad[s.activeboard + 1] = 0
                 s.triggerautocalibration[s.activeboard] = False
-            if self.autocalib_collector.collect_event_data():
+            done = self.autocalib_collector.collect_event_data()
+            if done:
                 # Done collecting, apply calibration
                 self.autocalib_collector.apply_calibration()
                 s.dodrawing = self.autocalib_collector.was_drawing
                 self.autocalib_collector = None
                 if self.ui.actionAuto_oversample_alignment.isChecked():
                     self.ui.interleavedCheck.setChecked(True)
+            elif done is None:
+                print("Autocalibration failed to find edges in the data.")
+                self.autocalib_collector = None
 
         if profile_event_loop:
             end_time2 = time.perf_counter()
