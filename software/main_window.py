@@ -508,6 +508,7 @@ class MainWindow(TemplateBaseClass):
                     self.ui.interleavedCheck.setChecked(True)
             elif done is None:
                 print("Autocalibration failed to find edges in the data.")
+                s.dodrawing = self.autocalib_collector.was_drawing
                 self.autocalib_collector = None
 
         if profile_event_loop:
