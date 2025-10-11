@@ -54,6 +54,7 @@ def save_setup(main_window):
         'att': s.att,
         'tenx': s.tenx,
         'lpf': s.lpf,
+        'time_skew': s.time_skew,
 
         # Board mode settings
         'dotwochannel': s.dotwochannel,
@@ -242,6 +243,8 @@ def load_setup(main_window):
         s.tenx = setup['tenx']
     if 'lpf' in setup:
         s.lpf = setup['lpf']
+    if 'time_skew' in setup:
+        s.time_skew = setup['time_skew']
 
     # Board mode settings
     if 'dotwochannel' in setup:

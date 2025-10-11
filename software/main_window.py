@@ -216,6 +216,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.chanonCheck.stateChanged.connect(self.chanon_changed)
         self.ui.gainBox.valueChanged.connect(self.gain_changed)
         self.ui.offsetBox.valueChanged.connect(self.offset_changed)
+        self.ui.skewBox.valueChanged.connect(self.skew_changed)
         self.ui.acdcCheck.stateChanged.connect(self.acdc_changed)
         self.ui.ohmCheck.stateChanged.connect(self.mohm_changed)
         self.ui.attCheck.stateChanged.connect(self.att_changed)
@@ -941,6 +942,7 @@ class MainWindow(TemplateBaseClass):
         # Update UI widgets to reflect the state of the newly selected channel
         self.ui.gainBox.setValue(s.gain[s.activexychannel])
         self.ui.offsetBox.setValue(s.offset[s.activexychannel])
+        self.ui.skewBox.setValue(s.time_skew[s.activexychannel])
         self.ui.acdcCheck.setChecked(s.acdc[s.activexychannel])
         self.ui.ohmCheck.setChecked(s.mohm[s.activexychannel])
         self.ui.attCheck.setChecked(s.att[s.activexychannel])
@@ -1650,6 +1652,11 @@ class MainWindow(TemplateBaseClass):
                     1000 * s.VperD[s.activexychannel] / 160.0) * 1.5 * s.offset[s.activexychannel]
         if s.acdc[s.activexychannel]: v_offset *= (160.0 / 245.0)
         self.ui.Voff.setText(f"{int(v_offset)} mV")
+
+    def skew_changed(self):
+        """Handles changes to the time skew offset."""
+        s = self.state
+        s.time_skew[s.activexychannel] = self.ui.skewBox.value()
 
     def acdc_changed(self, checked):
         s = self.state

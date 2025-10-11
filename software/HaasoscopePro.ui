@@ -629,7 +629,7 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>140</y>
+          <y>142</y>
           <width>61</width>
           <height>16</height>
          </rect>
@@ -647,7 +647,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>138</y>
+          <y>140</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -785,7 +785,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>48</y>
+          <y>46</y>
           <width>51</width>
           <height>22</height>
          </rect>
@@ -815,7 +815,7 @@
         <property name="geometry">
          <rect>
           <x>70</x>
-          <y>50</y>
+          <y>48</y>
           <width>61</width>
           <height>20</height>
          </rect>
@@ -1040,6 +1040,60 @@
         </property>
         <property name="text">
          <string>Persist</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_28">
+        <property name="geometry">
+         <rect>
+          <x>90</x>
+          <y>142</y>
+          <width>41</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="text">
+         <string>Skew</string>
+        </property>
+       </widget>
+       <widget class="QDoubleSpinBox" name="skewBox">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>140</y>
+          <width>71</width>
+          <height>22</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Time skew offset for selected channel</string>
+        </property>
+        <property name="accelerated">
+         <bool>true</bool>
+        </property>
+        <property name="suffix">
+         <string> ns</string>
+        </property>
+        <property name="decimals">
+         <number>1</number>
+        </property>
+        <property name="minimum">
+         <double>-999.899999999999977</double>
+        </property>
+        <property name="maximum">
+         <double>999.899999999999977</double>
+        </property>
+        <property name="singleStep">
+         <double>0.100000000000000</double>
         </property>
        </widget>
       </widget>

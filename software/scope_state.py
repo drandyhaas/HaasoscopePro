@@ -50,6 +50,7 @@ class ScopeState:
         self.auxoutval = [0] * self.num_board
         self.tad = [0] * self.num_board
         self.lpf = [0] * (num_boards * num_chan_per_board)
+        self.time_skew = [0] * (num_boards * num_chan_per_board)  # Time offset in nanoseconds per channel
 
         # Triggering Parameters
         self.triggerlevel = 127
