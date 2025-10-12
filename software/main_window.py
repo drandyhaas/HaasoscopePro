@@ -101,6 +101,8 @@ class MainWindow(TemplateBaseClass):
                 if self.state.num_board < 2:
                     self.ui.ToffBox.setEnabled(False)
                     self.ui.tadBox.setEnabled(False)
+                    self.ui.actionDo_autocalibration.setEnabled(False)
+                    self.ui.actionAuto_oversample_alignment.setEnabled(False)
 
                 self.dostartstop()  # Start acquisition
                 self.setup_successful = True
