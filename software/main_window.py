@@ -20,7 +20,6 @@ from calibration import autocalibration, do_meanrms_calibration
 from settings_manager import save_setup, load_setup
 from math_channels_window import MathChannelsWindow
 from reference_manager import save_reference_lines, load_reference_lines
-from fft_processor import FFTProcessor
 
 # Import remaining dependencies
 from FFTWindow import FFTWindow
@@ -43,7 +42,6 @@ class MainWindow(TemplateBaseClass):
         print(f"Haasoscope Pro Software Version: {self.state.softwareversion:.2f}")
         self.controller = HardwareController(usbs, self.state)
         self.processor = DataProcessor(self.state)
-        self.fft_processor = FFTProcessor(max_workers=2)
         self.recorder = DataRecorder(self.state)
 
         # 2. Setup UI from template
@@ -601,25 +599,21 @@ class MainWindow(TemplateBaseClass):
                     else:
                         y_data_for_analysis = y_full
 
-                    # Submit FFT calculation to worker thread (non-blocking)
-                    self.fft_processor.submit_fft_calculation(ch_name, y_data_for_analysis, board_idx, s)
+                    # Pass the correct board_idx to get the right sample rate
+                    freq, mag = self.processor.calculate_fft(y_data_for_analysis, board_idx)
 
-                    # Try to retrieve result (returns cached result if current calculation not done)
-                    result = self.fft_processor.get_fft_result(ch_name, use_cached=True)
-                    if result is not None:
-                        freq, mag = result
-                        if freq is not None and len(freq) > 0:
-                            max_freq_mhz = np.max(freq)
-                            if max_freq_mhz < 0.001:
-                                plot_x_data, xlabel = freq * 1e6, 'Frequency (Hz)'
-                            elif max_freq_mhz < 1.0:
-                                plot_x_data, xlabel = freq * 1e3, 'Frequency (kHz)'
-                            else:
-                                plot_x_data, xlabel = freq, 'Frequency (MHz)'
+                    if freq is not None and len(freq) > 0:
+                        max_freq_mhz = np.max(freq)
+                        if max_freq_mhz < 0.001:
+                            plot_x_data, xlabel = freq * 1e6, 'Frequency (Hz)'
+                        elif max_freq_mhz < 1.0:
+                            plot_x_data, xlabel = freq * 1e3, 'Frequency (kHz)'
+                        else:
+                            plot_x_data, xlabel = freq, 'Frequency (MHz)'
 
-                            title = f'Haasoscope Pro FFT Plot'
-                            pen = self.plot_manager.linepens[ch_idx]  # Get the correct pen
-                            self.fftui.update_plot(ch_name, plot_x_data, mag, pen, title, xlabel, is_active)
+                        title = f'Haasoscope Pro FFT Plot'
+                        pen = self.plot_manager.linepens[ch_idx]  # Get the correct pen
+                        self.fftui.update_plot(ch_name, plot_x_data, mag, pen, title, xlabel, is_active)
                 else:
                     self.fftui.clear_plot(ch_name)
 
@@ -645,35 +639,31 @@ class MainWindow(TemplateBaseClass):
                             x_data, y_data = math_line.getData()
 
                             if y_data is not None and len(y_data) > 0:
-                                # Submit FFT calculation to worker thread (non-blocking)
-                                self.fft_processor.submit_fft_calculation(math_name, y_data, s.activeboard, s)
+                                # Calculate FFT using the active board's sample rate
+                                freq, mag = self.processor.calculate_fft(y_data, s.activeboard)
 
-                                # Try to retrieve result (returns cached result if current calculation not done)
-                                result = self.fft_processor.get_fft_result(math_name, use_cached=True)
-                                if result is not None:
-                                    freq, mag = result
-                                    if freq is not None and len(freq) > 0:
-                                        max_freq_mhz = np.max(freq)
-                                        if max_freq_mhz < 0.001:
-                                            plot_x_data, xlabel = freq * 1e6, 'Frequency (Hz)'
-                                        elif max_freq_mhz < 1.0:
-                                            plot_x_data, xlabel = freq * 1e3, 'Frequency (kHz)'
-                                        else:
-                                            plot_x_data, xlabel = freq, 'Frequency (MHz)'
+                                if freq is not None and len(freq) > 0:
+                                    max_freq_mhz = np.max(freq)
+                                    if max_freq_mhz < 0.001:
+                                        plot_x_data, xlabel = freq * 1e6, 'Frequency (Hz)'
+                                    elif max_freq_mhz < 1.0:
+                                        plot_x_data, xlabel = freq * 1e3, 'Frequency (kHz)'
+                                    else:
+                                        plot_x_data, xlabel = freq, 'Frequency (MHz)'
 
-                                        title = f'Haasoscope Pro FFT Plot'
-                                        # Create a pen with the math channel's color
-                                        color = QColor(math_def['color'])
-                                        pen = pg.mkPen(color=color, width=math_def.get('width', 1))
+                                    title = f'Haasoscope Pro FFT Plot'
+                                    # Create a pen with the math channel's color
+                                    color = QColor(math_def['color'])
+                                    pen = pg.mkPen(color=color, width=math_def.get('width', 1))
 
-                                        # Make this math channel active if no regular channels have FFT enabled
-                                        # and this is the first math channel we're processing
-                                        is_active = False
-                                        if not has_regular_channel_fft and not made_math_active:
-                                            is_active = True
-                                            made_math_active = True
+                                    # Make this math channel active if no regular channels have FFT enabled
+                                    # and this is the first math channel we're processing
+                                    is_active = False
+                                    if not has_regular_channel_fft and not made_math_active:
+                                        is_active = True
+                                        made_math_active = True
 
-                                        self.fftui.update_plot(math_name, plot_x_data, mag, pen, title, xlabel, is_active)
+                                    self.fftui.update_plot(math_name, plot_x_data, mag, pen, title, xlabel, is_active)
                     else:
                         self.fftui.clear_plot(math_name)
 
@@ -817,7 +807,6 @@ class MainWindow(TemplateBaseClass):
         if self.math_window: self.math_window.close()
         self.close_socket()
         self.controller.cleanup()
-        self.fft_processor.cleanup()
         if self.fftui: self.fftui.close()
         event.accept()
         print("Cleanup complete. Exiting.")
