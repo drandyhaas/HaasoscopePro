@@ -84,7 +84,7 @@ class MainWindow(TemplateBaseClass):
         self.status_timer = QtCore.QTimer()
         self.status_timer.timeout.connect(self.update_status_bar)
         self.fan_timer = QtCore.QTimer()
-        self.fan_timer.timeout.connect(self.update_fan)
+        self.fan_timer.timeout.connect(self.controller.update_fan)
 
         # 7. Run the main initialization and hardware setup sequence
         if self.state.num_board > 0:
@@ -917,10 +917,6 @@ class MainWindow(TemplateBaseClass):
             #self.status_timer.stop() # Stop status timer
             self.state.paused = True
             self.ui.runButton.setChecked(False)
-
-    def update_fan(self):
-        fan_override = self.ui.fanBox.value() # set to -1 to have no effect, or 0 - 255 to override
-        self.controller.update_fan(fan_override)
 
     def high_resolution_toggled(self, checked):
         """Toggles the hardware's high-resolution averaging mode."""
