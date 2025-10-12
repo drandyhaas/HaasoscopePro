@@ -110,8 +110,14 @@ class FFTWindow(FFTTemplateBaseClass):
                 self.peak_hold_data = max_across_channels.copy()
 
                 # Update the peak hold line with recalculated data
-                if self.active_channel_name in self.channel_data_cache:
-                    x_data, _ = self.channel_data_cache[self.active_channel_name]
+                # Use any channel's x_data (they should all be the same)
+                if len(self.channel_data_cache) > 0:
+                    # Get x_data from any channel (prefer active if available, otherwise first)
+                    if self.active_channel_name in self.channel_data_cache:
+                        x_data, _ = self.channel_data_cache[self.active_channel_name]
+                    else:
+                        # Use first channel's x_data
+                        x_data, _ = next(iter(self.channel_data_cache.values()))
                     self.peak_hold_line.setData(x_data, self.peak_hold_data, skipFiniteCheck=True)
         else:
             # If peak hold is disabled or no data, just clear
@@ -151,10 +157,18 @@ class FFTWindow(FFTTemplateBaseClass):
             self.clear_peak_labels()
 
     def clear_plot(self, channel_name):
-        """Removes a specific channel's trace from the plot."""
+        """Removes a specific channel's trace from the plot and cache."""
         if channel_name in self.fft_lines:
             line_to_remove = self.fft_lines.pop(channel_name)
             self.plot.removeItem(line_to_remove)
+
+        # Also remove from cache so peak hold doesn't include this channel's old data
+        if channel_name in self.channel_data_cache:
+            del self.channel_data_cache[channel_name]
+
+        # After removing a channel, recalculate peak hold from remaining channels
+        if self.peak_hold_enabled:
+            self.reset_analysis_state()
 
     def update_plot(self, channel_name, x_data, y_data, pen, title_text, xlabel_text, is_active_channel):
         """
