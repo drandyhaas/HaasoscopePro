@@ -79,6 +79,7 @@ class PlotManager(pg.QtCore.QObject):
         self.lines = []
         self.reference_lines = []
         self.math_channel_lines = {}  # Dictionary: {math_name: plot_line}
+        self.math_reference_lines = {}  # Dictionary: {math_name: plot_line}
         self.xy_line = None
         self.linepens = []
         self.otherlines = {}  # For trigger lines, fit lines etc.
@@ -457,6 +458,55 @@ class PlotManager(pg.QtCore.QObject):
             if math_name in self.math_channel_lines:
                 # Optimization: Use skipFiniteCheck for faster setData
                 self.math_channel_lines[math_name].setData(x_data, y_data, skipFiniteCheck=True)
+
+    def update_math_reference_lines(self, math_window, main_window):
+        """Updates the set of math reference lines based on reference data.
+
+        Args:
+            math_window: The MathChannelsWindow instance
+            main_window: The MainWindow instance (for reference data)
+        """
+        if math_window is None:
+            return
+
+        # Get current math channel names that have references
+        current_ref_names = set(main_window.math_reference_data.keys())
+
+        # Remove lines for references that no longer exist
+        for math_name in list(self.math_reference_lines.keys()):
+            if math_name not in current_ref_names:
+                line = self.math_reference_lines[math_name]
+                self.plot.removeItem(line)
+                del self.math_reference_lines[math_name]
+
+        # Create or update reference lines
+        for math_name, ref_data in main_window.math_reference_data.items():
+            # Find the corresponding math channel definition for color and width
+            math_def = next((m for m in math_window.math_channels if m['name'] == math_name), None)
+            if math_def is None:
+                continue  # Math channel no longer exists
+
+            color = math_def.get('color', '#00FFFF')
+            width = math_def.get('width', 2)
+
+            if math_name not in self.math_reference_lines:
+                # Create a new dotted reference line with the same color but semi-transparent
+                pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DotLine)
+                line = self.plot.plot(pen=pen, name=f"{math_name}_ref", skipFiniteCheck=True, connect="finite")
+                self.math_reference_lines[math_name] = line
+            else:
+                # Update the color and width of existing line
+                pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DotLine)
+                self.math_reference_lines[math_name].setPen(pen)
+
+            # Update data and visibility
+            x_data_in_current_units = ref_data['x_ns'] / self.state.nsunits
+            y_data = ref_data['y']
+            self.math_reference_lines[math_name].setData(x_data_in_current_units, y_data, skipFiniteCheck=True)
+
+            # Set visibility
+            is_visible = main_window.math_reference_visible.get(math_name, False)
+            self.math_reference_lines[math_name].setVisible(is_visible and not self.state.xy_mode)
 
     def update_xy_plot(self, x_data, y_data):
         """Updates the XY plot with new data."""

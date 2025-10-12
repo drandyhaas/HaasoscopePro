@@ -63,10 +63,12 @@ class MainWindow(TemplateBaseClass):
         self.ui.boardBox.setMaximum(self.state.num_board - 1)
         self.setup_successful = False
         self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
+        self.math_reference_data = {}  # Stores {math_channel_name: {'x_ns': array, 'y': array}}
 
         # Initialize reference visibility to True for all channels by default
         num_channels = self.state.num_board * self.state.num_chan_per_board
         self.reference_visible = {i: True for i in range(num_channels)}
+        self.math_reference_visible = {}  # Stores {math_channel_name: bool}
 
         # Histogram window for measurements
         self.histogram_window = HistogramWindow(self, self.plot_manager)
@@ -763,6 +765,10 @@ class MainWindow(TemplateBaseClass):
                 # This channel either has no reference or its reference is hidden
                 self.plot_manager.hide_reference_plot(i)
 
+        # --- Update math reference waveforms ---
+        if self.math_window is not None:
+            self.plot_manager.update_math_reference_lines(self.math_window, self)
+
         # Update trigger spinbox tooltips with new timing
         self.update_trigger_spinbox_tooltip(self.ui.totBox, "Time over threshold required to trigger")
         self.update_trigger_spinbox_tooltip(self.ui.trigger_delay_box, "Time to wait before actually firing trigger")
@@ -1360,6 +1366,9 @@ class MainWindow(TemplateBaseClass):
         # Update the plot lines (create/remove as needed)
         self.plot_manager.update_math_channel_lines(self.math_window)
 
+        # Update math reference lines
+        self.plot_manager.update_math_reference_lines(self.math_window, self)
+
         # Calculate and display current data if we have data
         if hasattr(self, 'xydata') and len(self.math_window.math_channels) > 0:
             # Use stabilized data (after trigger stabilizers are applied)
@@ -1418,14 +1427,19 @@ class MainWindow(TemplateBaseClass):
 
     def save_reference_lines_slot(self):
         """Slot for saving reference waveforms to a file."""
-        save_reference_lines(self, self.reference_data, self.reference_visible)
+        save_reference_lines(self, self.reference_data, self.reference_visible,
+                           self.math_reference_data, self.math_reference_visible)
 
     def load_reference_lines_slot(self):
         """Slot for loading reference waveforms from a file."""
-        success = load_reference_lines(self, self.reference_data, self.reference_visible)
+        success = load_reference_lines(self, self.reference_data, self.reference_visible,
+                                      self.math_reference_data, self.math_reference_visible)
         if success:
             # Update the checkbox for the active channel
             self.update_reference_checkbox_state()
+            # Update math window button states if it's open
+            if self.math_window is not None:
+                self.math_window.update_button_states()
             # Trigger a redraw to show the loaded references
             self.time_changed()
 

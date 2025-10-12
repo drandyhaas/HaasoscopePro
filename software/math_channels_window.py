@@ -266,6 +266,20 @@ class MathChannelsWindow(QWidget):
         buttons_layout_3.addWidget(self.fft_button)
         list_layout.addLayout(buttons_layout_3)
 
+        # Buttons layout - Row 4 (Reference waveforms)
+        buttons_layout_4 = QHBoxLayout()
+        self.take_reference_button = QPushButton("Take Reference Waveform")
+        self.take_reference_button.clicked.connect(self.take_reference_waveform)
+        self.take_reference_button.setEnabled(False)  # Initially disabled until a math channel is selected
+        buttons_layout_4.addWidget(self.take_reference_button)
+
+        self.show_reference_button = QCheckBox("Show Reference Waveform")
+        self.show_reference_button.setChecked(False)
+        self.show_reference_button.clicked.connect(self.toggle_reference_visibility)
+        self.show_reference_button.setEnabled(False)  # Initially disabled until a math channel is selected
+        buttons_layout_4.addWidget(self.show_reference_button)
+        list_layout.addLayout(buttons_layout_4)
+
         list_group.setLayout(list_layout)
         layout.addWidget(list_group)
 
@@ -549,6 +563,8 @@ class MathChannelsWindow(QWidget):
         self.color_button.setEnabled(has_selection)
         self.measure_button.setEnabled(has_selection)
         self.fft_button.setEnabled(has_selection)
+        self.take_reference_button.setEnabled(has_selection)
+        self.show_reference_button.setEnabled(has_selection)
         # Replace button is always enabled/disabled based on selection (now in top section)
         self.replace_button.setEnabled(has_selection)
 
@@ -557,6 +573,7 @@ class MathChannelsWindow(QWidget):
             current_row = self.math_list.currentRow()
             if 0 <= current_row < len(self.math_channels):
                 math_def = self.math_channels[current_row]
+                math_name = math_def['name']
 
                 # Check if this math channel uses disabled channels
                 uses_disabled = self.uses_disabled_channel(math_def['ch1']) or \
@@ -573,6 +590,11 @@ class MathChannelsWindow(QWidget):
                 self.fft_button.blockSignals(True)
                 self.fft_button.setChecked(math_def.get('fft_enabled', False))
                 self.fft_button.blockSignals(False)
+
+                # Update reference button state
+                self.show_reference_button.blockSignals(True)
+                self.show_reference_button.setChecked(self.main_window.math_reference_visible.get(math_name, False))
+                self.show_reference_button.blockSignals(False)
         else:
             self.displayed_button.setEnabled(False)
 
@@ -1306,6 +1328,52 @@ class MathChannelsWindow(QWidget):
                 results[math_def['name']] = (x1.copy(), np.zeros_like(y1))
 
         return results
+
+    def take_reference_waveform(self):
+        """Take a reference waveform of the currently selected math channel."""
+        current_row = self.math_list.currentRow()
+        if current_row < 0 or current_row >= len(self.math_channels):
+            return
+
+        math_def = self.math_channels[current_row]
+        math_name = math_def['name']
+
+        # Get the math channel line data
+        if math_name in self.main_window.plot_manager.math_channel_lines:
+            line = self.main_window.plot_manager.math_channel_lines[math_name]
+
+            if line.xData is not None and line.yData is not None:
+                # Convert the current x-axis data back to nanoseconds for storage
+                x_data_in_ns = line.xData * self.state.nsunits
+                y_data = np.copy(line.yData)  # Make a copy
+
+                # Store the reference data
+                self.main_window.math_reference_data[math_name] = {'x_ns': x_data_in_ns, 'y': y_data}
+
+                # Set the reference visibility to True for this math channel
+                self.main_window.math_reference_visible[math_name] = True
+
+                # Update the checkbox to reflect the new visibility state
+                self.update_button_states()
+
+                # Trigger a redraw to show the new reference immediately
+                self.main_window.time_changed()
+
+    def toggle_reference_visibility(self):
+        """Toggle visibility of the reference waveform for the currently selected math channel."""
+        current_row = self.math_list.currentRow()
+        if current_row < 0 or current_row >= len(self.math_channels):
+            return
+
+        math_def = self.math_channels[current_row]
+        math_name = math_def['name']
+
+        # Toggle the visibility state
+        is_checked = self.show_reference_button.isChecked()
+        self.main_window.math_reference_visible[math_name] = is_checked
+
+        # Trigger a redraw to apply the visibility change
+        self.main_window.time_changed()
 
     def showEvent(self, event):
         """Called when window is shown."""
