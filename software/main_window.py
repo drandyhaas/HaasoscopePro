@@ -424,28 +424,7 @@ class MainWindow(TemplateBaseClass):
             start_time = time.perf_counter()
         else: start_time = None
 
-        # If the flag is set, get and discard the next event to avoid glitches
-        if s.skip_next_event:
-            s.skip_next_event = False
-            try:
-                self.controller.get_event() # Fetch and discard
-            except ftd2xx.DeviceError:
-                pass # Ignore potential errors during this flush
-            return
-        s.isdrawing = True # for sync with ngscopeclient thread
-        try:
-            raw_data_map, rx_len = self.controller.get_event()
-        except ftd2xx.DeviceError as e:
-            # If a hardware communication error occurs, handle it gracefully.
-            title = "Hardware Communication Error"
-            message = (f"Lost communication with the device.\n\n"
-                       f"Details: {e}\n\n"
-                       "Please check the USB connection and restart the application.")
-            self.handle_critical_error(title, message)
-            self.ui.actionUpdate_firmware.setEnabled(False)
-            self.ui.actionVerify_firmware.setEnabled(False)
-            # Stop this loop immediately since communication has failed.
-            return
+        raw_data_map, rx_len = self.update_plot_event()
         if not raw_data_map:
             s.isdrawing = False
             return
@@ -467,56 +446,7 @@ class MainWindow(TemplateBaseClass):
                 s.lastrate = round(s.tinterval / elapsedtime, 2)
             s.oldnevents = s.nevents
 
-        # Creates the xydata, xydatainterleaved arrays or resizes if needed, filled next by the processor
-        self.allocate_xy_data()
-
-        for board_idx, raw_data in raw_data_map.items():
-            nbadA, nbadB, nbadC, nbadD, nbadS = self.processor.process_board_data(raw_data, board_idx, self.xydata)
-            if s.plljustreset[board_idx] > -10:
-                # If a reset is already in progress, continue it.
-                self.controller.adjustclocks(board_idx, nbadA, nbadB, nbadC, nbadD, nbadS, self)
-            elif s.pll_reset_grace_period > 0:
-                # If in the grace period, ignore any bad clock signals.
-                pass
-            elif (nbadA + nbadB + nbadC + nbadD + nbadS) > 0:
-                # If not in a reset and not in grace period, trigger a new reset on error.
-                print(f"Bad clock/strobe detected on board {board_idx}. Triggering PLL reset.")
-                self.controller.pllreset(board_idx)
-
-        # Decrement the grace period counter once per event, outside the board loop
-        if s.pll_reset_grace_period > 0:
-            s.pll_reset_grace_period -= 1
-
-        # Do mean rms calibration for oversampling boards if needed
-        for board_idx in range(s.num_board):
-            if s.dooversample[board_idx] and board_idx%2==0:
-                do_meanrms_calibration(self)
-
-        # Check if autocalibration is collecting data
-        if s.triggerautocalibration[s.activeboard]: autocalibration(self)
-        if hasattr(self, 'autocalib_collector') and self.autocalib_collector is not None:
-            if self.autocalib_collector.was_drawing is None:
-                self.autocalib_collector.was_drawing = s.dodrawing # remember if we were drawing before calibration
-                s.dodrawing = False
-                if s.extraphasefortad[s.activeboard + 1] and not s.triggerautocalibration[s.activeboard]:
-                    print("Resetting PLL extra phase. Adjusting PLL a step back up on other board.")
-                    self.controller.do_phase(s.activeboard + 1, plloutnum=0, updown=1, pllnum=0)
-                    self.controller.do_phase(s.activeboard + 1, plloutnum=1, updown=1, pllnum=0)
-                    self.controller.do_phase(s.activeboard + 1, plloutnum=2, updown=1, pllnum=0)
-                    s.extraphasefortad[s.activeboard + 1] = 0
-                s.triggerautocalibration[s.activeboard] = False
-            done = self.autocalib_collector.collect_event_data()
-            if done:
-                # Done collecting, apply calibration
-                self.autocalib_collector.apply_calibration()
-                s.dodrawing = self.autocalib_collector.was_drawing
-                self.autocalib_collector = None
-                if self.ui.actionAuto_oversample_alignment.isChecked():
-                    self.ui.interleavedCheck.setChecked(True)
-            elif done is None:
-                print("Autocalibration failed to find edges in the data.")
-                s.dodrawing = self.autocalib_collector.was_drawing
-                self.autocalib_collector = None
+        self.update_plot_process_event(raw_data_map)
 
         if profile_event_loop:
             end_time2 = time.perf_counter()
@@ -547,6 +477,87 @@ class MainWindow(TemplateBaseClass):
             # Update measurements for the newly acquired event before pausing
             self.measurements.update_measurements_display()
             self.dostartstop()
+
+    def update_plot_event(self):
+        s = self.state
+
+        # If the flag is set, get and discard the next event to avoid glitches
+        if s.skip_next_event:
+            s.skip_next_event = False
+            try:
+                self.controller.get_event()  # Fetch and discard
+            except ftd2xx.DeviceError:
+                pass  # Ignore potential errors during this flush
+            return None, 0
+        s.isdrawing = True  # for sync with ngscopeclient thread
+        try:
+            raw_data_map, rx_len = self.controller.get_event()
+            return raw_data_map, rx_len
+        except ftd2xx.DeviceError as e:
+            # If a hardware communication error occurs, handle it gracefully.
+            title = "Hardware Communication Error"
+            message = (f"Lost communication with the device.\n\n"
+                       f"Details: {e}\n\n"
+                       "Please check the USB connection and restart the application.")
+            self.handle_critical_error(title, message)
+            self.ui.actionUpdate_firmware.setEnabled(False)
+            self.ui.actionVerify_firmware.setEnabled(False)
+            # Stop this loop immediately since communication has failed.
+            return None, 0
+
+    def update_plot_process_event(self, raw_data_map):
+        s = self.state
+
+        # Creates the xydata, xydatainterleaved arrays or resizes if needed, filled next by the processor
+        self.allocate_xy_data()
+
+        for board_idx, raw_data in raw_data_map.items():
+            nbadA, nbadB, nbadC, nbadD, nbadS = self.processor.process_board_data(raw_data, board_idx, self.xydata)
+            if s.plljustreset[board_idx] > -10:
+                # If a reset is already in progress, continue it.
+                self.controller.adjustclocks(board_idx, nbadA, nbadB, nbadC, nbadD, nbadS, self)
+            elif s.pll_reset_grace_period > 0:
+                # If in the grace period, ignore any bad clock signals.
+                pass
+            elif (nbadA + nbadB + nbadC + nbadD + nbadS) > 0:
+                # If not in a reset and not in grace period, trigger a new reset on error.
+                print(f"Bad clock/strobe detected on board {board_idx}. Triggering PLL reset.")
+                self.controller.pllreset(board_idx)
+
+        # Decrement the grace period counter once per event, outside the board loop
+        if s.pll_reset_grace_period > 0:
+            s.pll_reset_grace_period -= 1
+
+        # Do mean rms calibration for oversampling boards if needed
+        for board_idx in range(s.num_board):
+            if s.dooversample[board_idx] and board_idx % 2 == 0:
+                do_meanrms_calibration(self)
+
+        # Check if autocalibration is collecting data
+        if s.triggerautocalibration[s.activeboard]: autocalibration(self)
+        if hasattr(self, 'autocalib_collector') and self.autocalib_collector is not None:
+            if self.autocalib_collector.was_drawing is None:
+                self.autocalib_collector.was_drawing = s.dodrawing  # remember if we were drawing before calibration
+                s.dodrawing = False
+                if s.extraphasefortad[s.activeboard + 1] and not s.triggerautocalibration[s.activeboard]:
+                    print("Resetting PLL extra phase. Adjusting PLL a step back up on other board.")
+                    self.controller.do_phase(s.activeboard + 1, plloutnum=0, updown=1, pllnum=0)
+                    self.controller.do_phase(s.activeboard + 1, plloutnum=1, updown=1, pllnum=0)
+                    self.controller.do_phase(s.activeboard + 1, plloutnum=2, updown=1, pllnum=0)
+                    s.extraphasefortad[s.activeboard + 1] = 0
+                s.triggerautocalibration[s.activeboard] = False
+            done = self.autocalib_collector.collect_event_data()
+            if done:
+                # Done collecting, apply calibration
+                self.autocalib_collector.apply_calibration()
+                s.dodrawing = self.autocalib_collector.was_drawing
+                self.autocalib_collector = None
+                if self.ui.actionAuto_oversample_alignment.isChecked():
+                    self.ui.interleavedCheck.setChecked(True)
+            elif done is None:
+                print("Autocalibration failed to find edges in the data.")
+                s.dodrawing = self.autocalib_collector.was_drawing
+                self.autocalib_collector = None
 
     def update_plot_data(self):
         s = self.state
