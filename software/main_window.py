@@ -1,6 +1,6 @@
 # main_window.py
 
-import time, math
+import time, math, sys
 import numpy as np
 import threading
 import pyqtgraph as pg
@@ -88,7 +88,11 @@ class MainWindow(TemplateBaseClass):
 
         # 7. Run the main initialization and hardware setup sequence
         if self.state.num_board > 0:
-            if self.controller.setup_all_boards():
+            try:
+                setup_good = self.controller.setup_all_boards()
+            except:
+                setup_good = False
+            if setup_good:
                 self.controller.send_trigger_info_all()
                 self.ui.ToffBox.setValue(self.state.toff)
                 #self.ui.resampBox.setValue(self.state.doresamp)
@@ -108,12 +112,10 @@ class MainWindow(TemplateBaseClass):
                 self.setup_successful = True
             else:
                 # This block runs if setup_all_boards fails for any reason.
-                self.ui.actionUpdate_firmware.setEnabled(False)
-                self.ui.actionVerify_firmware.setEnabled(False)
-                self.ui.runButton.setEnabled(False)
-                QMessageBox.warning(self, "Board Setup Failed",
-                                    "Please fix power to all boards and restart.")
-
+                title = "Board Setup Failed"
+                message = (f"Board Setup Failed.\n\n"
+                           "Please check the USB power and connection and restart the application.")
+                self.handle_critical_error(title, message)
             # Firmware Version Check (only if setup passed)
             if self.setup_successful:
                 req_firmware_ver = 28
@@ -803,8 +805,7 @@ class MainWindow(TemplateBaseClass):
         It stops the acquisition and displays an error message to the user.
         """
         # 1. Stop the acquisition timer if it's running
-        if not self.state.paused:
-            self.dostartstop()
+        if not self.state.paused: self.dostartstop()
 
         # 2. Disable the run button to prevent the user from restarting
         self.ui.runButton.setEnabled(False)
@@ -818,6 +819,9 @@ class MainWindow(TemplateBaseClass):
 
         # 5. Show the critical error message box
         QMessageBox.critical(self, title, message)
+
+        # 6. Exit
+        sys.exit(-1)
 
     def closeEvent(self, event):
         if event is None: print("Stopping application...")
