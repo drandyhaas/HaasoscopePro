@@ -421,18 +421,38 @@ class MainWindow(TemplateBaseClass):
         profile_event_loop = False
         if profile_event_loop:
             print("\nStarting profile for event")
+            start_time = time.perf_counter()
+        else: start_time = None
+
+        raw_data_map, rx_len = self.update_plot_event()
+        if not raw_data_map:
+            s.isdrawing = False
+            return
+
+        if profile_event_loop:
             end_time1 = time.perf_counter()
+            elapsed_time_seconds = end_time1 - start_time
+            elapsed_time_microseconds = elapsed_time_seconds * 1_000_000
+            print(f"Elapsed time for getting data: {elapsed_time_microseconds:.2f} microseconds")
         else: end_time1 = None
 
-        # Get and process the next raw event
-        # Only continue with further processing if we get a good event
-        if not self.update_plot_event(): return
+        s.nevents += 1
+        s.lastsize = rx_len
+        if s.nevents - s.oldnevents >= s.tinterval:
+            now = time.time()
+            elapsedtime = now - s.oldtime
+            s.oldtime = now
+            if elapsedtime > 0:
+                s.lastrate = round(s.tinterval / elapsedtime, 2)
+            s.oldnevents = s.nevents
+
+        self.update_plot_process_event(raw_data_map)
 
         if profile_event_loop:
             end_time2 = time.perf_counter()
             elapsed_time_seconds = end_time2 - end_time1
             elapsed_time_microseconds = elapsed_time_seconds * 1_000_000
-            print(f"Elapsed time for getting and processing raw data: {elapsed_time_microseconds:.2f} microseconds")
+            print(f"Elapsed time for processing data: {elapsed_time_microseconds:.2f} microseconds")
         else: end_time2 = None
 
         # Use data for plot, FFT, math, etc.
@@ -461,8 +481,6 @@ class MainWindow(TemplateBaseClass):
     def update_plot_event(self):
         s = self.state
 
-        # 1. Get the next raw event
-
         # If the flag is set, get and discard the next event to avoid glitches
         if s.skip_next_event:
             s.skip_next_event = False
@@ -470,10 +488,11 @@ class MainWindow(TemplateBaseClass):
                 self.controller.get_event()  # Fetch and discard
             except ftd2xx.DeviceError:
                 pass  # Ignore potential errors during this flush
-            return False
+            return None, 0
         s.isdrawing = True  # for sync with ngscopeclient thread
         try:
             raw_data_map, rx_len = self.controller.get_event()
+            return raw_data_map, rx_len
         except ftd2xx.DeviceError as e:
             # If a hardware communication error occurs, handle it gracefully.
             title = "Hardware Communication Error"
@@ -484,22 +503,10 @@ class MainWindow(TemplateBaseClass):
             self.ui.actionUpdate_firmware.setEnabled(False)
             self.ui.actionVerify_firmware.setEnabled(False)
             # Stop this loop immediately since communication has failed.
-            return False
-        if not raw_data_map:
-            s.isdrawing = False
-            return False
+            return None, 0
 
-        s.nevents += 1
-        s.lastsize = rx_len
-        if s.nevents - s.oldnevents >= s.tinterval:
-            now = time.time()
-            elapsedtime = now - s.oldtime
-            s.oldtime = now
-            if elapsedtime > 0:
-                s.lastrate = round(s.tinterval / elapsedtime, 2)
-            s.oldnevents = s.nevents
-
-        # 2. Now process the raw event
+    def update_plot_process_event(self, raw_data_map):
+        s = self.state
 
         # Creates the xydata, xydatainterleaved arrays or resizes if needed, filled next by the processor
         self.allocate_xy_data()
@@ -551,9 +558,6 @@ class MainWindow(TemplateBaseClass):
                 print("Autocalibration failed to find edges in the data.")
                 s.dodrawing = self.autocalib_collector.was_drawing
                 self.autocalib_collector = None
-
-        # Successful getting and processing of raw event
-        return True
 
     def update_plot_data(self):
         s = self.state
