@@ -178,14 +178,29 @@ class FFTWindow(FFTTemplateBaseClass):
                 self.peak_hold_line.clear() # Ensure no stale line is drawn
                 return
 
-            # --- Peak Hold Logic ---
+            # --- Peak Hold Logic (based on max across ALL displayed channels) ---
             if self.peak_hold_enabled:
-                if self.peak_hold_data is None or len(self.peak_hold_data) != len(y_data):
-                    self.peak_hold_data = y_data.copy()
-                else:
-                    self.peak_hold_data = np.maximum(self.peak_hold_data, y_data)
-                # Optimization: Use skipFiniteCheck for faster setData
-                self.peak_hold_line.setData(x_data, self.peak_hold_data, skipFiniteCheck=True)
+                # Find the maximum magnitude across all displayed channels
+                if len(self.channel_data_cache) > 0:
+                    # Get all y-data from all channels
+                    all_y_data = [y for _, y in self.channel_data_cache.values()]
+
+                    # Find max at each frequency bin across all channels
+                    # All channels should have same length, use first one as reference
+                    if len(all_y_data) > 0 and len(all_y_data[0]) > 0:
+                        max_across_channels = all_y_data[0].copy()
+                        for other_y in all_y_data[1:]:
+                            if len(other_y) == len(max_across_channels):
+                                max_across_channels = np.maximum(max_across_channels, other_y)
+
+                        # Update peak hold with max across all channels
+                        if self.peak_hold_data is None or len(self.peak_hold_data) != len(max_across_channels):
+                            self.peak_hold_data = max_across_channels.copy()
+                        else:
+                            self.peak_hold_data = np.maximum(self.peak_hold_data, max_across_channels)
+
+                        # Optimization: Use skipFiniteCheck for faster setData
+                        self.peak_hold_line.setData(x_data, self.peak_hold_data, skipFiniteCheck=True)
 
                 # --- Peak Label Logic ---
                 if self.show_labels_enabled and len(x_data) > 0:
@@ -223,32 +238,24 @@ class FFTWindow(FFTTemplateBaseClass):
             else:
                 self.peak_hold_line.clear()  # If peak hold is off, ensure line is clear
 
-
-            # --- START: New logic to scale other traces ---
-            # Optimization: Only scale if there are multiple channels being displayed
-            if len(self.fft_lines) > 1 and self.active_channel_name in self.channel_data_cache:
-                _, active_y = self.channel_data_cache[self.active_channel_name]
-                active_avg = np.mean(active_y)
-
-                for name, line in self.fft_lines.items():
-                    if name != self.active_channel_name and name in self.channel_data_cache:
-                        other_x, other_y = self.channel_data_cache[name]
-                        other_avg = np.mean(other_y)
-                        if other_avg > 0: # Avoid division by zero
-                            scale_factor = active_avg / other_avg
-                            # Optimization: Use skipFiniteCheck for faster setData
-                            line.setData(other_x, other_y * scale_factor, skipFiniteCheck=True)
-            # --- END: New logic ---
-
-        # --- Y-Axis Ranging ---
+        # --- Y-Axis Ranging (based on max across ALL displayed channels) ---
         self.plot.enableAutoRange(axis='y', enable=False)
         if len(y_data) == 0: return
 
-        ydatamax = np.max(y_data)
-        if self.peak_hold_enabled and self.peak_hold_data is not None and is_active_channel:
-            ydatamax = np.max(self.peak_hold_data)
+        # Find max and min across all displayed channels
+        ydatamax = 0
+        ydatamin = 1e10
 
-        ydatamin = np.min(y_data)
+        if len(self.channel_data_cache) > 0:
+            for _, ch_y_data in self.channel_data_cache.values():
+                if len(ch_y_data) > 0:
+                    ydatamax = max(ydatamax, np.max(ch_y_data))
+                    ydatamin = min(ydatamin, np.min(ch_y_data))
+
+        # If peak hold is enabled, use peak hold max
+        if self.peak_hold_enabled and self.peak_hold_data is not None:
+            ydatamax = max(ydatamax, np.max(self.peak_hold_data))
+
         now = time.time()
 
         time_elapsed = (now - self.last_time) > 3.0
