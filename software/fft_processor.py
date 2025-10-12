@@ -88,13 +88,14 @@ class FFTProcessor:
 
         return freq, np.abs(Y)
 
-    def get_fft_result(self, channel_name, use_cached=True):
+    def get_fft_result(self, channel_name, use_cached=True, timeout=None):
         """
-        Retrieve FFT result if ready (non-blocking).
+        Retrieve FFT result if ready (non-blocking by default).
 
         Args:
             channel_name: Channel identifier
             use_cached: If True, return last successful result if current is not ready
+            timeout: If specified, wait up to this many seconds for result (blocking)
 
         Returns:
             Tuple of (freq, magnitude) arrays if ready, or cached result, or None
@@ -107,27 +108,42 @@ class FFTProcessor:
 
         future = self.pending_ffts[channel_name]
 
-        # Check if the calculation is complete
-        if future.done():
-            try:
+        # Check if the calculation is complete (or wait if timeout specified)
+        try:
+            # If timeout is specified, wait for result (blocking)
+            # If timeout is None, just check if done (non-blocking)
+            if timeout is not None:
+                result = future.result(timeout=timeout)
+            elif future.done():
                 result = future.result(timeout=0)
-                # Cache the successful result
-                self.last_results[channel_name] = result
-                # Clean up the future
-                del self.pending_ffts[channel_name]
-                return result
-            except Exception as e:
+            else:
+                # Not done yet and no timeout specified
+                # Return cached result if available
+                if use_cached and channel_name in self.last_results:
+                    return self.last_results[channel_name]
+                return None
+
+            # Cache the successful result
+            self.last_results[channel_name] = result
+            # Clean up the future
+            del self.pending_ffts[channel_name]
+            return result
+        except Exception as e:
+            # On timeout or error
+            if timeout is not None:
+                # Timeout occurred, calculation still pending
+                if use_cached and channel_name in self.last_results:
+                    return self.last_results[channel_name]
+                return None
+            else:
+                # Actual error
                 print(f"FFT calculation error for {channel_name}: {e}")
-                del self.pending_ffts[channel_name]
+                if channel_name in self.pending_ffts:
+                    del self.pending_ffts[channel_name]
                 # Return cached result on error if available
                 if use_cached and channel_name in self.last_results:
                     return self.last_results[channel_name]
                 return None
-        else:
-            # Calculation still pending, return cached result if requested
-            if use_cached and channel_name in self.last_results:
-                return self.last_results[channel_name]
-            return None
 
     def clear_channel_cache(self, channel_name):
         """Clear cached FFT result for a specific channel."""
