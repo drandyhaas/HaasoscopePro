@@ -77,12 +77,14 @@ class MainWindow(TemplateBaseClass):
         self.measurements = MeasurementsManager(self)
 
         # 7. Setup timers for data acquisition and measurement updates
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.update_plot_loop)
-        self.timer2 = QtCore.QTimer()
-        self.timer2.timeout.connect(self.measurements.update_measurements_display)
+        self.update_timer = QtCore.QTimer()
+        self.update_timer.timeout.connect(self.update_plot_loop)
+        self.measurement_timer = QtCore.QTimer()
+        self.measurement_timer.timeout.connect(self.measurements.update_measurements_display)
         self.status_timer = QtCore.QTimer()
         self.status_timer.timeout.connect(self.update_status_bar)
+        self.fan_timer = QtCore.QTimer()
+        self.fan_timer.timeout.connect(self.update_fan)
 
         # 7. Run the main initialization and hardware setup sequence
         if self.state.num_board > 0:
@@ -161,6 +163,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.rollingButton.setChecked(bool(self.state.isrolling))
         self.ui.rollingButton.setText(" Auto " if self.state.isrolling else " Normal ")
         self.ui.runButton.setText(" Run ")
+        self.fan_timer.start(1031)
         self.ui.actionPan_and_zoom.setChecked(False)
         self.plot_manager.set_pan_and_zoom(False)
 
@@ -795,8 +798,9 @@ class MainWindow(TemplateBaseClass):
 
     def closeEvent(self, event):
         print("Closing application...")
-        self.timer.stop()
-        self.timer2.stop()
+        self.update_timer.stop()
+        self.measurement_timer.stop()
+        self.fan_timer.stop()
         self.recorder.stop()
         self.histogram_window.close()
         if self.math_window: self.math_window.close()
@@ -902,14 +906,14 @@ class MainWindow(TemplateBaseClass):
 
     def dostartstop(self):
         if self.state.paused:
-            self.timer.start(0)  # 0ms interval for fastest refresh
-            self.timer2.start(20)  # 20ms interval = 50 Hz for measurements
+            self.update_timer.start(0)  # 0ms interval for fastest refresh
+            self.measurement_timer.start(20)  # 20ms interval = 50 Hz for measurements
             self.status_timer.start(200)  # Start status timer at 5 Hz
             self.state.paused = False
             self.ui.runButton.setChecked(True)
         else:
-            self.timer.stop()
-            self.timer2.stop()
+            self.update_timer.stop()
+            self.measurement_timer.stop()
             #self.status_timer.stop() # Stop status timer
             self.state.paused = True
             self.ui.runButton.setChecked(False)

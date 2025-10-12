@@ -106,7 +106,7 @@ module command_processor (
 
 );
 
-integer version = 30; // firmware version
+integer version = 31; // firmware version
 
 // these first 10 debugout's go to LEDs on the board
 assign debugout[0] = clkswitch;
@@ -149,6 +149,7 @@ integer     overrange_counter[4];
 reg [15:0]  probecompcounter = 0;
 reg [3:0]   flashstate=0, flashbusycounter=0;
 reg         fanon = 0; 
+reg [7:0]   fanpwm = 0; 
 reg [31:0]  o_tdatatemp = 0;
 reg         clkstrprob = 0;
 reg [3:0]   numones=0, numones2=0;
@@ -258,8 +259,9 @@ always @ (posedge clk) begin
             lvdsout_spare <= rx_data[2][0]; // used for telling order of devices
             o_tdata <= {8'd0, 7'd0,lvdsin_spare, 4'd0,lockinfo, 7'd0,~clkswitch};
          end
-         6: begin
-            fanon <= rx_data[2][0];
+         6: begin // old on/off fan control
+            if (rx_data[2][0]) fanpwm <= 8'hff;
+            else fanpwm <= 8'h00;
             o_tdata <= fanon;
          end
          7: begin
@@ -297,6 +299,10 @@ always @ (posedge clk) begin
             trigger_options[0] <= rx_data[2];
             trigger_options[1] <= rx_data[3];
             o_tdata <= 120;
+         end
+         21: begin // new pwm fan control
+            fanpwm <= rx_data[2];
+            o_tdata <= {24'd0,fanpwm};
          end
          default: o_tdata <= 0;
          endcase
@@ -725,6 +731,14 @@ always @ (posedge clk) begin
    default : state <= INIT;
    endcase
 end
+
+// fan PWM control
+pwm_generator fan_pwm_control (
+   .clk(clk50),
+   .rst_n(rstn),
+   .duty_cycle(fanpwm),
+   .pwm_out(fanon)
+);
 
 // make 12.5 MHz clock, for flash and RGB LEDs
 reg clk_over_4_counter = 0;

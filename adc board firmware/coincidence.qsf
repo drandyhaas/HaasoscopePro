@@ -412,6 +412,7 @@ set_global_assignment -name QIP_FILE pll1.qip
 set_global_assignment -name QIP_FILE pll2.qip
 set_global_assignment -name QIP_FILE pll3.qip
 set_global_assignment -name QIP_FILE rambuffer.qip
+set_global_assignment -name VERILOG_FILE pwm_generator.v
 set_global_assignment -name VERILOG_FILE neo_driver.v
 set_global_assignment -name VERILOG_FILE SPI_Master.v
 set_global_assignment -name VERILOG_FILE ftdi245fifo/RTL/fpga_ft232h_example/fpga_top_ft232h_tx_mass.v

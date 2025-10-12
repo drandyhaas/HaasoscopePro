@@ -174,6 +174,13 @@ class HardwareController:
                 # Sync the Depth box UI with the state, in case it was changed by a PLL reset
                 main_window.sync_depth_ui_from_state()
 
+    def update_fan(self):
+        for i in range(self.num_board):
+            adc_temp, board_temp = gettemps(usb)
+            fanpwm = 0
+            if adc_temp>30: fampwm = 10
+            setfanpwm(self.usbs[board_idx],fanpwm,False)
+
     def send_trigger_info_all(self):
         """Sends the current trigger info to all connected boards."""
         for i in range(self.num_board):

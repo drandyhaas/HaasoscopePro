@@ -239,7 +239,7 @@ def setupboard(usb, dopattern: int, twochannel: bool, dooverrange: bool, do1v: b
     Performs the initial configuration of the ADC and front-end amplifiers.
     Returns 0 on success, non-zero on failure.
     """
-    setfan(usb, True)
+    #setfan(usb, True)
     set_spi_mode(usb, 0)
 
     # --- Power-up and Verification ---
@@ -387,6 +387,12 @@ def setfan(usb, fanon: bool, quiet: bool = True):
     usb.send(bytes([2, 6, int(fanon), 100, 100, 100, 100, 100]))
     res = usb.recv(4)
     if not quiet: print(f"Set fan {int(fanon)}, status was {res[0]}")
+
+def setfanpwm(usb, fanpwm: byte, quiet: bool = True):
+    """Turns the cooling fan to a given duty cycle."""
+    usb.send(bytes([2, 21, fanpwm, 100, 100, 100, 100, 100]))
+    res = usb.recv(4)
+    if not quiet: print(f"Set fan to {fanpwm}, was {res[0]}")
 
 
 def send_leds(usb, r1, g1, b1, r2, g2, b2):
