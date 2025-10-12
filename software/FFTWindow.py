@@ -208,76 +208,77 @@ class FFTWindow(FFTTemplateBaseClass):
         if not self.user_panned_zoomed:
             self.plot.enableAutoRange(axis='x')
 
-        # All analysis is performed only on the active channel's data
+        # Track the active channel
         if is_active_channel:
             self.active_channel_name = channel_name
-            self.clear_peak_labels()
 
-            # If in a grace period, skip peak hold update for this frame and decrement counter
-            if self.update_grace_period > 0:
-                self.update_grace_period -= 1
-                self.peak_hold_line.clear() # Ensure no stale line is drawn
-                return
+        # If in a grace period, skip peak hold update for this frame and decrement counter
+        if self.update_grace_period > 0:
+            self.update_grace_period -= 1
+            self.peak_hold_line.clear() # Ensure no stale line is drawn
+            return
 
-            # --- Peak Hold Logic (based on max across ALL displayed channels) ---
-            if self.peak_hold_enabled:
-                # Find the maximum magnitude across all displayed channels
-                if len(self.channel_data_cache) > 0:
-                    # Get all y-data from all channels
-                    all_y_data = [y for _, y in self.channel_data_cache.values()]
+        # --- Peak Hold Logic (based on max across ALL displayed channels) ---
+        if self.peak_hold_enabled:
+            # Find the maximum magnitude across all displayed channels
+            if len(self.channel_data_cache) > 0:
+                # Get all y-data from all channels
+                all_y_data = [y for _, y in self.channel_data_cache.values()]
 
-                    # Find max at each frequency bin across all channels
-                    # All channels should have same length, use first one as reference
-                    if len(all_y_data) > 0 and len(all_y_data[0]) > 0:
-                        max_across_channels = all_y_data[0].copy()
-                        for other_y in all_y_data[1:]:
-                            if len(other_y) == len(max_across_channels):
-                                max_across_channels = np.maximum(max_across_channels, other_y)
+                # Find max at each frequency bin across all channels
+                # All channels should have same length, use first one as reference
+                if len(all_y_data) > 0 and len(all_y_data[0]) > 0:
+                    max_across_channels = all_y_data[0].copy()
+                    for other_y in all_y_data[1:]:
+                        if len(other_y) == len(max_across_channels):
+                            max_across_channels = np.maximum(max_across_channels, other_y)
 
-                        # Update peak hold with max across all channels
-                        if self.peak_hold_data is None or len(self.peak_hold_data) != len(max_across_channels):
-                            self.peak_hold_data = max_across_channels.copy()
-                        else:
-                            self.peak_hold_data = np.maximum(self.peak_hold_data, max_across_channels)
-
-                        # Optimization: Use skipFiniteCheck for faster setData
-                        self.peak_hold_line.setData(x_data, self.peak_hold_data, skipFiniteCheck=True)
-
-                # --- Peak Label Logic ---
-                if self.show_labels_enabled and len(x_data) > 0:
-                    min_freq_dist = (x_data[-1] - x_data[0]) * 0.05
-
-                    # Adapt peak finding strategy based on the y-axis scale
-                    if self.dolog:
-                        # On a log scale, find peaks that are significantly above the median
-                        log_data = np.log10(self.peak_hold_data + 1e-10)  # Add epsilon to avoid log(0)
-                        median_log = np.median(log_data)
-                        # A threshold of 1 means peaks must be at least 1 decade (10x) above the median
-                        peak_height_threshold = median_log + 0.5
-                        peaks, _ = find_peaks(log_data, height=peak_height_threshold)
+                    # Update peak hold with max across all channels
+                    if self.peak_hold_data is None or len(self.peak_hold_data) != len(max_across_channels):
+                        self.peak_hold_data = max_across_channels.copy()
                     else:
-                        # On a linear scale, use a fraction of the max height
-                        peak_height_threshold = np.max(self.peak_hold_data) * 0.1
-                        peaks, _ = find_peaks(self.peak_hold_data, height=peak_height_threshold)
+                        self.peak_hold_data = np.maximum(self.peak_hold_data, max_across_channels)
 
-                    if len(peaks) > 0:
-                        peak_amplitudes = self.peak_hold_data[peaks]
-                        sorted_peak_indices = peaks[np.argsort(peak_amplitudes)[::-1]]
-                        labeled_peak_freqs = []
-                        for peak_idx in sorted_peak_indices:
-                            if len(labeled_peak_freqs) >= 20: break
-                            current_peak_freq = x_data[peak_idx]
-                            is_far_enough = all(abs(current_peak_freq - f) > min_freq_dist for f in labeled_peak_freqs)
-                            if is_far_enough:
-                                peak_amp = self.peak_hold_data[peak_idx]
-                                text_item = pg.TextItem(text=f"{current_peak_freq:.2f}", color=(255, 255, 0),
-                                                        anchor=(0.5, 1.5))
-                                text_item.setPos(current_peak_freq, np.log10(peak_amp) if self.dolog else peak_amp)
-                                self.plot.addItem(text_item)
-                                self.peak_text_labels.append(text_item)
-                                labeled_peak_freqs.append(current_peak_freq)
-            else:
-                self.peak_hold_line.clear()  # If peak hold is off, ensure line is clear
+                    # Optimization: Use skipFiniteCheck for faster setData
+                    self.peak_hold_line.setData(x_data, self.peak_hold_data, skipFiniteCheck=True)
+
+                    # --- Peak Label Logic (always update when peak hold updates) ---
+                    self.clear_peak_labels()  # Clear old labels first
+
+                    if self.show_labels_enabled and len(x_data) > 0 and self.peak_hold_data is not None:
+                        min_freq_dist = (x_data[-1] - x_data[0]) * 0.05
+
+                        # Adapt peak finding strategy based on the y-axis scale
+                        if self.dolog:
+                            # On a log scale, find peaks that are significantly above the median
+                            log_data = np.log10(self.peak_hold_data + 1e-10)  # Add epsilon to avoid log(0)
+                            median_log = np.median(log_data)
+                            # A threshold of 1 means peaks must be at least 1 decade (10x) above the median
+                            peak_height_threshold = median_log + 0.5
+                            peaks, _ = find_peaks(log_data, height=peak_height_threshold)
+                        else:
+                            # On a linear scale, use a fraction of the max height
+                            peak_height_threshold = np.max(self.peak_hold_data) * 0.1
+                            peaks, _ = find_peaks(self.peak_hold_data, height=peak_height_threshold)
+
+                        if len(peaks) > 0:
+                            peak_amplitudes = self.peak_hold_data[peaks]
+                            sorted_peak_indices = peaks[np.argsort(peak_amplitudes)[::-1]]
+                            labeled_peak_freqs = []
+                            for peak_idx in sorted_peak_indices:
+                                if len(labeled_peak_freqs) >= 20: break
+                                current_peak_freq = x_data[peak_idx]
+                                is_far_enough = all(abs(current_peak_freq - f) > min_freq_dist for f in labeled_peak_freqs)
+                                if is_far_enough:
+                                    peak_amp = self.peak_hold_data[peak_idx]
+                                    text_item = pg.TextItem(text=f"{current_peak_freq:.2f}", color=(255, 255, 0),
+                                                            anchor=(0.5, 1.5))
+                                    text_item.setPos(current_peak_freq, np.log10(peak_amp) if self.dolog else peak_amp)
+                                    self.plot.addItem(text_item)
+                                    self.peak_text_labels.append(text_item)
+                                    labeled_peak_freqs.append(current_peak_freq)
+        else:
+            self.peak_hold_line.clear()  # If peak hold is off, ensure line is clear
 
         # --- Y-Axis Ranging (based on max across ALL displayed channels) ---
         self.plot.enableAutoRange(axis='y', enable=False)
