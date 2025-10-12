@@ -163,7 +163,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.rollingButton.setChecked(bool(self.state.isrolling))
         self.ui.rollingButton.setText(" Auto " if self.state.isrolling else " Normal ")
         self.ui.runButton.setText(" Run ")
-        self.fan_timer.start(10031) # every 10 seconds or so
+        self.controller.update_fan() # update fan once right away
+        self.fan_timer.start(10031) # every 10 seconds or so afterwares
         self.ui.actionPan_and_zoom.setChecked(False)
         self.plot_manager.set_pan_and_zoom(False)
 
