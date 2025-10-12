@@ -54,7 +54,7 @@ Then run the new software, update the firmware (if needed) on your board from th
 
 ### Tips
 
-- If not enough power is being supplied, plug in via a [powered USB hub](https://a.co/d/hfAtVhl), a [USB PD hub with 15W reserved for ports](https://a.co/d/174I3v8) and a USB-C cable, or use an external [12V 2A+ power adapter with 2.1mm plug](https://a.co/d/1EkzLRP)
+- If not enough power is being supplied, plug in via a [powered USB hub](https://a.co/d/hfAtVhl), a [USB PD hub with 15W reserved for ports](https://a.co/d/174I3v8) and a USB-C cable, or use an external [5-24V 20W+ power adapter with 2.1mm plug](https://a.co/d/1EkzLRP)
 - If you get security issues on Mac, do: <code>xattr -cr Mac_HaasoscopeProQt</code>
 - If the board is not found on Linux, use this udev rule and then plug it in: <code>sudo cp HaasoscopePro/software/ft245.rules /etc/udev/rules.d/</code>
 - If you get an error like "qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found", try: <code>sudo apt install libxcb-xinerama0</code>
