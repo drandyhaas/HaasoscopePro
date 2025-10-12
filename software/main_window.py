@@ -918,6 +918,10 @@ class MainWindow(TemplateBaseClass):
             self.state.paused = True
             self.ui.runButton.setChecked(False)
 
+    def update_fan(self):
+        fan_override = self.ui.fanBox.value() # set to -1 to have no effect, or 0 - 255 to override
+        self.controller.update_fan(fan_override)
+
     def high_resolution_toggled(self, checked):
         """Toggles the hardware's high-resolution averaging mode."""
         self.state.highresval = 1 if checked else 0

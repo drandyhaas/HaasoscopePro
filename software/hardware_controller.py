@@ -174,11 +174,13 @@ class HardwareController:
                 # Sync the Depth box UI with the state, in case it was changed by a PLL reset
                 main_window.sync_depth_ui_from_state()
 
-    def update_fan(self):
+    def update_fan(self, fan_override=-1):
+        """Sets the fan PWM duty cycle on all boards."""
         for i in range(self.num_board):
-            adc_temp, board_temp = gettemps(usb)
+            adc_temp, board_temp = gettemps(self.usbs[i])
             fanpwm = 0
             if adc_temp>30: fampwm = 10
+            if 0 <= fan_override < 256: fanpwm = fan_override
             setfanpwm(self.usbs[board_idx],fanpwm,False)
 
     def send_trigger_info_all(self):
