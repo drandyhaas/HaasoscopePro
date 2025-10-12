@@ -604,16 +604,8 @@ class MainWindow(TemplateBaseClass):
                     # Submit FFT calculation to worker thread (non-blocking)
                     self.fft_processor.submit_fft_calculation(ch_name, y_data_for_analysis, board_idx, s)
 
-                    # Try to retrieve result
-                    # If no cached result exists (first time), wait briefly for initial result
-                    # Otherwise use cached result while new calculation completes
-                    if ch_name not in self.fft_processor.last_results:
-                        # First time - wait up to 50ms for initial result
-                        result = self.fft_processor.get_fft_result(ch_name, use_cached=False, timeout=0.05)
-                    else:
-                        # Subsequent frames - return cached result immediately
-                        result = self.fft_processor.get_fft_result(ch_name, use_cached=True)
-
+                    # Try to retrieve result (returns cached result if current calculation not done)
+                    result = self.fft_processor.get_fft_result(ch_name, use_cached=True)
                     if result is not None:
                         freq, mag = result
                         if freq is not None and len(freq) > 0:
@@ -656,16 +648,8 @@ class MainWindow(TemplateBaseClass):
                                 # Submit FFT calculation to worker thread (non-blocking)
                                 self.fft_processor.submit_fft_calculation(math_name, y_data, s.activeboard, s)
 
-                                # Try to retrieve result
-                                # If no cached result exists (first time), wait briefly for initial result
-                                # Otherwise use cached result while new calculation completes
-                                if math_name not in self.fft_processor.last_results:
-                                    # First time - wait up to 50ms for initial result
-                                    result = self.fft_processor.get_fft_result(math_name, use_cached=False, timeout=0.05)
-                                else:
-                                    # Subsequent frames - return cached result immediately
-                                    result = self.fft_processor.get_fft_result(math_name, use_cached=True)
-
+                                # Try to retrieve result (returns cached result if current calculation not done)
+                                result = self.fft_processor.get_fft_result(math_name, use_cached=True)
                                 if result is not None:
                                     freq, mag = result
                                     if freq is not None and len(freq) > 0:
