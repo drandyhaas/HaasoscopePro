@@ -178,10 +178,11 @@ class HardwareController:
         """Sets the fan PWM duty cycle on all boards."""
         for board_idx in range(self.num_board):
             adc_temp, board_temp = gettemps(self.usbs[board_idx])
+            #print("Got temps adc board", adc_temp, board_temp)
             fanpwm = 0 # off
-            if adc_temp>30: fampwm = 190 # low
-            if adc_temp>35: fampwm = 200 # medium
-            if adc_temp>40: fampwm = 255 # high
+            if adc_temp>30: fanpwm = 185 # low
+            if adc_temp>35: fanpwm = 195 # medium
+            if adc_temp>40: fanpwm = 255 # high
             if 0 <= fan_override < 256: fanpwm = fan_override
             setfanpwm(self.usbs[board_idx],fanpwm,False)
 
