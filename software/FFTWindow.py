@@ -91,10 +91,32 @@ class FFTWindow(FFTTemplateBaseClass):
         self.cached_xlimits = None
 
     def reset_analysis_state(self):
-        """Resets all analysis data for a clean start."""
-        self.peak_hold_data = None
-        self.peak_hold_line.clear()
+        """Resets peak hold data and recalculates from currently displayed FFT data."""
         self.clear_peak_labels()
+
+        # Recalculate peak hold from current channel data
+        if self.peak_hold_enabled and len(self.channel_data_cache) > 0:
+            # Get all y-data from currently displayed channels
+            all_y_data = [y for _, y in self.channel_data_cache.values()]
+
+            # Find max at each frequency bin across all channels
+            if len(all_y_data) > 0 and len(all_y_data[0]) > 0:
+                max_across_channels = all_y_data[0].copy()
+                for other_y in all_y_data[1:]:
+                    if len(other_y) == len(max_across_channels):
+                        max_across_channels = np.maximum(max_across_channels, other_y)
+
+                # Set peak hold to current max
+                self.peak_hold_data = max_across_channels.copy()
+
+                # Update the peak hold line with recalculated data
+                if self.active_channel_name in self.channel_data_cache:
+                    x_data, _ = self.channel_data_cache[self.active_channel_name]
+                    self.peak_hold_line.setData(x_data, self.peak_hold_data, skipFiniteCheck=True)
+        else:
+            # If peak hold is disabled or no data, just clear
+            self.peak_hold_data = None
+            self.peak_hold_line.clear()
 
     def reset_for_timescale_change(self):
         """Allows the main window to reset the pan/zoom state."""
