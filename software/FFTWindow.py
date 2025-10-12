@@ -158,16 +158,21 @@ class FFTWindow(FFTTemplateBaseClass):
 
     def clear_plot(self, channel_name):
         """Removes a specific channel's trace from the plot and cache."""
+        # Track if we actually removed anything
+        removed_something = False
+
         if channel_name in self.fft_lines:
             line_to_remove = self.fft_lines.pop(channel_name)
             self.plot.removeItem(line_to_remove)
+            removed_something = True
 
         # Also remove from cache so peak hold doesn't include this channel's old data
         if channel_name in self.channel_data_cache:
             del self.channel_data_cache[channel_name]
+            removed_something = True
 
-        # After removing a channel, recalculate peak hold from remaining channels
-        if self.peak_hold_enabled:
+        # Only recalculate peak hold if we actually removed something
+        if removed_something and self.peak_hold_enabled:
             self.reset_analysis_state()
 
     def update_plot(self, channel_name, x_data, y_data, pen, title_text, xlabel_text, is_active_channel):
