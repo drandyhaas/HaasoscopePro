@@ -20,6 +20,7 @@ class HardwareController:
         self.signals = HardwareControllerSignals()
         # Thread pool for parallel board operations - use enough threads for all boards
         self.executor = ThreadPoolExecutor(max_workers=max(4, self.num_board * 2))
+        self.got_exception = False
 
     def setup_all_boards(self):
         success = True
@@ -298,9 +299,13 @@ class HardwareController:
 
         # Process ext trig boards in parallel first using thread pool
         def process_board(board):
-            if self._get_channels(board):  # sends trigger info and checks for ready data
-                ready_event[board] = True
-                self._get_predata(board)  # gets downsamplemergingcounter and triggerphase
+            try:
+                if self._get_channels(board):  # sends trigger info and checks for ready data
+                    ready_event[board] = True
+                    self._get_predata(board)  # gets downsamplemergingcounter and triggerphase
+            except:
+                print("Exception doing board pre-data!")
+                self.got_exception = True
 
         futures = []
         for board in range(self.num_board):
@@ -328,9 +333,13 @@ class HardwareController:
         thedata = [bytes([])] * self.num_board
 
         def get_board_data(board):
-            if ready_event[board]:
-                data = self._get_data(self.usbs[board])  # gets the actual event data
-                thedata[board] = data
+            try:
+                if ready_event[board]:
+                    data = self._get_data(self.usbs[board])  # gets the actual event data
+                    thedata[board] = data
+            except:
+                print("Exception getting board data!")
+                self.got_exception = True
 
         futures = []
         for board in range(self.num_board):

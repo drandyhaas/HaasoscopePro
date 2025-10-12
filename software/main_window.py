@@ -492,7 +492,15 @@ class MainWindow(TemplateBaseClass):
         s.isdrawing = True  # for sync with ngscopeclient thread
         try:
             raw_data_map, rx_len = self.controller.get_event()
-            return raw_data_map, rx_len
+            if not self.controller.got_exception:
+                return raw_data_map, rx_len
+            else:
+                title = "Hardware Communication Exception"
+                message = (f"Got an exception when fetching event data.\n\n"
+                           "Please check the USB connection and restart the application.")
+                self.handle_critical_error(title, message)
+                # Stop this loop immediately since communication has failed.
+                return None, 0
         except ftd2xx.DeviceError as e:
             # If a hardware communication error occurs, handle it gracefully.
             title = "Hardware Communication Error"
@@ -500,8 +508,6 @@ class MainWindow(TemplateBaseClass):
                        f"Details: {e}\n\n"
                        "Please check the USB connection and restart the application.")
             self.handle_critical_error(title, message)
-            self.ui.actionUpdate_firmware.setEnabled(False)
-            self.ui.actionVerify_firmware.setEnabled(False)
             # Stop this loop immediately since communication has failed.
             return None, 0
 
@@ -805,22 +811,26 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionUpdate_firmware.setEnabled(False)
         self.ui.actionVerify_firmware.setEnabled(False)
 
-        # 4. Show the critical error message box
+        # 4. Cleanup as much as possible
+        self.closeEvent(None)
+
+        # 5. Show the critical error message box
         QMessageBox.critical(self, title, message)
 
     def closeEvent(self, event):
-        print("Closing application...")
+        if event is None: print("Stopping application...")
         self.update_timer.stop()
         self.measurement_timer.stop()
         self.fan_timer.stop()
         self.recorder.stop()
-        self.histogram_window.close()
-        if self.math_window: self.math_window.close()
-        self.close_socket()
-        self.controller.cleanup()
-        if self.fftui: self.fftui.close()
-        event.accept()
-        print("Cleanup complete. Exiting.")
+        if event is not None:
+            self.close_socket()
+            self.histogram_window.close()
+            if self.math_window: self.math_window.close()
+            if self.fftui: self.fftui.close()
+            if not self.controller.got_exception: self.controller.cleanup()
+            event.accept()
+            print("Cleanup complete. Exiting.")
 
     def keyPressEvent(self, event):
         modifiers = QtWidgets.QApplication.keyboardModifiers()
