@@ -579,7 +579,7 @@
           <string>Holdoff</string>
          </property>
         </widget>
-        <widget class="QSpinBox" name="tadBox_2">
+        <widget class="QSpinBox" name="fanBox">
          <property name="geometry">
           <rect>
            <x>10</x>
