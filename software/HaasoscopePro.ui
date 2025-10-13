@@ -1160,7 +1160,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>150</y>
+          <y>160</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1187,7 +1187,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>170</y>
+          <y>180</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1211,7 +1211,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>130</y>
+          <y>140</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1235,7 +1235,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>260</y>
+          <y>270</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1259,7 +1259,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>310</y>
+          <y>320</y>
           <width>111</width>
           <height>17</height>
          </rect>
@@ -1280,7 +1280,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>63</y>
+          <y>84</y>
           <width>47</width>
           <height>19</height>
          </rect>
@@ -1298,7 +1298,7 @@
         <property name="geometry">
          <rect>
           <x>50</x>
-          <y>63</y>
+          <y>84</y>
           <width>51</width>
           <height>20</height>
          </rect>
@@ -1328,7 +1328,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>89</y>
+          <y>110</y>
           <width>47</width>
           <height>19</height>
          </rect>
@@ -1346,7 +1346,7 @@
         <property name="geometry">
          <rect>
           <x>50</x>
-          <y>89</y>
+          <y>110</y>
           <width>51</width>
           <height>20</height>
          </rect>
@@ -1379,7 +1379,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>210</y>
+          <y>220</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1445,7 +1445,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>190</y>
+          <y>200</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1540,7 +1540,7 @@ Outlined if triggering on this channel</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>280</y>
+          <y>290</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1564,7 +1564,7 @@ Outlined if triggering on this channel</string>
         <property name="geometry">
          <rect>
           <x>107</x>
-          <y>89</y>
+          <y>110</y>
           <width>71</width>
           <height>20</height>
          </rect>
@@ -1592,7 +1592,7 @@ Outlined if triggering on this channel</string>
         <property name="geometry">
          <rect>
           <x>107</x>
-          <y>63</y>
+          <y>84</y>
           <width>71</width>
           <height>20</height>
          </rect>
@@ -1620,7 +1620,7 @@ Outlined if triggering on this channel</string>
         <property name="geometry">
          <rect>
           <x>130</x>
-          <y>372</y>
+          <y>382</y>
           <width>47</width>
           <height>20</height>
          </rect>
@@ -1638,7 +1638,7 @@ Outlined if triggering on this channel</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>370</y>
+          <y>380</y>
           <width>111</width>
           <height>22</height>
          </rect>
@@ -1680,7 +1680,7 @@ Outlined if triggering on this channel</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>240</y>
+          <y>250</y>
           <width>111</width>
           <height>17</height>
          </rect>
@@ -1701,7 +1701,7 @@ Outlined if triggering on this channel</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>340</y>
+          <y>350</y>
           <width>91</width>
           <height>22</height>
          </rect>
@@ -1768,7 +1768,7 @@ Outlined if triggering on this channel</string>
         <property name="geometry">
          <rect>
           <x>120</x>
-          <y>342</y>
+          <y>352</y>
           <width>61</width>
           <height>20</height>
          </rect>
@@ -1780,6 +1780,31 @@ Outlined if triggering on this channel</string>
         </property>
         <property name="text">
          <string>Low pass</string>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="channameEdit">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>56</y>
+          <width>171</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Can enter a custom channel name here</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="maxLength">
+         <number>25</number>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
+        </property>
+        <property name="placeholderText">
+         <string>Channel name</string>
         </property>
        </widget>
       </widget>
@@ -2316,6 +2341,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionGrid"/>
     <addaction name="actionVoltage_axis"/>
     <addaction name="actionPersist_average"/>
+    <addaction name="actionChannel_name_legend"/>
     <addaction name="actionMarkers"/>
     <addaction name="actionLine_color"/>
     <addaction name="actionPan_and_zoom"/>
@@ -2839,6 +2865,14 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Duty cycle</string>
+   </property>
+  </action>
+  <action name="actionChannel_name_legend">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Channel name legend</string>
    </property>
   </action>
  </widget>

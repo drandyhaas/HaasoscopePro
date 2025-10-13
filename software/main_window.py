@@ -227,6 +227,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.gainBox.valueChanged.connect(self.gain_changed)
         self.ui.offsetBox.valueChanged.connect(self.offset_changed)
         self.ui.skewBox.valueChanged.connect(self.skew_changed)
+        self.ui.channameEdit.editingFinished.connect(self.channel_name_changed)
         self.ui.acdcCheck.stateChanged.connect(self.acdc_changed)
         self.ui.ohmCheck.stateChanged.connect(self.mohm_changed)
         self.ui.attCheck.stateChanged.connect(self.att_changed)
@@ -981,6 +982,11 @@ class MainWindow(TemplateBaseClass):
         self.ui.gainBox.setValue(s.gain[s.activexychannel])
         self.ui.offsetBox.setValue(s.offset[s.activexychannel])
         self.ui.skewBox.setValue(s.time_skew[s.activexychannel])
+
+        # Update channel name
+        self.ui.channameEdit.setPlaceholderText("Channel name")
+        self.ui.channameEdit.setText(s.channel_names[s.activexychannel])
+
         self.ui.acdcCheck.setChecked(s.acdc[s.activexychannel])
         self.ui.ohmCheck.setChecked(s.mohm[s.activexychannel])
         self.ui.attCheck.setChecked(s.att[s.activexychannel])
@@ -1703,6 +1709,11 @@ class MainWindow(TemplateBaseClass):
         """Handles changes to the time skew offset."""
         s = self.state
         s.time_skew[s.activexychannel] = self.ui.skewBox.value()
+
+    def channel_name_changed(self):
+        """Handles changes to the channel name."""
+        s = self.state
+        s.channel_names[s.activexychannel] = self.ui.channameEdit.text()
 
     def acdc_changed(self, checked):
         s = self.state
