@@ -22,12 +22,12 @@ def auxoutselector(usb, val: int, doprint: bool = False):
     if doprint:
         print(f"auxoutselector now {val}, was {res[0]}")
 
-def clkout_ena(usb, en: bool, doprint: bool = True):
+def clkout_ena(usb, board, en: bool, doprint: bool = True):
     """Enables or disables the LVDS clock output for daisy-chaining boards."""
     usb.send(bytes([2, 9, int(en), 0, 99, 99, 99, 99]))
     res = usb.recv(4)
     if doprint:
-        print(f"Clock out now {int(en)}, was {res[0]}")
+        print(f"Clock out on board {board} now {int(en)}, was {res[0]}")
 
 def flash_erase(usb, doprint: bool = False):
     """Sends the command to bulk erase the configuration flash."""
@@ -71,7 +71,7 @@ def flash_write(usb, byte3: int, byte2: int, byte1: int, value_to_write: int, do
         print(f"Flash write response: {res[0]}")
 
 
-def flash_writeall_from_file(usb, filename: str, do_write: bool = True) -> bytes:
+def flash_writeall_from_file(usb, filename: str, do_write: bool = True, progress_callback=None) -> bytes:
     """
     Reads a binary file and writes its entire contents to the flash memory.
 
@@ -79,6 +79,7 @@ def flash_writeall_from_file(usb, filename: str, do_write: bool = True) -> bytes
         usb: The USB device handle.
         filename (str): The path to the binary file (e.g., firmware.rpd).
         do_write (bool): If False, reads the file but does not write to the device.
+        progress_callback: Optional callback function(current, total) to report progress.
 
     Returns:
         The byte contents of the file that was read.
@@ -99,12 +100,16 @@ def flash_writeall_from_file(usb, filename: str, do_write: bool = True) -> bytes
                     usb.recv(4 * 1024)
                     if (i + 1) % (1024 * 50) == 0:
                         print(f"Wrote byte {i + 1} / {len(all_bytes)}")
+                        if progress_callback:
+                            progress_callback(i + 1, len(all_bytes))
 
             # Receive the final remaining responses.
             remaining_bytes = len(all_bytes) % 1024
             if remaining_bytes > 0:
                 usb.recv(4 * remaining_bytes)
             print(f"Finished writing {len(all_bytes)} bytes.")
+            if progress_callback:
+                progress_callback(len(all_bytes), len(all_bytes))
     return all_bytes
 
 
@@ -135,8 +140,16 @@ def flash_read(usb, byte3: int, byte2: int, byte1: int, do_receive: bool = True)
     return 0
 
 
-def flash_readall(usb) -> bytearray:
-    """Reads the entire contents of the flash memory. This is a slow operation."""
+def flash_readall(usb, progress_callback=None) -> bytearray:
+    """Reads the entire contents of the flash memory. This is a slow operation.
+
+    Args:
+        usb: The USB device handle.
+        progress_callback: Optional callback function(current, total) to report progress.
+
+    Returns:
+        The byte contents read from flash.
+    """
     read_bytes = bytearray()
     total_size = 1191788
     block_size = 65536  # 256 * 256
@@ -144,6 +157,8 @@ def flash_readall(usb) -> bytearray:
 
     for k in range(num_blocks):
         print(f"Reading flash block {k + 1}/{num_blocks}...")
+        if progress_callback:
+            progress_callback(k, num_blocks)
 
         # Determine how many bytes to read in this specific block
         bytes_so_far = k * block_size
@@ -169,6 +184,8 @@ def flash_readall(usb) -> bytearray:
             print(f"Flash readall timeout on block {k + 1}. Expected {bytes_to_expect}, received {len(res)}.")
             break  # Stop if a read fails
 
+    if progress_callback:
+        progress_callback(num_blocks, num_blocks)
     return read_bytes
 
 

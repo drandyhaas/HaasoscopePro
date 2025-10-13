@@ -227,6 +227,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.gainBox.valueChanged.connect(self.gain_changed)
         self.ui.offsetBox.valueChanged.connect(self.offset_changed)
         self.ui.skewBox.valueChanged.connect(self.skew_changed)
+        self.ui.channameEdit.editingFinished.connect(self.channel_name_changed)
         self.ui.acdcCheck.stateChanged.connect(self.acdc_changed)
         self.ui.ohmCheck.stateChanged.connect(self.mohm_changed)
         self.ui.attCheck.stateChanged.connect(self.att_changed)
@@ -246,6 +247,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionTime_relative.triggered.connect(lambda checked: self.plot_manager.update_cursor_display())
         self.ui.actionTrigger_info.triggered.connect(lambda checked: self.plot_manager.update_trigger_threshold_display())
         self.ui.actionPeak_detect.triggered.connect(lambda checked: self.plot_manager.set_peak_detect(checked))
+        self.ui.actionChannel_name_legend.triggered.connect(lambda checked: self.plot_manager.update_legend())
         self.ui.linewidthBox.valueChanged.connect(self.plot_manager.set_line_width)
         self.ui.lpfBox.currentIndexChanged.connect(self.lpf_changed)
         self.ui.resampBox.valueChanged.connect(self.resamp_changed)
@@ -702,6 +704,9 @@ class MainWindow(TemplateBaseClass):
         if self.recorder.is_recording: status_text += ", Recording to "+str(self.recorder.file_handle.name)
         self.ui.statusBar.showMessage(status_text)
 
+        # Update channel name legend while we're at it
+        self.plot_manager.update_legend()
+
     def resizeEvent(self, event):
         """Handles window resize events to adjust the table view."""
         super().resizeEvent(event)  # Call the parent's resize event
@@ -981,6 +986,11 @@ class MainWindow(TemplateBaseClass):
         self.ui.gainBox.setValue(s.gain[s.activexychannel])
         self.ui.offsetBox.setValue(s.offset[s.activexychannel])
         self.ui.skewBox.setValue(s.time_skew[s.activexychannel])
+
+        # Update channel name
+        self.ui.channameEdit.setPlaceholderText("Channel name")
+        self.ui.channameEdit.setText(s.channel_names[s.activexychannel])
+
         self.ui.acdcCheck.setChecked(s.acdc[s.activexychannel])
         self.ui.ohmCheck.setChecked(s.mohm[s.activexychannel])
         self.ui.attCheck.setChecked(s.att[s.activexychannel])
@@ -1294,22 +1304,60 @@ class MainWindow(TemplateBaseClass):
         load_setup(self)
 
     def update_firmware(self):
+        from PyQt5.QtWidgets import QProgressDialog
+        from PyQt5.QtCore import Qt
+
         board = self.state.activeboard
         reply = QMessageBox.question(self, 'Confirmation', f'Update firmware on board {board} with firmware {self.state.firmwareversion[board]}\nto the one in this software?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.No: return
         if not self.state.paused: self.dostartstop()  # Pause
-        success, message = self.controller.update_firmware(board)
+
+        # Create progress dialog
+        progress = QProgressDialog("Starting firmware update...", None, 0, 100, self)
+        progress.setWindowTitle("Firmware Update")
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setCancelButton(None)  # No cancel button
+        progress.show()
+
+        def progress_callback(label, value, maximum):
+            progress.setLabelText(label)
+            progress.setValue(value)
+            QtWidgets.QApplication.processEvents()  # Allow UI to update
+
+        success, message = self.controller.update_firmware(board, progress_callback=progress_callback)
+
+        progress.close()
         QMessageBox.information(self, "Firmware Update", message)
         if success: self.ui.runButton.setEnabled(False)
 
     def verify_firmware(self):
+        from PyQt5.QtWidgets import QProgressDialog
+        from PyQt5.QtCore import Qt
+
         board = self.state.activeboard
         reply = QMessageBox.question(self, 'Confirmation', f'Verify firmware on board {board} with firmware {self.state.firmwareversion[board]}\nmatches the one in this software?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.No: return
         if not self.state.paused: self.dostartstop()  # Pause
-        success, message = self.controller.update_firmware(board, verify_only=True)
+
+        # Create progress dialog
+        progress = QProgressDialog("Starting firmware verification...", None, 0, 100, self)
+        progress.setWindowTitle("Firmware Verification")
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setCancelButton(None)  # No cancel button
+        progress.show()
+
+        def progress_callback(label, value, maximum):
+            progress.setLabelText(label)
+            progress.setValue(value)
+            QtWidgets.QApplication.processEvents()  # Allow UI to update
+
+        success, message = self.controller.update_firmware(board, verify_only=True, progress_callback=progress_callback)
+
+        progress.close()
         QMessageBox.information(self, "Firmware Verify", message)
 
     def set_channel_frame(self):
@@ -1703,6 +1751,13 @@ class MainWindow(TemplateBaseClass):
         """Handles changes to the time skew offset."""
         s = self.state
         s.time_skew[s.activexychannel] = self.ui.skewBox.value()
+
+    def channel_name_changed(self):
+        """Handles changes to the channel name."""
+        s = self.state
+        s.channel_names[s.activexychannel] = self.ui.channameEdit.text()
+        # Update the legend to reflect the new name
+        self.plot_manager.update_legend()
 
     def acdc_changed(self, checked):
         s = self.state

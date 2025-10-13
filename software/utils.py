@@ -76,9 +76,9 @@ def inttobytes(theint: int) -> List[int]:
 
 def oldbytes(usb):
     """Reads and discards any lingering data in the USB receive buffer."""
-    while True:
-        old_data = usb.recv(100000)
-        if len(old_data) > 0:
-            print(f"Cleared {len(old_data)} old bytes from USB buffer.")
-        else:
-            break
+    old_data = usb.recv(1000000)
+    if len(old_data) > 0:
+        print(f"Cleared {len(old_data)} old bytes from USB buffer.")
+        return len(old_data)
+    else:
+        return 0
