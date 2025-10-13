@@ -4,9 +4,11 @@ Handles the discovery, connection, and ordering of HaasoscopePro USB devices.
 The key function, `orderusbs`, implements a daisy-chain discovery algorithm
 to determine the physical order of the connected boards.
 """
+import sys
 import ftd2xx
 from typing import List
 from USB_FT232H import UsbFt232hSync245mode
+from board import reload_firmware
 from utils import getbit, oldbytes
 
 
@@ -47,14 +49,17 @@ def connectdevices(nmax: int = 100) -> List[UsbFt232hSync245mode]:
                 usb_device = UsbFt232hSync245mode('HaasoscopePro USB2', serial_bytes)
                 if usb_device.good:
 
-                    # Clear any old data from the USB buffer just in case
-                    # usbs[b].reopen()
-                    if oldbytes(usb_device) > 100000:
-                        print(f"Skipping serial {usb_device.serial}")
-                        continue
+                    # Can skip or select particular boards if needed
+                    if usb_device.serial == b'FTAKMEZ1' and False:
+                        #continue
+                        reload_firmware(usb_device)
+                        usb_device.reopen()
+                        sys.exit(-1)
 
-                    # Can skip particular boards if needed
-                    #if usbs[b].serial == "FTAKMEWI": continue
+                    # Clear any old data from the USB buffer just in case
+                    if oldbytes(usb_device) > 100000:
+                        raise RuntimeError(
+                            f"Board communication failed with baord {usb_device.serial}.")
 
                     usbs.append(usb_device)
     except ftd2xx.DeviceError as e:
