@@ -189,6 +189,11 @@ class PlotManager(pg.QtCore.QObject):
         self.cursor_manager = CursorManager(self.plot, self.state, self.linepens, self.ui, self.otherlines, self.lines)
         self.cursor_manager.setup_cursors()
 
+        # Legend for channel names
+        self.legend_text = pg.TextItem(anchor=(1, 0), color='w')  # anchor=(1,0) means top-right
+        self.plot.addItem(self.legend_text)
+        self.legend_text.setPos(1.0, 1.0)  # Will be updated to actual position
+
         # Secondary Y-Axis
         if self.state.num_board > 0:
             self.right_axis = add_secondary_axis(
@@ -404,6 +409,42 @@ class PlotManager(pg.QtCore.QObject):
         """Hides a specific reference plot."""
         if 0 <= channel_index < len(self.reference_lines):
             self.reference_lines[channel_index].setVisible(False)
+
+    def update_legend(self):
+        """Updates the legend with channel names in the top right corner."""
+        # Only show legend if the action is checked
+        if not self.ui.actionChannel_name_legend.isChecked():
+            self.legend_text.setVisible(False)
+            return
+
+        s = self.state
+        legend_items = []
+
+        # Collect channels that have names and are visible
+        for li in range(self.nlines):
+            if s.channel_names[li] and self.lines[li].isVisible():
+                # Get the channel color
+                pen = self.linepens[li]
+                color = pen.color()
+                # Convert QColor to hex string
+                color_hex = color.name()
+                # Add to legend items
+                legend_items.append(f'<span style="color:{color_hex};">{s.channel_names[li]}</span>')
+
+        # Build HTML text
+        if legend_items:
+            html_text = '<br>'.join(legend_items)
+            self.legend_text.setHtml(html_text)
+            self.legend_text.setVisible(True)
+            # Position in top right corner (in view coordinates)
+            view_range = self.plot.viewRange()
+            x_max = view_range[0][1]  # Right edge of view
+            x_range = x_max - view_range[0][0]
+            y_max = view_range[1][1]  # Top edge of view
+            y_range = y_max - view_range[1][0]
+            self.legend_text.setPos(x_max-0.01*x_range, y_max-0.01*y_range)
+        else:
+            self.legend_text.setVisible(False)
 
     def update_math_channel_lines(self, math_window=None):
         """Updates the set of math channel plot lines based on current math channel definitions.

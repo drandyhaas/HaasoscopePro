@@ -247,6 +247,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionTime_relative.triggered.connect(lambda checked: self.plot_manager.update_cursor_display())
         self.ui.actionTrigger_info.triggered.connect(lambda checked: self.plot_manager.update_trigger_threshold_display())
         self.ui.actionPeak_detect.triggered.connect(lambda checked: self.plot_manager.set_peak_detect(checked))
+        self.ui.actionChannel_name_legend.triggered.connect(lambda checked: self.plot_manager.update_legend())
         self.ui.linewidthBox.valueChanged.connect(self.plot_manager.set_line_width)
         self.ui.lpfBox.currentIndexChanged.connect(self.lpf_changed)
         self.ui.resampBox.valueChanged.connect(self.resamp_changed)
@@ -702,6 +703,9 @@ class MainWindow(TemplateBaseClass):
                        f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s")
         if self.recorder.is_recording: status_text += ", Recording to "+str(self.recorder.file_handle.name)
         self.ui.statusBar.showMessage(status_text)
+
+        # Update channel name legend while we're at it
+        self.plot_manager.update_legend()
 
     def resizeEvent(self, event):
         """Handles window resize events to adjust the table view."""
@@ -1714,6 +1718,8 @@ class MainWindow(TemplateBaseClass):
         """Handles changes to the channel name."""
         s = self.state
         s.channel_names[s.activexychannel] = self.ui.channameEdit.text()
+        # Update the legend to reflect the new name
+        self.plot_manager.update_legend()
 
     def acdc_changed(self, checked):
         s = self.state
