@@ -9,6 +9,7 @@ modules like `spi.py` to execute commands.
 import time
 import math
 from typing import Union
+from numpy import byte
 
 # Import dependencies
 from spi import spicommand, spicommand2, set_spi_mode
