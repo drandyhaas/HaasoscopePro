@@ -60,7 +60,13 @@ class MainWindow(TemplateBaseClass):
         self.socket_thread = None
         self.fftui = None
         self.math_window = None
-        self.ui.boardBox.setMaximum(self.state.num_board - 1)
+        # Initialize boardBox ComboBox with board numbers
+        self.ui.boardBox.blockSignals(True)
+        self.ui.boardBox.setMaxVisibleItems(self.state.num_board)
+        self.ui.boardBox.clear()
+        for i in range(self.state.num_board):
+            self.ui.boardBox.addItem(str(i))
+        self.ui.boardBox.blockSignals(False)
         self.setup_successful = False
         self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
         self.math_reference_data = {}  # Stores {math_channel_name: {'x_ns': array, 'y': array}}
@@ -221,8 +227,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.trigger_holdoff_box.valueChanged.connect(self.trigger_holdoff_changed)
 
         # Channel controls
-        self.ui.boardBox.valueChanged.connect(self.select_channel)
-        self.ui.chanBox.valueChanged.connect(self.select_channel)
+        self.ui.boardBox.currentIndexChanged.connect(self.select_channel)
+        self.ui.chanBox.currentIndexChanged.connect(self.select_channel)
         self.ui.chanonCheck.stateChanged.connect(self.chanon_changed)
         self.ui.gainBox.valueChanged.connect(self.gain_changed)
         self.ui.offsetBox.valueChanged.connect(self.offset_changed)
@@ -350,13 +356,28 @@ class MainWindow(TemplateBaseClass):
         self.ui.oversampCheck.setEnabled(can_change_oversampling)
         self.ui.interleavedCheck.setEnabled(can_change_oversampling and self.ui.oversampCheck.isChecked())
 
-        # Existing logic for chanBox
+        # Update chanBox ComboBox based on two-channel mode
+        current_chan = self.ui.chanBox.currentIndex()
+        self.ui.chanBox.blockSignals(True)
         if s.dotwochannel[s.activeboard]:
-            self.ui.chanBox.setMaximum(s.num_chan_per_board - 1)
+            # Two-channel mode: show channels 0 and 1
+            self.ui.chanBox.setMaxVisibleItems(s.num_chan_per_board)
+            self.ui.chanBox.clear()
+            for i in range(self.state.num_chan_per_board):
+                self.ui.chanBox.addItem(str(i))
+            # Restore previous selection if valid
+            if current_chan < s.num_chan_per_board:
+                self.ui.chanBox.setCurrentIndex(current_chan)
+            else:
+                self.ui.chanBox.setCurrentIndex(0)
         else:
-            if self.ui.chanBox.value() != 0:
-                self.ui.chanBox.setValue(0)
-            self.ui.chanBox.setMaximum(0)
+            # Single-channel mode: only channel 0
+            self.ui.chanBox.setMaxVisibleItems(1)
+            self.ui.chanBox.clear()
+            for i in range(1):
+                self.ui.chanBox.addItem(str(i))
+            self.ui.chanBox.setCurrentIndex(0)
+        self.ui.chanBox.blockSignals(False)
 
         # Enable/disable Ch 1 trigger options based on two-channel mode
         model = self.ui.risingfalling_comboBox.model()
@@ -866,9 +887,9 @@ class MainWindow(TemplateBaseClass):
         """Slot for when a waveform on the plot is clicked."""
         board = channel_index // self.state.num_chan_per_board
         channel = channel_index % self.state.num_chan_per_board
-        self.ui.boardBox.setValue(board)
-        self.ui.chanBox.setValue(channel)
-        # select_channel is called automatically by the valueChanged signal
+        self.ui.boardBox.setCurrentIndex(board)
+        self.ui.chanBox.setCurrentIndex(channel)
+        # select_channel is called automatically by the currentIndexChanged signal
 
     def on_math_curve_clicked(self, math_channel_name):
         """Slot for when a math channel waveform on the plot is clicked."""
@@ -967,8 +988,8 @@ class MainWindow(TemplateBaseClass):
         """Called when board or channel selector is changed."""
         s = self.state
         if s.num_board<1: return
-        s.activeboard = self.ui.boardBox.value()
-        s.selectedchannel = self.ui.chanBox.value()
+        s.activeboard = self.ui.boardBox.currentIndex()
+        s.selectedchannel = self.ui.chanBox.currentIndex()
 
         # This now correctly calls the method to update the checkbox
         self.update_fft_checkbox_state()

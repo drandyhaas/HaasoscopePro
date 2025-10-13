@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1225</width>
-    <height>983</height>
+    <width>1200</width>
+    <height>800</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -589,7 +589,7 @@
           <x>10</x>
           <y>380</y>
           <width>71</width>
-          <height>22</height>
+          <height>20</height>
          </rect>
         </property>
         <property name="font">
@@ -1117,10 +1117,10 @@
        <property name="flat">
         <bool>false</bool>
        </property>
-       <widget class="QSpinBox" name="chanBox">
+       <widget class="QLabel" name="label">
         <property name="geometry">
          <rect>
-          <x>50</x>
+          <x>10</x>
           <y>30</y>
           <width>51</width>
           <height>20</height>
@@ -1131,29 +1131,8 @@
           <family>Arial</family>
          </font>
         </property>
-        <property name="toolTip">
-         <string>Selected channel on this board</string>
-        </property>
-        <property name="maximum">
-         <number>255</number>
-        </property>
-       </widget>
-       <widget class="QLabel" name="label">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>30</y>
-          <width>47</width>
-          <height>20</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
         <property name="text">
-         <string>Chan</string>
+         <string>Channel</string>
         </property>
        </widget>
        <widget class="QCheckBox" name="acdcCheck">
@@ -1399,33 +1378,12 @@
          <bool>true</bool>
         </property>
        </widget>
-       <widget class="QSpinBox" name="boardBox">
-        <property name="geometry">
-         <rect>
-          <x>50</x>
-          <y>7</y>
-          <width>51</width>
-          <height>20</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>Selected board</string>
-        </property>
-        <property name="maximum">
-         <number>0</number>
-        </property>
-       </widget>
        <widget class="QLabel" name="label_18">
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>7</y>
-          <width>47</width>
+          <y>8</y>
+          <width>51</width>
           <height>20</height>
          </rect>
         </property>
@@ -1471,10 +1429,10 @@
        <widget class="QTextBrowser" name="chanColor">
         <property name="geometry">
          <rect>
-          <x>107</x>
+          <x>117</x>
           <y>8</y>
           <width>30</width>
-          <height>41</height>
+          <height>42</height>
          </rect>
         </property>
         <property name="palette">
@@ -1620,7 +1578,7 @@ Outlined if triggering on this channel</string>
         <property name="geometry">
          <rect>
           <x>130</x>
-          <y>382</y>
+          <y>380</y>
           <width>47</width>
           <height>20</height>
          </rect>
@@ -1640,7 +1598,7 @@ Outlined if triggering on this channel</string>
           <x>10</x>
           <y>380</y>
           <width>111</width>
-          <height>22</height>
+          <height>20</height>
          </rect>
         </property>
         <property name="toolTip">
@@ -1703,7 +1661,7 @@ Outlined if triggering on this channel</string>
           <x>10</x>
           <y>350</y>
           <width>91</width>
-          <height>22</height>
+          <height>20</height>
          </rect>
         </property>
         <property name="toolTip">
@@ -1768,7 +1726,7 @@ Outlined if triggering on this channel</string>
         <property name="geometry">
          <rect>
           <x>120</x>
-          <y>352</y>
+          <y>350</y>
           <width>61</width>
           <height>20</height>
          </rect>
@@ -1806,6 +1764,70 @@ Outlined if triggering on this channel</string>
         <property name="placeholderText">
          <string>Channel name</string>
         </property>
+       </widget>
+       <widget class="QComboBox" name="boardBox">
+        <property name="geometry">
+         <rect>
+          <x>60</x>
+          <y>8</y>
+          <width>51</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Selected board (Haasoscope Pro)</string>
+        </property>
+        <property name="currentText">
+         <string>0</string>
+        </property>
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <property name="maxVisibleItems">
+         <number>1</number>
+        </property>
+        <item>
+         <property name="text">
+          <string>0</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>1</string>
+         </property>
+        </item>
+       </widget>
+       <widget class="QComboBox" name="chanBox">
+        <property name="geometry">
+         <rect>
+          <x>60</x>
+          <y>30</y>
+          <width>51</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="toolTip">
+         <string>Selected channel of selected board</string>
+        </property>
+        <property name="currentText">
+         <string>0</string>
+        </property>
+        <property name="currentIndex">
+         <number>0</number>
+        </property>
+        <property name="maxVisibleItems">
+         <number>2</number>
+        </property>
+        <item>
+         <property name="text">
+          <string>0</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>1</string>
+         </property>
+        </item>
        </widget>
       </widget>
       <widget class="QGroupBox" name="groupBox_3">
@@ -2244,7 +2266,7 @@ Outlined if triggering on this channel</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1225</width>
+     <width>1200</width>
      <height>21</height>
     </rect>
    </property>
