@@ -44,7 +44,7 @@ try:
     if len(usbs) > 1:
         tellfirstandlast(usbs)
 
-except RuntimeError as e:
+except (RuntimeError, IndexError) as e:
     print(f"An unexpected error occurred: {e}")
     sys.exit(-1)
 

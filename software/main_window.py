@@ -524,6 +524,10 @@ class MainWindow(TemplateBaseClass):
         self.allocate_xy_data()
 
         for board_idx, raw_data in raw_data_map.items():
+            expect_len = (self.state.expect_samples + self.state.expect_samples_extra) * 2 * 50
+            if len(raw_data) < expect_len:
+                print("Not enough data length in event, not processing.")
+                return
             nbadA, nbadB, nbadC, nbadD, nbadS = self.processor.process_board_data(raw_data, board_idx, self.xydata)
             if s.plljustreset[board_idx] > -10:
                 # If a reset is already in progress, continue it.
