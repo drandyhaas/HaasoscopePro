@@ -12,7 +12,7 @@ from PyQt5.QtCore import Qt
 from main_window import MainWindow
 from usbs import connectdevices, orderusbs, tellfirstandlast, version
 from board import clkout_ena
-from utils import get_pwd, oldbytes
+from utils import get_pwd
 
 # --- Hardware Discovery and Initial Setup ---
 print("Searching for Haasoscope Pro boards...")
@@ -26,17 +26,9 @@ if usbs:
         version(usbs[b])
         version(usbs[b])
 
-        # Clear any old data from the USB buffer just in case
-        #usbs[b].reopen()
-        oldbytes(usbs[b])
-
-        version(usbs[b])
-        version(usbs[b])
-        version(usbs[b])
-
         if len(usbs) > 1:
             print("Enabling clock out on board", usbs[b].serial)
-            clkout_ena(usbs[b], True, False)  # Turn on lvdsout_clk for multi-board setups
+            clkout_ena(usbs[b], b, True, False)  # Turn on lvdsout_clk for multi-board setups
 
         # Check for special beta device serial numbers
         usbs[b].beta = 0.0  # Assign default

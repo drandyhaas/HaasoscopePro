@@ -7,7 +7,7 @@ to determine the physical order of the connected boards.
 import ftd2xx
 from typing import List
 from USB_FT232H import UsbFt232hSync245mode
-from utils import getbit
+from utils import getbit, oldbytes
 
 
 def version(usb: UsbFt232hSync245mode, quiet: bool = True) -> int:
@@ -46,6 +46,16 @@ def connectdevices(nmax: int = 100) -> List[UsbFt232hSync245mode]:
             if serial_bytes and serial_bytes.startswith(b'FT'):
                 usb_device = UsbFt232hSync245mode('HaasoscopePro USB2', serial_bytes)
                 if usb_device.good:
+
+                    # Clear any old data from the USB buffer just in case
+                    # usbs[b].reopen()
+                    if oldbytes(usb_device) > 100000:
+                        print(f"Skipping serial {usb_device.serial}")
+                        continue
+
+                    # Can skip particular boards if needed
+                    #if usbs[b].serial == "FTAKMEWI": continue
+
                     usbs.append(usb_device)
     except ftd2xx.DeviceError as e:
         print(f"Error listing FTDI devices: {e}")
