@@ -23,9 +23,10 @@ See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiK
 - old: v27 is the firmware that shipped with the first round of units
 - old: v28 firmware fixed trigger stability
 - "main" branch is currently v29 firmware and adds more software features
-- "v29_cleanup" branch has a beta version of the software with yet more features
-- "v30" branch has v30 firmware which adds trigger delay and holdoff options
-- "v30_test" branch: new development is occuring here
+- old: "v29_cleanup" branch has a beta version of the software with yet more features
+- old: "v30" branch has v30 firmware which adds trigger delay and holdoff options and more software features 
+- "v31” branch has v31 firmware which adds fan PWM control and more software features 
+- "v31_test" branch: new development is occuring here
 
 To use a different branch, do <code>git pull && git checkout "branchname"</code>, select the branch name in the drop down box on github and then download the zip file of the code, or (for v30+) [download a release](https://github.com/drandyhaas/HaasoscopePro/releases) zip file for your platform (Windows, Mac, Linux). 
 Then run the new software, update the firmware (if needed) on your board from that new software, and power cycle the board (automatic firmware reload for boards with v29+ firmware).
