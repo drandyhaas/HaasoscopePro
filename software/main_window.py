@@ -85,9 +85,11 @@ class MainWindow(TemplateBaseClass):
         # History window and circular buffer for storing past events
         self.history_window = HistoryWindow(self)
         self.history_window.event_selected.connect(self.on_history_event_selected)
+        self.history_window.window_closed.connect(self.on_history_window_closed)
         self.history_buffer = deque(maxlen=100)  # Circular buffer for 100 events
         self.displaying_history = False  # Flag to indicate if showing historical data
         self.current_history_index = None  # Index of currently displayed historical event
+        self.was_running_before_history = False  # Track if we were running when history opened
 
         # 6. Initialize measurements manager (handles table, histogram, etc.)
         self.measurements = MeasurementsManager(self)
@@ -1507,8 +1509,15 @@ class MainWindow(TemplateBaseClass):
 
     def open_history_window(self):
         """Slot for the 'History window' menu action."""
+        # Track whether we're currently running
+        self.was_running_before_history = not self.state.paused
+
         # Update the history window with current buffer contents
         self.history_window.update_event_list(list(self.history_buffer))
+
+        # Position the window to the left of the main window
+        self.history_window.position_relative_to_main(self)
+
         self.history_window.show()
         self.history_window.raise_()
         self.history_window.activateWindow()
@@ -1556,6 +1565,17 @@ class MainWindow(TemplateBaseClass):
             self.displaying_history = False
             self.current_history_index = None
             self.update_timer.start(0)
+
+    def on_history_window_closed(self):
+        """Slot called when the history window is closed."""
+        # If we were running when the history window was opened, resume running
+        if self.was_running_before_history and self.displaying_history:
+            self.displaying_history = False
+            self.current_history_index = None
+            self.state.paused = False
+            self.ui.runButton.setChecked(True)
+            self.update_timer.start(0)
+            self.measurement_timer.start(20)
 
     def take_reference_waveform(self):
         """
