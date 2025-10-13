@@ -10,6 +10,7 @@ from PyQt5.QtCore import Qt
 
 # Import the new main window and necessary hardware functions
 from main_window import MainWindow
+from utils import oldbytes
 from usbs import connectdevices, orderusbs, tellfirstandlast, version
 from board import clkout_ena
 from utils import get_pwd
@@ -19,14 +20,14 @@ print("Searching for Haasoscope Pro boards...")
 max_devices = 100
 try:
     usbs = connectdevices(max_devices) # This will now return an empty list if none are found
-    print(f"Found {len(usbs)} board(s). Performing initial configuration...")
     if usbs:
         for b in range(len(usbs)):
 
             # Reading version multiple times seems to be a hardware quirk to ensure a stable read
             version(usbs[b])
             version(usbs[b])
-            version(usbs[b])
+            version(usbs[b], quiet=True)
+            oldbytes(usbs[b])
 
             # Turn on lvdsout_clk for multi-board setups
             if len(usbs) > 1:

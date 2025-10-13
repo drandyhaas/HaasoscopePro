@@ -16,7 +16,9 @@ def version(usb: UsbFt232hSync245mode, quiet: bool = True) -> int:
     """Reads the firmware version from a connected board."""
     usb.send(bytes([2, 0, 100, 100, 100, 100, 100, 100]))
     res = usb.recv(4)
-    if len(res) < 4: return -1
+    if len(res) < 4:
+        print("Failed to get firmware version!")
+        return -1
     ver = int.from_bytes(res, "little")
     if not quiet:
         print(f"Firmware version: {ver}")
