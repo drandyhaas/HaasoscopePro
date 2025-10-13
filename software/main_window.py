@@ -1,6 +1,8 @@
 # main_window.py
 
 import time, math, sys
+from datetime import datetime
+from collections import deque
 import numpy as np
 import threading
 import pyqtgraph as pg
@@ -15,6 +17,7 @@ from data_processor import DataProcessor, format_freq
 from plot_manager import PlotManager
 from data_recorder import DataRecorder
 from histogram_window import HistogramWindow
+from history_window import HistoryWindow
 from measurements_manager import MeasurementsManager
 from calibration import autocalibration, do_meanrms_calibration
 from settings_manager import save_setup, load_setup
@@ -78,6 +81,13 @@ class MainWindow(TemplateBaseClass):
 
         # Histogram window for measurements
         self.histogram_window = HistogramWindow(self, self.plot_manager)
+
+        # History window and circular buffer for storing past events
+        self.history_window = HistoryWindow(self)
+        self.history_window.event_selected.connect(self.on_history_event_selected)
+        self.history_buffer = deque(maxlen=100)  # Circular buffer for 100 events
+        self.displaying_history = False  # Flag to indicate if showing historical data
+        self.current_history_index = None  # Index of currently displayed historical event
 
         # 6. Initialize measurements manager (handles table, histogram, etc.)
         self.measurements = MeasurementsManager(self)
@@ -314,6 +324,7 @@ class MainWindow(TemplateBaseClass):
         # View menu actions
         self.ui.actionXY_Plot.triggered.connect(self.toggle_xy_view_slot)
         self.ui.actionMath_channels.triggered.connect(self.open_math_channels)
+        self.ui.actionHistory_window.triggered.connect(self.open_history_window)
 
         # Plot manager signals
         self.plot_manager.curve_clicked_signal.connect(self.on_curve_clicked)
@@ -622,6 +633,15 @@ class MainWindow(TemplateBaseClass):
             math_results = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data)
             self.plot_manager.update_math_channel_data(math_results)
 
+        # Store event in history buffer (only if not displaying historical data)
+        if not self.displaying_history:
+            event_data = {
+                'timestamp': datetime.now(),
+                'xydata': self.xydata.copy(),
+                'xydatainterleaved': self.xydatainterleaved.copy() if self.xydatainterleaved is not None else None
+            }
+            self.history_buffer.append(event_data)
+
         if self.recorder.is_recording:
             lines_vis = [line.isVisible() for line in self.plot_manager.lines]
             self.recorder.record_event(self.xydata, self.plot_manager.otherlines['vline'].value(), lines_vis)
@@ -861,6 +881,7 @@ class MainWindow(TemplateBaseClass):
         self.recorder.stop()
         self.close_socket()
         self.histogram_window.close()
+        self.history_window.close()
         if self.math_window: self.math_window.close()
         if self.fftui: self.fftui.close()
         if event is not None:
@@ -969,6 +990,10 @@ class MainWindow(TemplateBaseClass):
             self.status_timer.start(200)  # Start status timer at 5 Hz
             self.state.paused = False
             self.ui.runButton.setChecked(True)
+            # If resuming from history display, clear the flag
+            if self.displaying_history:
+                self.displaying_history = False
+                self.current_history_index = None
         else:
             self.update_timer.stop()
             self.measurement_timer.stop()
@@ -1479,6 +1504,58 @@ class MainWindow(TemplateBaseClass):
             # Use stabilized data (after trigger stabilizers are applied)
             math_results = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data)
             self.plot_manager.update_math_channel_data(math_results)
+
+    def open_history_window(self):
+        """Slot for the 'History window' menu action."""
+        # Update the history window with current buffer contents
+        self.history_window.update_event_list(list(self.history_buffer))
+        self.history_window.show()
+        self.history_window.raise_()
+        self.history_window.activateWindow()
+
+    def on_history_event_selected(self, event_index):
+        """Slot called when user selects a historical event from the list."""
+        # Pause data acquisition
+        if self.update_timer.isActive():
+            self.update_timer.stop()
+            self.measurement_timer.stop()
+            self.displaying_history = True
+            self.current_history_index = event_index
+            self.state.paused = True
+            self.ui.runButton.setChecked(False)
+
+        # Get the selected event data from the buffer
+        if 0 <= event_index < len(self.history_buffer):
+            event = self.history_buffer[event_index]
+
+            # Replace current data with historical data
+            self.xydata = event['xydata']
+            self.xydatainterleaved = event['xydatainterleaved']
+
+            # Update the plot with the historical data
+            if self.state.xy_mode:
+                board = self.state.activeboard
+                if self.state.dotwochannel[board]:
+                    ch0_index = board * self.state.num_chan_per_board
+                    ch1_index = ch0_index + 1
+                    num_valid_samples = self.xydata.shape[2] // 2
+                    y_data_ch0 = self.xydata[ch0_index][1][:num_valid_samples]
+                    x_data_ch1 = self.xydata[ch1_index][1][:num_valid_samples]
+                    self.plot_manager.update_xy_plot(x_data=x_data_ch1, y_data=y_data_ch0)
+            else:
+                self.plot_manager.update_plots(self.xydata, self.xydatainterleaved)
+
+            # Update math channels if any
+            if self.math_window and len(self.math_window.math_channels) > 0:
+                math_results = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data)
+                self.plot_manager.update_math_channel_data(math_results)
+
+    def resume_live_acquisition(self):
+        """Resume live data acquisition after viewing history."""
+        if self.displaying_history:
+            self.displaying_history = False
+            self.current_history_index = None
+            self.update_timer.start(0)
 
     def take_reference_waveform(self):
         """
