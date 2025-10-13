@@ -182,8 +182,8 @@ class HardwareController:
             #print("Got temps adc board", adc_temp, board_temp)
             fanpwm = 0 # off
             if adc_temp>30: fanpwm = 185 # low
-            if adc_temp>35: fanpwm = 195 # medium
-            if adc_temp>40: fanpwm = 255 # high
+            if adc_temp>40: fanpwm = 195 # medium
+            if adc_temp>50: fanpwm = 255 # high
             if 0 <= fan_override < 256: fanpwm = fan_override
             setfanpwm(self.usbs[board_idx],fanpwm,True)
 
