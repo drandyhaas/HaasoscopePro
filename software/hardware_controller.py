@@ -427,7 +427,7 @@ class HardwareController:
         if not quiet: print(
             f"phase for pllnum {pllnum} plloutnum {plloutnum} on board {board} now {self.state.phasecs[board][pllnum][plloutnum]}")
 
-    def update_firmware(self, board_idx, verify_only = False):
+    def update_firmware(self, board_idx, verify_only=False, progress_callback=None):
         print(f"Starting firmware update on board {board_idx}...")
         firmwarepath = "../adc board firmware/output_files/coincidence_auto.rpd"
         if not os.path.exists(firmwarepath):
@@ -437,25 +437,60 @@ class HardwareController:
                 return False, "Firmware file not found."
 
         starttime = time.time()
-        for i in range(self.num_board): clkout_ena(self.usbs[i], False)
+        for i in reversed(range(self.num_board)): clkout_ena(self.usbs[i], i, False)
 
         if not verify_only:
+            if progress_callback:
+                progress_callback("Erasing flash...", 0, 100)
             print("Erasing flash...")
             flash_erase(self.usbs[board_idx])
-            while flash_busy(self.usbs[board_idx], doprint=False) > 0: time.sleep(.1)
+            # Poll flash_busy and update progress
+            busy_count = 0
+            while flash_busy(self.usbs[board_idx], doprint=False) > 0:
+                time.sleep(.1)
+                busy_count += 1
+                if progress_callback and busy_count % 5 == 0:  # Update every 0.5 seconds
+                    progress_callback("Erasing flash...", min(busy_count, 90), 100)
             print(f"Erase took {time.time() - starttime:.3f} seconds.")
+            if progress_callback:
+                progress_callback("Erase complete", 100, 100)
 
-        if not verify_only: print("Writing firmware...")
-        writtenbytes = flash_writeall_from_file(self.usbs[board_idx], firmwarepath, do_write=(not verify_only))
-        if not verify_only: print(f"Write took {time.time() - starttime:.3f} seconds total.")
+        # Writing firmware with progress
+        if not verify_only:
+            if progress_callback:
+                progress_callback("Writing firmware...", 0, 100)
+            print("Writing firmware...")
 
+            def write_progress(current, total):
+                if progress_callback:
+                    percent = int(100 * current / total)
+                    progress_callback(f"Writing firmware... ({current}/{total} bytes)", percent, 100)
+
+            writtenbytes = flash_writeall_from_file(self.usbs[board_idx], firmwarepath,
+                                                    do_write=True, progress_callback=write_progress)
+            print(f"Write took {time.time() - starttime:.3f} seconds total.")
+        else:
+            # For verify-only, just read the file
+            writtenbytes = flash_writeall_from_file(self.usbs[board_idx], firmwarepath, do_write=False)
+
+        # Verifying with progress
+        if progress_callback:
+            progress_callback("Verifying...", 0, 100)
         print("Verifying write...")
-        readbytes = flash_readall(self.usbs[board_idx])
 
-        for i in range(self.num_board): clkout_ena(self.usbs[i], self.num_board > 1)
+        def verify_progress(current, total):
+            if progress_callback:
+                percent = int(100 * current / total)
+                progress_callback(f"Verifying... (block {current}/{total})", percent, 100)
+
+        readbytes = flash_readall(self.usbs[board_idx], progress_callback=verify_progress)
+
+        for i in range(self.num_board): clkout_ena(self.usbs[i], i, self.num_board > 1)
 
         if writtenbytes == readbytes:
             print("Verified!")
+            if progress_callback:
+                progress_callback("Verified!", 100, 100)
             if verify_only:
                 return True, f"Verified! Update took {time.time() - starttime:.3f}s."
             else:
@@ -463,6 +498,8 @@ class HardwareController:
                 return True, f"Verified! Update took {time.time() - starttime:.3f}s. Restart software."
         else:
             print("Verification failed!")
+            if progress_callback:
+                progress_callback("Verification failed!", 100, 100)
             return False, "Verification failed!"
 
     def force_split(self, board_idx, is_split):

@@ -1304,22 +1304,60 @@ class MainWindow(TemplateBaseClass):
         load_setup(self)
 
     def update_firmware(self):
+        from PyQt5.QtWidgets import QProgressDialog
+        from PyQt5.QtCore import Qt
+
         board = self.state.activeboard
         reply = QMessageBox.question(self, 'Confirmation', f'Update firmware on board {board} with firmware {self.state.firmwareversion[board]}\nto the one in this software?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.No: return
         if not self.state.paused: self.dostartstop()  # Pause
-        success, message = self.controller.update_firmware(board)
+
+        # Create progress dialog
+        progress = QProgressDialog("Starting firmware update...", None, 0, 100, self)
+        progress.setWindowTitle("Firmware Update")
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setCancelButton(None)  # No cancel button
+        progress.show()
+
+        def progress_callback(label, value, maximum):
+            progress.setLabelText(label)
+            progress.setValue(value)
+            QtWidgets.QApplication.processEvents()  # Allow UI to update
+
+        success, message = self.controller.update_firmware(board, progress_callback=progress_callback)
+
+        progress.close()
         QMessageBox.information(self, "Firmware Update", message)
         if success: self.ui.runButton.setEnabled(False)
 
     def verify_firmware(self):
+        from PyQt5.QtWidgets import QProgressDialog
+        from PyQt5.QtCore import Qt
+
         board = self.state.activeboard
         reply = QMessageBox.question(self, 'Confirmation', f'Verify firmware on board {board} with firmware {self.state.firmwareversion[board]}\nmatches the one in this software?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.No: return
         if not self.state.paused: self.dostartstop()  # Pause
-        success, message = self.controller.update_firmware(board, verify_only=True)
+
+        # Create progress dialog
+        progress = QProgressDialog("Starting firmware verification...", None, 0, 100, self)
+        progress.setWindowTitle("Firmware Verification")
+        progress.setWindowModality(Qt.WindowModal)
+        progress.setMinimumDuration(0)
+        progress.setCancelButton(None)  # No cancel button
+        progress.show()
+
+        def progress_callback(label, value, maximum):
+            progress.setLabelText(label)
+            progress.setValue(value)
+            QtWidgets.QApplication.processEvents()  # Allow UI to update
+
+        success, message = self.controller.update_firmware(board, verify_only=True, progress_callback=progress_callback)
+
+        progress.close()
         QMessageBox.information(self, "Firmware Verify", message)
 
     def set_channel_frame(self):
