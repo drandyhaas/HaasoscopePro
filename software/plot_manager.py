@@ -83,6 +83,7 @@ class PlotManager(pg.QtCore.QObject):
         self.xy_line = None
         self.linepens = []
         self.otherlines = {}  # For trigger lines, fit lines etc.
+        self.trigger_arrows = {}  # Store arrow markers for trigger line ends
         self.average_line = None
         self.right_axis = None
         self.nlines = state.num_board * state.num_chan_per_board
@@ -162,6 +163,12 @@ class PlotManager(pg.QtCore.QObject):
         self.otherlines['vline'].sigDragged.connect(self.on_vline_dragged)
         self.otherlines['vline'].sigPositionChangeFinished.connect(self.on_vline_drag_finished)
         self.otherlines['hline'].sigPositionChanged.connect(self.on_hline_dragged)
+
+        # Create triangle markers for trigger lines
+        self._create_trigger_arrows()
+        # Update arrow positions when trigger lines move
+        self.otherlines['vline'].sigPositionChanged.connect(lambda: self._update_trigger_arrows('vline'))
+        self.otherlines['hline'].sigPositionChanged.connect(lambda: self._update_trigger_arrows('hline'))
 
         # Risetime fit lines (initially invisible)
         fit_pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DotLine)
@@ -588,6 +595,9 @@ class PlotManager(pg.QtCore.QObject):
         self.plot.setRange(xRange=(state.min_x, state.max_x), yRange=(state.min_y, state.max_y), padding=0.01)
 
         self.draw_trigger_lines()
+        # Update trigger arrow positions when plot area changes
+        self._update_trigger_arrows('vline')
+        self._update_trigger_arrows('hline')
         if self.cursor_manager:
             self.cursor_manager.adjust_cursor_positions()
 
@@ -825,6 +835,84 @@ class PlotManager(pg.QtCore.QObject):
         # Update trigger threshold text if it's enabled
         if self.cursor_manager:
             self.cursor_manager.update_trigger_threshold_text()
+
+    def _create_trigger_arrows(self):
+        """Create triangular arrow markers at the ends of trigger lines."""
+        trigger_color = QColor('white')
+
+        # vline (vertical trigger line) needs top and bottom triangles
+        # Top triangle (pointing up)
+        self.trigger_arrows['vline_top'] = pg.ScatterPlotItem(
+            size=12, brush=pg.mkBrush(trigger_color), pen=None,
+            symbol='t'  # Triangle pointing up
+        )
+        # Bottom triangle (pointing down)
+        self.trigger_arrows['vline_bottom'] = pg.ScatterPlotItem(
+            size=12, brush=pg.mkBrush(trigger_color), pen=None,
+            symbol='t1'  # Triangle pointing down
+        )
+        self.plot.addItem(self.trigger_arrows['vline_top'])
+        self.plot.addItem(self.trigger_arrows['vline_bottom'])
+
+        # hline (horizontal trigger line) needs left and right triangles
+        # Left triangle (pointing left)
+        self.trigger_arrows['hline_left'] = pg.ScatterPlotItem(
+            size=12, brush=pg.mkBrush(trigger_color), pen=None,
+            symbol='t2'  # Triangle pointing left
+        )
+        # Right triangle (pointing right)
+        self.trigger_arrows['hline_right'] = pg.ScatterPlotItem(
+            size=12, brush=pg.mkBrush(trigger_color), pen=None,
+            symbol='t3'  # Triangle pointing right
+        )
+        self.plot.addItem(self.trigger_arrows['hline_left'])
+        self.plot.addItem(self.trigger_arrows['hline_right'])
+
+        # Initialize positions
+        self._update_trigger_arrows('vline')
+        self._update_trigger_arrows('hline')
+
+    def _update_trigger_arrows(self, line_name):
+        """Update the position of arrow markers for trigger lines.
+
+        Args:
+            line_name: Name of the line ('vline' or 'hline')
+        """
+        if line_name not in self.otherlines:
+            return
+
+        line = self.otherlines[line_name]
+        pos = line.value()
+
+        # Get pixel-to-data conversion for 3-pixel offset
+        try:
+            pixel_size = self.plot.getViewBox().viewPixelSize()
+            x_offset = 3 * pixel_size[0]
+            y_offset = 3 * pixel_size[1]
+        except:
+            # Fallback if viewPixelSize fails
+            x_offset = 0
+            y_offset = 0
+
+        if line_name == 'vline':
+            # Vertical trigger line - update top and bottom arrows
+            top_arrow = self.trigger_arrows.get('vline_top')
+            bottom_arrow = self.trigger_arrows.get('vline_bottom')
+
+            if top_arrow and bottom_arrow:
+                # Position at top and bottom of plot area, offset by 3 pixels
+                top_arrow.setData([pos], [self.state.max_y + y_offset])
+                bottom_arrow.setData([pos], [self.state.min_y - y_offset])
+
+        elif line_name == 'hline':
+            # Horizontal trigger line - update left and right arrows
+            left_arrow = self.trigger_arrows.get('hline_left')
+            right_arrow = self.trigger_arrows.get('hline_right')
+
+            if left_arrow and right_arrow:
+                # Position at left and right of plot area, offset by 3 pixels
+                left_arrow.setData([self.state.min_x - x_offset], [pos])
+                right_arrow.setData([self.state.max_x + x_offset], [pos])
 
     def show_cursors(self, visible):
         """Show or hide cursor lines and labels."""
