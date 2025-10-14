@@ -172,6 +172,12 @@ class PlotManager(pg.QtCore.QObject):
         # Update arrow positions when view changes (pan/zoom)
         self.plot.getViewBox().sigRangeChanged.connect(self._update_all_trigger_arrows)
 
+        # Hide trigger lines and arrows initially (will be shown after PLL calibration)
+        self.otherlines['vline'].setVisible(False)
+        self.otherlines['hline'].setVisible(False)
+        for arrow in self.trigger_arrows.values():
+            arrow.setVisible(False)
+
         # Risetime fit lines (initially invisible)
         fit_pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DotLine)
         for i in range(3):
@@ -813,6 +819,13 @@ class PlotManager(pg.QtCore.QObject):
             line.setSymbolBrush(self.linepens[i].color())
         self.average_line.setSymbol(symbol)
         self.average_line.setSymbolSize(size)
+
+    def show_trigger_lines(self):
+        """Show trigger lines and arrows after PLL calibration is complete."""
+        self.otherlines['vline'].setVisible(True)
+        self.otherlines['hline'].setVisible(True)
+        for arrow in self.trigger_arrows.values():
+            arrow.setVisible(True)
 
     def set_pan_and_zoom(self, is_checked):
         self.plot.setMouseEnabled(x=is_checked, y=is_checked)
