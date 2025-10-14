@@ -1,6 +1,7 @@
 # settings_manager.py
 """Handles saving and loading scope setup configurations to/from JSON files."""
 
+import sys
 import json
 from PyQt5.QtWidgets import QMessageBox, QFileDialog, QListWidgetItem
 from PyQt5.QtGui import QColor
@@ -13,8 +14,11 @@ def save_setup(main_window):
     Args:
         main_window: The MainWindow instance containing all scope state
     """
+    options = QFileDialog.Options()
+    if sys.platform.startswith('linux'):
+        options |= QFileDialog.DontUseNativeDialog
     filename, _ = QFileDialog.getSaveFileName(
-        main_window, "Save Setup", "", "JSON Files (*.json);;All Files (*)"
+        main_window, "Save Setup", "", "JSON Files (*.json);;All Files (*)", options=options
     )
     if not filename:
         return
@@ -161,8 +165,11 @@ def load_setup(main_window):
     Args:
         main_window: The MainWindow instance to restore state to
     """
+    options = QFileDialog.Options()
+    if sys.platform.startswith('linux'):
+        options |= QFileDialog.DontUseNativeDialog
     filename, _ = QFileDialog.getOpenFileName(
-        main_window, "Load Setup", "", "JSON Files (*.json);;All Files (*)"
+        main_window, "Load Setup", "", "JSON Files (*.json);;All Files (*)", options=options
     )
     if not filename:
         return

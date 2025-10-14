@@ -2368,11 +2368,12 @@ Outlined if triggering on this channel</string>
     <addaction name="actionLine_color"/>
     <addaction name="actionPan_and_zoom"/>
     <addaction name="actionTrigger_info"/>
+    <addaction name="actionPeak_detect"/>
     <addaction name="separator"/>
     <addaction name="actionXY_Plot"/>
     <addaction name="actionMath_channels"/>
+    <addaction name="actionHistory_window"/>
     <addaction name="separator"/>
-    <addaction name="actionPeak_detect"/>
    </widget>
    <widget class="QMenu" name="menuReference">
     <property name="title">
@@ -2397,8 +2398,8 @@ Outlined if triggering on this channel</string>
    <addaction name="menuCalibration"/>
    <addaction name="menuView"/>
    <addaction name="menuMeasurements"/>
-   <addaction name="menuReference"/>
    <addaction name="menuCursors"/>
+   <addaction name="menuReference"/>
    <addaction name="menuAdvanced"/>
    <addaction name="menuHelp"/>
   </widget>
@@ -2867,7 +2868,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>Peak detect</string>
+    <string>Peak waveforrm</string>
    </property>
   </action>
   <action name="actionPersist_average">
@@ -2895,6 +2896,11 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Channel name legend</string>
+   </property>
+  </action>
+  <action name="actionHistory_window">
+   <property name="text">
+    <string>History window</string>
    </property>
   </action>
  </widget>

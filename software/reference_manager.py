@@ -1,6 +1,7 @@
 # reference_manager.py
 """Manages saving and loading of reference waveforms."""
 
+import sys
 import numpy as np
 from PyQt5.QtWidgets import QMessageBox, QFileDialog
 
@@ -20,11 +21,15 @@ def save_reference_lines(parent, reference_data, reference_visible, math_referen
         return
 
     # Open file dialog to choose save location
+    options = QFileDialog.Options()
+    if sys.platform.startswith('linux'):
+        options |= QFileDialog.DontUseNativeDialog
     filename, _ = QFileDialog.getSaveFileName(
         parent,
         "Save Reference Lines",
         "",
-        "NumPy Archive (*.npz);;All Files (*)"
+        "NumPy Archive (*.npz);;All Files (*)",
+        options=options
     )
 
     if not filename:
@@ -87,11 +92,15 @@ def load_reference_lines(parent, reference_data, reference_visible, math_referen
         bool: True if data was loaded successfully, False otherwise
     """
     # Open file dialog to choose file to load
+    options = QFileDialog.Options()
+    if sys.platform.startswith('linux'):
+        options |= QFileDialog.DontUseNativeDialog
     filename, _ = QFileDialog.getOpenFileName(
         parent,
         "Load Reference Lines",
         "",
-        "NumPy Archive (*.npz);;All Files (*)"
+        "NumPy Archive (*.npz);;All Files (*)",
+        options=options
     )
 
     if not filename:

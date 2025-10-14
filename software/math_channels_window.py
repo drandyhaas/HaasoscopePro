@@ -1,6 +1,7 @@
 # math_channels_window.py
 """Window for creating and managing math channel operations."""
 
+import sys
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QComboBox,
                              QPushButton, QListWidget, QLabel, QGroupBox, QColorDialog, QListWidgetItem, QCheckBox,
                              QDialog, QLineEdit, QTextEdit, QDialogButtonBox, QMessageBox)
@@ -949,7 +950,10 @@ class MathChannelsWindow(QWidget):
             current_color = QColor(self.math_channels[current_row]['color'])
 
             # Open color dialog
-            color = QColorDialog.getColor(current_color, self, "Select Math Channel Color")
+            options = QColorDialog.ColorDialogOptions()
+            if sys.platform.startswith('linux'):
+                options |= QColorDialog.DontUseNativeDialog
+            color = QColorDialog.getColor(current_color, self, "Select Math Channel Color", options=options)
 
             if color.isValid():
                 # Update the math channel definition
