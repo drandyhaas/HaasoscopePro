@@ -232,9 +232,9 @@ class MainWindow(TemplateBaseClass):
 
         # Trigger controls
         self.ui.threshold.valueChanged.connect(self.trigger_level_changed)
-        self.ui.thresholdLabel.clicked.connect(lambda: self.trigger_level_changed(128))
+        self.ui.thresholdLabel.clicked.connect(lambda: self.trigger_level_changed(127))
         self.ui.thresholdPos.valueChanged.connect(self.trigger_pos_changed)
-        self.ui.thresholdPosLabel.clicked.connect(lambda: self.trigger_pos_changed(5000))
+        self.ui.thresholdPosLabel.clicked.connect(self.trigger_pos_reset)
         self.ui.thresholdDelta.valueChanged.connect(self.trigger_delta_changed)
         self.ui.risingfalling_comboBox.currentIndexChanged.connect(self.rising_falling_changed)
         self.ui.totBox.valueChanged.connect(self.tot_changed)
@@ -417,6 +417,9 @@ class MainWindow(TemplateBaseClass):
             # If hiding the channel, also clear its data to remove the stale trace
             if not is_ch1_visible:
                 self.plot_manager.lines[ch1_idx].clear()
+
+        # Update reference menu states based on initial data
+        self.update_clear_all_reference_state()
 
     def open_socket(self):
         print("Starting SCPI socket thread...")
@@ -747,7 +750,8 @@ class MainWindow(TemplateBaseClass):
         sradjust = 1e9
         if s.dointerleaved[s.activeboard]: sradjust = 2e9
         elif s.dotwochannel[s.activeboard]: sradjust = 0.5e9
-        effective_sr = s.samplerate * sradjust / (s.downsamplefactor if not s.highresval else 1)
+        highres = self.ui.actionHigh_resolution.isChecked()
+        effective_sr = s.samplerate * sradjust / (s.downsamplefactor if not highres else 1)
         status_text = (f"{format_freq(effective_sr, 'S/s')}, {self.fps:.2f} fps, "
                        f"{s.nevents} events, {s.lastrate:.2f} Hz, "
                        f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s")
@@ -1010,11 +1014,10 @@ class MainWindow(TemplateBaseClass):
 
     def high_resolution_toggled(self, checked):
         """Toggles the hardware's high-resolution averaging mode."""
-        self.state.highresval = 1 if checked else 0
-
         # The downsample command also sends the high-resolution setting,
         # so we just need to re-send it to the hardware for all boards.
-        self.controller.tell_downsample_all(self.state.downsample)
+        highres = 1 if checked else 0
+        self.controller.tell_downsample_all(self.state.downsample, highres)
 
     def select_channel(self):
         """Called when board or channel selector is changed."""
@@ -1213,6 +1216,24 @@ class MainWindow(TemplateBaseClass):
             self.ui.thresholdPos.blockSignals(False)
             self.trigger_pos_changed(self.ui.thresholdPos.value())
 
+    def trigger_pos_reset(self):
+        s = self.state
+
+        # Reset trigger position to the middle of the data range
+        s.triggerpos = int(s.expect_samples / 2)
+        self.plot_manager.draw_trigger_lines()
+
+        if s.downsamplezoom > 1:  # Zoomed mode - center view on trigger position
+            # Use the same approach as time_fast/time_slow:
+            # Call time_changed() to recalculate view, then sync slider
+            self.time_changed()
+            self.ui.thresholdPos.blockSignals(True)
+            self.on_vline_dragged(self.plot_manager.otherlines['vline'].value())
+            self.ui.thresholdPos.blockSignals(False)
+        else:
+            # Normal mode - just update the slider
+            self.ui.thresholdPos.setValue(5000)
+
     def on_hline_dragged(self, value):
         t = value / (self.state.yscale * 256) + 127
         self.ui.threshold.setValue(int(t))
@@ -1235,7 +1256,8 @@ class MainWindow(TemplateBaseClass):
 
         old_downsample = self.state.downsample
         self.state.downsample -= 1
-        self.controller.tell_downsample_all(self.state.downsample)
+        highres = 1 if self.ui.actionHigh_resolution.isChecked() else 0
+        self.controller.tell_downsample_all(self.state.downsample, highres)
 
         # When transitioning from downsample=0 to downsample=-1, restore saved resamp value
         if old_downsample == 0 and self.state.downsample == -1:
@@ -1273,7 +1295,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.timefastButton.setEnabled(True)
         old_downsample = self.state.downsample
         self.state.downsample += 1
-        self.controller.tell_downsample_all(self.state.downsample)
+        highres = 1 if self.ui.actionHigh_resolution.isChecked() else 0
+        self.controller.tell_downsample_all(self.state.downsample, highres)
 
         # When transitioning from downsample=-1 to downsample=0, save and turn off resamp
         if old_downsample == -1 and self.state.downsample == 0:
@@ -1602,6 +1625,9 @@ class MainWindow(TemplateBaseClass):
             # Update the checkbox to reflect the new visibility state
             self.update_reference_checkbox_state()
 
+            # Update the Clear all menu state
+            self.update_clear_all_reference_state()
+
             # Trigger a redraw to show the new reference immediately
             self.time_changed()
 
@@ -1626,8 +1652,16 @@ class MainWindow(TemplateBaseClass):
         # Update the checkbox for the active channel
         self.update_reference_checkbox_state()
 
+        # Update the Clear all menu state
+        self.update_clear_all_reference_state()
+
         # Trigger a redraw to hide all references
         self.time_changed()
+
+    def update_clear_all_reference_state(self):
+        """Enable/disable the 'Clear all' action based on whether any references exist."""
+        has_references = bool(self.reference_data) or bool(self.math_reference_data)
+        self.ui.actionClear_all.setEnabled(has_references)
 
     def save_reference_lines_slot(self):
         """Slot for saving reference waveforms to a file."""
@@ -1641,6 +1675,8 @@ class MainWindow(TemplateBaseClass):
         if success:
             # Update the checkbox for the active channel
             self.update_reference_checkbox_state()
+            # Update the Clear all menu state
+            self.update_clear_all_reference_state()
             # Update math window button states if it's open
             if self.math_window is not None:
                 self.math_window.update_button_states()

@@ -109,6 +109,8 @@ def save_setup(main_window):
         'markers_visible': main_window.ui.actionMarkers.isChecked(),
         'voltage_axis_visible': main_window.ui.actionVoltage_axis.isChecked(),
         'pan_and_zoom': main_window.ui.actionPan_and_zoom.isChecked(),
+        'peak_detect': main_window.ui.actionPeak_detect.isChecked(),
+        'channel_name_legend': main_window.ui.actionChannel_name_legend.isChecked(),
 
         # Cursor menu states
         'cursors_visible': main_window.ui.actionCursors.isChecked(),
@@ -142,6 +144,8 @@ def save_setup(main_window):
         'trig_stabilizer_enabled': s.trig_stabilizer_enabled,
         'extra_trig_stabilizer_enabled': s.extra_trig_stabilizer_enabled,
         'oversampling_controls': main_window.ui.actionOversampling_controls.isChecked(),
+        'pll_controls': main_window.ui.actionToggle_PLL_controls.isChecked(),
+        'auto_oversample_alignment': main_window.ui.actionAuto_oversample_alignment.isChecked(),
     }
 
     # Math channels
@@ -194,7 +198,7 @@ def load_setup(main_window):
     # Timebase and acquisition
     if 'downsample' in setup:
         s.downsample = setup['downsample']
-        main_window.controller.tell_downsample_all(s.downsample)
+        # Note: tell_downsample_all will be called later after high_resolution is restored
     if 'expect_samples' in setup:
         s.expect_samples = setup['expect_samples']
         main_window.ui.depthBox.setValue(s.expect_samples)
@@ -353,6 +357,12 @@ def load_setup(main_window):
     if 'pan_and_zoom' in setup:
         main_window.ui.actionPan_and_zoom.setChecked(setup['pan_and_zoom'])
         main_window.plot_manager.set_pan_and_zoom(setup['pan_and_zoom'])
+    if 'peak_detect' in setup:
+        main_window.ui.actionPeak_detect.setChecked(setup['peak_detect'])
+        main_window.plot_manager.set_peak_detect(setup['peak_detect'])
+    if 'channel_name_legend' in setup:
+        main_window.ui.actionChannel_name_legend.setChecked(setup['channel_name_legend'])
+        main_window.plot_manager.update_legend()
 
     # Cursor menu states
     if 'cursors_visible' in setup:
@@ -415,7 +425,12 @@ def load_setup(main_window):
     # Other settings
     if 'high_resolution' in setup:
         main_window.ui.actionHigh_resolution.setChecked(setup['high_resolution'])
-        s.highresval = 1 if setup['high_resolution'] else 0
+        main_window.high_resolution_toggled(setup['high_resolution'])
+    else:
+        # If high_resolution wasn't saved, still need to send downsample with current highres setting
+        if 'downsample' in setup:
+            highres = 1 if main_window.ui.actionHigh_resolution.isChecked() else 0
+            main_window.controller.tell_downsample_all(s.downsample, highres)
     if 'trig_stabilizer_enabled' in setup:
         s.trig_stabilizer_enabled = setup['trig_stabilizer_enabled']
         main_window.ui.actionToggle_trig_stabilizer.setChecked(s.trig_stabilizer_enabled)
@@ -428,6 +443,16 @@ def load_setup(main_window):
         is_enabled = setup['oversampling_controls']
         main_window.ui.ToffBox.setEnabled(is_enabled)
         main_window.ui.tadBox.setEnabled(is_enabled)
+    if 'pll_controls' in setup:
+        # Need to set checkbox first, then toggle if needed to match saved state
+        current_pll_enabled = main_window.ui.pllBox.isEnabled()
+        if current_pll_enabled != setup['pll_controls']:
+            main_window.ui.actionToggle_PLL_controls.setChecked(setup['pll_controls'])
+            main_window.toggle_pll_controls()
+        else:
+            main_window.ui.actionToggle_PLL_controls.setChecked(setup['pll_controls'])
+    if 'auto_oversample_alignment' in setup:
+        main_window.ui.actionAuto_oversample_alignment.setChecked(setup['auto_oversample_alignment'])
 
     # Active board/channel (restore last to trigger UI updates)
     if 'activeboard' in setup:

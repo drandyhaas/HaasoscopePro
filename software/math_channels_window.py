@@ -1360,6 +1360,9 @@ class MathChannelsWindow(QWidget):
                 # Update the checkbox to reflect the new visibility state
                 self.update_button_states()
 
+                # Update the Clear all menu state in main window
+                self.main_window.update_clear_all_reference_state()
+
                 # Trigger a redraw to show the new reference immediately
                 self.main_window.time_changed()
 
