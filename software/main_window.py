@@ -234,7 +234,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.threshold.valueChanged.connect(self.trigger_level_changed)
         self.ui.thresholdLabel.clicked.connect(lambda: self.trigger_level_changed(128))
         self.ui.thresholdPos.valueChanged.connect(self.trigger_pos_changed)
-        self.ui.thresholdPosLabel.clicked.connect(lambda: self.trigger_pos_changed(5000))
+        self.ui.thresholdPosLabel.clicked.connect(self.trigger_pos_reset)
         self.ui.thresholdDelta.valueChanged.connect(self.trigger_delta_changed)
         self.ui.risingfalling_comboBox.currentIndexChanged.connect(self.rising_falling_changed)
         self.ui.totBox.valueChanged.connect(self.tot_changed)
@@ -1212,6 +1212,40 @@ class MainWindow(TemplateBaseClass):
             self.ui.thresholdPos.setValue(math.ceil(t))
             self.ui.thresholdPos.blockSignals(False)
             self.trigger_pos_changed(self.ui.thresholdPos.value())
+
+    def trigger_pos_reset(self):
+        s = self.state
+
+        # Reset trigger position to the middle of the data range
+        s.triggerpos = int(s.expect_samples / 2)
+        self.plot_manager.draw_trigger_lines()
+
+        if s.downsamplezoom > 1:  # Zoomed mode - center view on trigger position
+            # Calculate where the trigger vline is now positioned
+            vline_pos = 4 * 10 * (s.triggerpos + 1.0) * (s.downsamplefactor / s.nsunits / s.samplerate)
+
+            # Calculate the view width
+            full_width = 4 * 10 * s.expect_samples * (s.downsamplefactor / s.nsunits / s.samplerate)
+            view_width = 0.95 * full_width / s.downsamplezoom
+
+            # Center the view on the trigger position
+            s.min_x = vline_pos - view_width / 2.0
+            s.max_x = vline_pos + view_width / 2.0
+
+            # Apply the new view range
+            self.plot_manager.plot.setRange(xRange=(s.min_x, s.max_x), padding=0.01)
+
+            # Update the slider to reflect the new pan position
+            max_pan_distance = full_width - view_width
+            if max_pan_distance > 0:
+                slider_fraction = s.min_x / max_pan_distance
+                slider_value = (1.0 - slider_fraction) * 9900.0
+                self.ui.thresholdPos.blockSignals(True)
+                self.ui.thresholdPos.setValue(int(slider_value))
+                self.ui.thresholdPos.blockSignals(False)
+        else:
+            # Normal mode - just update the slider
+            self.ui.thresholdPos.setValue(5000)
 
     def on_hline_dragged(self, value):
         t = value / (self.state.yscale * 256) + 127
