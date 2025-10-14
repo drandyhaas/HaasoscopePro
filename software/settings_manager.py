@@ -127,7 +127,6 @@ def save_setup(main_window):
         'measure_risetime_error': main_window.ui.actionRisetime_error.isChecked(),
         'measure_edge_fit': main_window.ui.actionEdge_fit_method.isChecked(),
         'measure_trig_thresh': main_window.ui.actionTrigger_thresh.isChecked(),
-        'measure_trig_thresh_mv': main_window.ui.actionTrigger_thresh_mV.isChecked(),
         'measure_n_persist': main_window.ui.actionN_persist_lines.isChecked(),
         'measure_adc_temp': main_window.ui.actionADC_temperature.isChecked(),
         'measure_board_temp': main_window.ui.actionBoard_temperature.isChecked(),
@@ -389,8 +388,6 @@ def load_setup(main_window):
         main_window.ui.actionEdge_fit_method.setChecked(setup['measure_edge_fit'])
     if 'measure_trig_thresh' in setup:
         main_window.ui.actionTrigger_thresh.setChecked(setup['measure_trig_thresh'])
-    if 'measure_trig_thresh_mv' in setup:
-        main_window.ui.actionTrigger_thresh_mV.setChecked(setup['measure_trig_thresh_mv'])
     if 'measure_n_persist' in setup:
         main_window.ui.actionN_persist_lines.setChecked(setup['measure_n_persist'])
     # Handle new separate temperature settings
@@ -432,10 +429,10 @@ def load_setup(main_window):
     # Active board/channel (restore last to trigger UI updates)
     if 'activeboard' in setup:
         s.activeboard = setup['activeboard']
-        main_window.ui.boardBox.setValue(s.activeboard)
+        main_window.ui.boardBox.setCurrentIndex(s.activeboard)
     if 'selectedchannel' in setup:
         s.selectedchannel = setup['selectedchannel']
-        main_window.ui.chanBox.setValue(s.selectedchannel)
+        main_window.ui.chanBox.setCurrentIndex(s.selectedchannel)
 
     # Apply all settings to hardware and update UI
     for board_idx in range(s.num_board):
