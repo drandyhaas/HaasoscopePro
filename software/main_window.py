@@ -232,7 +232,7 @@ class MainWindow(TemplateBaseClass):
 
         # Trigger controls
         self.ui.threshold.valueChanged.connect(self.trigger_level_changed)
-        self.ui.thresholdLabel.clicked.connect(lambda: self.trigger_level_changed(128))
+        self.ui.thresholdLabel.clicked.connect(lambda: self.trigger_level_changed(127))
         self.ui.thresholdPos.valueChanged.connect(self.trigger_pos_changed)
         self.ui.thresholdPosLabel.clicked.connect(self.trigger_pos_reset)
         self.ui.thresholdDelta.valueChanged.connect(self.trigger_delta_changed)
