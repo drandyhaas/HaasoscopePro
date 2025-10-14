@@ -1,7 +1,7 @@
 # settings_manager.py
 """Handles saving and loading scope setup configurations to/from JSON files."""
 
-import sys
+import sys, os
 import json
 from PyQt5.QtWidgets import QMessageBox, QFileDialog, QListWidgetItem
 from PyQt5.QtGui import QColor
@@ -22,6 +22,9 @@ def save_setup(main_window):
     )
     if not filename:
         return
+
+    if not os.path.splitext(filename)[1]:  # Check if there's no extension
+        filename += ".json"
 
     s = main_window.state
 
@@ -446,6 +449,7 @@ def load_setup(main_window):
     main_window.select_channel()  # This will update all UI elements
     main_window.allocate_xy_data()
     main_window.time_changed()
+    main_window.plot_manager.show_cursors(main_window.ui.actionCursors.isChecked())
     main_window._update_channel_mode_ui()
 
     # Update persistence display after restoring visibility and persistence settings

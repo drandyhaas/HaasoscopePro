@@ -1,7 +1,7 @@
 # reference_manager.py
 """Manages saving and loading of reference waveforms."""
 
-import sys
+import sys, os
 import numpy as np
 from PyQt5.QtWidgets import QMessageBox, QFileDialog
 
@@ -34,6 +34,9 @@ def save_reference_lines(parent, reference_data, reference_visible, math_referen
 
     if not filename:
         return  # User cancelled
+
+    if not os.path.splitext(filename)[1]:  # Check if there's no extension
+        filename += ".npz"
 
     try:
         # Prepare data for saving

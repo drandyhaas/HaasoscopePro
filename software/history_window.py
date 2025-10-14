@@ -1,7 +1,7 @@
 # history_window.py
 
 from datetime import datetime
-import sys
+import sys, os
 import numpy as np
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, QPushButton, QFileDialog, QMessageBox
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -120,6 +120,9 @@ class HistoryWindow(QWidget):
 
         if not file_path:
             return  # User cancelled
+
+        if not os.path.splitext(file_path)[1]:  # Check if there's no extension
+            file_path += ".npz"
 
         try:
             # Prepare data for saving
