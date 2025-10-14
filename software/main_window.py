@@ -418,6 +418,9 @@ class MainWindow(TemplateBaseClass):
             if not is_ch1_visible:
                 self.plot_manager.lines[ch1_idx].clear()
 
+        # Update reference menu states based on initial data
+        self.update_clear_all_reference_state()
+
     def open_socket(self):
         print("Starting SCPI socket thread...")
         self.socket = DataSocket()
@@ -1622,6 +1625,9 @@ class MainWindow(TemplateBaseClass):
             # Update the checkbox to reflect the new visibility state
             self.update_reference_checkbox_state()
 
+            # Update the Clear all menu state
+            self.update_clear_all_reference_state()
+
             # Trigger a redraw to show the new reference immediately
             self.time_changed()
 
@@ -1646,8 +1652,16 @@ class MainWindow(TemplateBaseClass):
         # Update the checkbox for the active channel
         self.update_reference_checkbox_state()
 
+        # Update the Clear all menu state
+        self.update_clear_all_reference_state()
+
         # Trigger a redraw to hide all references
         self.time_changed()
+
+    def update_clear_all_reference_state(self):
+        """Enable/disable the 'Clear all' action based on whether any references exist."""
+        has_references = bool(self.reference_data) or bool(self.math_reference_data)
+        self.ui.actionClear_all.setEnabled(has_references)
 
     def save_reference_lines_slot(self):
         """Slot for saving reference waveforms to a file."""
@@ -1661,6 +1675,8 @@ class MainWindow(TemplateBaseClass):
         if success:
             # Update the checkbox for the active channel
             self.update_reference_checkbox_state()
+            # Update the Clear all menu state
+            self.update_clear_all_reference_state()
             # Update math window button states if it's open
             if self.math_window is not None:
                 self.math_window.update_button_states()
