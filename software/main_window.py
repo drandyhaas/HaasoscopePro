@@ -1221,28 +1221,12 @@ class MainWindow(TemplateBaseClass):
         self.plot_manager.draw_trigger_lines()
 
         if s.downsamplezoom > 1:  # Zoomed mode - center view on trigger position
-            # Calculate where the trigger vline is now positioned
-            vline_pos = 4 * 10 * (s.triggerpos + 1.0) * (s.downsamplefactor / s.nsunits / s.samplerate)
-
-            # Calculate the view width
-            full_width = 4 * 10 * s.expect_samples * (s.downsamplefactor / s.nsunits / s.samplerate)
-            view_width = 0.95 * full_width / s.downsamplezoom
-
-            # Center the view on the trigger position
-            s.min_x = vline_pos - view_width / 2.0
-            s.max_x = vline_pos + view_width / 2.0
-
-            # Apply the new view range
-            self.plot_manager.plot.setRange(xRange=(s.min_x, s.max_x), padding=0.01)
-
-            # Update the slider to reflect the new pan position
-            max_pan_distance = full_width - view_width
-            if max_pan_distance > 0:
-                slider_fraction = s.min_x / max_pan_distance
-                slider_value = (1.0 - slider_fraction) * 9900.0
-                self.ui.thresholdPos.blockSignals(True)
-                self.ui.thresholdPos.setValue(int(slider_value))
-                self.ui.thresholdPos.blockSignals(False)
+            # Use the same approach as time_fast/time_slow:
+            # Call time_changed() to recalculate view, then sync slider
+            self.time_changed()
+            self.ui.thresholdPos.blockSignals(True)
+            self.on_vline_dragged(self.plot_manager.otherlines['vline'].value())
+            self.ui.thresholdPos.blockSignals(False)
         else:
             # Normal mode - just update the slider
             self.ui.thresholdPos.setValue(5000)
