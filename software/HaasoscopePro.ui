@@ -2398,8 +2398,8 @@ Outlined if triggering on this channel</string>
    <addaction name="menuCalibration"/>
    <addaction name="menuView"/>
    <addaction name="menuMeasurements"/>
-   <addaction name="menuReference"/>
    <addaction name="menuCursors"/>
+   <addaction name="menuReference"/>
    <addaction name="menuAdvanced"/>
    <addaction name="menuHelp"/>
   </widget>

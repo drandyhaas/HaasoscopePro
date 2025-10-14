@@ -86,6 +86,7 @@ class MainWindow(TemplateBaseClass):
         self.history_window = HistoryWindow(self)
         self.history_window.event_selected.connect(self.on_history_event_selected)
         self.history_window.window_closed.connect(self.on_history_window_closed)
+        self.history_window.history_loaded.connect(self.on_history_loaded)
         self.history_buffer = deque(maxlen=100)  # Circular buffer for 100 events
         self.displaying_history = False  # Flag to indicate if showing historical data
         self.current_history_index = None  # Index of currently displayed historical event
@@ -883,6 +884,8 @@ class MainWindow(TemplateBaseClass):
         self.recorder.stop()
         self.close_socket()
         self.histogram_window.close()
+        # Block signals to prevent history window from trying to resume acquisition
+        self.history_window.blockSignals(True)
         self.history_window.close()
         if self.math_window: self.math_window.close()
         if self.fftui: self.fftui.close()
@@ -1576,6 +1579,13 @@ class MainWindow(TemplateBaseClass):
             self.ui.runButton.setChecked(True)
             self.update_timer.start(0)
             self.measurement_timer.start(20)
+
+    def on_history_loaded(self, event_buffer):
+        """Slot called when history is loaded from a file."""
+        # Replace the current history buffer with the loaded events
+        self.history_buffer.clear()
+        for event in event_buffer:
+            self.history_buffer.append(event)
 
     def take_reference_waveform(self):
         """
