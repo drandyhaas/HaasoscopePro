@@ -267,7 +267,14 @@ class DataProcessor:
         if not s.trig_stabilizer_enabled:
             return
 
-        vline_time = 4 * 10 * (s.triggerpos + 1.0) * (s.downsamplefactor / s.nsunits / s.samplerate)
+        # Calculate vline_time accounting for board mode (two-channel vs interleaved)
+        time_factor = s.downsamplefactor / s.nsunits / s.samplerate
+        if s.dointerleaved[board_idx]:
+            time_factor /= 2
+        elif s.dotwochannel[board_idx]:
+            time_factor *= 2
+        vline_time = 4 * 10 * (s.triggerpos + 1.0) * time_factor
+
         hline_pos = (s.triggerlevel - 127) * s.yscale * 256
         # Include triggerdelta in the threshold (per-board setting)
         hline_threshold = hline_pos + s.triggerdelta[board_idx] * s.yscale*256
