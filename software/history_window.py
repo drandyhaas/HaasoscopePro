@@ -1,6 +1,7 @@
 # history_window.py
 
 from datetime import datetime
+import sys
 import numpy as np
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, QPushButton, QFileDialog, QMessageBox
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -106,11 +107,15 @@ class HistoryWindow(QWidget):
             return
 
         # Open file dialog for save location
+        options = QFileDialog.Options()
+        if sys.platform.startswith('linux'):
+            options |= QFileDialog.DontUseNativeDialog
         file_path, _ = QFileDialog.getSaveFileName(
             self,
             "Save History",
             "",
-            "History Files (*.npz);;All Files (*)"
+            "History Files (*.npz);;All Files (*)",
+            options=options
         )
 
         if not file_path:
@@ -152,11 +157,15 @@ class HistoryWindow(QWidget):
     def load_history(self):
         """Load history buffer from a file."""
         # Open file dialog for load location
+        options = QFileDialog.Options()
+        if sys.platform.startswith('linux'):
+            options |= QFileDialog.DontUseNativeDialog
         file_path, _ = QFileDialog.getOpenFileName(
             self,
             "Load History",
             "",
-            "History Files (*.npz);;All Files (*)"
+            "History Files (*.npz);;All Files (*)",
+            options=options
         )
 
         if not file_path:
