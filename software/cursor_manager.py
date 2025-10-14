@@ -29,6 +29,7 @@ class CursorManager:
         self.lines = lines
         self.cursor_lines = {}
         self.cursor_labels = {}
+        self.cursor_arrows = {}  # Store arrow markers for cursor line ends
         self._snapping_in_progress = False  # Flag to prevent infinite recursion
 
     def setup_cursors(self):
@@ -57,6 +58,9 @@ class CursorManager:
             self.plot.addItem(cursor)
             cursor.setVisible(False)
 
+        # Create triangle markers at cursor line ends
+        self._create_cursor_arrows()
+
         # Connect signals - snap first, then update readout
         self.cursor_lines['t1'].sigPositionChanged.connect(lambda: self.snap_cursor_to_waveform('t1', 'v1'))
         self.cursor_lines['t2'].sigPositionChanged.connect(lambda: self.snap_cursor_to_waveform('t2', 'v2'))
@@ -64,6 +68,12 @@ class CursorManager:
         # Update readout when any cursor moves
         for cursor in self.cursor_lines.values():
             cursor.sigPositionChanged.connect(self.update_cursor_readout)
+
+        # Update arrow positions when cursors move - connect explicitly to avoid closure issues
+        self.cursor_lines['t1'].sigPositionChanged.connect(lambda: self._update_cursor_arrows('t1'))
+        self.cursor_lines['t2'].sigPositionChanged.connect(lambda: self._update_cursor_arrows('t2'))
+        self.cursor_lines['v1'].sigPositionChanged.connect(lambda: self._update_cursor_arrows('v1'))
+        self.cursor_lines['v2'].sigPositionChanged.connect(lambda: self._update_cursor_arrows('v2'))
 
         # Create text labels for cursor readouts
         self.cursor_labels['readout'] = pg.TextItem(anchor=(0, 0), color='w')
@@ -77,6 +87,87 @@ class CursorManager:
         self.cursor_labels['trigger_thresh'] = pg.TextItem(anchor=(0, 1), color='w')
         self.plot.addItem(self.cursor_labels['trigger_thresh'])
         self.cursor_labels['trigger_thresh'].setVisible(False)
+
+    def _create_cursor_arrows(self):
+        """Create triangular arrow markers at the ends of cursor lines."""
+        cursor_color = QColor('gray')
+
+        # Create arrows for each cursor line
+        # Vertical cursors (t1, t2) need top and bottom triangles
+        for cursor_name in ['t1', 't2']:
+            # Top triangle (pointing up)
+            self.cursor_arrows[f'{cursor_name}_top'] = pg.ScatterPlotItem(
+                size=12, brush=pg.mkBrush(cursor_color), pen=None,
+                symbol='t'  # Triangle pointing up
+            )
+            # Bottom triangle (pointing down)
+            self.cursor_arrows[f'{cursor_name}_bottom'] = pg.ScatterPlotItem(
+                size=12, brush=pg.mkBrush(cursor_color), pen=None,
+                symbol='t1'  # Triangle pointing down
+            )
+            self.plot.addItem(self.cursor_arrows[f'{cursor_name}_top'])
+            self.plot.addItem(self.cursor_arrows[f'{cursor_name}_bottom'])
+            self.cursor_arrows[f'{cursor_name}_top'].setVisible(False)
+            self.cursor_arrows[f'{cursor_name}_bottom'].setVisible(False)
+
+        # Horizontal cursors (v1, v2) need left and right triangles
+        for cursor_name in ['v1', 'v2']:
+            # Left triangle (pointing left)
+            self.cursor_arrows[f'{cursor_name}_left'] = pg.ScatterPlotItem(
+                size=12, brush=pg.mkBrush(cursor_color), pen=None,
+                symbol='t2'  # Triangle pointing left
+            )
+            # Right triangle (pointing right)
+            self.cursor_arrows[f'{cursor_name}_right'] = pg.ScatterPlotItem(
+                size=12, brush=pg.mkBrush(cursor_color), pen=None,
+                symbol='t3'  # Triangle pointing right
+            )
+            self.plot.addItem(self.cursor_arrows[f'{cursor_name}_left'])
+            self.plot.addItem(self.cursor_arrows[f'{cursor_name}_right'])
+            self.cursor_arrows[f'{cursor_name}_left'].setVisible(False)
+            self.cursor_arrows[f'{cursor_name}_right'].setVisible(False)
+
+    def _update_cursor_arrows(self, cursor_name):
+        """Update the position of arrow markers for a specific cursor.
+
+        Args:
+            cursor_name: Name of the cursor ('t1', 't2', 'v1', or 'v2')
+        """
+        if cursor_name not in self.cursor_lines:
+            return
+
+        cursor = self.cursor_lines[cursor_name]
+        pos = cursor.value()
+
+        # Get pixel-to-data conversion for 3-pixel offset
+        try:
+            pixel_size = self.plot.getViewBox().viewPixelSize()
+            x_offset = 3 * pixel_size[0]
+            y_offset = 3 * pixel_size[1]
+        except:
+            # Fallback if viewPixelSize fails
+            x_offset = 0
+            y_offset = 0
+
+        if cursor_name in ['t1', 't2']:
+            # Vertical cursor - update top and bottom arrows
+            top_arrow = self.cursor_arrows.get(f'{cursor_name}_top')
+            bottom_arrow = self.cursor_arrows.get(f'{cursor_name}_bottom')
+
+            if top_arrow and bottom_arrow:
+                # Position at top and bottom of plot area, offset by 3 pixels
+                top_arrow.setData([pos], [self.state.max_y + y_offset])
+                bottom_arrow.setData([pos], [self.state.min_y - y_offset])
+
+        elif cursor_name in ['v1', 'v2']:
+            # Horizontal cursor - update left and right arrows
+            left_arrow = self.cursor_arrows.get(f'{cursor_name}_left')
+            right_arrow = self.cursor_arrows.get(f'{cursor_name}_right')
+
+            if left_arrow and right_arrow:
+                # Position at left and right of plot area, offset by 3 pixels
+                left_arrow.setData([self.state.min_x - x_offset], [pos])
+                right_arrow.setData([self.state.max_x + x_offset], [pos])
 
     def update_cursor_readout(self):
         """Update cursor value display when cursors are moved."""
@@ -277,7 +368,14 @@ class CursorManager:
             cursor.setVisible(visible)
         self.cursor_labels['readout'].setVisible(visible)
 
+        # Show/hide arrows
+        for arrow in self.cursor_arrows.values():
+            arrow.setVisible(visible)
+
         if visible:
+            # Update arrow positions for all cursors
+            for cursor_name in self.cursor_lines.keys():
+                self._update_cursor_arrows(cursor_name)
             # Snap cursors to waveform if snap option is enabled
             if self.ui and hasattr(self.ui, 'actionSnap_to_waveform') and self.ui.actionSnap_to_waveform.isChecked():
                 self.snap_all_cursors()
@@ -337,6 +435,10 @@ class CursorManager:
             self.cursor_lines['v2'].setValue(min_y + y_margin)
         elif v2_pos > max_y:
             self.cursor_lines['v2'].setValue(max_y - y_margin)
+
+        # Update arrow positions for all cursors (plot area may have changed)
+        for cursor_name in self.cursor_lines.keys():
+            self._update_cursor_arrows(cursor_name)
 
         # Update readout position and values
         if self.cursor_lines['t1'].isVisible():
