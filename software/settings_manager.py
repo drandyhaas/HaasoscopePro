@@ -449,6 +449,7 @@ def load_setup(main_window):
     main_window.select_channel()  # This will update all UI elements
     main_window.allocate_xy_data()
     main_window.time_changed()
+    main_window.plot_manager.show_cursors(main_window.ui.actionCursors.isChecked())
     main_window._update_channel_mode_ui()
 
     # Update persistence display after restoring visibility and persistence settings
