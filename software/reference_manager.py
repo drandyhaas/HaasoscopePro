@@ -1,7 +1,7 @@
 # reference_manager.py
 """Manages saving and loading of reference waveforms."""
 
-import sys
+import sys, os
 import numpy as np
 from PyQt5.QtWidgets import QMessageBox, QFileDialog
 

@@ -1,7 +1,7 @@
 # history_window.py
 
 from datetime import datetime
-import sys
+import sys, os
 import numpy as np
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QListWidget, QListWidgetItem, QPushButton, QFileDialog, QMessageBox
 from PyQt5.QtCore import Qt, pyqtSignal

@@ -1,7 +1,7 @@
 # settings_manager.py
 """Handles saving and loading scope setup configurations to/from JSON files."""
 
-import sys
+import sys, os
 import json
 from PyQt5.QtWidgets import QMessageBox, QFileDialog, QListWidgetItem
 from PyQt5.QtGui import QColor
