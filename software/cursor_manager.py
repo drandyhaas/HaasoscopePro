@@ -74,8 +74,9 @@ class CursorManager:
         self.cursor_lines['t2'].sigPositionChanged.connect(lambda: self._update_cursor_arrows('t2'))
         self.cursor_lines['v1'].sigPositionChanged.connect(lambda: self._update_cursor_arrows('v1'))
         self.cursor_lines['v2'].sigPositionChanged.connect(lambda: self._update_cursor_arrows('v2'))
-        # Update arrow positions when view changes (pan/zoom)
+        # Update arrow positions and text positions when view changes (pan/zoom)
         self.plot.getViewBox().sigRangeChanged.connect(self._update_all_cursor_arrows)
+        self.plot.getViewBox().sigRangeChanged.connect(self._update_text_positions)
 
         # Create text labels for cursor readouts
         self.cursor_labels['readout'] = pg.TextItem(anchor=(0, 0), color='w')
@@ -133,6 +134,46 @@ class CursorManager:
         """Update all cursor arrows (called on view range changes)."""
         for cursor_name in self.cursor_lines.keys():
             self._update_cursor_arrows(cursor_name)
+
+    def _update_text_positions(self):
+        """Update text label positions when view changes (pan/zoom)."""
+        if self.cursor_lines['t1'].isVisible():
+            self._update_cursor_readout_position()
+        if self.ui and hasattr(self.ui, 'actionTrigger_info') and self.ui.actionTrigger_info.isChecked():
+            self._update_trigger_info_position()
+
+    def _update_cursor_readout_position(self):
+        """Update cursor readout position based on visible view range."""
+        try:
+            view_range = self.plot.getViewBox().viewRange()
+            min_x, max_x = view_range[0]
+            min_y, max_y = view_range[1]
+        except:
+            min_x = self.state.min_x
+            max_x = self.state.max_x
+            min_y = self.state.min_y
+            max_y = self.state.max_y
+
+        # Position in top-left corner of visible area
+        self.cursor_labels['readout'].setPos(min_x + 0.1*(max_x - min_x), max_y - 0.1)
+
+    def _update_trigger_info_position(self):
+        """Update trigger info position based on visible view range."""
+        try:
+            view_range = self.plot.getViewBox().viewRange()
+            min_x, max_x = view_range[0]
+            min_y, max_y = view_range[1]
+        except:
+            min_x = self.state.min_x
+            max_x = self.state.max_x
+            min_y = self.state.min_y
+            max_y = self.state.max_y
+
+        # Position in lower-left corner of visible area
+        self.cursor_labels['trigger_thresh'].setPos(
+            min_x + 0.1*(max_x - min_x),
+            min_y + 0.1
+        )
 
     def _update_cursor_arrows(self, cursor_name):
         """Update the position of arrow markers for a specific cursor.
@@ -257,8 +298,8 @@ class CursorManager:
 
         self.cursor_labels['readout'].setHtml(readout_text)
 
-        # Update readout position to stay in visible area
-        self.cursor_labels['readout'].setPos(self.state.min_x + 0.1*(self.state.max_x-self.state.min_x), self.state.max_y - 0.1)
+        # Update readout position to stay in visible area (use actual view range for pan/zoom)
+        self._update_cursor_readout_position()
 
     def update_trigger_threshold_text(self):
         """Update trigger info display when hline/vline moves or action is toggled."""
@@ -313,11 +354,8 @@ class CursorManager:
         info_text = "<br>".join(info_lines)
         self.cursor_labels['trigger_thresh'].setHtml(info_text)
 
-        # Position in lower left corner, same x as cursor text, same distance from bottom as cursor text from top
-        self.cursor_labels['trigger_thresh'].setPos(
-            self.state.min_x + 0.1*(self.state.max_x - self.state.min_x),
-            self.state.min_y + 0.1
-        )
+        # Position in lower left corner (use actual view range for pan/zoom)
+        self._update_trigger_info_position()
 
         self.cursor_labels['trigger_thresh'].setVisible(True)
 
