@@ -1327,7 +1327,10 @@ class MainWindow(TemplateBaseClass):
         self.time_changed()
 
     def change_channel_color(self):
-        color = QColorDialog.getColor(self.plot_manager.linepens[self.state.activexychannel].color(), self)
+        options = QColorDialog.ColorDialogOptions()
+        if sys.platform.startswith('linux'):
+            options |= QColorDialog.DontUseNativeDialog
+        color = QColorDialog.getColor(self.plot_manager.linepens[self.state.activexychannel].color(), self, options=options)
         if color.isValid():
             self.plot_manager.linepens[self.state.activexychannel].setColor(color)
             self.select_channel()  # Re-call to update color box and LEDs
