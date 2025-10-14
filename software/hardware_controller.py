@@ -172,6 +172,9 @@ class HardwareController:
             if all_calibrations_finished:
                 s.dodrawing = True
 
+                # Show trigger lines and arrows now that calibration is complete
+                main_window.plot_manager.show_trigger_lines()
+
                 # Sync the Depth box UI with the state, in case it was changed by a PLL reset
                 main_window.sync_depth_ui_from_state()
 
