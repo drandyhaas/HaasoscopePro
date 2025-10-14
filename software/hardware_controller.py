@@ -196,10 +196,10 @@ class HardwareController:
             self.send_trigger_info(i)
             self.send_trigger_delay(i)
 
-    def tell_downsample_all(self, ds):
+    def tell_downsample_all(self, ds, highres=1):
         """Sends the current downsample setting to all connected boards."""
         for i in range(self.num_board):
-            self.tell_downsample(self.usbs[i], ds, i)
+            self.tell_downsample(self.usbs[i], ds, i, highres)
 
     def send_trigger_info(self, board_idx):
         state = self.state
@@ -222,7 +222,7 @@ class HardwareController:
         self.usbs[board_idx].send(bytes([2, 20, trigger_delay, trigger_holdoff, 0,0,0,0]))
         self.usbs[board_idx].recv(4)
 
-    def tell_downsample(self, usb, ds, board):
+    def tell_downsample(self, usb, ds, board, highres=1):
         state = self.state
         merging = 1
         if ds < 0: ds = 0
@@ -246,7 +246,7 @@ class HardwareController:
         state.downsamplemerging = merging
         state.downsamplefactor = state.downsamplemerging * pow(2, ds)
 
-        usb.send(bytes([9, ds, state.highresval, state.downsamplemerging, 100, 100, 100, 100]))
+        usb.send(bytes([9, ds, highres, state.downsamplemerging, 100, 100, 100, 100]))
         usb.recv(4)
 
     def set_channel_gain(self, board_idx, chan_idx, value):

@@ -747,7 +747,8 @@ class MainWindow(TemplateBaseClass):
         sradjust = 1e9
         if s.dointerleaved[s.activeboard]: sradjust = 2e9
         elif s.dotwochannel[s.activeboard]: sradjust = 0.5e9
-        effective_sr = s.samplerate * sradjust / (s.downsamplefactor if not s.highresval else 1)
+        highres = self.ui.actionHigh_resolution.isChecked()
+        effective_sr = s.samplerate * sradjust / (s.downsamplefactor if not highres else 1)
         status_text = (f"{format_freq(effective_sr, 'S/s')}, {self.fps:.2f} fps, "
                        f"{s.nevents} events, {s.lastrate:.2f} Hz, "
                        f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s")
@@ -1010,11 +1011,10 @@ class MainWindow(TemplateBaseClass):
 
     def high_resolution_toggled(self, checked):
         """Toggles the hardware's high-resolution averaging mode."""
-        self.state.highresval = 1 if checked else 0
-
         # The downsample command also sends the high-resolution setting,
         # so we just need to re-send it to the hardware for all boards.
-        self.controller.tell_downsample_all(self.state.downsample)
+        highres = 1 if checked else 0
+        self.controller.tell_downsample_all(self.state.downsample, highres)
 
     def select_channel(self):
         """Called when board or channel selector is changed."""
@@ -1253,7 +1253,8 @@ class MainWindow(TemplateBaseClass):
 
         old_downsample = self.state.downsample
         self.state.downsample -= 1
-        self.controller.tell_downsample_all(self.state.downsample)
+        highres = 1 if self.ui.actionHigh_resolution.isChecked() else 0
+        self.controller.tell_downsample_all(self.state.downsample, highres)
 
         # When transitioning from downsample=0 to downsample=-1, restore saved resamp value
         if old_downsample == 0 and self.state.downsample == -1:
@@ -1291,7 +1292,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.timefastButton.setEnabled(True)
         old_downsample = self.state.downsample
         self.state.downsample += 1
-        self.controller.tell_downsample_all(self.state.downsample)
+        highres = 1 if self.ui.actionHigh_resolution.isChecked() else 0
+        self.controller.tell_downsample_all(self.state.downsample, highres)
 
         # When transitioning from downsample=-1 to downsample=0, save and turn off resamp
         if old_downsample == -1 and self.state.downsample == 0:
