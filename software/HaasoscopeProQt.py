@@ -15,44 +15,44 @@ from usbs import connectdevices, orderusbs, tellfirstandlast, version
 from board import clkout_ena
 from utils import get_pwd
 
-# --- Hardware Discovery and Initial Setup ---
-print("Searching for Haasoscope Pro boards...")
-max_devices = 100
-try:
-    usbs = connectdevices(max_devices) # This will now return an empty list if none are found
-    if usbs:
-        for b in range(len(usbs)):
-
-            # Reading version multiple times seems to be a hardware quirk to ensure a stable read
-            version(usbs[b])
-            version(usbs[b])
-            version(usbs[b], quiet=True)
-            oldbytes(usbs[b])
-
-            # Turn on lvdsout_clk for multi-board setups
-            if len(usbs) > 1:
-                clkout_ena(usbs[b], b, True, True)
-
-            # Check for special beta device serial numbers
-            usbs[b].beta = 0.0  # Assign default
-            index = str(usbs[b].serial).find("_v1.")
-            if index > -1:
-                usbs[b].beta = float(str(usbs[b].serial)[index + 2:index + 6])
-                print(f"Board {b} is a special beta device: v{usbs[b].beta}")
-
-    time.sleep(0.1)  # Wait for clocks to lock after configuration
-    usbs = orderusbs(usbs)
-    if len(usbs) > 1:
-        tellfirstandlast(usbs)
-
-except (RuntimeError, IndexError) as e:
-    print(f"An unexpected error occurred: {e}")
-    sys.exit(-1)
-
 # --- Main Application Execution ---
 if __name__ == '__main__':
     #print('Argument List:', str(sys.argv))
     print("Python version", sys.version)
+
+    try:
+        # --- Hardware Discovery and Initial Setup ---
+        print("Searching for Haasoscope Pro boards...")
+        max_devices = 100
+        usbs = connectdevices(max_devices)  # This will now return an empty list if none are found
+        if usbs:
+            for b in range(len(usbs)):
+
+                # Reading version multiple times seems to be a hardware quirk to ensure a stable read
+                version(usbs[b])
+                version(usbs[b])
+                version(usbs[b], quiet=True)
+                oldbytes(usbs[b])
+
+                # Turn on lvdsout_clk for multi-board setups
+                if len(usbs) > 1:
+                    clkout_ena(usbs[b], b, True, True)
+
+                # Check for special beta device serial numbers
+                usbs[b].beta = 0.0  # Assign default
+                index = str(usbs[b].serial).find("_v1.")
+                if index > -1:
+                    usbs[b].beta = float(str(usbs[b].serial)[index + 2:index + 6])
+                    print(f"Board {b} is a special beta device: v{usbs[b].beta}")
+
+        time.sleep(0.1)  # Wait for clocks to lock after configuration
+        usbs = orderusbs(usbs)
+        if len(usbs) > 1:
+            tellfirstandlast(usbs)
+
+    except (RuntimeError, IndexError) as e:
+        print(f"An unexpected error occurred: {e}")
+        sys.exit(-1)
 
     # The most common fix for UI scaling and grid misalignment issues
     if sys.platform.startswith('win'):
