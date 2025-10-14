@@ -267,13 +267,10 @@ class DataProcessor:
         if not s.trig_stabilizer_enabled:
             return
 
-        # Calculate vline_time accounting for board mode (two-channel vs interleaved)
-        time_factor = s.downsamplefactor / s.nsunits / s.samplerate
-        if s.dointerleaved[board_idx]:
-            time_factor /= 2
-        elif s.dotwochannel[board_idx]:
-            time_factor *= 2
-        vline_time = 4 * 10 * (s.triggerpos + 1.0) * time_factor
+        # Calculate vline_time - the position in the raw data where we expect the trigger crossing.
+        # In two-channel mode, each hardware sample produces 20 array elements (not 40).
+        samples_per_trigger = 2 * 10 if s.dotwochannel[board_idx] else 4 * 10
+        vline_time = samples_per_trigger * (s.triggerpos + 1.0) * (s.downsamplefactor / s.nsunits / s.samplerate)
 
         hline_pos = (s.triggerlevel - 127) * s.yscale * 256
         # Include triggerdelta in the threshold (per-board setting)
