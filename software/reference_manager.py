@@ -35,6 +35,9 @@ def save_reference_lines(parent, reference_data, reference_visible, math_referen
     if not filename:
         return  # User cancelled
 
+    if not os.path.splitext(filename)[1]:  # Check if there's no extension
+        filename += ".npz"
+
     try:
         # Prepare data for saving
         save_dict = {}

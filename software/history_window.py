@@ -121,6 +121,9 @@ class HistoryWindow(QWidget):
         if not file_path:
             return  # User cancelled
 
+        if not os.path.splitext(file_path)[1]:  # Check if there's no extension
+            file_path += ".npz"
+
         try:
             # Prepare data for saving
             num_events = len(self.current_event_buffer)

@@ -23,6 +23,9 @@ def save_setup(main_window):
     if not filename:
         return
 
+    if not os.path.splitext(filename)[1]:  # Check if there's no extension
+        filename += ".json"
+
     s = main_window.state
 
     # Collect all settings to save
