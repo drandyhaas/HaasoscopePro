@@ -169,6 +169,8 @@ class PlotManager(pg.QtCore.QObject):
         # Update arrow positions when trigger lines move
         self.otherlines['vline'].sigPositionChanged.connect(lambda: self._update_trigger_arrows('vline'))
         self.otherlines['hline'].sigPositionChanged.connect(lambda: self._update_trigger_arrows('hline'))
+        # Update arrow positions when view changes (pan/zoom)
+        self.plot.getViewBox().sigRangeChanged.connect(self._update_all_trigger_arrows)
 
         # Risetime fit lines (initially invisible)
         fit_pen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DotLine)
@@ -815,9 +817,13 @@ class PlotManager(pg.QtCore.QObject):
     def set_pan_and_zoom(self, is_checked):
         self.plot.setMouseEnabled(x=is_checked, y=is_checked)
         if is_checked:
-            self.plot.showButtons()
-        else:
-            self.plot.hideButtons()
+            #self.plot.showButtons()
+            # Disable autoscale button during pan/zoom
+            view_box = self.plot.getViewBox()
+            if hasattr(view_box, 'autoBtn') and view_box.autoBtn is not None:
+                view_box.autoBtn.hide()
+                view_box.autoBtn.setEnabled(False)
+        self.plot.hideButtons()
 
     def on_vline_dragged(self, line):
         self.vline_dragged_signal.emit(line.value())
@@ -872,6 +878,11 @@ class PlotManager(pg.QtCore.QObject):
         self._update_trigger_arrows('vline')
         self._update_trigger_arrows('hline')
 
+    def _update_all_trigger_arrows(self):
+        """Update all trigger arrows (called on view range changes)."""
+        self._update_trigger_arrows('vline')
+        self._update_trigger_arrows('hline')
+
     def _update_trigger_arrows(self, line_name):
         """Update the position of arrow markers for trigger lines.
 
@@ -884,13 +895,22 @@ class PlotManager(pg.QtCore.QObject):
         line = self.otherlines[line_name]
         pos = line.value()
 
-        # Get pixel-to-data conversion for 3-pixel offset
+        # Get the actual visible view range (handles pan/zoom)
         try:
+            view_range = self.plot.getViewBox().viewRange()
+            min_x, max_x = view_range[0]
+            min_y, max_y = view_range[1]
+
+            # Get pixel-to-data conversion for 3-pixel offset
             pixel_size = self.plot.getViewBox().viewPixelSize()
             x_offset = 3 * pixel_size[0]
             y_offset = 3 * pixel_size[1]
         except:
-            # Fallback if viewPixelSize fails
+            # Fallback if viewRange fails
+            min_x = self.state.min_x
+            max_x = self.state.max_x
+            min_y = self.state.min_y
+            max_y = self.state.max_y
             x_offset = 0
             y_offset = 0
 
@@ -900,9 +920,10 @@ class PlotManager(pg.QtCore.QObject):
             bottom_arrow = self.trigger_arrows.get('vline_bottom')
 
             if top_arrow and bottom_arrow:
-                # Position at top and bottom of plot area, offset by 3 pixels
-                top_arrow.setData([pos], [self.state.max_y + y_offset])
-                bottom_arrow.setData([pos], [self.state.min_y - y_offset])
+                # Position at top and bottom of visible view area
+                # Move slightly inward so they're visible (3 pixels inside the boundary)
+                top_arrow.setData([pos], [max_y - y_offset])
+                bottom_arrow.setData([pos], [min_y + y_offset])
 
         elif line_name == 'hline':
             # Horizontal trigger line - update left and right arrows
@@ -910,9 +931,10 @@ class PlotManager(pg.QtCore.QObject):
             right_arrow = self.trigger_arrows.get('hline_right')
 
             if left_arrow and right_arrow:
-                # Position at left and right of plot area, offset by 3 pixels
-                left_arrow.setData([self.state.min_x - x_offset], [pos])
-                right_arrow.setData([self.state.max_x + x_offset], [pos])
+                # Position at left and right of visible view area
+                # Move slightly inward so they're visible (3 pixels inside the boundary)
+                left_arrow.setData([min_x + x_offset], [pos])
+                right_arrow.setData([max_x - x_offset], [pos])
 
     def show_cursors(self, visible):
         """Show or hide cursor lines and labels."""

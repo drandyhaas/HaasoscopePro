@@ -74,6 +74,8 @@ class CursorManager:
         self.cursor_lines['t2'].sigPositionChanged.connect(lambda: self._update_cursor_arrows('t2'))
         self.cursor_lines['v1'].sigPositionChanged.connect(lambda: self._update_cursor_arrows('v1'))
         self.cursor_lines['v2'].sigPositionChanged.connect(lambda: self._update_cursor_arrows('v2'))
+        # Update arrow positions when view changes (pan/zoom)
+        self.plot.getViewBox().sigRangeChanged.connect(self._update_all_cursor_arrows)
 
         # Create text labels for cursor readouts
         self.cursor_labels['readout'] = pg.TextItem(anchor=(0, 0), color='w')
@@ -127,6 +129,11 @@ class CursorManager:
             self.cursor_arrows[f'{cursor_name}_left'].setVisible(False)
             self.cursor_arrows[f'{cursor_name}_right'].setVisible(False)
 
+    def _update_all_cursor_arrows(self):
+        """Update all cursor arrows (called on view range changes)."""
+        for cursor_name in self.cursor_lines.keys():
+            self._update_cursor_arrows(cursor_name)
+
     def _update_cursor_arrows(self, cursor_name):
         """Update the position of arrow markers for a specific cursor.
 
@@ -139,13 +146,22 @@ class CursorManager:
         cursor = self.cursor_lines[cursor_name]
         pos = cursor.value()
 
-        # Get pixel-to-data conversion for 3-pixel offset
+        # Get the actual visible view range (handles pan/zoom)
         try:
+            view_range = self.plot.getViewBox().viewRange()
+            min_x, max_x = view_range[0]
+            min_y, max_y = view_range[1]
+
+            # Get pixel-to-data conversion for 3-pixel offset
             pixel_size = self.plot.getViewBox().viewPixelSize()
             x_offset = 3 * pixel_size[0]
             y_offset = 3 * pixel_size[1]
         except:
-            # Fallback if viewPixelSize fails
+            # Fallback if viewRange fails
+            min_x = self.state.min_x
+            max_x = self.state.max_x
+            min_y = self.state.min_y
+            max_y = self.state.max_y
             x_offset = 0
             y_offset = 0
 
@@ -155,9 +171,10 @@ class CursorManager:
             bottom_arrow = self.cursor_arrows.get(f'{cursor_name}_bottom')
 
             if top_arrow and bottom_arrow:
-                # Position at top and bottom of plot area, offset by 3 pixels
-                top_arrow.setData([pos], [self.state.max_y + y_offset])
-                bottom_arrow.setData([pos], [self.state.min_y - y_offset])
+                # Position at top and bottom of visible view area
+                # Move slightly inward so they're visible (3 pixels inside the boundary)
+                top_arrow.setData([pos], [max_y - y_offset])
+                bottom_arrow.setData([pos], [min_y + y_offset])
 
         elif cursor_name in ['v1', 'v2']:
             # Horizontal cursor - update left and right arrows
@@ -165,9 +182,10 @@ class CursorManager:
             right_arrow = self.cursor_arrows.get(f'{cursor_name}_right')
 
             if left_arrow and right_arrow:
-                # Position at left and right of plot area, offset by 3 pixels
-                left_arrow.setData([self.state.min_x - x_offset], [pos])
-                right_arrow.setData([self.state.max_x + x_offset], [pos])
+                # Position at left and right of visible view area
+                # Move slightly inward so they're visible (3 pixels inside the boundary)
+                left_arrow.setData([min_x + x_offset], [pos])
+                right_arrow.setData([max_x - x_offset], [pos])
 
     def update_cursor_readout(self):
         """Update cursor value display when cursors are moved."""
