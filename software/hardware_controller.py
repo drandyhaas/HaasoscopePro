@@ -18,6 +18,7 @@ class HardwareController:
         self.state = state
         self.num_board = len(usbs)
         self.signals = HardwareControllerSignals()
+        self.use_external_clock = [False] * self.num_board
         # Thread pool for parallel board operations - use enough threads for all boards
         self.executor = ThreadPoolExecutor(max_workers=max(4, self.num_board * 2))
         self.got_exception = False
@@ -26,10 +27,13 @@ class HardwareController:
         success = True
         for i, usb in enumerate(self.usbs):
             if not self.setup_connection(i, usb):
-                print(f"FATAL: Failed to set up board {i}")
+                print(f"FATAL: Failed to set up board {i}!")
                 success = False
+            if i==0 and clockused(usb,i,False): # make sure board 0 is on its internal clock
+                self.force_switch_clocks(i)
         if success:
-            self.use_ext_trigs()
+            if not self.use_ext_trigs():
+                success = False
             self.tell_downsample_all(self.state.downsample)
         return success
 
@@ -102,7 +106,7 @@ class HardwareController:
         usb = self.usbs[board_idx]
         usb.send(bytes([5, 99, 99, 99, 100, 100, 100, 100]))
         usb.recv(4)
-        print(f"Pllreset sent to board {board_idx}")
+        print(f"Pll reset sent to board {board_idx}")
         s = self.state
         if all(x == -10 for x in s.plljustreset): s.depth_before_pllreset = s.expect_samples  # make sure we're the first board doing pllreset
         s.phasecs[board_idx] = [[0] * 5 for _ in range(4)]
@@ -134,9 +138,9 @@ class HardwareController:
             self.do_phase(board, plloutnum2, (s.plljustresetdir[board] == 1), pllnum=0, quiet=True)
 
         elif s.plljustreset[board] == -1:  # End of sweep, now analyze and set the optimal phase
-            print(f"Board {board} clkstr errors per phase step: {s.phasenbad[board]}")
+            #print(f"Board {board} clkstr errors per phase step: {s.phasenbad[board]}")
             start, length = find_longest_zero_stretch(s.phasenbad[board], True)
-            print(f"Found good phase range for board {board} starting at {start} for {length} steps.")
+            print(f"Found good pll phase range for board {board}: starting at {start} for {length} steps.")
 
             if length < 4:
                 error_title = "PLL Calibration Failed"
@@ -163,7 +167,7 @@ class HardwareController:
         elif s.plljustreset[board] == -3:  # Final step for the current board
             # Mark this board as finished
             s.plljustreset[board] = -10
-            print(f"PLL calibration for board {board} is complete.")
+            #print(f"PLL calibration for board {board} is complete.")
 
             # Check if ALL boards have finished their calibration sequences.
             all_calibrations_finished = all(status == -10 for status in s.plljustreset)
@@ -409,9 +413,21 @@ class HardwareController:
         for board in range(1, self.num_board):
             self.state.doexttrig[board] = True
             usb = self.usbs[board]
+
+            # Try to set the clock to external
+            if not clockused(usb,board,quiet=True): # returns True if on external clock
+                if not self.force_switch_clocks(board): # ask to switch to external
+                    print(f"FATAL: Failed to set board {board} to external clock!")
+                    return False
+            else:
+                print(f"Board {board} already locked to external clock")
+                self.use_external_clock[board] = True
+
+            # Actually turn on ext trigs
             usb.send(bytes([2, 8, False, 0, 100, 100, 100, 100]))
             usb.recv(4)
             self.send_trigger_info(board)
+        return True
 
     def set_channel_gain_offset(self, board_idx, chan_idx, gain, offset):
         state = self.state
@@ -511,7 +527,16 @@ class HardwareController:
 
     def force_switch_clocks(self, board_idx):
         """Directly commands a clock switch."""
-        switchclock(self.usbs[board_idx], board_idx)
+        clock_wanted = not self.use_external_clock[board_idx]
+        if clock_wanted: print(f"Trying to switch board {board_idx} to external clock")
+        else: print(f"Trying to switch board {board_idx} to internal clock")
+        if switchclock(self.usbs[board_idx], board_idx, clock_wanted):
+            self.use_external_clock[board_idx] = clock_wanted
+            if self.use_external_clock[board_idx]: print(f"Board {board_idx} now locked to external clock")
+            else: print(f"Board {board_idx} now locked to internal clock")
+            return True # Successfully switched
+        print(f"Board {board_idx} was unable to switch clocks")
+        return False
 
     def do_leds(self, channel_colors):
         """
