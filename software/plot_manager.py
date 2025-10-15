@@ -246,13 +246,13 @@ class PlotManager(pg.QtCore.QObject):
                 # Check the mode for the board this line belongs to
                 if s.dotwochannel[board_idx]:
                     # For two-channel boards, we have half the samples.
-                    # We need to plot these samples across the full time axis.
+                    # In two-channel mode, samples are spaced 2x further apart in time.
                     num_valid_samples = xy_data.shape[2] // 2
                     y_to_plot = y_data_full[:num_valid_samples]
 
-                    # Create a new, correctly spaced time axis for this smaller dataset.
-                    # It starts at the same time and ends at the same time.
-                    x_to_plot = np.linspace(x_data_full[0], x_data_full[-1], num_valid_samples)
+                    # Create correct x-axis: in two-channel mode, time per sample is 2*x_step1
+                    x_step_two_channel = 2 * s.downsamplefactor / s.nsunits / s.samplerate
+                    x_to_plot = np.arange(num_valid_samples) * x_step_two_channel + x_data_full[0]
                     xdatanew, ydatanew = x_to_plot, y_to_plot
                 else:
                     # For single-channel boards, use the data as is.
