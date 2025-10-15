@@ -250,9 +250,10 @@ class PlotManager(pg.QtCore.QObject):
                     num_valid_samples = xy_data.shape[2] // 2
                     y_to_plot = y_data_full[:num_valid_samples]
 
-                    # Create correct x-axis: in two-channel mode, time per sample is 2*x_step1
-                    x_step_two_channel = 2 * s.downsamplefactor / s.nsunits / s.samplerate
-                    x_to_plot = np.arange(num_valid_samples) * x_step_two_channel + x_data_full[0]
+                    # Use the raw x values directly but multiply by 2 to get correct sample spacing.
+                    # The raw x-axis has corrections applied but wrong spacing (x_step1 instead of 2*x_step1).
+                    # Multiplying by 2 gives correct spacing AND preserves corrections.
+                    x_to_plot = x_data_full[:num_valid_samples] * 2.0
                     xdatanew, ydatanew = x_to_plot, y_to_plot
                 else:
                     # For single-channel boards, use the data as is.
@@ -286,7 +287,7 @@ class PlotManager(pg.QtCore.QObject):
 
         # Calculate extra trig stabilizer correction using noextboard
         extra_trig_correction = None
-        if s.extra_trig_stabilizer_enabled and s.noextboard != -1:
+        if s.extra_trig_stabilizer_enabled and s.noextboard != -1 and s.downsamplefactor==1:
             # Use the first channel of the noextboard for correction calculation
             noext_li = s.noextboard * s.num_chan_per_board
             if s.dotwochannel: noext_li += s.triggerchan[s.noextboard]

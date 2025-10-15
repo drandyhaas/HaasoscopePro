@@ -264,7 +264,7 @@ class DataProcessor:
     def _apply_board_stabilizer(self, board_idx, xy_data_array):
         """Applies board-level trigger stabilization."""
         s = self.state
-        if not s.trig_stabilizer_enabled:
+        if not s.trig_stabilizer_enabled or s.downsamplefactor>1:
             return
 
         # Calculate vline_time - the position in the raw data where we expect the trigger crossing.
@@ -293,6 +293,7 @@ class DataProcessor:
             xc = thed[0][(thed[0] > vline_time - fitwidth) & (thed[0] < vline_time + fitwidth)]
             if xc.size > 2:
                 fitwidth *= s.distcorrsamp / xc.size
+                if s.dotwochannel[board_idx]: fitwidth /= 2 # the samples are spaced out twice as much, so to use the same time interval we use half the samples
                 xc = thed[0][(thed[0] > vline_time - fitwidth) & (thed[0] < vline_time + fitwidth)]
                 yc = thed[1][(thed[0] > vline_time - fitwidth) & (thed[0] < vline_time + fitwidth)]
 
