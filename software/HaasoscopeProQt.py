@@ -35,7 +35,7 @@ if __name__ == '__main__':
                 oldbytes(usbs[b])
 
                 # Turn on lvdsout_clk for multi-board setups
-                if len(usbs) > 1:
+                if len(usbs)>1 and b<len(usbs)-1:
                     clkout_ena(usbs[b], b, True, True)
 
                 # Check for special beta device serial numbers
