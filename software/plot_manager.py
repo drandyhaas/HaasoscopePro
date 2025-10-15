@@ -18,13 +18,13 @@ import math
 # Plotting Helper Functions (Moved from utils.py)
 # #############################################################################
 
-def rainbow_colormap(n, start=0.0, end=0.66):
+def rainbow_colormap(n, start, end):
     """Generate rainbow colors using HSV color space.
 
     Args:
         n: Number of colors to generate
-        start: Starting hue (0.0 = red, default)
-        end: Ending hue (0.66 = blue, default 0.66 to match matplotlib rainbow)
+        start: Starting hue (e.g. 0.0 = red)
+        end: Ending hue (e.g. 0.66 = blue)
 
     Returns:
         Array of RGBA colors with shape (n, 4)
@@ -136,9 +136,15 @@ class PlotManager(pg.QtCore.QObject):
         self.set_grid(self.ui.actionGrid.isChecked())
 
         # Create lines for each channel
-        colors = rainbow_colormap(self.nlines, start=0.0, end=0.66)
+        if self.nlines>4:
+            colors = rainbow_colormap(self.nlines, start=0.0, end=0.8)
+        else:
+            colors = [QColor("red"), QColor("cyan"), QColor("yellow"), QColor("magenta")]
         for i in range(self.nlines):
-            c = QColor.fromRgbF(*colors[i])
+            if self.nlines>4:
+                c = QColor.fromRgbF(*colors[i])
+            else:
+                c = colors[i]
             pen = pg.mkPen(color=c)
             line = self.plot.plot(pen=pen, name=f"Channel {i}", skipFiniteCheck=True, connect="finite")
             line.curve.setClickable(True)
