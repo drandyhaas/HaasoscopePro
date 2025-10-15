@@ -277,7 +277,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.resampBox.valueChanged.connect(self.resamp_changed)
         self.ui.fwfBox.valueChanged.connect(lambda val: setattr(self.state, 'fitwidthfraction', val / 100.))
         self.ui.fftCheck.stateChanged.connect(self.fft_clicked)
-        self.ui.persistTbox.valueChanged.connect(self.plot_manager.set_persistence)
+        self.ui.persistTbox.valueChanged.connect(self.set_persistence)
         self.ui.actionPersist_average.triggered.connect(self.set_average_line_pen)
         self.ui.persistlinesCheck.clicked.connect(self.set_average_line_pen)
         self.ui.actionLine_color.triggered.connect(self.change_channel_color)
@@ -1452,6 +1452,10 @@ class MainWindow(TemplateBaseClass):
         # Update the average line's pen and visibility, which depends on this checkbox
         self.set_average_line_pen()
 
+    def set_persistence(self, value):
+        self.plot_manager.set_persistence(value)
+        self.set_average_line_pen()
+
     def set_average_line_pen(self):
         """
         Updates the appearance and visibility of the main trace, the average trace,
@@ -1463,6 +1467,7 @@ class MainWindow(TemplateBaseClass):
         # Get the state of the relevant UI checkboxes
         is_chan_on = self.ui.chanonCheck.isChecked()
         show_persist_lines = self.ui.persistlinesCheck.isChecked()
+        num_persist_lines = self.ui.persistTbox.value()
         show_persist_avg = self.ui.actionPersist_average.isChecked()
 
         # Get the line objects from the plot manager
@@ -1488,7 +1493,7 @@ class MainWindow(TemplateBaseClass):
 
         # 3. THIS IS YOUR NEW RULE:
         #    Hide the main trace ONLY if the average is on AND the faint lines are off.
-        if show_persist_avg and not show_persist_lines:
+        if show_persist_avg and not show_persist_lines and num_persist_lines>0:
             active_line.setVisible(False)
         else:
             active_line.setVisible(True)

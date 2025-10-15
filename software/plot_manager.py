@@ -679,7 +679,7 @@ class PlotManager(pg.QtCore.QObject):
 
     def update_persist_average(self):
         """Calculates and plots the average of persistent traces."""
-        if len(self.persist_lines) < 2:
+        if len(self.persist_lines) < 1: # Need at least one to average (it will be itself but that's OK)
             self.average_line.clear()
             return
 
