@@ -190,6 +190,9 @@ class MainWindow(TemplateBaseClass):
         self.fan_timer.start(10031) # every 10 seconds or so afterwares
         self.ui.actionPan_and_zoom.setChecked(False)
         self.plot_manager.set_pan_and_zoom(False)
+        # Initialize line width from state
+        self.ui.linewidthBox.setValue(self.state.line_width)
+        self.line_width_changed(self.state.line_width)
 
     def _sync_board_settings_to_hardware(self, board_idx):
         """
@@ -269,7 +272,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionTrigger_info.triggered.connect(lambda checked: self.plot_manager.update_trigger_threshold_display())
         self.ui.actionPeak_detect.triggered.connect(lambda checked: self.plot_manager.set_peak_detect(checked))
         self.ui.actionChannel_name_legend.triggered.connect(lambda checked: self.plot_manager.update_legend())
-        self.ui.linewidthBox.valueChanged.connect(self.plot_manager.set_line_width)
+        self.ui.linewidthBox.valueChanged.connect(self.line_width_changed)
         self.ui.lpfBox.currentIndexChanged.connect(self.lpf_changed)
         self.ui.resampBox.valueChanged.connect(self.resamp_changed)
         self.ui.fwfBox.valueChanged.connect(lambda val: setattr(self.state, 'fitwidthfraction', val / 100.))
@@ -1243,6 +1246,11 @@ class MainWindow(TemplateBaseClass):
         self.state.doresamp = value
         if True: #self.state.downsample < 0:
             self.state.saved_doresamp = value
+
+    def line_width_changed(self, value):
+        """Handle line width changes from the UI."""
+        self.state.line_width = value
+        self.plot_manager.set_line_width(value)
 
     def trigger_level_changed(self, value):
         self.state.triggerlevel = value

@@ -93,7 +93,7 @@ def save_setup(main_window):
         'show_reference': main_window.ui.actionShow_Reference.isChecked(),
 
         # Plot manager settings
-        'line_width': main_window.ui.linewidthBox.value(),
+        'line_width': main_window.state.line_width,
         'persistence': main_window.ui.persistTbox.value(),
         'persist_avg_enabled': main_window.ui.actionPersist_average.isChecked(),
         'persist_lines_enabled': main_window.ui.persistlinesCheck.isChecked(),
@@ -324,6 +324,7 @@ def load_setup(main_window):
 
     # Plot manager settings
     if 'line_width' in setup:
+        main_window.state.line_width = setup['line_width']
         main_window.ui.linewidthBox.setValue(setup['line_width'])
     if 'persistence' in setup:
         main_window.ui.persistTbox.setValue(setup['persistence'])

@@ -73,6 +73,7 @@ class ScopeState:
         self.xy_mode = False
         self.skip_next_event = False
         self.fitwidthfraction = 0.2
+        self.line_width = 2  # Default line width for plots
         self.yscale = 3.3 / 2.03 * 10 * 5 / 8 / pow(2, 12) / 16
         self.nsunits = 1
         self.units = "ns"
