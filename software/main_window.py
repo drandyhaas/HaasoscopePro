@@ -290,6 +290,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.Auxout_comboBox.currentIndexChanged.connect(self.auxout_changed)
         self.ui.actionToggle_PLL_controls.triggered.connect(self.toggle_pll_controls)
         self.ui.actionOversampling_controls.triggered.connect(self.toggle_oversampling_controls)
+        self.ui.actionClock_reset.triggered.connect(lambda: self.controller.adfreset(self.state.activeboard))
         self.ui.upposButton0.clicked.connect(self.uppos)
         self.ui.upposButton1.clicked.connect(self.uppos1)
         self.ui.upposButton2.clicked.connect(self.uppos2)
