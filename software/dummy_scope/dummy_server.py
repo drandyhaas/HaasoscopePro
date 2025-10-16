@@ -55,6 +55,8 @@ class DummyOscilloscopeServer:
             "downsample_ds": 0,  # Downsample factor (power of 2)
             "downsample_highres": 1,  # 1 = averaging mode, 0 = decimation mode
             "downsample_merging": 1,  # Number of samples to merge
+            # Trigger type (from opcode 1)
+            "trigger_type": 1,  # 1 = rising edge, 2 = falling edge
         }
 
     def start(self):
@@ -247,6 +249,11 @@ class DummyOscilloscopeServer:
 
     def _handle_trigger_check(self, data: bytes) -> bytes:
         """Handle opcode 1 (trigger status check)."""
+        # Parse trigger type from data[1]
+        # 1 = rising edge, 2 = falling edge
+        trigger_type = data[1]
+        self.board_state["trigger_type"] = trigger_type
+
         # Always simulate trigger ready - continuously return new events
         # Event ready response: byte 0 = 251, byte 1 = trigger position, bytes 2-3 = unused
         # Return trigger position of 0 in byte 1
@@ -294,14 +301,19 @@ class DummyOscilloscopeServer:
         # Map 0-254 to ADC range: 0 -> -2048, 127 -> 0, 254 -> +2047
         trigger_level_adc = int((trigger_level_raw - 127) * 2047 / 127)
 
-        # Apply triggerdelta: the actual trigger threshold is trigger_level + triggerdelta
-        # triggerdelta is in raw ADC units (0-255 range, but represents ADC counts)
-        # The signal must cross this higher threshold to trigger (for rising edge)
+        # Get trigger type (1 = rising, 2 = falling)
+        trigger_type = self.board_state["trigger_type"]
+        is_falling = (trigger_type == 2)
+
+        # Apply triggerdelta based on edge direction:
+        # - Rising edge: signal must cross UP through (trigger_level + triggerdelta)
+        # - Falling edge: signal must cross DOWN through (trigger_level - triggerdelta)
         trigger_delta = self.board_state["trigger_delta"]
-        # triggerdelta is already in the same scale as trigger_level (0-255)
-        # Convert it to ADC units the same way
         trigger_delta_adc = int(trigger_delta * 2047 / 127)
-        actual_trigger_level_adc = trigger_level_adc + trigger_delta_adc
+        if is_falling:
+            actual_trigger_level_adc = trigger_level_adc - trigger_delta_adc
+        else:
+            actual_trigger_level_adc = trigger_level_adc + trigger_delta_adc
 
         # Get trigger position (in logical sample blocks) and convert to ADC sample index
         # Each logical sample block contains 40 ADC samples (words 0-39)
@@ -317,18 +329,23 @@ class DummyOscilloscopeServer:
         num_logical_samples = expect_len // bytes_per_sample
 
         # Calculate phase offset so the waveform crosses actual_trigger_level_adc at trigger_pos
-        # For a rising edge trigger: we want sin(phase_at_trigger) = actual_trigger_level_adc / signal_amplitude
         # We need to ensure the trigger level is within the signal amplitude range
         if signal_amplitude > 0 and abs(actual_trigger_level_adc) <= signal_amplitude:
-            # Calculate the phase where the sine wave equals the actual trigger level (rising edge)
             normalized_level = actual_trigger_level_adc / signal_amplitude
             # Clamp to valid range for arcsin
             normalized_level = max(-1.0, min(1.0, normalized_level))
-            # Get phase where sin(phase) = normalized_level (choose rising edge)
-            phase_at_trigger = math.asin(normalized_level)
+
+            if is_falling:
+                # Falling edge: sin(phase) = level with negative derivative (going down)
+                # This occurs at phase = π - arcsin(level)
+                phase_at_trigger = math.pi - math.asin(normalized_level)
+            else:
+                # Rising edge: sin(phase) = level with positive derivative (going up)
+                # This occurs at phase = arcsin(level)
+                phase_at_trigger = math.asin(normalized_level)
         else:
-            # Default to zero crossing if trigger level is out of range
-            phase_at_trigger = 0.0
+            # Default to appropriate zero crossing if trigger level is out of range
+            phase_at_trigger = math.pi if is_falling else 0.0
 
         # Calculate the effective downsample factor
         ds = self.board_state["downsample_ds"]
