@@ -45,6 +45,12 @@ class DummyOscilloscopeServer:
             "spi_mode": 0,  # Current SPI mode (0 or 1)
             "trigger_counter": 0,  # Incrementing trigger counter
             "data_counter": 0,  # For phase continuity in generated data
+            # Trigger settings (from opcode 8)
+            "trigger_level": 0,  # Voltage threshold for triggering (0-255, maps to ADC value)
+            "trigger_delta": 0,  # Trigger hysteresis
+            "trigger_pos": 0,  # Position in waveform where trigger should occur
+            "trigger_time_thresh": 0,  # Timing threshold
+            "trigger_chan": 0,  # Channel to trigger on
         }
 
     def start(self):
@@ -278,15 +284,49 @@ class DummyOscilloscopeServer:
         signal_amplitude = 1500
         noise_rms = 0.02 * signal_amplitude  # ~30 ADC counts
 
+        # Convert trigger level from 0-255 range to ADC 12-bit range (-2048 to +2047)
+        # trigger_level is sent as (state.triggerlevel+1), so we need to subtract 1
+        trigger_level_raw = self.board_state["trigger_level"] - 1
+        # Map 0-254 to ADC range: 0 -> -2048, 127 -> 0, 254 -> +2047
+        trigger_level_adc = int((trigger_level_raw - 127) * 2047 / 127)
+
+        # Get trigger position (in logical sample blocks) and convert to ADC sample index
+        # Each logical sample block contains 40 ADC samples (words 0-39)
+        # So trigger_pos needs to be multiplied by 40 to get the actual ADC sample position
+        trigger_pos_blocks = self.board_state["trigger_pos"]
+        trigger_pos = trigger_pos_blocks * 40
+
         adc_data = bytearray()
         nsubsamples = 50
         bytes_per_sample = nsubsamples * 2  # 100 bytes per sample (50 words * 2 bytes/word)
         num_logical_samples = expect_len // bytes_per_sample
 
+        # Calculate phase offset so the waveform crosses trigger_level_adc at trigger_pos
+        # For a rising edge trigger: we want sin(phase_at_trigger) = trigger_level_adc / signal_amplitude
+        # We need to ensure the trigger level is within the signal amplitude range
+        if signal_amplitude > 0 and abs(trigger_level_adc) <= signal_amplitude:
+            # Calculate the phase where the sine wave equals the trigger level (rising edge)
+            normalized_level = trigger_level_adc / signal_amplitude
+            # Clamp to valid range for arcsin
+            normalized_level = max(-1.0, min(1.0, normalized_level))
+            # Get phase where sin(phase) = normalized_level (choose rising edge)
+            phase_at_trigger = math.asin(normalized_level)
+        else:
+            # Default to zero crossing if trigger level is out of range
+            phase_at_trigger = 0.0
+
+        # Period: 1000 samples = 4 cycles across the 4000-sample capture window
+        wave_period = 1000.0
+        # Calculate phase offset so that at trigger_pos, we have the trigger crossing
+        # phase = (sample_position - phase_offset) * 2*pi / period
+        # At trigger_pos: phase = phase_at_trigger
+        # So: phase_offset = trigger_pos - (phase_at_trigger * period) / (2*pi)
+        phase_offset = trigger_pos - (phase_at_trigger * wave_period) / (2 * math.pi)
+
         for s in range(num_logical_samples):
             # Words 0-39: ADC data (40 samples for single-channel mode)
             # In single-channel mode: words 0-39 are all from the single channel
-            # Generate continuous sine wave data centered at 0 (symmetric around zero)
+            # Generate triggered sine wave data
             # ADC is 12-bit, so range is -2048 to +2047
 
             # Start sample index for this block
@@ -298,7 +338,8 @@ class DummyOscilloscopeServer:
             for i in range(40):
                 # Apply time shift to each sample (fractional sample interpolation)
                 sample_position = sample_index + i + time_shift_samples
-                phase = sample_position * 2 * math.pi / 1000
+                # Apply phase offset so waveform triggers at the correct position
+                phase = (sample_position - phase_offset) * 2 * math.pi / wave_period
                 val = int(signal_amplitude * math.sin(phase))
                 # Add Gaussian noise (~2% RMS)
                 noise = random.gauss(0, noise_rms)
@@ -344,7 +385,8 @@ class DummyOscilloscopeServer:
             for i in range(min(words_needed, 40)):
                 # Apply time shift to each sample (fractional sample interpolation)
                 sample_position = sample_index + i + time_shift_samples
-                phase = sample_position * 2 * math.pi / 1000
+                # Apply phase offset so waveform triggers at the correct position
+                phase = (sample_position - phase_offset) * 2 * math.pi / wave_period
                 val = int(signal_amplitude * math.sin(phase))
                 # Add Gaussian noise (~2% RMS)
                 noise = random.gauss(0, noise_rms)
@@ -410,6 +452,17 @@ class DummyOscilloscopeServer:
 
     def _handle_trigger_info(self, data: bytes) -> bytes:
         """Handle opcode 8 (trigger info/level)."""
+        # Parse trigger parameters:
+        # data[1] = trigger_level (0-255)
+        # data[2] = trigger_delta (hysteresis)
+        # data[3:5] = trigger_pos (16-bit)
+        # data[5] = trigger_time_thresh
+        # data[6] = trigger_chan
+        self.board_state["trigger_level"] = data[1]
+        self.board_state["trigger_delta"] = data[2]
+        self.board_state["trigger_pos"] = (data[3] << 8) | data[4]
+        self.board_state["trigger_time_thresh"] = data[5]
+        self.board_state["trigger_chan"] = data[6]
         return struct.pack("<I", 0)
 
     def _handle_downsample(self, data: bytes) -> bytes:
