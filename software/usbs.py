@@ -3,11 +3,14 @@ Handles the discovery, connection, and ordering of HaasoscopePro USB devices.
 
 The key function, `orderusbs`, implements a daisy-chain discovery algorithm
 to determine the physical order of the connected boards.
+
+For testing without hardware, use connect_socket_devices() instead of connectdevices().
 """
 import sys
 import ftd2xx
-from typing import List
+from typing import List, Union
 from USB_FT232H import UsbFt232hSync245mode
+from dummy_scope.USB_Socket import UsbSocketAdapter
 from board import reload_firmware
 from utils import getbit, oldbytes
 
@@ -142,7 +145,7 @@ def orderusbs(usbs: List[UsbFt232hSync245mode]) -> List[UsbFt232hSync245mode]:
     return [usbs[i] for i in ordered_indices]
 
 
-def tellfirstandlast(usbs: List[UsbFt232hSync245mode]):
+def tellfirstandlast(usbs: List[Union[UsbFt232hSync245mode, UsbSocketAdapter]]):
     """Informs each board if it is the first or last in the chain for termination purposes."""
     if not usbs: return
 
@@ -156,3 +159,29 @@ def tellfirstandlast(usbs: List[UsbFt232hSync245mode]):
 
         usb.send(bytes([2, 14, firstlast, 0, 99, 99, 99, 99]))
         usb.recv(4)
+
+
+def connect_socket_devices(socket_addresses: List[str]) -> List[UsbSocketAdapter]:
+    """
+    Connect to dummy oscilloscope servers via TCP sockets for testing.
+
+    Args:
+        socket_addresses (List[str]): List of socket addresses in format "host:port"
+                                     e.g., ["localhost:9999", "localhost:10000"]
+
+    Returns:
+        A list of connected UsbSocketAdapter objects.
+    """
+    usbs = []
+    for addr in socket_addresses:
+        try:
+            usb_device = UsbSocketAdapter('HaasoscopePro USB2 (Socket)', addr)
+            if usb_device.good:
+                usbs.append(usb_device)
+                # Optionally clear old data simulation
+                version(usb_device, quiet=True)
+        except Exception as e:
+            print(f"Failed to connect to socket {addr}: {e}")
+
+    print(f"Connected to {len(usbs)} dummy oscilloscope server(s) via socket.")
+    return usbs

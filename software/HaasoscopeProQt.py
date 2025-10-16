@@ -11,7 +11,7 @@ from PyQt5.QtCore import Qt
 # Import the new main window and necessary hardware functions
 from main_window import MainWindow
 from utils import oldbytes
-from usbs import connectdevices, orderusbs, tellfirstandlast, version
+from usbs import connectdevices, orderusbs, tellfirstandlast, version, connect_socket_devices
 from board import clkout_ena
 from utils import get_pwd
 
@@ -25,6 +25,11 @@ if __name__ == '__main__':
         print("Searching for Haasoscope Pro boards...")
         max_devices = 100
         usbs = connectdevices(max_devices)  # This will now return an empty list if none are found
+
+        # Can use dummy scope
+        try_dummy_scope = False
+        if try_dummy_scope and len(usbs)<1: usbs = connect_socket_devices(["localhost:9998"])
+
         if usbs:
             for b in range(len(usbs)):
 
