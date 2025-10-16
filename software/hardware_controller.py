@@ -45,9 +45,9 @@ class HardwareController:
             print("Warning - this board has older firmware than another being used:",max(self.state.firmwareversion))
         if ver > min(self.state.firmwareversion) > -1:
             print("Warning - this board has newer firmware than another being used:",min(self.state.firmwareversion))
-        self.adfreset(board_idx)
-        if setupboard(usb, self.state.dopattern, self.state.dotwochannel[board_idx], self.state.dooverrange,
-                      self.state.basevoltage == 200) > 0:
+        if not self.adfreset(board_idx):
+            return False
+        if not setupboard(usb, self.state.dopattern, self.state.dotwochannel[board_idx], self.state.dooverrange, self.state.basevoltage == 200):
             return False
         for c in range(self.state.num_chan_per_board):
             setchanacdc(usb, c, False, self.state.dooversample[board_idx])
@@ -97,9 +97,11 @@ class HardwareController:
         time.sleep(0.1)
         res = boardinbits(usb)
         if not getbit(res, 5):
-            print(f"Adf pll for board {board_idx} not locked?")
+            print(f"Adf pll for board {board_idx} not locked!")
+            return False
         else:
             print(f"Adf pll locked for board {board_idx}")
+            return True
 
     def pllreset(self, board_idx):
         """Sends PLL reset and correctly updates the state to start the adjustclocks sequence."""

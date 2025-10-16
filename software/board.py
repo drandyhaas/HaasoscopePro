@@ -252,10 +252,9 @@ def adf4350(usb, freq: float, phase: Union[int, None], r_counter: int = 1,
     set_spi_mode(usb, 0)
 
 
-def setupboard(usb, dopattern: int, twochannel: bool, dooverrange: bool, do1v: bool = False) -> int:
+def setupboard(usb, dopattern: int, twochannel: bool, dooverrange: bool, do1v: bool = False) -> bool:
     """
     Performs the initial configuration of the ADC and front-end amplifiers.
-    Returns 0 on success, non-zero on failure.
     """
     #setfan(usb, True)
     set_spi_mode(usb, 0)
@@ -265,7 +264,7 @@ def setupboard(usb, dopattern: int, twochannel: bool, dooverrange: bool, do1v: b
     res = spicommand2(usb, "VENDOR_ID", 0x00, 0x0c, 0, 0, True)
     if res is None or res[0] != 0x51:
         print("Error: Could not read correct Vendor ID from ADC!")
-        return 1
+        return False
 
     # --- ADC and LVDS Configuration ---
     spicommand(usb, "LVDS_EN", 0x02, 0x00, 0x00, False)
@@ -303,7 +302,7 @@ def setupboard(usb, dopattern: int, twochannel: bool, dooverrange: bool, do1v: b
     setgain(usb, 0, 0, False)
     setgain(usb, 1, 0, False)
 
-    return 0
+    return True
 
 
 def setgain(usb, chan: int, value: int, doswap: bool):
