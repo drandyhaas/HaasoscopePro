@@ -114,10 +114,11 @@ class HardwareController:
         s.phasecs[board_idx] = [[0] * 5 for _ in range(4)]
         s.plljustresetdir[board_idx] = 1
         s.phasenbad[board_idx] = [0] * 12
-        if not hasattr(usb,"socket_addr"): # Only do real pllreset for real boards. It breaks the dummy server!
-            s.expect_samples = 1000
-            s.plljustreset[board_idx] = 0  # CRITICAL: This starts the calibration
-            s.dodrawing = False
+        s.expect_samples = 1000
+        s.dodrawing = False
+
+        # Only do real pllreset for real boards. It breaks the dummy server!
+        s.plljustreset[board_idx] = -2 if hasattr(usb,"socket_addr") else 0 # CRITICAL: This starts the calibration
 
     def adjustclocks(self, board, nbadclkA, nbadclkB, nbadclkC, nbadclkD, nbadstr, main_window):
         """
