@@ -589,7 +589,15 @@ class MainWindow(TemplateBaseClass):
             if len(raw_data) < expect_len:
                 print("Not enough data length in event, not processing.")
                 return
-            nbadA, nbadB, nbadC, nbadD, nbadS = self.processor.process_board_data(raw_data, board_idx, self.xydata)
+            try:
+                nbadA, nbadB, nbadC, nbadD, nbadS = self.processor.process_board_data(raw_data, board_idx, self.xydata)
+            except RuntimeError as e:
+                self.closeEvent(None)
+                title = "Data Processing Failed"
+                message = (f"Data processing failed for board {board_idx}: {e}\n\n"
+                           "Please check the USB connection and restart the application.")
+                QMessageBox.critical(self, title, message)
+                sys.exit(-7)
             if s.plljustreset[board_idx] > -10:
                 # If a reset is already in progress, continue it.
                 self.controller.adjustclocks(board_idx, nbadA, nbadB, nbadC, nbadD, nbadS, self)
