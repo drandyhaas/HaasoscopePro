@@ -63,7 +63,7 @@
           <x>176</x>
           <y>50</y>
           <width>10</width>
-          <height>251</height>
+          <height>265</height>
          </rect>
         </property>
         <property name="minimumSize">
@@ -575,9 +575,9 @@
         <property name="geometry">
          <rect>
           <x>40</x>
-          <y>321</y>
+          <y>320</y>
           <width>131</width>
-          <height>21</height>
+          <height>24</height>
          </rect>
         </property>
         <property name="font">
