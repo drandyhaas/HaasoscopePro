@@ -11,6 +11,7 @@ import threading
 import argparse
 import time
 import math
+import random
 from typing import Dict, Tuple
 
 class DummyOscilloscopeServer:
@@ -265,6 +266,17 @@ class DummyOscilloscopeServer:
         # Reset data counter at the start of each trigger event to ensure phase starts from 0
         self.board_state["data_counter"] = 0
 
+        # Generate per-event random parameters
+        # Time shift: Gaussian distribution with RMS = 1 sample (1/3.2 ns ≈ 0.3125 ns)
+        # Sample period at 3.2 GHz = 1/3.2 ns ≈ 0.3125 ns
+        sample_period = 1.0 / 3.2  # ns per sample
+        time_shift_samples = random.gauss(0, 1.0)  # RMS of 1 sample
+        time_shift_ns = time_shift_samples * sample_period
+
+        # Noise: 2% RMS of the signal amplitude (30000)
+        signal_amplitude = 30000
+        noise_rms = 0.02 * signal_amplitude  # ~600 ADC counts
+
         adc_data = bytearray()
         nsubsamples = 50
         bytes_per_sample = nsubsamples * 2  # 100 bytes per sample (50 words * 2 bytes/word)
@@ -281,10 +293,19 @@ class DummyOscilloscopeServer:
 
             # Words 0-39: 40 consecutive ADC samples
             # Period: 1000 samples = 4 cycles across the 4000-sample capture window
-            # Use amplitude that fits within 12-bit ADC range (-2048 to +2047)
+            # Amplitude scaled to produce ~900mV peak-to-peak at display
+            # Calculation: 900mV / (yscale * VperD * 1000) ≈ 29000
+            # But we're limited to 16-bit signed range, so we use 30000
             for i in range(40):
-                phase = (sample_index + i) * 2 * math.pi / 1000
-                val = int(2000 * math.sin(phase))
+                # Apply time shift to each sample (fractional sample interpolation)
+                sample_position = sample_index + i + time_shift_samples
+                phase = sample_position * 2 * math.pi / 1000
+                val = int(signal_amplitude * math.sin(phase))
+                # Add Gaussian noise (~2% RMS)
+                noise = random.gauss(0, noise_rms)
+                val = int(val + noise)
+                # Clamp to 16-bit signed range
+                val = max(-32768, min(32767, val))
                 adc_data.extend(struct.pack("<h", val))
 
             # Words 40-49: Timing and marker
@@ -321,8 +342,15 @@ class DummyOscilloscopeServer:
 
             # Generate ADC data words (up to 40)
             for i in range(min(words_needed, 40)):
-                phase = (sample_index + i) * 2 * math.pi / 1000
-                val = int(2000 * math.sin(phase))
+                # Apply time shift to each sample (fractional sample interpolation)
+                sample_position = sample_index + i + time_shift_samples
+                phase = sample_position * 2 * math.pi / 1000
+                val = int(signal_amplitude * math.sin(phase))
+                # Add Gaussian noise (~2% RMS)
+                noise = random.gauss(0, noise_rms)
+                val = int(val + noise)
+                # Clamp to 16-bit signed range
+                val = max(-32768, min(32767, val))
                 adc_data.extend(struct.pack("<h", val))
 
             # If we need more words beyond the 40 ADC samples, generate timing/marker data
