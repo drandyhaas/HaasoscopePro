@@ -881,57 +881,6 @@ threshold</string>
        <property name="title">
         <string>View options</string>
        </property>
-       <widget class="QLabel" name="label_16">
-        <property name="geometry">
-         <rect>
-          <x>70</x>
-          <y>91</y>
-          <width>61</width>
-          <height>16</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="text">
-         <string>Fit fraction</string>
-        </property>
-       </widget>
-       <widget class="QSpinBox" name="fwfBox">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>89</y>
-          <width>51</width>
-          <height>22</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>Fraction of waveform to use for risetime and calibration calculations</string>
-        </property>
-        <property name="accelerated">
-         <bool>true</bool>
-        </property>
-        <property name="suffix">
-         <string>%</string>
-        </property>
-        <property name="minimum">
-         <number>1</number>
-        </property>
-        <property name="maximum">
-         <number>99</number>
-        </property>
-        <property name="value">
-         <number>20</number>
-        </property>
-       </widget>
        <widget class="QLabel" name="label_23">
         <property name="geometry">
          <rect>
@@ -1110,6 +1059,30 @@ threshold</string>
         </property>
         <property name="singleStep">
          <double>0.100000000000000</double>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="persistAvgCheck">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>70</y>
+          <width>121</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Whether to draw the persist average line</string>
+        </property>
+        <property name="text">
+         <string>Persist average</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </widget>
@@ -2378,7 +2351,6 @@ Outlined if triggering on this channel</string>
     <addaction name="actionHigh_resolution"/>
     <addaction name="actionGrid"/>
     <addaction name="actionVoltage_axis"/>
-    <addaction name="actionPersist_average"/>
     <addaction name="actionChannel_name_legend"/>
     <addaction name="actionMarkers"/>
     <addaction name="actionLine_color"/>
@@ -2595,14 +2567,6 @@ Outlined if triggering on this channel</string>
   <action name="actionTake_screenshot">
    <property name="text">
     <string>Take screenshot</string>
-   </property>
-  </action>
-  <action name="actionPersist">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Persist</string>
    </property>
   </action>
   <action name="actionClock_reset">
@@ -2887,17 +2851,6 @@ Outlined if triggering on this channel</string>
     <string>Peak waveforrm</string>
    </property>
   </action>
-  <action name="actionPersist_average">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Persist average</string>
-   </property>
-  </action>
   <action name="actionDuty_cycle">
    <property name="checkable">
     <bool>true</bool>
@@ -2908,6 +2861,9 @@ Outlined if triggering on this channel</string>
   </action>
   <action name="actionChannel_name_legend">
    <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
     <bool>true</bool>
    </property>
    <property name="text">

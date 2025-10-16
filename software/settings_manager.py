@@ -311,7 +311,6 @@ def load_setup(main_window):
         main_window.ui.resampBox.setValue(s.doresamp)
     if 'fitwidthfraction' in setup:
         s.fitwidthfraction = setup['fitwidthfraction']
-        main_window.ui.fwfBox.setValue(int(s.fitwidthfraction * 100))
 
     # FFT and reference settings
     if 'fft_enabled' in setup:

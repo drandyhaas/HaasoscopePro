@@ -280,10 +280,9 @@ class MainWindow(TemplateBaseClass):
         self.ui.linewidthBox.valueChanged.connect(self.line_width_changed)
         self.ui.lpfBox.currentIndexChanged.connect(self.lpf_changed)
         self.ui.resampBox.valueChanged.connect(self.resamp_changed)
-        self.ui.fwfBox.valueChanged.connect(lambda val: setattr(self.state, 'fitwidthfraction', val / 100.))
         self.ui.fftCheck.stateChanged.connect(self.fft_clicked)
         self.ui.persistTbox.valueChanged.connect(self.set_persistence)
-        self.ui.actionPersist_average.triggered.connect(self.set_average_line_pen)
+        self.ui.persistAvgCheck.stateChanged.connect(self.set_average_line_pen)
         self.ui.persistlinesCheck.clicked.connect(self.set_average_line_pen)
         self.ui.actionLine_color.triggered.connect(self.change_channel_color)
         self.ui.actionHigh_resolution.triggered.connect(self.high_resolution_toggled)
@@ -1477,7 +1476,7 @@ class MainWindow(TemplateBaseClass):
         # Block signals to prevent triggering handlers while syncing
         self.ui.persistTbox.blockSignals(True)
         self.ui.persistlinesCheck.blockSignals(True)
-        self.ui.actionPersist_average.blockSignals(True)
+        self.ui.persistAvgCheck.blockSignals(True)
 
         # Convert persist_time back to the spinbox value (reverse of the formula)
         persist_time_ms = s.persist_time[active_channel]
@@ -1491,12 +1490,12 @@ class MainWindow(TemplateBaseClass):
 
         # Update checkboxes
         self.ui.persistlinesCheck.setChecked(s.persist_lines_enabled[active_channel])
-        self.ui.actionPersist_average.setChecked(s.persist_avg_enabled[active_channel])
+        self.ui.persistAvgCheck.setChecked(s.persist_avg_enabled[active_channel])
 
         # Unblock signals
         self.ui.persistTbox.blockSignals(False)
         self.ui.persistlinesCheck.blockSignals(False)
-        self.ui.actionPersist_average.blockSignals(False)
+        self.ui.persistAvgCheck.blockSignals(False)
 
     def set_persistence(self, value):
         """Handle persistence time changes from the UI."""
@@ -1562,7 +1561,7 @@ class MainWindow(TemplateBaseClass):
 
         # Store UI checkbox states to the active channel's state
         s.persist_lines_enabled[active_channel] = self.ui.persistlinesCheck.isChecked()
-        s.persist_avg_enabled[active_channel] = self.ui.actionPersist_average.isChecked()
+        s.persist_avg_enabled[active_channel] = self.ui.persistAvgCheck.isChecked()
         s.channel_enabled[active_channel] = self.ui.chanonCheck.isChecked()
 
         # Update the pen style/color of the average line
