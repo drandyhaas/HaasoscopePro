@@ -574,9 +574,9 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>60</x>
+          <x>40</x>
           <y>324</y>
-          <width>91</width>
+          <width>131</width>
           <height>21</height>
          </rect>
         </property>
@@ -601,9 +601,9 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>150</x>
+          <x>140</x>
           <y>10</y>
-          <width>61</width>
+          <width>81</width>
           <height>35</height>
          </rect>
         </property>
