@@ -174,7 +174,9 @@ class DummyOscilloscopeServer:
 
         elif sub_cmd == 4:
             # Get pre-data (merge counter)
-            return struct.pack("<I", 0)
+            # Return 1 to keep downsamplemergingcounter stable
+            # (real hardware increments this, but for dummy we keep it constant)
+            return struct.pack("<I", 1)
 
         elif sub_cmd == 5:
             # Get LVDS info/status (clockused checks bits)
@@ -235,10 +237,11 @@ class DummyOscilloscopeServer:
     def _handle_trigger_check(self, data: bytes) -> bytes:
         """Handle opcode 1 (trigger status check)."""
         # Always simulate trigger ready - continuously return new events
-        self.board_state["trigger_counter"] += 1
-        # Event ready response: byte 0 = 251, byte 1 = counter
-        counter = self.board_state["trigger_counter"] % 256
-        return bytes([251, counter, 0, 0])
+        # Event ready response: byte 0 = 251, byte 1 = trigger position, bytes 2-3 = unused
+        # Return trigger position of 0 in byte 1
+        # This combined with triggerpos=50 will center the trigger in the display
+        trigger_pos = 0
+        return bytes([251, trigger_pos, 0, 0])
 
     def _handle_read_data(self, data: bytes) -> bytes:
         """Handle opcode 0 (read captured data)."""
@@ -259,30 +262,29 @@ class DummyOscilloscopeServer:
         #   vals[9]     = marker (should be -16657 / 0xBEEF)
         # Words 0-39 are actual ADC data (20 samples per channel in two-channel mode)
 
+        # Reset data counter at the start of each trigger event to ensure phase starts from 0
+        self.board_state["data_counter"] = 0
+
         adc_data = bytearray()
         nsubsamples = 50
         bytes_per_sample = nsubsamples * 2  # 100 bytes per sample (50 words * 2 bytes/word)
         num_logical_samples = expect_len // bytes_per_sample
 
-        # Ensure we generate exactly expect_len bytes, even if there's remainder
-        remainder = expect_len % bytes_per_sample
-        if remainder != 0:
-            num_logical_samples += 1
-
         for s in range(num_logical_samples):
-            # Words 0-39: ADC data (20 per channel for 2-channel mode)
-            # Generate realistic sine/cosine waveform data
+            # Words 0-39: ADC data (40 samples for single-channel mode)
+            # In single-channel mode: words 0-39 are all from the single channel
+            # Generate continuous sine wave data centered at 0 (symmetric around zero)
+            # ADC is 12-bit, so range is -2048 to +2047
+
+            # Start sample index for this block
+            sample_index = self.board_state["data_counter"] * 40
+
+            # Words 0-39: 40 consecutive ADC samples
+            # Period: 1000 samples = 4 cycles across the 4000-sample capture window
+            # Use amplitude that fits within 12-bit ADC range (-2048 to +2047)
             for i in range(40):
-                phase = (self.board_state["data_counter"] * 40 + i) * 2 * math.pi / 200
-                # Mix of sine and cosine for realism
-                if i < 20:
-                    # Channel A: sine wave
-                    val = int(32768 + 20000 * math.sin(phase))
-                else:
-                    # Channel B: cosine wave
-                    val = int(32768 + 20000 * math.cos(phase + math.pi / 4))
-                # Clamp to 16-bit range
-                val = max(-32768, min(32767, val))
+                phase = (sample_index + i) * 2 * math.pi / 1000
+                val = int(2000 * math.sin(phase))
                 adc_data.extend(struct.pack("<h", val))
 
             # Words 40-49: Timing and marker
@@ -308,10 +310,46 @@ class DummyOscilloscopeServer:
 
             self.board_state["data_counter"] += 1
 
-        # Ensure we return exactly expect_len bytes, padding with zeros if needed
-        if len(adc_data) < expect_len:
-            adc_data.extend(b'\x00' * (expect_len - len(adc_data)))
-        return bytes(adc_data[:expect_len])
+        # Handle any remaining bytes by generating a partial block
+        remainder = expect_len % bytes_per_sample
+        if remainder > 0:
+            # Generate one more partial block
+            sample_index = self.board_state["data_counter"] * 40
+
+            # Calculate how many complete words we need
+            words_needed = remainder // 2
+
+            # Generate ADC data words (up to 40)
+            for i in range(min(words_needed, 40)):
+                phase = (sample_index + i) * 2 * math.pi / 1000
+                val = int(2000 * math.sin(phase))
+                adc_data.extend(struct.pack("<h", val))
+
+            # If we need more words beyond the 40 ADC samples, generate timing/marker data
+            if words_needed > 40:
+                # Clocks (words 40-43)
+                for clk_idx in range(min(4, words_needed - 40)):
+                    clock_val = 341 if (self.board_state["data_counter"] + clk_idx) % 2 == 0 else 682
+                    adc_data.extend(struct.pack("<h", clock_val))
+
+                # Strobes (words 44-47)
+                if words_needed > 44:
+                    for strobe_idx in range(min(4, words_needed - 44)):
+                        strobe_pattern = [1, 2, 4, 8, 16, 32, 64, 128]
+                        strobe_val = strobe_pattern[(self.board_state["data_counter"] + strobe_idx) % 8]
+                        adc_data.extend(struct.pack("<h", strobe_val))
+
+                # Control (word 48)
+                if words_needed > 48:
+                    adc_data.extend(struct.pack("<h", 0))
+
+                # Marker (word 49)
+                if words_needed > 49:
+                    adc_data.extend(struct.pack("<h", -16657))
+
+            self.board_state["data_counter"] += 1
+
+        return bytes(adc_data)
 
     def _handle_spi_transaction(self, data: bytes) -> bytes:
         """Handle opcode 3 (SPI transaction)."""
