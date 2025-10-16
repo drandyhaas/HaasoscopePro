@@ -32,6 +32,15 @@ class DummyOscilloscopeServer:
             "aux_out": 0,
             "board_position": 0,  # 0=middle, 1=first, 2=last
             "has_external_clock": False,  # For LVDS ordering
+            "pll_locked": True,  # PLL lock status (bit 5)
+            "internal_clock": True,  # True=internal, False=external
+            "adc_temp": 25.0,  # Simulated ADC die temperature
+            "board_temp": 20.0,  # Simulated board temperature
+            "channel_impedance": [False, False],  # False=50Ohm, True=1MOhm
+            "channel_coupling": [False, False],  # False=DC, True=AC
+            "channel_att": [False, False],  # False=no att, True=att
+            "split_enabled": False,  # Clock splitter for oversampling
+            "spi_mode": 0,  # Current SPI mode (0 or 1)
         }
 
     def start(self):
@@ -96,17 +105,53 @@ class DummyOscilloscopeServer:
         opcode = data[0]
         sub_cmd = data[1] if len(data) > 1 else 0
 
-        # Opcode 2: General commands
-        if opcode == 2:
-            return self._handle_opcode2(sub_cmd, data)
+        # Opcode 0: Read data
+        if opcode == 0:
+            return self._handle_read_data(data)
 
         # Opcode 1: Trigger check
         elif opcode == 1:
             return self._handle_trigger_check(data)
 
-        # Opcode 0: Read data
-        elif opcode == 0:
-            return self._handle_read_data(data)
+        # Opcode 2: General commands
+        elif opcode == 2:
+            return self._handle_opcode2(sub_cmd, data)
+
+        # Opcode 3: SPI transaction
+        elif opcode == 3:
+            return self._handle_spi_transaction(data)
+
+        # Opcode 4: Set SPI mode
+        elif opcode == 4:
+            return self._handle_set_spi_mode(data)
+
+        # Opcode 5: PLL reset
+        elif opcode == 5:
+            return self._handle_pll_reset(data)
+
+        # Opcode 6: Phase adjust
+        elif opcode == 6:
+            return self._handle_phase_adjust(data)
+
+        # Opcode 7: Clock switch
+        elif opcode == 7:
+            return self._handle_clock_switch(data)
+
+        # Opcode 8: Trigger info/level
+        elif opcode == 8:
+            return self._handle_trigger_info(data)
+
+        # Opcode 9: Set downsample/merge
+        elif opcode == 9:
+            return self._handle_downsample(data)
+
+        # Opcode 10: Set channel parameters
+        elif opcode == 10:
+            return self._handle_channel_control(data)
+
+        # Opcode 11: Send LED RGB values
+        elif opcode == 11:
+            return self._handle_led_control(data)
 
         # Default: return dummy response (4 bytes)
         return struct.pack("<I", 0x00000000)
@@ -120,7 +165,8 @@ class DummyOscilloscopeServer:
 
         elif sub_cmd == 1:
             # Read board digital status
-            status = 0x00000042  # Dummy status
+            # Bit 5 must be 1 for PLL locked
+            status = 0x20 if self.board_state["pll_locked"] else 0x00
             return struct.pack("<I", status)
 
         elif sub_cmd == 4:
@@ -128,10 +174,15 @@ class DummyOscilloscopeServer:
             return struct.pack("<I", 0)
 
         elif sub_cmd == 5:
-            # Get LVDS info/status
-            # Bit 0 = has external clock input (0 for first board, 1 for subsequent)
-            has_clock = 1 if self.board_state["has_external_clock"] else 0
-            return struct.pack("<I", has_clock)
+            # Get LVDS info/status (clockused checks bits)
+            # Bit 1: external clock lock status
+            # Bit 3: no external clock input (for first board)
+            response = 0
+            if self.board_state["internal_clock"]:
+                response |= (1 << 3)  # Set bit 3 for internal clock (first board)
+            else:
+                response |= (1 << 1)  # Set bit 1 for external clock locked
+            return struct.pack("<I", response)
 
         elif sub_cmd == 6:
             # Set fan on/off
@@ -195,6 +246,70 @@ class DummyOscilloscopeServer:
 
         # For now, just return status byte
         return bytes([0, 0, 0, 0])
+
+    def _handle_spi_transaction(self, data: bytes) -> bytes:
+        """Handle opcode 3 (SPI transaction)."""
+        # cs = data[1], nbyte = data[7]
+        # Return dummy SPI response (vendor ID 0x51 for ADC, etc.)
+        return bytes([0x51, 0x00, 0x00, 0x00])
+
+    def _handle_set_spi_mode(self, data: bytes) -> bytes:
+        """Handle opcode 4 (set SPI mode)."""
+        mode = data[1]
+        self.board_state["spi_mode"] = mode
+        return struct.pack("<I", 0)
+
+    def _handle_pll_reset(self, data: bytes) -> bytes:
+        """Handle opcode 5 (PLL reset)."""
+        self.board_state["pll_locked"] = True
+        return struct.pack("<I", 0)
+
+    def _handle_phase_adjust(self, data: bytes) -> bytes:
+        """Handle opcode 6 (phase adjust)."""
+        # pllnum = data[1], plloutnum = data[2], updown = data[3]
+        return struct.pack("<I", 0)
+
+    def _handle_clock_switch(self, data: bytes) -> bytes:
+        """Handle opcode 7 (clock switch)."""
+        # Toggle clock source
+        self.board_state["internal_clock"] = not self.board_state["internal_clock"]
+        return struct.pack("<I", 0)
+
+    def _handle_trigger_info(self, data: bytes) -> bytes:
+        """Handle opcode 8 (trigger info/level)."""
+        return struct.pack("<I", 0)
+
+    def _handle_downsample(self, data: bytes) -> bytes:
+        """Handle opcode 9 (set downsample/merge)."""
+        return struct.pack("<I", 0)
+
+    def _handle_channel_control(self, data: bytes) -> bytes:
+        """Handle opcode 10 (set channel parameters)."""
+        controlbit = data[1]
+        value = data[2]
+
+        # Handle channel impedance/coupling/att control
+        if controlbit == 0:
+            self.board_state["channel_impedance"][0] = bool(value)
+        elif controlbit == 1:
+            self.board_state["channel_coupling"][0] = bool(value)
+        elif controlbit == 2:
+            self.board_state["channel_att"][0] = bool(value)
+        elif controlbit == 4:
+            self.board_state["channel_impedance"][1] = bool(value)
+        elif controlbit == 5:
+            self.board_state["channel_coupling"][1] = bool(value)
+        elif controlbit == 6:
+            self.board_state["channel_att"][1] = bool(value)
+        elif controlbit == 7:
+            self.board_state["split_enabled"] = bool(value)
+
+        return struct.pack("<I", 0)
+
+    def _handle_led_control(self, data: bytes) -> bytes:
+        """Handle opcode 11 (send LED RGB values)."""
+        # data[1] = led_enable, data[2:8] = RGB values
+        return struct.pack("<I", 0)
 
     def stop(self):
         """Stop the server."""
