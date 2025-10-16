@@ -1497,6 +1497,7 @@ class MainWindow(TemplateBaseClass):
         """Sync persistence UI controls with the active channel's settings."""
         s = self.state
         active_channel = s.activexychannel
+        if s.num_board<1: return
 
         # Block signals to prevent triggering handlers while syncing
         self.ui.persistTbox.blockSignals(True)
