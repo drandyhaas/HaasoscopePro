@@ -273,9 +273,10 @@ class DummyOscilloscopeServer:
         time_shift_samples = random.gauss(0, 1.0)  # RMS of 1 sample
         time_shift_ns = time_shift_samples * sample_period
 
-        # Noise: 2% RMS of the signal amplitude (30000)
-        signal_amplitude = 30000
-        noise_rms = 0.02 * signal_amplitude  # ~600 ADC counts
+        # Noise: 2% RMS of the signal amplitude
+        # ADC is 12-bit, amplitude 1500
+        signal_amplitude = 1500
+        noise_rms = 0.02 * signal_amplitude  # ~30 ADC counts
 
         adc_data = bytearray()
         nsubsamples = 50
@@ -293,9 +294,7 @@ class DummyOscilloscopeServer:
 
             # Words 0-39: 40 consecutive ADC samples
             # Period: 1000 samples = 4 cycles across the 4000-sample capture window
-            # Amplitude scaled to produce ~900mV peak-to-peak at display
-            # Calculation: 900mV / (yscale * VperD * 1000) ≈ 29000
-            # But we're limited to 16-bit signed range, so we use 30000
+            # Amplitude: 1500 (12-bit ADC), shifted to upper 12 bits when packing
             for i in range(40):
                 # Apply time shift to each sample (fractional sample interpolation)
                 sample_position = sample_index + i + time_shift_samples
@@ -304,9 +303,10 @@ class DummyOscilloscopeServer:
                 # Add Gaussian noise (~2% RMS)
                 noise = random.gauss(0, noise_rms)
                 val = int(val + noise)
-                # Clamp to 16-bit signed range
-                val = max(-32768, min(32767, val))
-                adc_data.extend(struct.pack("<h", val))
+                # Clamp to 12-bit signed range (-2048 to 2047)
+                val = max(-2048, min(2047, val))
+                # Shift to upper 12 bits of 16-bit short
+                adc_data.extend(struct.pack("<h", val << 4))
 
             # Words 40-49: Timing and marker
             # Clocks (words 40-43): vals[0:4] should be 341 or 682
@@ -349,9 +349,10 @@ class DummyOscilloscopeServer:
                 # Add Gaussian noise (~2% RMS)
                 noise = random.gauss(0, noise_rms)
                 val = int(val + noise)
-                # Clamp to 16-bit signed range
-                val = max(-32768, min(32767, val))
-                adc_data.extend(struct.pack("<h", val))
+                # Clamp to 12-bit signed range (-2048 to 2047)
+                val = max(-2048, min(2047, val))
+                # Shift to upper 12 bits of 16-bit short
+                adc_data.extend(struct.pack("<h", val << 4))
 
             # If we need more words beyond the 40 ADC samples, generate timing/marker data
             if words_needed > 40:
