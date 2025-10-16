@@ -129,6 +129,9 @@ class MainWindow(TemplateBaseClass):
                     self.ui.tadBox.setEnabled(False)
                     self.ui.actionDo_autocalibration.setEnabled(False)
                     self.ui.actionAuto_oversample_alignment.setEnabled(False)
+                else:
+                    # Update autocalibration enabled state based on initial board configuration
+                    self.update_autocalibration_enabled()
 
                 self.dostartstop()  # Start acquisition
                 self.setup_successful = True
@@ -965,6 +968,25 @@ class MainWindow(TemplateBaseClass):
             getattr(self.ui, f"upposButton{i}").setEnabled(not is_enabled)
             getattr(self.ui, f"downposButton{i}").setEnabled(not is_enabled)
 
+    def update_autocalibration_enabled(self):
+        """Update the enabled state of the Do Autocalibration action.
+
+        Should be enabled only when the active board is an even-numbered board
+        in an oversampling pair.
+        """
+        s = self.state
+        # Check if we have at least 2 boards
+        if s.num_board < 2:
+            self.ui.actionDo_autocalibration.setEnabled(False)
+            return
+
+        # Check if active board is even and in oversampling mode
+        is_even_board = s.activeboard % 2 == 0
+        is_oversampling = s.dooversample[s.activeboard]
+
+        should_enable = is_even_board and is_oversampling
+        self.ui.actionDo_autocalibration.setEnabled(should_enable)
+
     def toggle_oversampling_controls(self):
         """Shows or hides the oversampling delay and fine delay adjustment buttons."""
         is_enabled = self.ui.actionOversampling_controls.isChecked()
@@ -1160,6 +1182,9 @@ class MainWindow(TemplateBaseClass):
         self.update_trigger_spinbox_tooltip(self.ui.totBox, "Time over threshold required to trigger")
         self.update_trigger_spinbox_tooltip(self.ui.trigger_delay_box, "Time to wait before actually firing trigger")
         self.update_trigger_spinbox_tooltip(self.ui.trigger_holdoff_box, "Time needed failing threshold before passing threshold")
+
+        # Update autocalibration enabled state based on new board selection
+        self.update_autocalibration_enabled()
 
     def trigger_pos_changed(self, value):
         """
@@ -2039,6 +2064,24 @@ class MainWindow(TemplateBaseClass):
         s.dooversample[board] = bool(checked)
         s.dooversample[board + 1] = bool(checked)
         s.skip_next_event = True  # Skip next event after oversampling change
+
+        # Reset persistence settings for both boards in the oversampling pair (ch0 only)
+        ch0_board1 = board * s.num_chan_per_board
+        ch0_board2 = (board + 1) * s.num_chan_per_board
+
+        for ch_idx in [ch0_board1, ch0_board2]:
+            s.persist_time[ch_idx] = 0
+            s.persist_lines_enabled[ch_idx] = True
+            s.persist_avg_enabled[ch_idx] = True
+            # Clear any existing persistence data
+            self.plot_manager.clear_persist(ch_idx)
+            # Update visibility (might have been hidden if persist avg was on and lines were off)
+            self.update_channel_visibility(ch_idx)
+
+        # If we're resetting the active channel, update UI to reflect defaults
+        if s.activexychannel in [ch0_board1, ch0_board2]:
+            self.sync_persistence_ui()
+
         self.controller.set_oversampling(board, bool(checked))
         if bool(checked):
             self.ui.interleavedCheck.setEnabled(True)
@@ -2049,6 +2092,13 @@ class MainWindow(TemplateBaseClass):
             self.ui.interleavedCheck.setEnabled(False)
             self.ui.interleavedCheck.setChecked(False)
             self.ui.twochanCheck.setEnabled(True)
+            # When disabling oversampling, re-enable the odd board's ch0
+            s.channel_enabled[ch0_board2] = True
+            self.update_channel_visibility(ch0_board2)
+
+        # Update autocalibration enabled state based on oversampling change
+        self.update_autocalibration_enabled()
+
         self.gain_changed()
         self.offset_changed()
         all_colors = [pen.color() for pen in self.plot_manager.linepens]
