@@ -290,23 +290,34 @@ class DummyOscilloscopeServer:
         # Map 0-254 to ADC range: 0 -> -2048, 127 -> 0, 254 -> +2047
         trigger_level_adc = int((trigger_level_raw - 127) * 2047 / 127)
 
+        # Apply triggerdelta: the actual trigger threshold is trigger_level + triggerdelta
+        # triggerdelta is in raw ADC units (0-255 range, but represents ADC counts)
+        # The signal must cross this higher threshold to trigger (for rising edge)
+        trigger_delta = self.board_state["trigger_delta"]
+        # triggerdelta is already in the same scale as trigger_level (0-255)
+        # Convert it to ADC units the same way
+        trigger_delta_adc = int(trigger_delta * 2047 / 127)
+        actual_trigger_level_adc = trigger_level_adc + trigger_delta_adc
+
         # Get trigger position (in logical sample blocks) and convert to ADC sample index
         # Each logical sample block contains 40 ADC samples (words 0-39)
-        # So trigger_pos needs to be multiplied by 40 to get the actual ADC sample position
+        # Note: trigger_pos already includes triggershift (see hardware_controller.py:214)
+        # IMPORTANT: The software expects the trigger at (triggerpos + 1) * 40 samples
+        # (see data_processor.py:275 - vline_time uses triggerpos + 1.0)
         trigger_pos_blocks = self.board_state["trigger_pos"]
-        trigger_pos = trigger_pos_blocks * 40
+        trigger_pos = (trigger_pos_blocks + 1) * 40
 
         adc_data = bytearray()
         nsubsamples = 50
         bytes_per_sample = nsubsamples * 2  # 100 bytes per sample (50 words * 2 bytes/word)
         num_logical_samples = expect_len // bytes_per_sample
 
-        # Calculate phase offset so the waveform crosses trigger_level_adc at trigger_pos
-        # For a rising edge trigger: we want sin(phase_at_trigger) = trigger_level_adc / signal_amplitude
+        # Calculate phase offset so the waveform crosses actual_trigger_level_adc at trigger_pos
+        # For a rising edge trigger: we want sin(phase_at_trigger) = actual_trigger_level_adc / signal_amplitude
         # We need to ensure the trigger level is within the signal amplitude range
-        if signal_amplitude > 0 and abs(trigger_level_adc) <= signal_amplitude:
-            # Calculate the phase where the sine wave equals the trigger level (rising edge)
-            normalized_level = trigger_level_adc / signal_amplitude
+        if signal_amplitude > 0 and abs(actual_trigger_level_adc) <= signal_amplitude:
+            # Calculate the phase where the sine wave equals the actual trigger level (rising edge)
+            normalized_level = actual_trigger_level_adc / signal_amplitude
             # Clamp to valid range for arcsin
             normalized_level = max(-1.0, min(1.0, normalized_level))
             # Get phase where sin(phase) = normalized_level (choose rising edge)
