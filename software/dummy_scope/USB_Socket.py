@@ -30,6 +30,7 @@ class UsbSocketAdapter:
         self._recv_timeout = 250  # ms
         self._send_timeout = 2000  # ms
         self.good = False
+        self._buffer = b""  # Internal buffer for any excess data from recv
 
         # Try to connect
         self._connect()
@@ -82,6 +83,31 @@ class UsbSocketAdapter:
         """Set send timeout."""
         self._send_timeout = timeout_ms
 
+    def flush_buffer(self):
+        """Clear the internal buffer AND drain any data from the socket. Used when expect_samples changes (e.g., during pllreset)."""
+        self._buffer = b""
+        # Try to drain any pending data from the socket without blocking
+        if self._socket:
+            old_timeout = self._socket.gettimeout()
+            try:
+                self._socket.settimeout(0.1)  # Longer timeout to ensure we drain all pending data
+                drained_bytes = 0
+                while True:
+                    chunk = self._socket.recv(4096)
+                    if not chunk:
+                        break
+                    drained_bytes += len(chunk)
+            except socket.timeout:
+                pass  # Expected - no more data
+            except Exception:
+                pass
+            finally:
+                self._socket.settimeout(old_timeout)
+        if drained_bytes > 0:
+            print(f"USB Socket buffer flushed (drained {drained_bytes} bytes)")
+        else:
+            print("USB Socket buffer flushed")
+
     def send(self, data: bytes) -> int:
         """
         Send data to the server.
@@ -105,24 +131,62 @@ class UsbSocketAdapter:
 
     def recv(self, recv_len: int) -> bytes:
         """
-        Receive data from the server.
+        Receive data from the server, looping until all data is received or timeout.
+        This function handles buffering to ensure exact byte counts are returned.
+        For large data reads (>1000 bytes), we use a longer timeout to ensure we get all data.
 
         Args:
             recv_len (int): Number of bytes to receive
 
         Returns:
-            bytes: Received data
+            bytes: Received data (exactly recv_len bytes if available, or less if timeout/error)
         """
         if not self.good or not self._socket:
             return b""
 
         try:
-            data = self._socket.recv(recv_len)
-            return data
+            data = self._buffer  # Start with any leftover data from previous recv
+            self._buffer = b""  # Clear the buffer
+
+            # For large data reads, use a longer timeout to ensure we get all data
+            # This is critical for data transfers during PLL calibration
+            if recv_len > 1000:
+                old_timeout = self._socket.gettimeout()
+                self._socket.settimeout(1.0)  # 1 second for large transfers
+
+            # Read data until we have enough
+            while len(data) < recv_len:
+                remaining = recv_len - len(data)
+                chunk = self._socket.recv(min(remaining, 65536))  # Recv in 64KB chunks
+                if not chunk:
+                    # Socket closed
+                    break
+                data += chunk
+
+            # Restore original timeout for large reads
+            if recv_len > 1000:
+                self._socket.settimeout(old_timeout)
+
+            # Return exactly recv_len bytes, save any excess for next call
+            if len(data) > recv_len:
+                self._buffer = data[recv_len:]
+                return data[:recv_len]
+            else:
+                return data
+
         except socket.timeout:
-            print(f"Receive timeout after {self._recv_timeout}ms")
+            # Timeout - for small reads this is ok, but for large reads it's a problem
+            # Just return what we have
+            if len(self._buffer) > 0:
+                data = self._buffer[:recv_len]
+                self._buffer = self._buffer[recv_len:]
+                return data
             return b""
         except Exception as e:
             print(f"Receive error: {e}")
             self.good = False
+            if len(self._buffer) > 0:
+                data = self._buffer[:recv_len]
+                self._buffer = self._buffer[recv_len:]
+                return data
             return b""

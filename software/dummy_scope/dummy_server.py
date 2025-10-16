@@ -10,6 +10,7 @@ import struct
 import threading
 import argparse
 import time
+import math
 from typing import Dict, Tuple
 
 class DummyOscilloscopeServer:
@@ -41,6 +42,8 @@ class DummyOscilloscopeServer:
             "channel_att": [False, False],  # False=no att, True=att
             "split_enabled": False,  # Clock splitter for oversampling
             "spi_mode": 0,  # Current SPI mode (0 or 1)
+            "trigger_counter": 0,  # Incrementing trigger counter
+            "data_counter": 0,  # For phase continuity in generated data
         }
 
     def start(self):
@@ -231,21 +234,84 @@ class DummyOscilloscopeServer:
 
     def _handle_trigger_check(self, data: bytes) -> bytes:
         """Handle opcode 1 (trigger status check)."""
-        # Simple dummy: simulate trigger ready after a few calls
-        if self.board_state["trigger_ready"]:
-            # Event ready response: byte 0 = 251, byte 1 = counter
-            return bytes([251, 0, 0, 0])
-        else:
-            # Not ready
-            return bytes([0, 0, 0, 0])
+        # Always simulate trigger ready - continuously return new events
+        self.board_state["trigger_counter"] += 1
+        # Event ready response: byte 0 = 251, byte 1 = counter
+        counter = self.board_state["trigger_counter"] % 256
+        return bytes([251, counter, 0, 0])
 
     def _handle_read_data(self, data: bytes) -> bytes:
         """Handle opcode 0 (read captured data)."""
-        # Return dummy ADC data: sine wave pattern
-        expect_len = struct.unpack("<I", data[4:8])[0] if len(data) >= 8 else 100
+        # Extract expected data length from bytes [4:8]
+        expect_len = struct.unpack("<I", data[4:8])[0] if len(data) >= 8 else 1000
 
-        # For now, just return status byte
-        return bytes([0, 0, 0, 0])
+        # The real USB protocol may return 8 bytes of header/status before the data.
+        # To match that behavior over TCP/socket, we return: [4-byte status][4-byte count][data]
+        # The client's recv() will handle this properly with our buffering logic.
+
+        # Data format: nsubsamples = 50 words per sample
+        # Based on data_processor.py line 189:
+        #   vals = unpackedsamples[s * nsubsamples + 40: s * nsubsamples + 50]
+        # So words 40-49 contain timing info and marker:
+        #   vals[0:4]   = clocks (should be 341 or 682)
+        #   vals[4:8]   = strobes (should be one-hot: 1, 2, 4, 8, 16, 32, 64, 128)
+        #   vals[8]     = control (should be 0)
+        #   vals[9]     = marker (should be -16657 / 0xBEEF)
+        # Words 0-39 are actual ADC data (20 samples per channel in two-channel mode)
+
+        adc_data = bytearray()
+        nsubsamples = 50
+        bytes_per_sample = nsubsamples * 2  # 100 bytes per sample (50 words * 2 bytes/word)
+        num_logical_samples = expect_len // bytes_per_sample
+
+        # Ensure we generate exactly expect_len bytes, even if there's remainder
+        remainder = expect_len % bytes_per_sample
+        if remainder != 0:
+            num_logical_samples += 1
+
+        for s in range(num_logical_samples):
+            # Words 0-39: ADC data (20 per channel for 2-channel mode)
+            # Generate realistic sine/cosine waveform data
+            for i in range(40):
+                phase = (self.board_state["data_counter"] * 40 + i) * 2 * math.pi / 200
+                # Mix of sine and cosine for realism
+                if i < 20:
+                    # Channel A: sine wave
+                    val = int(32768 + 20000 * math.sin(phase))
+                else:
+                    # Channel B: cosine wave
+                    val = int(32768 + 20000 * math.cos(phase + math.pi / 4))
+                # Clamp to 16-bit range
+                val = max(-32768, min(32767, val))
+                adc_data.extend(struct.pack("<h", val))
+
+            # Words 40-49: Timing and marker
+            # Clocks (words 40-43): vals[0:4] should be 341 or 682
+            for clk_idx in range(4):
+                clock_val = 341 if (self.board_state["data_counter"] + clk_idx) % 2 == 0 else 682
+                adc_data.extend(struct.pack("<h", clock_val))
+
+            # Strobes (words 44-47): vals[4:8] should be one-hot encoded
+            # Comment says "10*4 clks + 8 strs", but we only have 4 strobe words in vals[4:8]
+            # So we generate a cycling pattern of one-hot values
+            for strobe_idx in range(4):
+                # Cycle through one-hot patterns: 1, 2, 4, 8, 16, 32, 64, 128
+                strobe_pattern = [1, 2, 4, 8, 16, 32, 64, 128]
+                strobe_val = strobe_pattern[(self.board_state["data_counter"] + strobe_idx) % 8]
+                adc_data.extend(struct.pack("<h", strobe_val))
+
+            # Word 48 (vals[8]): Control byte (should be 0)
+            adc_data.extend(struct.pack("<h", 0))
+
+            # Word 49 (vals[9]): 0xBEEF marker (-16657 in signed 16-bit)
+            adc_data.extend(struct.pack("<h", -16657))
+
+            self.board_state["data_counter"] += 1
+
+        # Ensure we return exactly expect_len bytes, padding with zeros if needed
+        if len(adc_data) < expect_len:
+            adc_data.extend(b'\x00' * (expect_len - len(adc_data)))
+        return bytes(adc_data[:expect_len])
 
     def _handle_spi_transaction(self, data: bytes) -> bytes:
         """Handle opcode 3 (SPI transaction)."""
