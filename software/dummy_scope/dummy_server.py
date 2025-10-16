@@ -57,6 +57,8 @@ class DummyOscilloscopeServer:
             "downsample_merging": 1,  # Number of samples to merge
             # Trigger type (from opcode 1)
             "trigger_type": 1,  # 1 = rising edge, 2 = falling edge
+            # Channel mode (from opcode 1, data[2])
+            "two_channel_mode": False,  # False = single channel (3.2 GS/s), True = two channel (1.6 GS/s per channel)
         }
 
     def start(self):
@@ -254,6 +256,13 @@ class DummyOscilloscopeServer:
         trigger_type = data[1]
         self.board_state["trigger_type"] = trigger_type
 
+        # Parse two-channel mode from data[2]
+        # data[2] = is_two_channel + 2 * state.dooversample[board_idx]
+        # For non-oversampling mode: data[2] = 0 (single channel) or 1 (two channel)
+        channel_mode_byte = data[2]
+        is_two_channel = (channel_mode_byte % 2) == 1  # Extract the LSB
+        self.board_state["two_channel_mode"] = is_two_channel
+
         # Always simulate trigger ready - continuously return new events
         # Event ready response: byte 0 = 251, byte 1 = trigger position, bytes 2-3 = unused
         # Return trigger position of 0 in byte 1
@@ -362,53 +371,151 @@ class DummyOscilloscopeServer:
         # So: phase_offset = trigger_pos - (phase_at_trigger * period) / (2*pi)
         phase_offset = trigger_pos - (phase_at_trigger * wave_period) / (2 * math.pi)
 
+        # Check if we're in two-channel mode
+        two_channel_mode = self.board_state["two_channel_mode"]
+
         for s in range(num_logical_samples):
-            # Words 0-39: ADC data (40 samples for single-channel mode)
-            # In single-channel mode: words 0-39 are all from the single channel
+            # Words 0-39: ADC data
+            # In single-channel mode: words 0-39 are all from channel 1 at 3.2 GS/s (40 samples)
+            # In two-channel mode: words 0-19 are channel 2, words 20-39 are channel 1, each at 1.6 GS/s (20 samples each)
             # Generate triggered sine wave data
             # ADC is 12-bit, so range is -2048 to +2047
 
             # Start sample index for this block
-            sample_index = self.board_state["data_counter"] * 40
+            if two_channel_mode:
+                # In two-channel mode, each logical block has 20 samples per channel
+                # Sample index for channel 1 (used for triggering)
+                sample_index = self.board_state["data_counter"] * 20
+            else:
+                # In single-channel mode, each logical block has 40 samples
+                sample_index = self.board_state["data_counter"] * 40
 
-            # Words 0-39: 40 consecutive ADC samples
-            # The base waveform has period 1000 samples at 3.2 GHz (doesn't change with downsampling)
-            # When downsampling by factor N:
-            #   - Each output sample represents N input samples averaged/decimated
-            #   - Output sample i corresponds to base sample positions i*N to i*N+N-1
-            # Amplitude: 1500 (12-bit ADC), shifted to upper 12 bits when packing
-            for i in range(40):
-                if downsample_factor == 1:
-                    # No downsampling - generate sample directly at base rate
-                    base_sample_pos = sample_index + i + time_shift_samples
-                    phase = (base_sample_pos - phase_offset) * 2 * math.pi / wave_period
-                    val = int(signal_amplitude * math.sin(phase))
-                    noise = random.gauss(0, noise_rms)
-                    val = int(val + noise)
-                elif highres == 1:
-                    # Averaging mode: average downsample_factor base-rate samples together
-                    # Output sample i averages base samples from (sample_index+i)*N to (sample_index+i)*N + N-1
-                    val_sum = 0
-                    base_start = (sample_index + i) * downsample_factor
-                    for j in range(downsample_factor):
-                        base_sample_pos = base_start + j + time_shift_samples
-                        phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
-                        base_val = int(signal_amplitude * math.sin(phase))
+            if two_channel_mode:
+                # Two-channel mode: Generate 20 samples for channel 1 (words 0-19), then 20 for channel 0 (words 20-39)
+                # Each channel samples at 1.6 GS/s (half the single-channel rate)
+                # Channel 0 (words 20-39) should have the SAME waveform as in single-channel mode (trigger channel)
+                # Channel 1 (words 0-19) can have different data (e.g., a 100 MHz square wave)
+                # The base waveform has period 1000 samples at 3.2 GHz base rate
+                # When downsampling by factor N:
+                #   - Each output sample represents N input samples averaged/decimated
+                #   - Output sample i corresponds to base sample positions i*N to i*N+N-1
+                # Amplitude: 1500 (12-bit ADC), shifted to upper 12 bits when packing
+
+                # Channel 1 (words 0-19): Generate a 100 MHz square wave for variety
+                # 100 MHz at 1.6 GS/s = 16 samples per cycle
+                for i in range(20):
+                    # In two-channel mode, samples are spaced 2x further apart (1.6 GS/s vs 3.2 GS/s)
+                    # So each output sample i represents base samples at positions i*2, i*2+1 (interleaved)
+                    if downsample_factor == 1:
+                        # No downsampling - generate sample at 1.6 GS/s rate
+                        # Channel 1 uses even-numbered base samples (0, 2, 4, ...)
+                        base_sample_pos = (sample_index + i) * 2 + time_shift_samples
+                        # Generate 100 MHz square wave: 16 samples per cycle at 1.6 GS/s
+                        square_period = 16.0
+                        square_phase = ((base_sample_pos / 2) % square_period) / square_period  # Normalize to 0-1
+                        val = int(signal_amplitude * 0.7 * (1 if square_phase < 0.5 else -1))  # Square wave
                         noise = random.gauss(0, noise_rms)
-                        val_sum += base_val + noise
-                    val = int(val_sum / downsample_factor)
-                else:
-                    # Decimation mode: pick the first sample of every N base-rate samples
-                    base_sample_pos = (sample_index + i) * downsample_factor + time_shift_samples
-                    phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
-                    val = int(signal_amplitude * math.sin(phase))
-                    noise = random.gauss(0, noise_rms)
-                    val = int(val + noise)
+                        val = int(val + noise)
+                    elif highres == 1:
+                        # Averaging mode
+                        val_sum = 0
+                        base_start = (sample_index + i) * 2 * downsample_factor
+                        for j in range(downsample_factor):
+                            base_sample_pos = base_start + j * 2 + time_shift_samples
+                            square_period = 16.0
+                            square_phase = ((base_sample_pos / 2) % square_period) / square_period
+                            base_val = int(signal_amplitude * 0.7 * (1 if square_phase < 0.5 else -1))
+                            noise = random.gauss(0, noise_rms)
+                            val_sum += base_val + noise
+                        val = int(val_sum / downsample_factor)
+                    else:
+                        # Decimation mode
+                        base_sample_pos = (sample_index + i) * 2 * downsample_factor + time_shift_samples
+                        square_period = 16.0
+                        square_phase = ((base_sample_pos / 2) % square_period) / square_period
+                        val = int(signal_amplitude * 0.7 * (1 if square_phase < 0.5 else -1))
+                        noise = random.gauss(0, noise_rms)
+                        val = int(val + noise)
 
-                # Clamp to 12-bit signed range (-2048 to 2047)
-                val = max(-2048, min(2047, val))
-                # Shift to upper 12 bits of 16-bit short
-                adc_data.extend(struct.pack("<h", val << 4))
+                    # Clamp to 12-bit signed range (-2048 to 2047)
+                    val = max(-2048, min(2047, val))
+                    # Shift to upper 12 bits of 16-bit short
+                    adc_data.extend(struct.pack("<h", val << 4))
+
+                # Channel 0 (words 20-39): Generate with trigger-aligned phase (same as single-channel mode)
+                # This channel should be consistent between single and two-channel modes
+                for i in range(20):
+                    if downsample_factor == 1:
+                        # No downsampling - generate sample at 1.6 GS/s rate
+                        # Channel 0 uses odd-numbered base samples (1, 3, 5, ...) - but offset by 1
+                        base_sample_pos = (sample_index + i) * 2 + 1 + time_shift_samples
+                        phase = (base_sample_pos - phase_offset) * 2 * math.pi / wave_period
+                        val = int(signal_amplitude * math.sin(phase))
+                        noise = random.gauss(0, noise_rms)
+                        val = int(val + noise)
+                    elif highres == 1:
+                        # Averaging mode
+                        val_sum = 0
+                        base_start = (sample_index + i) * 2 * downsample_factor + 1
+                        for j in range(downsample_factor):
+                            base_sample_pos = base_start + j * 2 + time_shift_samples
+                            phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
+                            base_val = int(signal_amplitude * math.sin(phase))
+                            noise = random.gauss(0, noise_rms)
+                            val_sum += base_val + noise
+                        val = int(val_sum / downsample_factor)
+                    else:
+                        # Decimation mode
+                        base_sample_pos = (sample_index + i) * 2 * downsample_factor + 1 + time_shift_samples
+                        phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
+                        val = int(signal_amplitude * math.sin(phase))
+                        noise = random.gauss(0, noise_rms)
+                        val = int(val + noise)
+
+                    # Clamp to 12-bit signed range (-2048 to 2047)
+                    val = max(-2048, min(2047, val))
+                    # Shift to upper 12 bits of 16-bit short
+                    adc_data.extend(struct.pack("<h", val << 4))
+
+            else:
+                # Single-channel mode: Words 0-39 are 40 consecutive ADC samples at 3.2 GS/s
+                # The base waveform has period 1000 samples at 3.2 GHz (doesn't change with downsampling)
+                # When downsampling by factor N:
+                #   - Each output sample represents N input samples averaged/decimated
+                #   - Output sample i corresponds to base sample positions i*N to i*N+N-1
+                # Amplitude: 1500 (12-bit ADC), shifted to upper 12 bits when packing
+                for i in range(40):
+                    if downsample_factor == 1:
+                        # No downsampling - generate sample directly at base rate
+                        base_sample_pos = sample_index + i + time_shift_samples
+                        phase = (base_sample_pos - phase_offset) * 2 * math.pi / wave_period
+                        val = int(signal_amplitude * math.sin(phase))
+                        noise = random.gauss(0, noise_rms)
+                        val = int(val + noise)
+                    elif highres == 1:
+                        # Averaging mode: average downsample_factor base-rate samples together
+                        # Output sample i averages base samples from (sample_index+i)*N to (sample_index+i)*N + N-1
+                        val_sum = 0
+                        base_start = (sample_index + i) * downsample_factor
+                        for j in range(downsample_factor):
+                            base_sample_pos = base_start + j + time_shift_samples
+                            phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
+                            base_val = int(signal_amplitude * math.sin(phase))
+                            noise = random.gauss(0, noise_rms)
+                            val_sum += base_val + noise
+                        val = int(val_sum / downsample_factor)
+                    else:
+                        # Decimation mode: pick the first sample of every N base-rate samples
+                        base_sample_pos = (sample_index + i) * downsample_factor + time_shift_samples
+                        phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
+                        val = int(signal_amplitude * math.sin(phase))
+                        noise = random.gauss(0, noise_rms)
+                        val = int(val + noise)
+
+                    # Clamp to 12-bit signed range (-2048 to 2047)
+                    val = max(-2048, min(2047, val))
+                    # Shift to upper 12 bits of 16-bit short
+                    adc_data.extend(struct.pack("<h", val << 4))
 
             # Words 40-49: Timing and marker
             # Clocks (words 40-43): vals[0:4] should be 341 or 682
