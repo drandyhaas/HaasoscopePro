@@ -720,6 +720,9 @@ class PlotManager(pg.QtCore.QObject):
                 pen = self.linepens[channel_idx]
                 avg_line = self.plot.plot(pen=pg.mkPen(color=pen.color(), width=1),
                                           name=f"persist_avg_ch{channel_idx}")
+                # Make the average line clickable to select the channel
+                avg_line.curve.setClickable(True)
+                avg_line.curve.sigClicked.connect(self._create_click_handler(channel_idx))
                 self.average_lines[channel_idx] = avg_line
                 # Set initial visibility based on state
                 avg_line.setVisible(s.persist_avg_enabled[channel_idx])
