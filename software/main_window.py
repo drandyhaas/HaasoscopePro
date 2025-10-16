@@ -58,6 +58,9 @@ class MainWindow(TemplateBaseClass):
         # 4. Connect all signals from UI widgets to slots in this class
         self._connect_signals()
 
+        # 4b. Sync persistence UI to match state defaults (before any other operations)
+        self.sync_persistence_ui()
+
         # 5. Initialize network socket and other components
         self.socket = None
         self.socket_thread = None
@@ -193,6 +196,8 @@ class MainWindow(TemplateBaseClass):
         # Initialize line width from state
         self.ui.linewidthBox.setValue(self.state.line_width)
         self.line_width_changed(self.state.line_width)
+        # Initialize persistence UI controls from state
+        self.sync_persistence_ui()
 
     def _sync_board_settings_to_hardware(self, board_idx):
         """
@@ -413,17 +418,27 @@ class MainWindow(TemplateBaseClass):
             # The index of the second channel on this board
             ch1_idx = board_idx * s.num_chan_per_board + 1
 
-            # Determine if the second channel should be visible
-            is_ch1_visible = s.dotwochannel[board_idx]
-
-            self.plot_manager.lines[ch1_idx].setVisible(is_ch1_visible)
-
-            # If hiding the channel, also clear its data to remove the stale trace
-            if not is_ch1_visible:
+            # Update channel enabled state based on two-channel mode
+            if s.dotwochannel[board_idx]:
+                # In two-channel mode, ch1 should be enabled
+                s.channel_enabled[ch1_idx] = True
+            else:
+                # In single-channel mode, ch1 should be disabled
+                s.channel_enabled[ch1_idx] = False
                 self.plot_manager.lines[ch1_idx].clear()
+
+            # Apply correct visibility based on all state (including persistence)
+            self.update_channel_visibility(ch1_idx)
 
         # Update reference menu states based on initial data
         self.update_clear_all_reference_state()
+
+        # Update persistence UI to reflect the current channel's settings
+        # (important when switching modes causes channel selection to change)
+        self.sync_persistence_ui()
+
+        # Also update visibility for the active channel
+        self.update_channel_visibility(s.activexychannel)
 
     def open_socket(self):
         print("Starting SCPI socket thread...")
@@ -1059,8 +1074,11 @@ class MainWindow(TemplateBaseClass):
         self.ui.ohmCheck.setChecked(s.mohm[s.activexychannel])
         self.ui.attCheck.setChecked(s.att[s.activexychannel])
         self.ui.tenxCheck.setChecked(s.tenx[s.activexychannel] == 10)
-        self.ui.chanonCheck.setChecked(self.plot_manager.lines[s.activexychannel].isVisible())
+        self.ui.chanonCheck.setChecked(s.channel_enabled[s.activexychannel])
         self.ui.tadBox.setValue(s.tad[s.activeboard])
+
+        # Update persistence UI controls to reflect active channel's settings
+        self.sync_persistence_ui()
 
         # Update per-board trigger settings
         self.ui.trigger_delay_box.setValue(s.trigger_delay[s.activeboard])
@@ -1447,57 +1465,111 @@ class MainWindow(TemplateBaseClass):
 
     def chanon_changed(self, checked):
         """Toggles the visibility of the currently selected channel's trace."""
-        # Set the visibility of the main line plot item
-        self.plot_manager.lines[self.state.activexychannel].setVisible(bool(checked))
-
         # Update the average line's pen and visibility, which depends on this checkbox
+        # This will also update the main line visibility correctly via update_channel_visibility()
         self.set_average_line_pen()
+
+    def sync_persistence_ui(self):
+        """Sync persistence UI controls with the active channel's settings."""
+        s = self.state
+        active_channel = s.activexychannel
+
+        # Block signals to prevent triggering handlers while syncing
+        self.ui.persistTbox.blockSignals(True)
+        self.ui.persistlinesCheck.blockSignals(True)
+        self.ui.actionPersist_average.blockSignals(True)
+
+        # Convert persist_time back to the spinbox value (reverse of the formula)
+        persist_time_ms = s.persist_time[active_channel]
+        if persist_time_ms > 0:
+            # Reverse formula: value = log2(persist_time_ms / 50)
+            import math
+            value = int(math.log2(persist_time_ms / 50))
+        else:
+            value = 0
+        self.ui.persistTbox.setValue(value)
+
+        # Update checkboxes
+        self.ui.persistlinesCheck.setChecked(s.persist_lines_enabled[active_channel])
+        self.ui.actionPersist_average.setChecked(s.persist_avg_enabled[active_channel])
+
+        # Unblock signals
+        self.ui.persistTbox.blockSignals(False)
+        self.ui.persistlinesCheck.blockSignals(False)
+        self.ui.actionPersist_average.blockSignals(False)
 
     def set_persistence(self, value):
-        self.plot_manager.set_persistence(value)
+        """Handle persistence time changes from the UI."""
+        s = self.state
+        active_channel = s.activexychannel
+
+        # Store to state
+        persist_time_ms = 50 * pow(2, value) if value > 0 else 0
+        s.persist_time[active_channel] = persist_time_ms
+
+        # Update plot manager
+        self.plot_manager.set_persistence(value, active_channel)
         self.set_average_line_pen()
+
+    def update_channel_visibility(self, channel_index):
+        """Update visibility for a specific channel based on its state."""
+        s = self.state
+
+        # Get channel settings
+        is_chan_on = s.channel_enabled[channel_index]
+        show_persist_lines = s.persist_lines_enabled[channel_index]
+        show_persist_avg = s.persist_avg_enabled[channel_index]
+        persist_time = s.persist_time[channel_index]
+
+        # Get the line objects
+        main_line = self.plot_manager.lines[channel_index]
+        average_line = self.plot_manager.average_lines.get(channel_index)
+
+        # If channel is not enabled, hide everything
+        if not is_chan_on:
+            main_line.setVisible(False)
+            if average_line:
+                average_line.setVisible(False)
+            if channel_index in self.plot_manager.persist_lines_per_channel:
+                for item, _, _ in self.plot_manager.persist_lines_per_channel[channel_index]:
+                    item.setVisible(False)
+            return
+
+        # Channel is enabled - apply visibility rules
+
+        # Average line visibility
+        if average_line:
+            average_line.setVisible(show_persist_avg)
+
+        # Persist lines visibility
+        if channel_index in self.plot_manager.persist_lines_per_channel:
+            for item, _, _ in self.plot_manager.persist_lines_per_channel[channel_index]:
+                item.setVisible(show_persist_lines)
+
+        # Main trace visibility: hide ONLY if average is on AND persist lines are off AND persist time > 0
+        if show_persist_avg and not show_persist_lines and persist_time > 0:
+            main_line.setVisible(False)
+        else:
+            main_line.setVisible(True)
 
     def set_average_line_pen(self):
         """
         Updates the appearance and visibility of the main trace, the average trace,
         and the faint persistence traces based on UI settings.
         """
-        # First, tell the plot manager to update the pen style/color of the average line
+        s = self.state
+        active_channel = s.activexychannel
+
+        # Store UI checkbox states to the active channel's state
+        s.persist_lines_enabled[active_channel] = self.ui.persistlinesCheck.isChecked()
+        s.persist_avg_enabled[active_channel] = self.ui.actionPersist_average.isChecked()
+        s.channel_enabled[active_channel] = self.ui.chanonCheck.isChecked()
+
+        # Update the pen style/color of the average line
         self.plot_manager.set_average_line_pen()
 
-        # Get the state of the relevant UI checkboxes
-        is_chan_on = self.ui.chanonCheck.isChecked()
-        show_persist_lines = self.ui.persistlinesCheck.isChecked()
-        num_persist_lines = self.ui.persistTbox.value()
-        show_persist_avg = self.ui.actionPersist_average.isChecked()
-
-        # Get the line objects from the plot manager
-        active_line = self.plot_manager.lines[self.state.activexychannel]
-        average_line = self.plot_manager.average_line
-
-        # If the main "Channel On" box is unchecked, everything for this channel is hidden.
-        if not is_chan_on:
-            active_line.setVisible(False)
-            average_line.setVisible(False)
-            for item, _, _ in self.plot_manager.persist_lines:
-                item.setVisible(False)
-            return
-
-        # --- VISIBILITY LOGIC WHEN CHANNEL IS ON ---
-
-        # 1. The average line's visibility is directly tied to its checkbox.
-        average_line.setVisible(show_persist_avg)
-
-        # 2. The faint persist lines' visibility is tied to their checkbox.
-        for item, _, _ in self.plot_manager.persist_lines:
-            item.setVisible(show_persist_lines)
-
-        # 3. THIS IS YOUR NEW RULE:
-        #    Hide the main trace ONLY if the average is on AND the faint lines are off.
-        if show_persist_avg and not show_persist_lines and num_persist_lines>0:
-            active_line.setVisible(False)
-        else:
-            active_line.setVisible(True)
+        # Update visibility for the active channel
+        self.update_channel_visibility(active_channel)
 
     # #########################################################################
     # ## Slot Implementations (Callbacks for UI events)
@@ -1989,9 +2061,15 @@ class MainWindow(TemplateBaseClass):
         s.dointerleaved[board] = bool(checked)
         s.dointerleaved[board + 1] = bool(checked)
 
-        # Hide the traces from the secondary board
-        c_secondary = (board + 1) * s.num_chan_per_board
-        self.plot_manager.lines[c_secondary].setVisible(not bool(checked))
+        # Update visibility for the secondary board's channels
+        # When interleaved, secondary board channels should be disabled
+        c_secondary_ch0 = (board + 1) * s.num_chan_per_board
+        c_secondary_ch1 = c_secondary_ch0 + 1
+        if checked:
+            s.channel_enabled[c_secondary_ch0] = False
+            s.channel_enabled[c_secondary_ch1] = False
+        self.update_channel_visibility(c_secondary_ch0)
+        self.update_channel_visibility(c_secondary_ch1)
 
         self.time_changed()
         all_colors = [pen.color() for pen in self.plot_manager.linepens]

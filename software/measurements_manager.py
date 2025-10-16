@@ -162,6 +162,7 @@ class MeasurementsManager:
             (self.ui.actionDuty_cycle, "Duty cycle"),
             (self.ui.actionRisetime, "Risetime"),  # Special: also handles Falltime
             (self.ui.actionRisetime_error, "Risetime error"),  # Special: also handles Falltime error
+            (self.ui.actionN_persist_lines, "Persist lines"),  # Per-channel persist line count
         ]
 
         for action, name in measurement_actions:
@@ -176,7 +177,7 @@ class MeasurementsManager:
         for action, name in board_measurement_actions:
             action.triggered.connect(lambda checked, n=name: self.toggle_board_measurement(n, checked))
 
-        # Global measurements (Trigger threshold, Persist lines) are handled in update_measurements_display
+        # Global measurements (Trigger threshold) are handled in update_measurements_display
 
     def toggle_measurement(self, measurement_name, checked):
         """Add or remove a measurement for the current channel."""
@@ -266,14 +267,12 @@ class MeasurementsManager:
         """Remove a global measurement by unchecking its menu item."""
         if measurement_name == "Trig threshold":
             self.ui.actionTrigger_thresh.setChecked(False)
-        elif measurement_name == "Persist lines":
-            self.ui.actionN_persist_lines.setChecked(False)
 
     def add_all_measurements_for_channel(self):
         """Add all available measurements for the current channel."""
         # Manually add each measurement (setting checkbox doesn't trigger the signal)
         measurement_types = ["Mean", "RMS", "Min", "Max", "Vpp", "Freq", "Period", "Duty cycle", "Risetime",
-                             "Risetime error"]
+                             "Risetime error", "Persist lines"]
 
         for measurement_name in measurement_types:
             self.toggle_measurement(measurement_name, True)
@@ -348,6 +347,7 @@ class MeasurementsManager:
                                                                                                      channel_key) in self.active_measurements))
         self.ui.actionRisetime_error.setChecked((("Risetime error", channel_key) in self.active_measurements or (
             "Falltime error", channel_key) in self.active_measurements))
+        self.ui.actionN_persist_lines.setChecked((("Persist lines", channel_key) in self.active_measurements))
 
         # Check which board-level measurements are active for this board
         self.ui.actionADC_temperature.setChecked((("ADC temp", board_key) in self.active_measurements))
@@ -565,10 +565,6 @@ class MeasurementsManager:
             hline_val = self.plot_manager.otherlines['hline'].value()
             _set_global_measurement("Trig threshold", hline_val, "div")
 
-        if self.ui.actionN_persist_lines.isChecked():
-            num_persist = len(self.plot_manager.persist_lines)
-            _set_global_measurement("Persist lines", num_persist)
-
         # Handle temperature measurements (per-board)
         # Cache for temperature readings per board (board_index: (adc_temp, board_temp, timestamp))
         if not hasattr(self, 'board_temp_cache'):
@@ -599,8 +595,12 @@ class MeasurementsManager:
                 name = key[0]
                 if name == "Trig threshold" and not self.ui.actionTrigger_thresh.isChecked():
                     global_measurements_to_remove.append(key)
-                elif name == "Persist lines" and not self.ui.actionN_persist_lines.isChecked():
-                    global_measurements_to_remove.append(key)
+
+        # Remove "Persist lines" per-channel measurements if checkbox is unchecked
+        if not self.ui.actionN_persist_lines.isChecked():
+            persist_measurements_to_remove = [key for key in self.measurement_items.keys()
+                                              if key[0] == "Persist lines" and key[1].startswith("CH")]
+            global_measurements_to_remove.extend(persist_measurements_to_remove)
 
         for key in global_measurements_to_remove:
             if key in self.measurement_items:
@@ -625,6 +625,21 @@ class MeasurementsManager:
                         _set_measurement(measurement_key, self.board_temp_cache[board_idx][0], "\u00b0C")
                     elif measurement_name == "Board temp":
                         _set_measurement(measurement_key, self.board_temp_cache[board_idx][1], "\u00b0C")
+                continue  # Skip normal channel processing
+
+            # Special case: "Persist lines" measurement doesn't need waveform data
+            if measurement_name == "Persist lines":
+                # Extract channel index from channel_key (format: "B0 Ch1")
+                if " " in channel_key:
+                    parts = channel_key.split()
+                    board = int(parts[0][1:])  # Remove 'B' prefix
+                    chan = int(parts[1][2:])  # Get channel number (remove 'Ch' prefix)
+                    channel_index = board * self.state.num_chan_per_board + chan
+
+                    # Get persist lines count for this channel
+                    persist_lines = self.plot_manager.persist_lines_per_channel.get(channel_index, [])
+                    num_persist = len(persist_lines)
+                    _set_measurement(measurement_key, num_persist)
                 continue  # Skip normal channel processing
 
             # Determine which channel's data to use

@@ -2344,11 +2344,11 @@ Outlined if triggering on this channel</string>
      <bool>true</bool>
     </property>
     <addaction name="actionTrigger_thresh"/>
-    <addaction name="actionN_persist_lines"/>
     <addaction name="separator"/>
     <addaction name="action_For_Board_X_Channel_Y"/>
     <addaction name="actionADC_temperature"/>
     <addaction name="actionBoard_temperature"/>
+    <addaction name="actionN_persist_lines"/>
     <addaction name="actionMean"/>
     <addaction name="actionRMS"/>
     <addaction name="actionMaximum"/>

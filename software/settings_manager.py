@@ -94,12 +94,14 @@ def save_setup(main_window):
 
         # Plot manager settings
         'line_width': main_window.state.line_width,
-        'persistence': main_window.ui.persistTbox.value(),
-        'persist_avg_enabled': main_window.ui.actionPersist_average.isChecked(),
-        'persist_lines_enabled': main_window.ui.persistlinesCheck.isChecked(),
 
-        # Channel visibility (per-channel)
-        'channel_visible': [line.isVisible() for line in main_window.plot_manager.lines],
+        # Per-channel persistence settings
+        'persist_time': main_window.state.persist_time,
+        'persist_lines_enabled': main_window.state.persist_lines_enabled,
+        'persist_avg_enabled': main_window.state.persist_avg_enabled,
+
+        # Channel enabled state (per-channel, from chanonCheck)
+        'channel_enabled': main_window.state.channel_enabled,
 
         # Channel colors
         'channel_colors': [pen.color().name() for pen in main_window.plot_manager.linepens],
@@ -326,18 +328,44 @@ def load_setup(main_window):
     if 'line_width' in setup:
         main_window.state.line_width = setup['line_width']
         main_window.ui.linewidthBox.setValue(setup['line_width'])
-    if 'persistence' in setup:
-        main_window.ui.persistTbox.setValue(setup['persistence'])
-    if 'persist_avg_enabled' in setup:
-        main_window.ui.actionPersist_average.setChecked(setup['persist_avg_enabled'])
-    if 'persist_lines_enabled' in setup:
-        main_window.ui.persistlinesCheck.setChecked(setup['persist_lines_enabled'])
 
-    # Channel visibility (per-channel)
-    if 'channel_visible' in setup:
-        for idx, is_visible in enumerate(setup['channel_visible']):
-            if idx < len(main_window.plot_manager.lines):
-                main_window.plot_manager.lines[idx].setVisible(is_visible)
+    # Load per-channel persistence settings
+    if 'persist_time' in setup:
+        main_window.state.persist_time = setup['persist_time']
+    if 'persist_lines_enabled' in setup:
+        persist_lines = setup['persist_lines_enabled']
+        # Handle both old (bool) and new (list) formats
+        if isinstance(persist_lines, bool):
+            # Old format: single bool, apply to all channels
+            main_window.state.persist_lines_enabled = [persist_lines] * len(main_window.state.persist_lines_enabled)
+        else:
+            # New format: per-channel list
+            main_window.state.persist_lines_enabled = persist_lines
+    if 'persist_avg_enabled' in setup:
+        persist_avg = setup['persist_avg_enabled']
+        # Handle both old (bool) and new (list) formats
+        if isinstance(persist_avg, bool):
+            # Old format: single bool, apply to all channels
+            main_window.state.persist_avg_enabled = [persist_avg] * len(main_window.state.persist_avg_enabled)
+        else:
+            # New format: per-channel list
+            main_window.state.persist_avg_enabled = persist_avg
+
+    # Sync UI controls to reflect active channel's persistence settings
+    main_window.sync_persistence_ui()
+
+    # Initialize persistence timer based on loaded settings
+    any_persist_active = any(t > 0 for t in main_window.state.persist_time)
+    if any_persist_active:
+        if not main_window.plot_manager.persist_timer.isActive():
+            main_window.plot_manager.persist_timer.start(50)
+
+    # Channel enabled state (per-channel)
+    if 'channel_enabled' in setup:
+        main_window.state.channel_enabled = setup['channel_enabled']
+    elif 'channel_visible' in setup:
+        # Backward compatibility: use old channel_visible as channel_enabled
+        main_window.state.channel_enabled = setup['channel_visible']
 
     # Channel colors
     if 'channel_colors' in setup:

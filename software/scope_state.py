@@ -52,6 +52,12 @@ class ScopeState:
         self.lpf = [0] * (num_boards * num_chan_per_board)
         self.time_skew = [0] * (num_boards * num_chan_per_board)  # Time offset in nanoseconds per channel
         self.channel_names = [''] * (num_boards * num_chan_per_board)  # Custom names for each channel
+        self.channel_enabled = [True] * (num_boards * num_chan_per_board)  # Whether channel is enabled (chanonCheck)
+
+        # Per-channel persistence settings
+        self.persist_time = [0] * (num_boards * num_chan_per_board)  # Persistence time in ms for each channel
+        self.persist_lines_enabled = [True] * (num_boards * num_chan_per_board)  # Show faint persist lines
+        self.persist_avg_enabled = [True] * (num_boards * num_chan_per_board)  # Show persist average
 
         # Triggering Parameters
         self.triggerlevel = 127
@@ -86,8 +92,8 @@ class ScopeState:
         self.downsamplemergingcounter = [0] * self.num_board
         self.distcorr = [0] * self.num_board
         self.totdistcorr = [0] * self.num_board
-        self.distcorrtol = 1.0
-        self.distcorrsamp = 20
+        self.distcorrtol = 3.0
+        self.distcorrsamp = 30
         self.noextboard = -1
         self.lvdstrigdelay = [0] * self.num_board
         self.lastlvdstrigdelay = [0] * self.num_board
