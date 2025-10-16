@@ -51,6 +51,10 @@ class DummyOscilloscopeServer:
             "trigger_pos": 0,  # Position in waveform where trigger should occur
             "trigger_time_thresh": 0,  # Timing threshold
             "trigger_chan": 0,  # Channel to trigger on
+            # Downsample settings (from opcode 9)
+            "downsample_ds": 0,  # Downsample factor (power of 2)
+            "downsample_highres": 1,  # 1 = averaging mode, 0 = decimation mode
+            "downsample_merging": 1,  # Number of samples to merge
         }
 
     def start(self):
@@ -326,7 +330,14 @@ class DummyOscilloscopeServer:
             # Default to zero crossing if trigger level is out of range
             phase_at_trigger = 0.0
 
-        # Period: 1000 samples = 4 cycles across the 4000-sample capture window
+        # Calculate the effective downsample factor
+        ds = self.board_state["downsample_ds"]
+        merging = self.board_state["downsample_merging"]
+        highres = self.board_state["downsample_highres"]
+        downsample_factor = merging * (2 ** ds)
+
+        # Period: 1000 samples = 4 cycles across the 4000-sample capture window (at full rate)
+        # This doesn't change with downsampling - the output samples are still at the same rate
         wave_period = 1000.0
         # Calculate phase offset so that at trigger_pos, we have the trigger crossing
         # phase = (sample_position - phase_offset) * 2*pi / period
@@ -344,17 +355,39 @@ class DummyOscilloscopeServer:
             sample_index = self.board_state["data_counter"] * 40
 
             # Words 0-39: 40 consecutive ADC samples
-            # Period: 1000 samples = 4 cycles across the 4000-sample capture window
+            # The base waveform has period 1000 samples at 3.2 GHz (doesn't change with downsampling)
+            # When downsampling by factor N:
+            #   - Each output sample represents N input samples averaged/decimated
+            #   - Output sample i corresponds to base sample positions i*N to i*N+N-1
             # Amplitude: 1500 (12-bit ADC), shifted to upper 12 bits when packing
             for i in range(40):
-                # Apply time shift to each sample (fractional sample interpolation)
-                sample_position = sample_index + i + time_shift_samples
-                # Apply phase offset so waveform triggers at the correct position
-                phase = (sample_position - phase_offset) * 2 * math.pi / wave_period
-                val = int(signal_amplitude * math.sin(phase))
-                # Add Gaussian noise (~2% RMS)
-                noise = random.gauss(0, noise_rms)
-                val = int(val + noise)
+                if downsample_factor == 1:
+                    # No downsampling - generate sample directly at base rate
+                    base_sample_pos = sample_index + i + time_shift_samples
+                    phase = (base_sample_pos - phase_offset) * 2 * math.pi / wave_period
+                    val = int(signal_amplitude * math.sin(phase))
+                    noise = random.gauss(0, noise_rms)
+                    val = int(val + noise)
+                elif highres == 1:
+                    # Averaging mode: average downsample_factor base-rate samples together
+                    # Output sample i averages base samples from (sample_index+i)*N to (sample_index+i)*N + N-1
+                    val_sum = 0
+                    base_start = (sample_index + i) * downsample_factor
+                    for j in range(downsample_factor):
+                        base_sample_pos = base_start + j + time_shift_samples
+                        phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
+                        base_val = int(signal_amplitude * math.sin(phase))
+                        noise = random.gauss(0, noise_rms)
+                        val_sum += base_val + noise
+                    val = int(val_sum / downsample_factor)
+                else:
+                    # Decimation mode: pick the first sample of every N base-rate samples
+                    base_sample_pos = (sample_index + i) * downsample_factor + time_shift_samples
+                    phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
+                    val = int(signal_amplitude * math.sin(phase))
+                    noise = random.gauss(0, noise_rms)
+                    val = int(val + noise)
+
                 # Clamp to 12-bit signed range (-2048 to 2047)
                 val = max(-2048, min(2047, val))
                 # Shift to upper 12 bits of 16-bit short
@@ -394,14 +427,32 @@ class DummyOscilloscopeServer:
 
             # Generate ADC data words (up to 40)
             for i in range(min(words_needed, 40)):
-                # Apply time shift to each sample (fractional sample interpolation)
-                sample_position = sample_index + i + time_shift_samples
-                # Apply phase offset so waveform triggers at the correct position
-                phase = (sample_position - phase_offset) * 2 * math.pi / wave_period
-                val = int(signal_amplitude * math.sin(phase))
-                # Add Gaussian noise (~2% RMS)
-                noise = random.gauss(0, noise_rms)
-                val = int(val + noise)
+                if downsample_factor == 1:
+                    # No downsampling - generate sample directly at base rate
+                    base_sample_pos = sample_index + i + time_shift_samples
+                    phase = (base_sample_pos - phase_offset) * 2 * math.pi / wave_period
+                    val = int(signal_amplitude * math.sin(phase))
+                    noise = random.gauss(0, noise_rms)
+                    val = int(val + noise)
+                elif highres == 1:
+                    # Averaging mode: average downsample_factor base-rate samples together
+                    val_sum = 0
+                    base_start = (sample_index + i) * downsample_factor
+                    for j in range(downsample_factor):
+                        base_sample_pos = base_start + j + time_shift_samples
+                        phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
+                        base_val = int(signal_amplitude * math.sin(phase))
+                        noise = random.gauss(0, noise_rms)
+                        val_sum += base_val + noise
+                    val = int(val_sum / downsample_factor)
+                else:
+                    # Decimation mode: pick the first sample of every N base-rate samples
+                    base_sample_pos = (sample_index + i) * downsample_factor + time_shift_samples
+                    phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
+                    val = int(signal_amplitude * math.sin(phase))
+                    noise = random.gauss(0, noise_rms)
+                    val = int(val + noise)
+
                 # Clamp to 12-bit signed range (-2048 to 2047)
                 val = max(-2048, min(2047, val))
                 # Shift to upper 12 bits of 16-bit short
@@ -478,6 +529,14 @@ class DummyOscilloscopeServer:
 
     def _handle_downsample(self, data: bytes) -> bytes:
         """Handle opcode 9 (set downsample/merge)."""
+        # Parse downsample parameters:
+        # data[1] = ds (downsample factor as power of 2)
+        # data[2] = highres (1 = averaging, 0 = decimation)
+        # data[3] = downsamplemerging (number of samples to merge)
+        # Total downsample factor = downsamplemerging * 2^ds
+        self.board_state["downsample_ds"] = data[1]
+        self.board_state["downsample_highres"] = data[2]
+        self.board_state["downsample_merging"] = data[3]
         return struct.pack("<I", 0)
 
     def _handle_channel_control(self, data: bytes) -> bytes:
