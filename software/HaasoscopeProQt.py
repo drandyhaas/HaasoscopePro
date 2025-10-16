@@ -25,10 +25,10 @@ if __name__ == '__main__':
         print("Searching for Haasoscope Pro boards...")
         max_devices = 100
 
-        # Can use dummy or real scope
-        use_dummy_scope = False
-        if use_dummy_scope: usbs = connect_socket_devices(["localhost:9998"])
-        else: usbs = connectdevices(max_devices)  # This will now return an empty list if none are found
+        # Can use dummy scope if found, or real scope
+        try_to_use_dummy_server = False
+        usbs = connect_socket_devices(["localhost:9998"]) if try_to_use_dummy_server else []
+        if len(usbs)<1: usbs = connectdevices(max_devices)
 
         if usbs:
             for b in range(len(usbs)):
