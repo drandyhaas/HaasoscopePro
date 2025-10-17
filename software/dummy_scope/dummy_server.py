@@ -396,6 +396,11 @@ class DummyOscilloscopeServer:
         # since there's no phase coherence between the two channels
         trigger_chan = self.board_state["trigger_chan"]
 
+        # Check if trigger is possible for the square wave (ch1)
+        # Square wave amplitude is 70% of signal_amplitude = 1050 ADC counts
+        square_amplitude = int(signal_amplitude * 0.7)
+        ch1_trigger_possible = abs(actual_trigger_level_adc) <= square_amplitude
+
         if two_channel_mode:
             # Generate random phase offsets for both channels
             # We'll apply trigger alignment to the triggered channel only
@@ -445,8 +450,8 @@ class DummyOscilloscopeServer:
                         base_sample_pos = (sample_index + i) * 2 + time_shift_samples
                         # Position in 1.6 GS/s samples (divide by 2 since we're using every other base sample)
                         ch1_sample_pos = base_sample_pos / 2
-                        if trigger_chan == 1:
-                            # Triggering on ch1 - align to trigger position
+                        if trigger_chan == 1 and ch1_trigger_possible:
+                            # Triggering on ch1 and trigger is possible - align to trigger position
                             # Trigger position is in base samples, convert to ch1 samples
                             ch1_trigger_pos = trigger_pos / 2
                             square_phase = ((ch1_sample_pos - ch1_trigger_pos) % square_period) / square_period
@@ -454,7 +459,7 @@ class DummyOscilloscopeServer:
                             if is_falling:
                                 square_phase = (square_phase + 0.5) % 1.0
                         else:
-                            # Not triggering on ch1 - use random phase
+                            # Not triggering on ch1 or trigger not possible - use random phase
                             square_phase = ((ch1_sample_pos + ch1_random_phase * square_period / (2 * math.pi)) % square_period) / square_period
                         # Convert phase to square wave value
                         val = int(signal_amplitude * 0.7 * (1 if square_phase < 0.5 else -1))
@@ -467,7 +472,7 @@ class DummyOscilloscopeServer:
                         for j in range(downsample_factor):
                             base_sample_pos = base_start + j * 2 + time_shift_samples
                             ch1_sample_pos = base_sample_pos / 2
-                            if trigger_chan == 1:
+                            if trigger_chan == 1 and ch1_trigger_possible:
                                 ch1_trigger_pos = trigger_pos / 2
                                 square_phase = ((ch1_sample_pos - ch1_trigger_pos) % square_period) / square_period
                                 if is_falling:
@@ -482,7 +487,7 @@ class DummyOscilloscopeServer:
                         # Decimation mode
                         base_sample_pos = (sample_index + i) * 2 * downsample_factor + time_shift_samples
                         ch1_sample_pos = base_sample_pos / 2
-                        if trigger_chan == 1:
+                        if trigger_chan == 1 and ch1_trigger_possible:
                             ch1_trigger_pos = trigger_pos / 2
                             square_phase = ((ch1_sample_pos - ch1_trigger_pos) % square_period) / square_period
                             if is_falling:
