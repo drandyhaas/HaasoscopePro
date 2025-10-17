@@ -402,12 +402,13 @@ class DummyOscilloscopeServer:
 
         return {'ch0': ch0_samples, 'ch1': ch1_samples}
 
-    def _find_trigger(self, wave_buffer: Dict[str, list]) -> int:
+    def _find_trigger(self, wave_buffer: Dict[str, list], start_search_index: int = 0) -> int:
         """
         Find the trigger point in the waveform buffer.
 
         Args:
             wave_buffer: Dictionary with 'ch0' and 'ch1' waveform data
+            start_search_index: Index to start searching from (to ensure pre-trigger margin)
 
         Returns:
             Sample index where trigger occurs, or None if no trigger found
@@ -433,8 +434,8 @@ class DummyOscilloscopeServer:
         else:
             trigger_data = wave_buffer['ch1']
 
-        # Search for trigger crossing
-        for i in range(1, len(trigger_data)):
+        # Search for trigger crossing, starting from start_search_index
+        for i in range(max(1, start_search_index), len(trigger_data)):
             prev_val = trigger_data[i - 1]
             curr_val = trigger_data[i]
 
@@ -449,6 +450,20 @@ class DummyOscilloscopeServer:
 
         # No trigger found
         return None
+
+    def _find_trigger_with_margin(self, wave_buffer: Dict[str, list], pre_trigger_samples: int) -> int:
+        """
+        Find trigger in buffer, ensuring enough pre-trigger samples are available.
+
+        Args:
+            wave_buffer: Dictionary with 'ch0' and 'ch1' waveform data
+            pre_trigger_samples: Number of samples needed before the trigger point
+
+        Returns:
+            Sample index where trigger occurs (with margin), or None if no trigger found
+        """
+        # Start searching after pre_trigger_samples to ensure we have enough headroom
+        return self._find_trigger(wave_buffer, start_search_index=pre_trigger_samples)
 
     def _handle_read_data(self, data: bytes) -> bytes:
         """Handle opcode 0 (read captured data)."""
@@ -480,20 +495,23 @@ class DummyOscilloscopeServer:
 
         total_adc_samples_needed = num_logical_samples * samples_per_block
 
-        # Generate a buffer ~2x the size to allow for trigger searching
-        buffer_size = total_adc_samples_needed * 2
+        # Get trigger position (where trigger should appear in the output)
+        # trigger_pos is in logical sample blocks, convert to ADC samples
+        trigger_pos_blocks = self.board_state["trigger_pos"]
+        trigger_pos_samples = trigger_pos_blocks * samples_per_block
+
+        # Generate a buffer with enough headroom for pre-trigger and post-trigger samples
+        # We need: pre-trigger samples + actual data samples + search window
+        # Add extra headroom (2x the needed samples) to ensure we can find triggers
+        buffer_size = total_adc_samples_needed + trigger_pos_samples + total_adc_samples_needed
 
         # Generate waveform buffer with random starting phase
         start_phase = random.uniform(0, 2 * math.pi)
         wave_buffer = self._generate_wave_buffer(buffer_size, start_phase)
 
-        # Find trigger point in the buffer
-        trigger_index = self._find_trigger(wave_buffer)
-
-        # Get trigger position (where trigger should appear in the output)
-        # trigger_pos is in logical sample blocks, convert to ADC samples
-        trigger_pos_blocks = self.board_state["trigger_pos"]
-        trigger_pos_samples = (trigger_pos_blocks + 1) * samples_per_block
+        # Find trigger point in the buffer, but only search after we have enough pre-trigger samples
+        # This ensures we can always extract the correct window
+        trigger_index = self._find_trigger_with_margin(wave_buffer, trigger_pos_samples)
 
         # Determine the starting index in the buffer to extract data
         if trigger_index is not None:
