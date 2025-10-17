@@ -23,6 +23,7 @@ from calibration import autocalibration, do_meanrms_calibration
 from settings_manager import save_setup, load_setup
 from math_channels_window import MathChannelsWindow
 from reference_manager import save_reference_lines, load_reference_lines
+from dummy_server_config_dialog import DummyServerConfigDialog
 
 # Import remaining dependencies
 from FFTWindow import FFTWindow
@@ -39,6 +40,9 @@ WindowTemplate, TemplateBaseClass = loadUiType(pwd + "/HaasoscopePro.ui")
 class MainWindow(TemplateBaseClass):
     def __init__(self, usbs):
         super().__init__()
+
+        # Store usbs for later use
+        self.usbs = usbs
 
         # 1. Initialize core components
         self.state = ScopeState(num_boards=len(usbs), num_chan_per_board=2)
@@ -66,6 +70,7 @@ class MainWindow(TemplateBaseClass):
         self.socket_thread = None
         self.fftui = None
         self.math_window = None
+        self.dummy_server_config_dialog = None
         # Initialize boardBox ComboBox with board numbers
         self.ui.boardBox.blockSignals(True)
         self.ui.boardBox.setMaxVisibleItems(self.state.num_board)
@@ -310,6 +315,9 @@ class MainWindow(TemplateBaseClass):
         self.ui.downposButton4.clicked.connect(self.downpos4)
         self.ui.actionForce_split.triggered.connect(self.force_split_toggled)
         self.ui.actionForce_switch_clocks.triggered.connect(self.force_switch_clocks_triggered)
+        self.ui.actionConfigure_dummy_scope.triggered.connect(self.open_dummy_server_config)
+        if self._is_connected_to_dummy_server():
+            self.ui.actionConfigure_dummy_scope.setEnabled(True)
 
         # Menu actions
         self.ui.actionAbout.triggered.connect(self.about_dialog)
@@ -1643,6 +1651,24 @@ class MainWindow(TemplateBaseClass):
             # Use stabilized data (after trigger stabilizers are applied)
             math_results = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data)
             self.plot_manager.update_math_channel_data(math_results)
+
+    def _is_connected_to_dummy_server(self):
+        """Check if any USB device is connected to a dummy server (socket)."""
+        for usb in self.usbs:
+            if hasattr(usb, 'socket_addr'):  # UsbSocketAdapter has socket_addr
+                #print(f"  -> Connected to dummy server at: {usb.socket_addr}")
+                return True
+        return False
+
+    def open_dummy_server_config(self):
+        """Open or bring to front the dummy server configuration dialog."""
+        if self.dummy_server_config_dialog is None:
+            self.dummy_server_config_dialog = DummyServerConfigDialog(self, self.usbs)
+            self.dummy_server_config_dialog.show()
+        else:
+            # Dialog exists - just bring it to front
+            self.dummy_server_config_dialog.raise_()
+            self.dummy_server_config_dialog.activateWindow()
 
     def open_history_window(self):
         """Slot for the 'History window' menu action."""

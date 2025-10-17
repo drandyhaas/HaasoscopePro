@@ -2881,7 +2881,7 @@ Outlined if triggering on this channel</string>
     <bool>false</bool>
    </property>
    <property name="text">
-    <string>Configure dummy scope</string>
+    <string>Dummy scope</string>
    </property>
   </action>
  </widget>

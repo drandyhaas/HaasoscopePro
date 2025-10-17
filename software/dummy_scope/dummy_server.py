@@ -196,6 +196,10 @@ class DummyOscilloscopeServer:
         elif opcode == 11:
             return self._handle_led_control(data)
 
+        # Opcode 12: Dummy server configuration (custom opcode)
+        elif opcode == 12:
+            return self._handle_dummy_config(data)
+
         # Default: return dummy response (4 bytes)
         return struct.pack("<I", 0x00000000)
 
@@ -890,6 +894,24 @@ class DummyOscilloscopeServer:
     def _handle_led_control(self, data: bytes) -> bytes:
         """Handle opcode 11 (send LED RGB values)."""
         # data[1] = led_enable, data[2:8] = RGB values
+        return struct.pack("<I", 0)
+
+    def _handle_dummy_config(self, data: bytes) -> bytes:
+        """Handle opcode 12 (dummy server configuration)."""
+        # Format: [12, channel, wave_type_code, 0, 0, 0, 0, 0]
+        # wave_type_code: 0 = sine, 1 = square, 2 = pulse
+        channel = data[1]
+        wave_type_code = data[2]
+
+        wave_types = {0: "sine", 1: "square", 2: "pulse"}
+        wave_type = wave_types.get(wave_type_code, "pulse")
+
+        if channel in self.channel_config:
+            self.channel_config[channel]["wave_type"] = wave_type
+            print(f"[DUMMY SERVER] Channel {channel} wave type set to: {wave_type}")
+        else:
+            print(f"[DUMMY SERVER] Warning: Invalid channel {channel}")
+
         return struct.pack("<I", 0)
 
     def stop(self):
