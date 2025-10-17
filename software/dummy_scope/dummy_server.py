@@ -59,6 +59,9 @@ class DummyOscilloscopeServer:
             "trigger_type": 1,  # 1 = rising edge, 2 = falling edge
             # Channel mode (from opcode 1, data[2])
             "two_channel_mode": False,  # False = single channel (3.2 GS/s), True = two channel (1.6 GS/s per channel)
+            # Gain and offset (from SPI commands)
+            "channel_gain": [0, 0],  # Gain in dB for each channel (0 = 0dB = 1x)
+            "channel_offset": [0, 0],  # Offset in ADC counts for each channel
         }
 
     def start(self):
@@ -352,12 +355,45 @@ class DummyOscilloscopeServer:
         bytes_per_sample = nsubsamples * 2  # 100 bytes per sample (50 words * 2 bytes/word)
         num_logical_samples = expect_len // bytes_per_sample
 
+        # Get gain and offset BEFORE calculating trigger_possible
+        # We need these to determine the actual waveform range
+        trigger_chan = self.board_state["trigger_chan"]
+
+        # Determine which channel's gain/offset to use based on trigger channel
+        # In two-channel mode: ch0 and ch1 are separate
+        # In single-channel mode: always use ch0 (since that's the active channel)
+        two_channel_mode = self.board_state["two_channel_mode"]
+
+        if two_channel_mode:
+            # Use the gain/offset of the trigger channel
+            trigger_gain_db = self.board_state["channel_gain"][trigger_chan]
+            trigger_offset_adc = self.board_state["channel_offset"][trigger_chan]
+        else:
+            # Single channel mode - always use ch0
+            trigger_gain_db = self.board_state["channel_gain"][0]
+            trigger_offset_adc = self.board_state["channel_offset"][0]
+
+        # Convert gain from dB to linear
+        trigger_gain = pow(10, trigger_gain_db / 20.0)
+
+        # Calculate the actual amplitude of the trigger channel after gain
+        trigger_amplitude = signal_amplitude * trigger_gain
+
+        # For square wave (ch1), use 70% amplitude
+        if two_channel_mode and trigger_chan == 1:
+            trigger_amplitude = signal_amplitude * 0.7 * trigger_gain
+
         # Calculate phase offset so the waveform crosses actual_trigger_level_adc at trigger_pos
-        # We need to ensure the trigger level is within the signal amplitude range
-        trigger_possible = signal_amplitude > 0 and abs(actual_trigger_level_adc) <= signal_amplitude
+        # The waveform (after gain and offset) ranges from:
+        #   (trigger_offset_adc - trigger_amplitude) to (trigger_offset_adc + trigger_amplitude)
+        # For triggering to be possible, actual_trigger_level_adc must be within this range
+        trigger_possible = (trigger_amplitude > 0 and
+                          actual_trigger_level_adc >= (trigger_offset_adc - trigger_amplitude) and
+                          actual_trigger_level_adc <= (trigger_offset_adc + trigger_amplitude))
 
         if trigger_possible:
-            normalized_level = actual_trigger_level_adc / signal_amplitude
+            # Normalize the trigger level relative to the offset center
+            normalized_level = (actual_trigger_level_adc - trigger_offset_adc) / trigger_amplitude
             # Clamp to valid range for arcsin
             normalized_level = max(-1.0, min(1.0, normalized_level))
 
@@ -394,12 +430,6 @@ class DummyOscilloscopeServer:
 
         # For two-channel mode: generate random phase offsets for the non-triggered channel
         # since there's no phase coherence between the two channels
-        trigger_chan = self.board_state["trigger_chan"]
-
-        # Check if trigger is possible for the square wave (ch1)
-        # Square wave amplitude is 70% of signal_amplitude = 1050 ADC counts
-        square_amplitude = int(signal_amplitude * 0.7)
-        ch1_trigger_possible = abs(actual_trigger_level_adc) <= square_amplitude
 
         if two_channel_mode:
             # Generate random phase offsets for both channels
@@ -409,6 +439,13 @@ class DummyOscilloscopeServer:
         else:
             ch0_random_phase = 0
             ch1_random_phase = 0
+
+        # Get gain and offset for both channels
+        # Gain is in dB, convert to linear: gain_linear = 10^(gain_db/20)
+        ch0_gain = pow(10, self.board_state["channel_gain"][0] / 20.0)
+        ch1_gain = pow(10, self.board_state["channel_gain"][1] / 20.0)
+        ch0_offset = self.board_state["channel_offset"][0]
+        ch1_offset = self.board_state["channel_offset"][1]
 
         for s in range(num_logical_samples):
             # Words 0-39: ADC data
@@ -450,7 +487,7 @@ class DummyOscilloscopeServer:
                         base_sample_pos = (sample_index + i) * 2 + time_shift_samples
                         # Position in 1.6 GS/s samples (divide by 2 since we're using every other base sample)
                         ch1_sample_pos = base_sample_pos / 2
-                        if trigger_chan == 1 and ch1_trigger_possible:
+                        if trigger_chan == 1 and trigger_possible:
                             # Triggering on ch1 and trigger is possible - align to trigger position
                             # Trigger position is in base samples, convert to ch1 samples
                             ch1_trigger_pos = trigger_pos / 2
@@ -461,10 +498,10 @@ class DummyOscilloscopeServer:
                         else:
                             # Not triggering on ch1 or trigger not possible - use random phase
                             square_phase = ((ch1_sample_pos + ch1_random_phase * square_period / (2 * math.pi)) % square_period) / square_period
-                        # Convert phase to square wave value
-                        val = int(signal_amplitude * 0.7 * (1 if square_phase < 0.5 else -1))
+                        # Convert phase to square wave value, apply gain
+                        val = int(signal_amplitude * 0.7 * (1 if square_phase < 0.5 else -1) * ch1_gain)
                         noise = random.gauss(0, noise_rms)
-                        val = int(val + noise)
+                        val = int(val + noise + ch1_offset)
                     elif highres == 1:
                         # Averaging mode
                         val_sum = 0
@@ -472,31 +509,32 @@ class DummyOscilloscopeServer:
                         for j in range(downsample_factor):
                             base_sample_pos = base_start + j * 2 + time_shift_samples
                             ch1_sample_pos = base_sample_pos / 2
-                            if trigger_chan == 1 and ch1_trigger_possible:
+                            if trigger_chan == 1 and trigger_possible:
                                 ch1_trigger_pos = trigger_pos / 2
                                 square_phase = ((ch1_sample_pos - ch1_trigger_pos) % square_period) / square_period
                                 if is_falling:
                                     square_phase = (square_phase + 0.5) % 1.0
                             else:
                                 square_phase = ((ch1_sample_pos + ch1_random_phase * square_period / (2 * math.pi)) % square_period) / square_period
-                            base_val = int(signal_amplitude * 0.7 * (1 if square_phase < 0.5 else -1))
+                            base_val = int(signal_amplitude * 0.7 * (1 if square_phase < 0.5 else -1) * ch1_gain)
                             noise = random.gauss(0, noise_rms)
                             val_sum += base_val + noise
-                        val = int(val_sum / downsample_factor)
+                        # Apply offset to averaged value
+                        val = int(val_sum / downsample_factor + ch1_offset)
                     else:
                         # Decimation mode
                         base_sample_pos = (sample_index + i) * 2 * downsample_factor + time_shift_samples
                         ch1_sample_pos = base_sample_pos / 2
-                        if trigger_chan == 1 and ch1_trigger_possible:
+                        if trigger_chan == 1 and trigger_possible:
                             ch1_trigger_pos = trigger_pos / 2
                             square_phase = ((ch1_sample_pos - ch1_trigger_pos) % square_period) / square_period
                             if is_falling:
                                 square_phase = (square_phase + 0.5) % 1.0
                         else:
                             square_phase = ((ch1_sample_pos + ch1_random_phase * square_period / (2 * math.pi)) % square_period) / square_period
-                        val = int(signal_amplitude * 0.7 * (1 if square_phase < 0.5 else -1))
+                        val = int(signal_amplitude * 0.7 * (1 if square_phase < 0.5 else -1) * ch1_gain)
                         noise = random.gauss(0, noise_rms)
-                        val = int(val + noise)
+                        val = int(val + noise + ch1_offset)
 
                     # Clamp to 12-bit signed range (-2048 to 2047)
                     val = max(-2048, min(2047, val))
@@ -516,9 +554,9 @@ class DummyOscilloscopeServer:
                         else:
                             # Not triggering on ch0 - use random phase
                             phase = base_sample_pos * 2 * math.pi / wave_period + ch0_random_phase
-                        val = int(signal_amplitude * math.sin(phase))
+                        val = int(signal_amplitude * math.sin(phase) * ch0_gain)
                         noise = random.gauss(0, noise_rms)
-                        val = int(val + noise)
+                        val = int(val + noise + ch0_offset)
                     elif highres == 1:
                         # Averaging mode
                         val_sum = 0
@@ -529,10 +567,10 @@ class DummyOscilloscopeServer:
                                 phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
                             else:
                                 phase = base_sample_pos * 2 * math.pi / wave_period + ch0_random_phase
-                            base_val = int(signal_amplitude * math.sin(phase))
+                            base_val = int(signal_amplitude * math.sin(phase) * ch0_gain)
                             noise = random.gauss(0, noise_rms)
                             val_sum += base_val + noise
-                        val = int(val_sum / downsample_factor)
+                        val = int(val_sum / downsample_factor + ch0_offset)
                     else:
                         # Decimation mode
                         base_sample_pos = (sample_index + i) * 2 * downsample_factor + 1 + time_shift_samples
@@ -540,9 +578,9 @@ class DummyOscilloscopeServer:
                             phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
                         else:
                             phase = base_sample_pos * 2 * math.pi / wave_period + ch0_random_phase
-                        val = int(signal_amplitude * math.sin(phase))
+                        val = int(signal_amplitude * math.sin(phase) * ch0_gain)
                         noise = random.gauss(0, noise_rms)
-                        val = int(val + noise)
+                        val = int(val + noise + ch0_offset)
 
                     # Clamp to 12-bit signed range (-2048 to 2047)
                     val = max(-2048, min(2047, val))
@@ -561,9 +599,9 @@ class DummyOscilloscopeServer:
                         # No downsampling - generate sample directly at base rate
                         base_sample_pos = sample_index + i + time_shift_samples
                         phase = (base_sample_pos - phase_offset) * 2 * math.pi / wave_period
-                        val = int(signal_amplitude * math.sin(phase))
+                        val = int(signal_amplitude * math.sin(phase) * ch0_gain)
                         noise = random.gauss(0, noise_rms)
-                        val = int(val + noise)
+                        val = int(val + noise + ch0_offset)
                     elif highres == 1:
                         # Averaging mode: average downsample_factor base-rate samples together
                         # Output sample i averages base samples from (sample_index+i)*N to (sample_index+i)*N + N-1
@@ -572,17 +610,17 @@ class DummyOscilloscopeServer:
                         for j in range(downsample_factor):
                             base_sample_pos = base_start + j + time_shift_samples
                             phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
-                            base_val = int(signal_amplitude * math.sin(phase))
+                            base_val = int(signal_amplitude * math.sin(phase) * ch0_gain)
                             noise = random.gauss(0, noise_rms)
                             val_sum += base_val + noise
-                        val = int(val_sum / downsample_factor)
+                        val = int(val_sum / downsample_factor + ch0_offset)
                     else:
                         # Decimation mode: pick the first sample of every N base-rate samples
                         base_sample_pos = (sample_index + i) * downsample_factor + time_shift_samples
                         phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
-                        val = int(signal_amplitude * math.sin(phase))
+                        val = int(signal_amplitude * math.sin(phase) * ch0_gain)
                         noise = random.gauss(0, noise_rms)
-                        val = int(val + noise)
+                        val = int(val + noise + ch0_offset)
 
                     # Clamp to 12-bit signed range (-2048 to 2047)
                     val = max(-2048, min(2047, val))
@@ -627,9 +665,9 @@ class DummyOscilloscopeServer:
                     # No downsampling - generate sample directly at base rate
                     base_sample_pos = sample_index + i + time_shift_samples
                     phase = (base_sample_pos - phase_offset) * 2 * math.pi / wave_period
-                    val = int(signal_amplitude * math.sin(phase))
+                    val = int(signal_amplitude * math.sin(phase) * ch0_gain)
                     noise = random.gauss(0, noise_rms)
-                    val = int(val + noise)
+                    val = int(val + noise + ch0_offset)
                 elif highres == 1:
                     # Averaging mode: average downsample_factor base-rate samples together
                     val_sum = 0
@@ -637,17 +675,17 @@ class DummyOscilloscopeServer:
                     for j in range(downsample_factor):
                         base_sample_pos = base_start + j + time_shift_samples
                         phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
-                        base_val = int(signal_amplitude * math.sin(phase))
+                        base_val = int(signal_amplitude * math.sin(phase) * ch0_gain)
                         noise = random.gauss(0, noise_rms)
                         val_sum += base_val + noise
-                    val = int(val_sum / downsample_factor)
+                    val = int(val_sum / downsample_factor + ch0_offset)
                 else:
                     # Decimation mode: pick the first sample of every N base-rate samples
                     base_sample_pos = (sample_index + i) * downsample_factor + time_shift_samples
                     phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
-                    val = int(signal_amplitude * math.sin(phase))
+                    val = int(signal_amplitude * math.sin(phase) * ch0_gain)
                     noise = random.gauss(0, noise_rms)
-                    val = int(val + noise)
+                    val = int(val + noise + ch0_offset)
 
                 # Clamp to 12-bit signed range (-2048 to 2047)
                 val = max(-2048, min(2047, val))
@@ -682,7 +720,46 @@ class DummyOscilloscopeServer:
 
     def _handle_spi_transaction(self, data: bytes) -> bytes:
         """Handle opcode 3 (SPI transaction)."""
-        # cs = data[1], nbyte = data[7]
+        # SPI transaction format: [opcode=3, cs, addr, b1, b2, b3, b4, nbyte]
+        # cs = data[1] (chip select)
+        # addr = data[2] (SPI address/command)
+        # b1-b4 = data[3:7] (data bytes)
+        # nbyte = data[7] (number of bytes)
+
+        cs = data[1]
+        addr = data[2]
+        b1 = data[3]
+        b2 = data[4] if len(data) > 4 else 0
+
+        # Detect gain setting (SPI mode 0)
+        # setgain: cs=2 (ch0) or cs=1 (ch1), addr=0x02, b1=0x00, b2=(26-gain_db)
+        if self.board_state["spi_mode"] == 0 and addr == 0x02:
+            if cs == 2:  # Channel 0 gain
+                self.board_state["channel_gain"][0] = 26 - b2
+            elif cs == 1:  # Channel 1 gain
+                self.board_state["channel_gain"][1] = 26 - b2
+
+        # Detect offset setting (SPI mode 1)
+        # dooffset: cs=4, addr=0x19 (ch0) or 0x18 (ch1), b1=high byte, b2=low byte
+        if self.board_state["spi_mode"] == 1 and cs == 4:
+            dac_value = (b1 << 8) | b2
+            # Convert DAC value back to offset in ADC counts
+            # DAC range is 0-65535, centered at 32768
+            # Map to ADC 12-bit range (-2048 to +2047)
+            # From dooffset: dacval = int((pow(2, 16) - 1) * (val * scaling / 2 + 500) / 1000)
+            # Reverse: val * scaling / 2 + 500 = dac_value * 1000 / 65535
+            # For dummy purposes, we'll use a simplified conversion
+            # assuming scaling ≈ 1 for now, so offset in mV ≈ 2 * (dac_value * 1000 / 65535 - 500)
+            offset_mv = 2 * (dac_value * 1000 / 65535 - 500)
+            # Convert mV to ADC counts (assuming basevoltage=200mV maps to full ADC range)
+            # ADC range: ±2048 counts for ±200mV, so 1mV ≈ 10.24 counts
+            offset_adc = int(offset_mv * 2048 / 200)
+
+            if addr == 0x19:  # Channel 0 offset
+                self.board_state["channel_offset"][0] = offset_adc
+            elif addr == 0x18:  # Channel 1 offset
+                self.board_state["channel_offset"][1] = offset_adc
+
         # Return dummy SPI response (vendor ID 0x51 for ADC, etc.)
         return bytes([0x51, 0x00, 0x00, 0x00])
 
