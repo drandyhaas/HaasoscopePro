@@ -26,7 +26,7 @@ if __name__ == '__main__':
         max_devices = 100
 
         # Can use dummy scope if found, or real scope
-        try_to_use_dummy_server = True
+        try_to_use_dummy_server = False
         usbs = connect_socket_devices(["localhost:9998"]) if try_to_use_dummy_server else []
         if len(usbs)<1: usbs = connectdevices(max_devices)
 
