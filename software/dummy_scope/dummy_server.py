@@ -300,8 +300,8 @@ class DummyOscilloscopeServer:
         wave_period = 1000.0
 
         # For two-channel mode: ch1 uses a square wave at 100 MHz
-        # At 1.6 GS/s (half rate), 100 MHz = 16 samples per cycle
-        square_period = 16.0
+        # At 3.2 GS/s, 100 MHz = 32 samples per cycle (will be downsampled to 16 at 1.6 GS/s)
+        square_period = 32.0
 
         ch0_samples = []
         ch1_samples = []
@@ -492,18 +492,23 @@ class DummyOscilloscopeServer:
         bytes_per_sample = nsubsamples * 2  # 100 bytes per sample (50 words * 2 bytes/word)
         num_logical_samples = expect_len // bytes_per_sample
 
-        # Calculate the number of ADC samples needed
-        # In single-channel mode: 40 ADC samples per logical block
-        # In two-channel mode: 20 ADC samples per channel per logical block
+        # Calculate the number of ADC samples needed from buffer
+        # In single-channel mode: 40 ADC samples per logical block at 3.2 GS/s
+        # In two-channel mode: 20 ADC samples per channel per logical block, but at 1.6 GS/s
+        #                      So we need 40 samples at 3.2 GS/s, then extract every other one
+        # Always use 40 samples per block for buffer generation (full rate)
+        samples_per_block = 40
+
+        # Output samples per block (what we extract and send)
         if two_channel_mode:
-            samples_per_block = 20
+            output_samples_per_block = 20
         else:
-            samples_per_block = 40
+            output_samples_per_block = 40
 
         total_adc_samples_needed = num_logical_samples * samples_per_block
 
         # Get trigger position (where trigger should appear in the output)
-        # trigger_pos is in logical sample blocks, convert to ADC samples
+        # trigger_pos is in logical sample blocks, convert to ADC samples at full rate
         # Add 1 block to account for how the hardware interprets trigger position
         trigger_pos_blocks = self.board_state["trigger_pos"]
         trigger_pos_samples = (trigger_pos_blocks + 1) * samples_per_block
@@ -513,7 +518,7 @@ class DummyOscilloscopeServer:
         # Add extra headroom (2x the needed samples) to ensure we can find triggers
         buffer_size = total_adc_samples_needed + trigger_pos_samples + total_adc_samples_needed
 
-        # Generate waveform buffer with random starting phase
+        # Generate waveform buffer at full rate (3.2 GS/s) with random starting phase
         start_phase = random.uniform(0, 2 * math.pi)
         wave_buffer = self._generate_wave_buffer(buffer_size, start_phase)
 
@@ -553,17 +558,19 @@ class DummyOscilloscopeServer:
 
             if two_channel_mode:
                 # Two-channel mode: words 0-19 are channel 1, words 20-39 are channel 0
-                # Extract 20 samples for each channel from the pre-generated buffer
+                # Extract 20 samples for each channel, skipping every other sample (1.6 GS/s from 3.2 GS/s buffer)
 
                 # Channel 1 (words 0-19)
                 for i in range(20):
-                    val = wave_buffer['ch1'][buffer_idx + i]
+                    # Skip every other sample to get 1.6 GS/s rate
+                    val = wave_buffer['ch1'][buffer_idx + i * 2]
                     # Shift to upper 12 bits of 16-bit short
                     adc_data.extend(struct.pack("<h", val << 4))
 
                 # Channel 0 (words 20-39)
                 for i in range(20):
-                    val = wave_buffer['ch0'][buffer_idx + i]
+                    # Skip every other sample to get 1.6 GS/s rate
+                    val = wave_buffer['ch0'][buffer_idx + i * 2]
                     # Shift to upper 12 bits of 16-bit short
                     adc_data.extend(struct.pack("<h", val << 4))
 
