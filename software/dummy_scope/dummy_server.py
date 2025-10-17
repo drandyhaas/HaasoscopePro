@@ -17,7 +17,7 @@ from typing import Dict, Tuple
 class DummyOscilloscopeServer:
     """Minimal simulated oscilloscope board responding to HaasoscopePro commands."""
 
-    def __init__(self, host: str = "localhost", port: int = 9998, firmware_version: int = 0x12345678):
+    def __init__(self, host: str = "localhost", port: int = 9998, firmware_version: int = 0):
         self.host = host
         self.port = port
         self.firmware_version = firmware_version
@@ -97,7 +97,7 @@ class DummyOscilloscopeServer:
             self.server_socket.bind((self.host, self.port))
             self.server_socket.listen(5)
             print(f"[DUMMY SERVER] Listening on {self.host}:{self.port}")
-            print(f"[DUMMY SERVER] Firmware version: 0x{self.firmware_version:08x}")
+            print(f"[DUMMY SERVER] Firmware version: {self.firmware_version}")
 
             while self.running:
                 try:
@@ -923,8 +923,8 @@ def main():
     parser.add_argument(
         "--version",
         type=lambda x: int(x, 0),
-        default=0x12345678,
-        help="Firmware version as hex (default: 0x12345678)"
+        default=1000031,
+        help="Firmware version as decimal"
     )
 
     args = parser.parse_args()
