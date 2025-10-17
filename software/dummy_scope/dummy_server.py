@@ -293,11 +293,25 @@ class DummyOscilloscopeServer:
         self.board_state["data_counter"] = 0
 
         # Generate per-event random parameters
-        # Time shift: Gaussian distribution with RMS = 1 sample (1/3.2 ns ≈ 0.3125 ns)
-        # Sample period at 3.2 GHz = 1/3.2 ns ≈ 0.3125 ns
-        sample_period = 1.0 / 3.2  # ns per sample
-        time_shift_samples = random.gauss(0, 1.0)  # RMS of 1 sample
-        time_shift_ns = time_shift_samples * sample_period
+        # Time shift: Uniformly distributed between 0 and 1 sample period of the trigger channel
+        # In single-channel mode: trigger samples at 3.2 GS/s, so jitter is 0 to 1/3.2 ns
+        # In two-channel mode: trigger samples at 1.6 GS/s, so jitter is 0 to 1/1.6 ns (2x larger)
+        two_channel_mode = self.board_state["two_channel_mode"]
+        base_sample_period = 1.0 / 3.2  # ns per base sample at 3.2 GHz
+
+        # Time jitter: uniform distribution between 0 and 1 trigger channel sample period
+        # This represents timing uncertainty in the trigger
+        if two_channel_mode:
+            # In two-channel mode, trigger channel samples at 1.6 GS/s (half rate)
+            # So jitter is 2x larger: 0 to 2/3.2 ns = 0 to 1/1.6 ns
+            time_shift_ns = random.uniform(0, 2 * base_sample_period)
+        else:
+            # In single-channel mode, trigger channel samples at 3.2 GS/s
+            # Jitter is 0 to 1/3.2 ns
+            time_shift_ns = random.uniform(0, base_sample_period)
+
+        # Convert time shift to base sample units for phase calculations
+        time_shift_samples = time_shift_ns / base_sample_period
 
         # Noise: 2% RMS of the signal amplitude
         # ADC is 12-bit, amplitude 1500
