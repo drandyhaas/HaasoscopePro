@@ -24,11 +24,13 @@ if __name__ == '__main__':
         # --- Hardware Discovery and Initial Setup ---
         print("Searching for Haasoscope Pro boards...")
         max_devices = 100
+        usbs = connectdevices(max_devices)
 
-        # Can use dummy scope if found, or real scope
-        try_to_use_dummy_server = False
-        usbs = connect_socket_devices(["localhost:9998"]) if try_to_use_dummy_server else []
-        if len(usbs)<1: usbs = connectdevices(max_devices)
+        # Can maybe try to use dummy server to simulate scope data
+        try_to_use_dummy_server = True
+        if len(usbs) < 1 and try_to_use_dummy_server:
+            print("Looking for dummy scopes...")
+            usbs = connect_socket_devices(["localhost:9998"])
 
         if usbs:
             for b in range(len(usbs)):

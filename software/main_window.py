@@ -41,8 +41,13 @@ class MainWindow(TemplateBaseClass):
     def __init__(self, usbs):
         super().__init__()
 
-        # Store usbs for later use
+        # Check for dummy scope
         self.usbs = usbs
+        self.dummy_scope = None
+        for usb in self.usbs:
+            if hasattr(usb, 'socket_addr'):  # UsbSocketAdapter has socket_addr
+                #print(f"  -> Connected to dummy scope server at: {}")
+                self.dummy_scope = usb.socket_addr
 
         # 1. Initialize core components
         self.state = ScopeState(num_boards=len(usbs), num_chan_per_board=2)
@@ -315,8 +320,8 @@ class MainWindow(TemplateBaseClass):
         self.ui.downposButton4.clicked.connect(self.downpos4)
         self.ui.actionForce_split.triggered.connect(self.force_split_toggled)
         self.ui.actionForce_switch_clocks.triggered.connect(self.force_switch_clocks_triggered)
-        self.ui.actionConfigure_dummy_scope.triggered.connect(self.open_dummy_server_config)
-        if self._is_connected_to_dummy_server():
+        if self.dummy_scope is not None:
+            self.ui.actionConfigure_dummy_scope.triggered.connect(self.open_dummy_server_config)
             self.ui.actionConfigure_dummy_scope.setEnabled(True)
 
         # Menu actions
@@ -792,6 +797,7 @@ class MainWindow(TemplateBaseClass):
         status_text = (f"{format_freq(effective_sr, 'S/s')}, {self.fps:.2f} fps, "
                        f"{s.nevents} events, {s.lastrate:.2f} Hz, "
                        f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s")
+        if self.dummy_scope is not None: status_text += ", connected to a dummy scope at " + str(self.dummy_scope)
         if self.recorder.is_recording: status_text += ", Recording to "+str(self.recorder.file_handle.name)
         self.ui.statusBar.showMessage(status_text)
 
@@ -1651,14 +1657,6 @@ class MainWindow(TemplateBaseClass):
             # Use stabilized data (after trigger stabilizers are applied)
             math_results = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data)
             self.plot_manager.update_math_channel_data(math_results)
-
-    def _is_connected_to_dummy_server(self):
-        """Check if any USB device is connected to a dummy server (socket)."""
-        for usb in self.usbs:
-            if hasattr(usb, 'socket_addr'):  # UsbSocketAdapter has socket_addr
-                #print(f"  -> Connected to dummy server at: {usb.socket_addr}")
-                return True
-        return False
 
     def open_dummy_server_config(self):
         """Open or bring to front the dummy server configuration dialog."""
