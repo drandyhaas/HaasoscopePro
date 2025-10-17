@@ -354,7 +354,9 @@ class DummyOscilloscopeServer:
 
         # Calculate phase offset so the waveform crosses actual_trigger_level_adc at trigger_pos
         # We need to ensure the trigger level is within the signal amplitude range
-        if signal_amplitude > 0 and abs(actual_trigger_level_adc) <= signal_amplitude:
+        trigger_possible = signal_amplitude > 0 and abs(actual_trigger_level_adc) <= signal_amplitude
+
+        if trigger_possible:
             normalized_level = actual_trigger_level_adc / signal_amplitude
             # Clamp to valid range for arcsin
             normalized_level = max(-1.0, min(1.0, normalized_level))
@@ -368,8 +370,9 @@ class DummyOscilloscopeServer:
                 # This occurs at phase = arcsin(level)
                 phase_at_trigger = math.asin(normalized_level)
         else:
-            # Default to appropriate zero crossing if trigger level is out of range
-            phase_at_trigger = math.pi if is_falling else 0.0
+            # Trigger level is out of range - trigger not possible
+            # Use random phase since the waveform won't cross the threshold
+            phase_at_trigger = random.uniform(0, 2 * math.pi)
 
         # Calculate the effective downsample factor
         ds = self.board_state["downsample_ds"]
