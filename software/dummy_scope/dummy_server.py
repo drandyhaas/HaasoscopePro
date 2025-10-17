@@ -388,6 +388,19 @@ class DummyOscilloscopeServer:
         # Check if we're in two-channel mode
         two_channel_mode = self.board_state["two_channel_mode"]
 
+        # For two-channel mode: generate random phase offsets for the non-triggered channel
+        # since there's no phase coherence between the two channels
+        trigger_chan = self.board_state["trigger_chan"]
+
+        if two_channel_mode:
+            # Generate random phase offsets for both channels
+            # We'll apply trigger alignment to the triggered channel only
+            ch0_random_phase = random.uniform(0, 2 * math.pi)
+            ch1_random_phase = random.uniform(0, 2 * math.pi)
+        else:
+            ch0_random_phase = 0
+            ch1_random_phase = 0
+
         for s in range(num_logical_samples):
             # Words 0-39: ADC data
             # In single-channel mode: words 0-39 are all from channel 1 at 3.2 GS/s (40 samples)
@@ -417,6 +430,8 @@ class DummyOscilloscopeServer:
 
                 # Channel 1 (words 0-19): Generate a 100 MHz square wave for variety
                 # 100 MHz at 1.6 GS/s = 16 samples per cycle
+                # Apply trigger alignment if triggering on ch1, otherwise use random phase
+                square_period = 16.0  # 100 MHz at 1.6 GS/s base rate
                 for i in range(20):
                     # In two-channel mode, samples are spaced 2x further apart (1.6 GS/s vs 3.2 GS/s)
                     # So each output sample i represents base samples at positions i*2, i*2+1 (interleaved)
@@ -424,10 +439,18 @@ class DummyOscilloscopeServer:
                         # No downsampling - generate sample at 1.6 GS/s rate
                         # Channel 1 uses even-numbered base samples (0, 2, 4, ...)
                         base_sample_pos = (sample_index + i) * 2 + time_shift_samples
-                        # Generate 100 MHz square wave: 16 samples per cycle at 1.6 GS/s
-                        square_period = 16.0
-                        square_phase = ((base_sample_pos / 2) % square_period) / square_period  # Normalize to 0-1
-                        val = int(signal_amplitude * 0.7 * (1 if square_phase < 0.5 else -1))  # Square wave
+                        # Position in 1.6 GS/s samples (divide by 2 since we're using every other base sample)
+                        ch1_sample_pos = base_sample_pos / 2
+                        if trigger_chan == 1:
+                            # Triggering on ch1 - align to trigger position
+                            # Trigger position is in base samples, convert to ch1 samples
+                            ch1_trigger_pos = trigger_pos / 2
+                            square_phase = ((ch1_sample_pos - ch1_trigger_pos) % square_period) / square_period
+                        else:
+                            # Not triggering on ch1 - use random phase
+                            square_phase = ((ch1_sample_pos + ch1_random_phase * square_period / (2 * math.pi)) % square_period) / square_period
+                        # Convert phase to square wave value
+                        val = int(signal_amplitude * 0.7 * (1 if square_phase < 0.5 else -1))
                         noise = random.gauss(0, noise_rms)
                         val = int(val + noise)
                     elif highres == 1:
@@ -436,8 +459,12 @@ class DummyOscilloscopeServer:
                         base_start = (sample_index + i) * 2 * downsample_factor
                         for j in range(downsample_factor):
                             base_sample_pos = base_start + j * 2 + time_shift_samples
-                            square_period = 16.0
-                            square_phase = ((base_sample_pos / 2) % square_period) / square_period
+                            ch1_sample_pos = base_sample_pos / 2
+                            if trigger_chan == 1:
+                                ch1_trigger_pos = trigger_pos / 2
+                                square_phase = ((ch1_sample_pos - ch1_trigger_pos) % square_period) / square_period
+                            else:
+                                square_phase = ((ch1_sample_pos + ch1_random_phase * square_period / (2 * math.pi)) % square_period) / square_period
                             base_val = int(signal_amplitude * 0.7 * (1 if square_phase < 0.5 else -1))
                             noise = random.gauss(0, noise_rms)
                             val_sum += base_val + noise
@@ -445,8 +472,12 @@ class DummyOscilloscopeServer:
                     else:
                         # Decimation mode
                         base_sample_pos = (sample_index + i) * 2 * downsample_factor + time_shift_samples
-                        square_period = 16.0
-                        square_phase = ((base_sample_pos / 2) % square_period) / square_period
+                        ch1_sample_pos = base_sample_pos / 2
+                        if trigger_chan == 1:
+                            ch1_trigger_pos = trigger_pos / 2
+                            square_phase = ((ch1_sample_pos - ch1_trigger_pos) % square_period) / square_period
+                        else:
+                            square_phase = ((ch1_sample_pos + ch1_random_phase * square_period / (2 * math.pi)) % square_period) / square_period
                         val = int(signal_amplitude * 0.7 * (1 if square_phase < 0.5 else -1))
                         noise = random.gauss(0, noise_rms)
                         val = int(val + noise)
@@ -456,14 +487,19 @@ class DummyOscilloscopeServer:
                     # Shift to upper 12 bits of 16-bit short
                     adc_data.extend(struct.pack("<h", val << 4))
 
-                # Channel 0 (words 20-39): Generate with trigger-aligned phase (same as single-channel mode)
-                # This channel should be consistent between single and two-channel modes
+                # Channel 0 (words 20-39): Generate sine wave
+                # Apply trigger alignment if triggering on ch0, otherwise use random phase
                 for i in range(20):
                     if downsample_factor == 1:
                         # No downsampling - generate sample at 1.6 GS/s rate
                         # Channel 0 uses odd-numbered base samples (1, 3, 5, ...) - but offset by 1
                         base_sample_pos = (sample_index + i) * 2 + 1 + time_shift_samples
-                        phase = (base_sample_pos - phase_offset) * 2 * math.pi / wave_period
+                        if trigger_chan == 0:
+                            # Triggering on ch0 - align to trigger position
+                            phase = (base_sample_pos - phase_offset) * 2 * math.pi / wave_period
+                        else:
+                            # Not triggering on ch0 - use random phase
+                            phase = base_sample_pos * 2 * math.pi / wave_period + ch0_random_phase
                         val = int(signal_amplitude * math.sin(phase))
                         noise = random.gauss(0, noise_rms)
                         val = int(val + noise)
@@ -473,7 +509,10 @@ class DummyOscilloscopeServer:
                         base_start = (sample_index + i) * 2 * downsample_factor + 1
                         for j in range(downsample_factor):
                             base_sample_pos = base_start + j * 2 + time_shift_samples
-                            phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
+                            if trigger_chan == 0:
+                                phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
+                            else:
+                                phase = base_sample_pos * 2 * math.pi / wave_period + ch0_random_phase
                             base_val = int(signal_amplitude * math.sin(phase))
                             noise = random.gauss(0, noise_rms)
                             val_sum += base_val + noise
@@ -481,7 +520,10 @@ class DummyOscilloscopeServer:
                     else:
                         # Decimation mode
                         base_sample_pos = (sample_index + i) * 2 * downsample_factor + 1 + time_shift_samples
-                        phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
+                        if trigger_chan == 0:
+                            phase = (base_sample_pos - phase_offset * downsample_factor) * 2 * math.pi / wave_period
+                        else:
+                            phase = base_sample_pos * 2 * math.pi / wave_period + ch0_random_phase
                         val = int(signal_amplitude * math.sin(phase))
                         noise = random.gauss(0, noise_rms)
                         val = int(val + noise)
