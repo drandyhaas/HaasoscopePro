@@ -241,7 +241,7 @@
         <property name="geometry">
          <rect>
           <x>90</x>
-          <y>378</y>
+          <y>375</y>
           <width>61</width>
           <height>23</height>
          </rect>
@@ -261,8 +261,8 @@
        <widget class="QPushButton" name="timefastButton">
         <property name="geometry">
          <rect>
-          <x>150</x>
-          <y>378</y>
+          <x>145</x>
+          <y>375</y>
           <width>61</width>
           <height>23</height>
          </rect>
