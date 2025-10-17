@@ -305,18 +305,19 @@ class DummyOscilloscopeServer:
             # In two-channel mode, trigger channel samples at 1.6 GS/s (half rate)
             # So jitter is 2x larger: 0 to 2/3.2 ns = 0 to 1/1.6 ns
             time_shift_ns = random.uniform(0, 2 * base_sample_period)
+            # Convert time shift to base sample units for phase calculations
+            time_shift_samples = time_shift_ns / base_sample_period
         else:
             # In single-channel mode, trigger channel samples at 3.2 GS/s
             # Jitter is 0 to 1/3.2 ns
             time_shift_ns = random.uniform(0, base_sample_period)
-
-        # Convert time shift to base sample units for phase calculations
-        time_shift_samples = time_shift_ns / base_sample_period
+            # Convert time shift to base sample units for phase calculations
+            time_shift_samples = time_shift_ns / base_sample_period
 
         # Noise: 2% RMS of the signal amplitude
         # ADC is 12-bit, amplitude 1500
         signal_amplitude = 1500
-        noise_rms = 0.02 * signal_amplitude  # ~30 ADC counts
+        noise_rms = 0.01 * signal_amplitude  # ~15 ADC counts
 
         # Convert trigger level from 0-255 range to ADC 12-bit range (-2048 to +2047)
         # trigger_level is sent as (state.triggerlevel+1), so we need to subtract 1
@@ -446,6 +447,9 @@ class DummyOscilloscopeServer:
                             # Trigger position is in base samples, convert to ch1 samples
                             ch1_trigger_pos = trigger_pos / 2
                             square_phase = ((ch1_sample_pos - ch1_trigger_pos) % square_period) / square_period
+                            # For falling edge, shift by half period to trigger on falling edge instead of rising
+                            if is_falling:
+                                square_phase = (square_phase + 0.5) % 1.0
                         else:
                             # Not triggering on ch1 - use random phase
                             square_phase = ((ch1_sample_pos + ch1_random_phase * square_period / (2 * math.pi)) % square_period) / square_period
@@ -463,6 +467,8 @@ class DummyOscilloscopeServer:
                             if trigger_chan == 1:
                                 ch1_trigger_pos = trigger_pos / 2
                                 square_phase = ((ch1_sample_pos - ch1_trigger_pos) % square_period) / square_period
+                                if is_falling:
+                                    square_phase = (square_phase + 0.5) % 1.0
                             else:
                                 square_phase = ((ch1_sample_pos + ch1_random_phase * square_period / (2 * math.pi)) % square_period) / square_period
                             base_val = int(signal_amplitude * 0.7 * (1 if square_phase < 0.5 else -1))
@@ -476,6 +482,8 @@ class DummyOscilloscopeServer:
                         if trigger_chan == 1:
                             ch1_trigger_pos = trigger_pos / 2
                             square_phase = ((ch1_sample_pos - ch1_trigger_pos) % square_period) / square_period
+                            if is_falling:
+                                square_phase = (square_phase + 0.5) % 1.0
                         else:
                             square_phase = ((ch1_sample_pos + ch1_random_phase * square_period / (2 * math.pi)) % square_period) / square_period
                         val = int(signal_amplitude * 0.7 * (1 if square_phase < 0.5 else -1))
