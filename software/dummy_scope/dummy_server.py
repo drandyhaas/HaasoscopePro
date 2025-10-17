@@ -28,7 +28,7 @@ class DummyOscilloscopeServer:
         # Per-channel waveform configuration
         self.channel_config = {
             0: {
-                "wave_type": "pulse",  # "sine", "square", "pulse"
+                "wave_type": "sine",  # "sine", "square", "pulse"
                 "frequency": 3.2e6,  # Hz (3.2 MHz = 1000 samples per period at 3.2 GS/s)
                 "amplitude": 1500,  # ADC counts (for sine/square waves)
                 "pulse_tau_rise": 10.0,  # samples (rise time constant for pulse)

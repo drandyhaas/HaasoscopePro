@@ -23,7 +23,7 @@ from calibration import autocalibration, do_meanrms_calibration
 from settings_manager import save_setup, load_setup
 from math_channels_window import MathChannelsWindow
 from reference_manager import save_reference_lines, load_reference_lines
-from dummy_server_config_dialog import DummyServerConfigDialog
+from dummy_scope.dummy_server_config_dialog import DummyServerConfigDialog
 
 # Import remaining dependencies
 from FFTWindow import FFTWindow
@@ -1668,7 +1668,7 @@ class MainWindow(TemplateBaseClass):
         else:
             # Dialog exists - just bring it to front
             self.dummy_server_config_dialog.raise_()
-            self.dummy_server_config_dialog.activateWindow()
+            self.dummy_server_config_dialog.show()
 
     def open_history_window(self):
         """Slot for the 'History window' menu action."""

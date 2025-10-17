@@ -31,7 +31,7 @@ class DummyServerConfigDialog(QDialog):
 
         # Channel config cache - stores the wave type for each channel
         self.channel_configs = {
-            0: {"wave_type": "pulse"},  # Will be updated from server
+            0: {"wave_type": "sine"},  # Will be updated from server
             1: {"wave_type": "pulse"}
         }
 
@@ -136,6 +136,6 @@ class DummyServerConfigDialog(QDialog):
                     print(f"Error sending config to dummy server: {e}")
 
         # Show confirmation
-        print(f"Applied dummy server configuration:")
-        for channel in [0, 1]:
-            print(f"  Channel {channel}: {self.channel_configs[channel]['wave_type']}")
+        # print(f"Applied dummy server configuration:")
+        # for channel in [0, 1]:
+        #     print(f"  Channel {channel}: {self.channel_configs[channel]['wave_type']}")
