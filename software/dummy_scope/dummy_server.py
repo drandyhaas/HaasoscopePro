@@ -25,6 +25,28 @@ class DummyOscilloscopeServer:
         self.server_socket = None
         self.clients: Dict[socket.socket, str] = {}
 
+        # Per-channel waveform configuration
+        self.channel_config = {
+            0: {
+                "wave_type": "pulse",  # "sine", "square", "pulse"
+                "frequency": 3.2e6,  # Hz (3.2 MHz = 1000 samples per period at 3.2 GS/s)
+                "amplitude": 1500,  # ADC counts (for sine/square waves)
+                "pulse_tau_rise": 10.0,  # samples (rise time constant for pulse)
+                "pulse_tau_decay": 50.0,  # samples (decay time constant for pulse)
+                "pulse_amplitude_min": 100,  # minimum pulse amplitude (ADC counts)
+                "pulse_amplitude_max": 2000,  # maximum pulse amplitude (ADC counts)
+            },
+            1: {
+                "wave_type": "pulse",  # "sine", "square", "pulse"
+                "frequency": 100e6,  # Hz (100 MHz)
+                "amplitude": 1500,  # ADC counts (for sine/square waves)
+                "pulse_tau_rise": 8.0,  # samples
+                "pulse_tau_decay": 40.0,  # samples
+                "pulse_amplitude_min": 10,  # minimum pulse amplitude (ADC counts)
+                "pulse_amplitude_max": 500,  # maximum pulse amplitude (ADC counts)
+            }
+        }
+
         # Board state simulation
         self.board_state = {
             "trigger_ready": False,
@@ -273,6 +295,187 @@ class DummyOscilloscopeServer:
         trigger_pos = 0
         return bytes([251, trigger_pos, 0, 0])
 
+    def _generate_double_exponential_pulse(self, t: float, t0: float, amplitude: float,
+                                          tau_rise: float, tau_decay: float) -> float:
+        """
+        Generate a double-exponential pulse value at time t.
+
+        Formula: A * (e^{-(t-t₀)/τ_d} - e^{-(t-t₀)/τ_r})
+
+        Args:
+            t: Current time (sample index)
+            t0: Pulse start time (sample index)
+            amplitude: Pulse amplitude
+            tau_rise: Rise time constant (samples)
+            tau_decay: Decay time constant (samples)
+
+        Returns:
+            Pulse value at time t
+        """
+        if t < t0:
+            return 0.0
+
+        dt = t - t0
+
+        # Compute double exponential
+        # Use max to avoid division by zero or negative time constants
+        tau_r = max(0.1, tau_rise)
+        tau_d = max(0.1, tau_decay)
+
+        exp_decay = math.exp(-dt / tau_d)
+        exp_rise = math.exp(-dt / tau_r)
+
+        # Normalize so peak amplitude is close to the specified amplitude
+        # The peak occurs at t_peak = (tau_r * tau_d) / (tau_d - tau_r) * ln(tau_d / tau_r)
+        # At the peak, the normalization factor is needed
+        # For simplicity, we'll use an empirical normalization
+        if tau_d > tau_r:
+            norm_factor = 1.0 / (math.exp(-tau_r / tau_d) - math.exp(-1.0))
+        else:
+            norm_factor = 1.0
+
+        return amplitude * norm_factor * (exp_decay - exp_rise)
+
+    def _generate_channel_waveform(self, channel: int, num_samples: int,
+                                   start_phase: float, downsample_factor: int,
+                                   highres: int, sample_rate: float) -> list:
+        """
+        Generate waveform for a single channel based on its configuration.
+
+        Args:
+            channel: Channel number (0 or 1)
+            num_samples: Number of samples to generate
+            start_phase: Starting phase offset in radians
+            downsample_factor: Total downsampling factor
+            highres: 1 for averaging mode, 0 for decimation
+            sample_rate: Sample rate in GS/s (3.2 for single channel, 1.6 for two channel)
+
+        Returns:
+            List of ADC sample values
+        """
+        config = self.channel_config[channel]
+        wave_type = config["wave_type"]
+        frequency = config["frequency"]
+        amplitude = config["amplitude"]
+
+        # Get gain and offset
+        gain = pow(10, self.board_state["channel_gain"][channel] / 20.0)
+        offset = self.board_state["channel_offset"][channel]
+
+        # Noise parameters
+        noise_rms = 0.01 * amplitude  # 1% RMS noise
+
+        # Calculate period in samples
+        sample_rate_hz = sample_rate * 1e9  # Convert GS/s to Hz
+        wave_period = sample_rate_hz / frequency
+
+        samples = []
+
+        # For pulse waveforms, generate random pulses
+        if wave_type == "pulse":
+            # Random pulse amplitude for this event
+            pulse_amp = random.uniform(config["pulse_amplitude_min"], config["pulse_amplitude_max"])
+            tau_rise = config["pulse_tau_rise"]
+            tau_decay = config["pulse_tau_decay"]
+
+            # Place pulse at a random position in the waveform, but ensure it's visible
+            # For triggered events, center it roughly in the middle
+            pulse_t0 = num_samples * 0.4 + random.uniform(-num_samples * 0.1, num_samples * 0.1)
+
+            for i in range(num_samples):
+                if downsample_factor == 1:
+                    base_sample_pos = i
+                    val = self._generate_double_exponential_pulse(
+                        base_sample_pos, pulse_t0, pulse_amp, tau_rise, tau_decay
+                    )
+                    val = int(val * gain)
+                    noise = random.gauss(0, noise_rms)
+                    val = int(val + noise + offset)
+                elif highres == 1:
+                    # Averaging mode
+                    val_sum = 0
+                    for j in range(downsample_factor):
+                        base_sample_pos = i * downsample_factor + j
+                        base_val = self._generate_double_exponential_pulse(
+                            base_sample_pos, pulse_t0, pulse_amp, tau_rise, tau_decay
+                        )
+                        base_val = int(base_val * gain)
+                        noise = random.gauss(0, noise_rms)
+                        val_sum += base_val + noise
+                    val = int(val_sum / downsample_factor + offset)
+                else:
+                    # Decimation mode
+                    base_sample_pos = i * downsample_factor
+                    val = self._generate_double_exponential_pulse(
+                        base_sample_pos, pulse_t0, pulse_amp, tau_rise, tau_decay
+                    )
+                    val = int(val * gain)
+                    noise = random.gauss(0, noise_rms)
+                    val = int(val + noise + offset)
+
+                val = max(-2048, min(2047, val))
+                samples.append(val)
+
+        elif wave_type == "square":
+            for i in range(num_samples):
+                if downsample_factor == 1:
+                    base_sample_pos = i
+                    phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase) % (2 * math.pi)
+                    val = int(amplitude * (1 if phase < math.pi else -1) * gain)
+                    noise = random.gauss(0, noise_rms)
+                    val = int(val + noise + offset)
+                elif highres == 1:
+                    # Averaging mode
+                    val_sum = 0
+                    for j in range(downsample_factor):
+                        base_sample_pos = i * downsample_factor + j
+                        phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase) % (2 * math.pi)
+                        base_val = int(amplitude * (1 if phase < math.pi else -1) * gain)
+                        noise = random.gauss(0, noise_rms)
+                        val_sum += base_val + noise
+                    val = int(val_sum / downsample_factor + offset)
+                else:
+                    # Decimation mode
+                    base_sample_pos = i * downsample_factor
+                    phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase) % (2 * math.pi)
+                    val = int(amplitude * (1 if phase < math.pi else -1) * gain)
+                    noise = random.gauss(0, noise_rms)
+                    val = int(val + noise + offset)
+
+                val = max(-2048, min(2047, val))
+                samples.append(val)
+
+        else:  # sine wave (default)
+            for i in range(num_samples):
+                if downsample_factor == 1:
+                    base_sample_pos = i
+                    phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase)
+                    val = int(amplitude * math.sin(phase) * gain)
+                    noise = random.gauss(0, noise_rms)
+                    val = int(val + noise + offset)
+                elif highres == 1:
+                    # Averaging mode
+                    val_sum = 0
+                    for j in range(downsample_factor):
+                        base_sample_pos = i * downsample_factor + j
+                        phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase)
+                        base_val = int(amplitude * math.sin(phase) * gain)
+                        noise = random.gauss(0, noise_rms)
+                        val_sum += base_val + noise
+                    val = int(val_sum / downsample_factor + offset)
+                else:
+                    # Decimation mode
+                    base_sample_pos = i * downsample_factor
+                    phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase)
+                    val = int(amplitude * math.sin(phase) * gain)
+                    noise = random.gauss(0, noise_rms)
+                    val = int(val + noise + offset)
+
+                val = max(-2048, min(2047, val))
+                samples.append(val)
+
+        return samples
+
     def _generate_wave_buffer(self, num_samples: int, start_phase: float = 0.0) -> Dict[str, list]:
         """
         Generate raw waveform data for both channels.
@@ -286,119 +489,44 @@ class DummyOscilloscopeServer:
         """
         two_channel_mode = self.board_state["two_channel_mode"]
 
-        # Get gain and offset for both channels
-        ch0_gain = pow(10, self.board_state["channel_gain"][0] / 20.0)
-        ch1_gain = pow(10, self.board_state["channel_gain"][1] / 20.0)
-        ch0_offset = self.board_state["channel_offset"][0]
-        ch1_offset = self.board_state["channel_offset"][1]
-
-        # Signal parameters
-        signal_amplitude = 1500
-        noise_rms = 0.01 * signal_amplitude  # 1% RMS noise
-
-        # Waveform period: 1000 samples = 4 cycles across 4000-sample window at 3.2 GS/s
-        wave_period = 1000.0
-
-        # For two-channel mode: ch1 uses a square wave at 100 MHz
-        # At 3.2 GS/s, 100 MHz = 32 samples per cycle (will be downsampled to 16 at 1.6 GS/s)
-        square_period = 32.0
-
-        ch0_samples = []
-        ch1_samples = []
-
         # Get downsample parameters
         ds = self.board_state["downsample_ds"]
         merging = self.board_state["downsample_merging"]
         highres = self.board_state["downsample_highres"]
         downsample_factor = merging * (2 ** ds)
 
+        ch0_samples = []
+        ch1_samples = []
+
         if two_channel_mode:
             # Generate samples for both channels at 1.6 GS/s (interleaved at 3.2 GS/s base rate)
-            for i in range(num_samples):
-                # Channel 1 (square wave)
-                if downsample_factor == 1:
-                    base_sample_pos = i
-                    square_phase = (base_sample_pos * 2 * math.pi / square_period + start_phase) % (2 * math.pi)
-                    val = int(signal_amplitude * 0.7 * (1 if square_phase < math.pi else -1) * ch1_gain)
-                    noise = random.gauss(0, noise_rms)
-                    val = int(val + noise + ch1_offset)
-                elif highres == 1:
-                    # Averaging mode
-                    val_sum = 0
-                    for j in range(downsample_factor):
-                        base_sample_pos = i * downsample_factor + j
-                        square_phase = (base_sample_pos * 2 * math.pi / square_period + start_phase) % (2 * math.pi)
-                        base_val = int(signal_amplitude * 0.7 * (1 if square_phase < math.pi else -1) * ch1_gain)
-                        noise = random.gauss(0, noise_rms)
-                        val_sum += base_val + noise
-                    val = int(val_sum / downsample_factor + ch1_offset)
-                else:
-                    # Decimation mode
-                    base_sample_pos = i * downsample_factor
-                    square_phase = (base_sample_pos * 2 * math.pi / square_period + start_phase) % (2 * math.pi)
-                    val = int(signal_amplitude * 0.7 * (1 if square_phase < math.pi else -1) * ch1_gain)
-                    noise = random.gauss(0, noise_rms)
-                    val = int(val + noise + ch1_offset)
+            ch1_samples = self._generate_channel_waveform(
+                channel=1,
+                num_samples=num_samples,
+                start_phase=start_phase,
+                downsample_factor=downsample_factor,
+                highres=highres,
+                sample_rate=1.6  # GS/s per channel in two-channel mode
+            )
 
-                val = max(-2048, min(2047, val))
-                ch1_samples.append(val)
-
-                # Channel 0 (sine wave)
-                if downsample_factor == 1:
-                    base_sample_pos = i
-                    phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase)
-                    val = int(signal_amplitude * math.sin(phase) * ch0_gain)
-                    noise = random.gauss(0, noise_rms)
-                    val = int(val + noise + ch0_offset)
-                elif highres == 1:
-                    # Averaging mode
-                    val_sum = 0
-                    for j in range(downsample_factor):
-                        base_sample_pos = i * downsample_factor + j
-                        phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase)
-                        base_val = int(signal_amplitude * math.sin(phase) * ch0_gain)
-                        noise = random.gauss(0, noise_rms)
-                        val_sum += base_val + noise
-                    val = int(val_sum / downsample_factor + ch0_offset)
-                else:
-                    # Decimation mode
-                    base_sample_pos = i * downsample_factor
-                    phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase)
-                    val = int(signal_amplitude * math.sin(phase) * ch0_gain)
-                    noise = random.gauss(0, noise_rms)
-                    val = int(val + noise + ch0_offset)
-
-                val = max(-2048, min(2047, val))
-                ch0_samples.append(val)
+            ch0_samples = self._generate_channel_waveform(
+                channel=0,
+                num_samples=num_samples,
+                start_phase=start_phase,
+                downsample_factor=downsample_factor,
+                highres=highres,
+                sample_rate=1.6  # GS/s per channel in two-channel mode
+            )
         else:
-            # Single-channel mode: only ch0 (sine wave) at 3.2 GS/s
-            for i in range(num_samples):
-                if downsample_factor == 1:
-                    base_sample_pos = i
-                    phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase)
-                    val = int(signal_amplitude * math.sin(phase) * ch0_gain)
-                    noise = random.gauss(0, noise_rms)
-                    val = int(val + noise + ch0_offset)
-                elif highres == 1:
-                    # Averaging mode
-                    val_sum = 0
-                    for j in range(downsample_factor):
-                        base_sample_pos = i * downsample_factor + j
-                        phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase)
-                        base_val = int(signal_amplitude * math.sin(phase) * ch0_gain)
-                        noise = random.gauss(0, noise_rms)
-                        val_sum += base_val + noise
-                    val = int(val_sum / downsample_factor + ch0_offset)
-                else:
-                    # Decimation mode
-                    base_sample_pos = i * downsample_factor
-                    phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase)
-                    val = int(signal_amplitude * math.sin(phase) * ch0_gain)
-                    noise = random.gauss(0, noise_rms)
-                    val = int(val + noise + ch0_offset)
-
-                val = max(-2048, min(2047, val))
-                ch0_samples.append(val)
+            # Single-channel mode: only ch0 at 3.2 GS/s
+            ch0_samples = self._generate_channel_waveform(
+                channel=0,
+                num_samples=num_samples,
+                start_phase=start_phase,
+                downsample_factor=downsample_factor,
+                highres=highres,
+                sample_rate=3.2  # GS/s in single-channel mode
+            )
 
         return {'ch0': ch0_samples, 'ch1': ch1_samples}
 
