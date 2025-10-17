@@ -645,10 +645,35 @@ class DummyOscilloscopeServer:
         trigger_pos_blocks = self.board_state["trigger_pos"]
         trigger_pos_samples = (trigger_pos_blocks + 1) * samples_per_block
 
+        # Calculate minimum buffer size needed for trigger search
+        # For low frequency signals, we need enough samples to cover multiple periods
+        # Use the trigger channel configuration to determine frequency
+        trigger_chan = self.board_state["trigger_chan"]
+        if trigger_chan in self.channel_config:
+            frequency = self.channel_config[trigger_chan]["frequency"]
+            # Determine sample rate based on channel mode
+            if two_channel_mode:
+                sample_rate_hz = 1.6e9  # 1.6 GS/s per channel in two-channel mode
+            else:
+                sample_rate_hz = 3.2e9  # 3.2 GS/s in single-channel mode
+
+            # Calculate period in samples
+            wave_period_samples = sample_rate_hz / frequency
+
+            # Calculate buffer size for 10 periods
+            ten_periods_samples = int(10 * wave_period_samples)
+
+            # Use the smaller of 1M samples or 10 periods
+            min_search_buffer = min(10_000, ten_periods_samples)
+        else:
+            # Fallback if trigger channel not configured
+            min_search_buffer = 10_000
+
         # Generate a buffer with enough headroom for pre-trigger and post-trigger samples
         # We need: pre-trigger samples + actual data samples + search window
-        # Add extra headroom (2x the needed samples) to ensure we can find triggers
-        buffer_size = total_adc_samples_needed + trigger_pos_samples + total_adc_samples_needed
+        # The search window should be at least min_search_buffer to ensure we can find triggers
+        basic_buffer_size = total_adc_samples_needed + trigger_pos_samples + total_adc_samples_needed
+        buffer_size = max(basic_buffer_size, trigger_pos_samples + min_search_buffer)
 
         # Generate waveform buffer at full rate (3.2 GS/s) with random starting phase
         start_phase = random.uniform(0, 2 * math.pi)
