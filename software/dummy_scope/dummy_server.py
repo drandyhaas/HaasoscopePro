@@ -898,19 +898,71 @@ class DummyOscilloscopeServer:
 
     def _handle_dummy_config(self, data: bytes) -> bytes:
         """Handle opcode 12 (dummy server configuration)."""
-        # Format: [12, channel, wave_type_code, 0, 0, 0, 0, 0]
-        # wave_type_code: 0 = sine, 1 = square, 2 = pulse
+        # Format: [12, channel, subcommand, data[0], data[1], data[2], data[3], data[4]]
+        #
+        # Subcommands:
+        # 0: Set wave type - data[0] = wave_type_code (0=sine, 1=square, 2=pulse)
+        # 1: Set amplitude - data[0:2] = amplitude as 16-bit uint (little endian)
+        # 2: Set frequency - data[0:4] = frequency as 32-bit float (little endian)
+        # 3: Set pulse rise time - data[0:4] = tau_rise as 32-bit float (little endian)
+        # 4: Set pulse decay time - data[0:4] = tau_decay as 32-bit float (little endian)
+        # 5: Set pulse amplitude min - data[0:2] = amplitude_min as 16-bit uint (little endian)
+        # 6: Set pulse amplitude max - data[0:2] = amplitude_max as 16-bit uint (little endian)
+
         channel = data[1]
-        wave_type_code = data[2]
+        subcommand = data[2]
 
-        wave_types = {0: "sine", 1: "square", 2: "pulse"}
-        wave_type = wave_types.get(wave_type_code, "pulse")
+        if channel not in self.channel_config:
+            print(f"[DUMMY SERVER] Warning: Invalid channel {channel}")
+            return struct.pack("<I", 0xFFFFFFFF)
 
-        if channel in self.channel_config:
+        # Subcommand 0: Set wave type
+        if subcommand == 0:
+            wave_type_code = data[3]
+            wave_types = {0: "sine", 1: "square", 2: "pulse"}
+            wave_type = wave_types.get(wave_type_code, "pulse")
             self.channel_config[channel]["wave_type"] = wave_type
             print(f"[DUMMY SERVER] Channel {channel} wave type set to: {wave_type}")
+
+        # Subcommand 1: Set amplitude
+        elif subcommand == 1:
+            amplitude = struct.unpack("<H", data[3:5])[0]
+            self.channel_config[channel]["amplitude"] = amplitude
+            print(f"[DUMMY SERVER] Channel {channel} amplitude set to: {amplitude}")
+
+        # Subcommand 2: Set frequency
+        elif subcommand == 2:
+            frequency = struct.unpack("<f", data[3:7])[0]
+            self.channel_config[channel]["frequency"] = frequency
+            print(f"[DUMMY SERVER] Channel {channel} frequency set to: {frequency:.3e} Hz")
+
+        # Subcommand 3: Set pulse rise time
+        elif subcommand == 3:
+            tau_rise = struct.unpack("<f", data[3:7])[0]
+            self.channel_config[channel]["pulse_tau_rise"] = tau_rise
+            print(f"[DUMMY SERVER] Channel {channel} pulse rise time set to: {tau_rise:.2f} samples")
+
+        # Subcommand 4: Set pulse decay time
+        elif subcommand == 4:
+            tau_decay = struct.unpack("<f", data[3:7])[0]
+            self.channel_config[channel]["pulse_tau_decay"] = tau_decay
+            print(f"[DUMMY SERVER] Channel {channel} pulse decay time set to: {tau_decay:.2f} samples")
+
+        # Subcommand 5: Set pulse amplitude min
+        elif subcommand == 5:
+            amplitude_min = struct.unpack("<H", data[3:5])[0]
+            self.channel_config[channel]["pulse_amplitude_min"] = amplitude_min
+            print(f"[DUMMY SERVER] Channel {channel} pulse amplitude min set to: {amplitude_min}")
+
+        # Subcommand 6: Set pulse amplitude max
+        elif subcommand == 6:
+            amplitude_max = struct.unpack("<H", data[3:5])[0]
+            self.channel_config[channel]["pulse_amplitude_max"] = amplitude_max
+            print(f"[DUMMY SERVER] Channel {channel} pulse amplitude max set to: {amplitude_max}")
+
         else:
-            print(f"[DUMMY SERVER] Warning: Invalid channel {channel}")
+            print(f"[DUMMY SERVER] Warning: Unknown subcommand {subcommand}")
+            return struct.pack("<I", 0xFFFFFFFF)
 
         return struct.pack("<I", 0)
 

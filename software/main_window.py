@@ -1664,9 +1664,11 @@ class MainWindow(TemplateBaseClass):
         """Open or bring to front the dummy server configuration dialog."""
         if self.dummy_server_config_dialog is None:
             self.dummy_server_config_dialog = DummyServerConfigDialog(self, self.usbs)
+            self.dummy_server_config_dialog.position_relative_to_main(self)
             self.dummy_server_config_dialog.show()
         else:
-            # Dialog exists - just bring it to front
+            # Dialog exists - just bring it to front and reposition
+            self.dummy_server_config_dialog.position_relative_to_main(self)
             self.dummy_server_config_dialog.raise_()
             self.dummy_server_config_dialog.show()
 
