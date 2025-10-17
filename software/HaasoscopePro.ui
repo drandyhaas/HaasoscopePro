@@ -2292,6 +2292,7 @@ Outlined if triggering on this channel</string>
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
+    <addaction name="actionConfigure_dummy_scope"/>
     <addaction name="actionForce_split"/>
     <addaction name="actionForce_switch_clocks"/>
     <addaction name="actionClock_reset"/>
@@ -2873,6 +2874,14 @@ Outlined if triggering on this channel</string>
   <action name="actionHistory_window">
    <property name="text">
     <string>History window</string>
+   </property>
+  </action>
+  <action name="actionConfigure_dummy_scope">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Configure dummy scope</string>
    </property>
   </action>
  </widget>
