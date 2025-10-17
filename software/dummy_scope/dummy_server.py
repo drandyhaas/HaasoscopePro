@@ -422,30 +422,37 @@ class DummyOscilloscopeServer:
         trigger_chan = self.board_state["trigger_chan"]
         is_falling = (trigger_type == 2)
 
-        # Calculate actual trigger level with delta
-        if is_falling:
-            actual_trigger_level_adc = trigger_level_adc - trigger_delta_adc
-        else:
-            actual_trigger_level_adc = trigger_level_adc + trigger_delta_adc
-
         # Select the trigger channel data
         if trigger_chan == 0:
             trigger_data = wave_buffer['ch0']
         else:
             trigger_data = wave_buffer['ch1']
 
-        # Search for trigger crossing, starting from start_search_index
+        # Search for trigger crossing with hysteresis, starting from start_search_index
+        # Hysteresis works as follows:
+        # - Rising edge: Signal must first go below threshold (arming), then cross above threshold+delta (trigger)
+        # - Falling edge: Signal must first go above threshold (arming), then cross below threshold-delta (trigger)
+
+        armed = False
+
         for i in range(max(1, start_search_index), len(trigger_data)):
-            prev_val = trigger_data[i - 1]
             curr_val = trigger_data[i]
 
             if is_falling:
-                # Falling edge: previous value above threshold, current value below
-                if prev_val > actual_trigger_level_adc and curr_val <= actual_trigger_level_adc:
+                # Falling edge with hysteresis:
+                # First, signal must go above threshold to arm
+                if not armed and curr_val > trigger_level_adc:
+                    armed = True
+                # Once armed, trigger fires when signal goes below (threshold - delta)
+                elif armed and curr_val <= trigger_level_adc - trigger_delta_adc:
                     return i
             else:
-                # Rising edge: previous value below threshold, current value above
-                if prev_val < actual_trigger_level_adc and curr_val >= actual_trigger_level_adc:
+                # Rising edge with hysteresis:
+                # First, signal must go below threshold to arm
+                if not armed and curr_val < trigger_level_adc:
+                    armed = True
+                # Once armed, trigger fires when signal goes above (threshold + delta)
+                elif armed and curr_val >= trigger_level_adc + trigger_delta_adc:
                     return i
 
         # No trigger found
@@ -497,8 +504,9 @@ class DummyOscilloscopeServer:
 
         # Get trigger position (where trigger should appear in the output)
         # trigger_pos is in logical sample blocks, convert to ADC samples
+        # Add 1 block to account for how the hardware interprets trigger position
         trigger_pos_blocks = self.board_state["trigger_pos"]
-        trigger_pos_samples = trigger_pos_blocks * samples_per_block
+        trigger_pos_samples = (trigger_pos_blocks + 1) * samples_per_block
 
         # Generate a buffer with enough headroom for pre-trigger and post-trigger samples
         # We need: pre-trigger samples + actual data samples + search window
