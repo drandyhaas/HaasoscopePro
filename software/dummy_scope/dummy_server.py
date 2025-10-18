@@ -369,6 +369,12 @@ class DummyOscilloscopeServer:
         # Noise parameters
         noise_rms = 0.01 * amplitude  # 1% RMS noise
 
+        # Reduce noise for high-res mode (simulates averaging without actually averaging)
+        if highres == 1 and downsample_factor > 1:
+            noise_rms_effective = noise_rms / math.sqrt(downsample_factor)
+        else:
+            noise_rms_effective = noise_rms
+
         # Calculate period in samples
         sample_rate_hz = sample_rate * 1e9  # Convert GS/s to Hz
         wave_period = sample_rate_hz / frequency
@@ -387,26 +393,15 @@ class DummyOscilloscopeServer:
             pulse_t0 = num_samples * 0.4 + random.uniform(-num_samples * 0.1, num_samples * 0.1)
 
             for i in range(num_samples):
-                if downsample_factor == 1:
-                    base_sample_pos = i
+                if downsample_factor == 1 or highres == 1:
+                    # No downsampling or high-res mode: generate single sample
+                    base_sample_pos = i if downsample_factor == 1 else i * downsample_factor
                     val = self._generate_double_exponential_pulse(
                         base_sample_pos, pulse_t0, pulse_amp, tau_rise, tau_decay
                     )
                     val = int(val * gain)
-                    noise = random.gauss(0, noise_rms)
+                    noise = random.gauss(0, noise_rms_effective)
                     val = int(val + noise + offset)
-                elif highres == 1:
-                    # Averaging mode
-                    val_sum = 0
-                    for j in range(downsample_factor):
-                        base_sample_pos = i * downsample_factor + j
-                        base_val = self._generate_double_exponential_pulse(
-                            base_sample_pos, pulse_t0, pulse_amp, tau_rise, tau_decay
-                        )
-                        base_val = int(base_val * gain)
-                        noise = random.gauss(0, noise_rms)
-                        val_sum += base_val + noise
-                    val = int(val_sum / downsample_factor + offset)
                 else:
                     # Decimation mode
                     base_sample_pos = i * downsample_factor
@@ -422,22 +417,13 @@ class DummyOscilloscopeServer:
 
         elif wave_type == "square":
             for i in range(num_samples):
-                if downsample_factor == 1:
-                    base_sample_pos = i
+                if downsample_factor == 1 or highres == 1:
+                    # No downsampling or high-res mode: generate single sample
+                    base_sample_pos = i if downsample_factor == 1 else i * downsample_factor
                     phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase) % (2 * math.pi)
                     val = int(amplitude * (1 if phase < math.pi else -1) * gain)
-                    noise = random.gauss(0, noise_rms)
+                    noise = random.gauss(0, noise_rms_effective)
                     val = int(val + noise + offset)
-                elif highres == 1:
-                    # Averaging mode
-                    val_sum = 0
-                    for j in range(downsample_factor):
-                        base_sample_pos = i * downsample_factor + j
-                        phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase) % (2 * math.pi)
-                        base_val = int(amplitude * (1 if phase < math.pi else -1) * gain)
-                        noise = random.gauss(0, noise_rms)
-                        val_sum += base_val + noise
-                    val = int(val_sum / downsample_factor + offset)
                 else:
                     # Decimation mode
                     base_sample_pos = i * downsample_factor
@@ -451,22 +437,13 @@ class DummyOscilloscopeServer:
 
         else:  # sine wave (default)
             for i in range(num_samples):
-                if downsample_factor == 1:
-                    base_sample_pos = i
+                if downsample_factor == 1 or highres == 1:
+                    # No downsampling or high-res mode: generate single sample
+                    base_sample_pos = i if downsample_factor == 1 else i * downsample_factor
                     phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase)
                     val = int(amplitude * math.sin(phase) * gain)
-                    noise = random.gauss(0, noise_rms)
+                    noise = random.gauss(0, noise_rms_effective)
                     val = int(val + noise + offset)
-                elif highres == 1:
-                    # Averaging mode
-                    val_sum = 0
-                    for j in range(downsample_factor):
-                        base_sample_pos = i * downsample_factor + j
-                        phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase)
-                        base_val = int(amplitude * math.sin(phase) * gain)
-                        noise = random.gauss(0, noise_rms)
-                        val_sum += base_val + noise
-                    val = int(val_sum / downsample_factor + offset)
                 else:
                     # Decimation mode
                     base_sample_pos = i * downsample_factor
