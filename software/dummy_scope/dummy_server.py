@@ -31,6 +31,7 @@ class DummyOscilloscopeServer:
                 "wave_type": "sine",  # "sine", "square", "pulse"
                 "frequency": 3.2e6,  # Hz (3.2 MHz = 1000 samples per period at 3.2 GS/s)
                 "amplitude": 1500,  # ADC counts (for sine/square waves)
+                "square_rise_fall_k": 10.0,  # rise/fall sharpness for square wave (1-100)
                 "pulse_tau_rise": 10.0,  # samples (rise time constant for pulse)
                 "pulse_tau_decay": 50.0,  # samples (decay time constant for pulse)
                 "pulse_amplitude_min": 100,  # minimum pulse amplitude (ADC counts)
@@ -40,6 +41,7 @@ class DummyOscilloscopeServer:
                 "wave_type": "pulse",  # "sine", "square", "pulse"
                 "frequency": 100e6,  # Hz (100 MHz)
                 "amplitude": 1500,  # ADC counts (for sine/square waves)
+                "square_rise_fall_k": 10.0,  # rise/fall sharpness for square wave (1-100)
                 "pulse_tau_rise": 8.0,  # samples
                 "pulse_tau_decay": 40.0,  # samples
                 "pulse_amplitude_min": 10,  # minimum pulse amplitude (ADC counts)
@@ -416,19 +418,25 @@ class DummyOscilloscopeServer:
                 samples.append(val)
 
         elif wave_type == "square":
+            # Get rise/fall parameter k
+            k = config["square_rise_fall_k"]
+
             for i in range(num_samples):
                 if downsample_factor == 1 or highres == 1:
                     # No downsampling or high-res mode: generate single sample
                     base_sample_pos = i if downsample_factor == 1 else i * downsample_factor
-                    phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase) % (2 * math.pi)
-                    val = int(amplitude * (1 if phase < math.pi else -1) * gain)
+                    phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase)
+                    # Square wave with adjustable rise/fall: A/2 * [1 + tanh(k * sin(phase))]
+                    # Convert to bipolar: A * tanh(k * sin(phase))
+                    val = int(amplitude * math.tanh(k * math.sin(phase)) * gain)
                     noise = random.gauss(0, noise_rms_effective)
                     val = int(val + noise + offset)
                 else:
                     # Decimation mode
                     base_sample_pos = i * downsample_factor
-                    phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase) % (2 * math.pi)
-                    val = int(amplitude * (1 if phase < math.pi else -1) * gain)
+                    phase = (base_sample_pos * 2 * math.pi / wave_period + start_phase)
+                    # Square wave with adjustable rise/fall: A * tanh(k * sin(phase))
+                    val = int(amplitude * math.tanh(k * math.sin(phase)) * gain)
                     noise = random.gauss(0, noise_rms)
                     val = int(val + noise + offset)
 
@@ -480,14 +488,15 @@ class DummyOscilloscopeServer:
         ch1_samples = []
 
         if two_channel_mode:
-            # Generate samples for both channels at 1.6 GS/s (interleaved at 3.2 GS/s base rate)
+            # Generate samples for both channels at 3.2 GS/s base rate
+            # Extraction will take every other sample to get 1.6 GS/s per channel
             ch1_samples = self._generate_channel_waveform(
                 channel=1,
                 num_samples=num_samples,
                 start_phase=start_phase,
                 downsample_factor=downsample_factor,
                 highres=highres,
-                sample_rate=1.6  # GS/s per channel in two-channel mode
+                sample_rate=3.2  # Generate at full rate, extraction decimates to 1.6 GS/s
             )
 
             ch0_samples = self._generate_channel_waveform(
@@ -496,7 +505,7 @@ class DummyOscilloscopeServer:
                 start_phase=start_phase,
                 downsample_factor=downsample_factor,
                 highres=highres,
-                sample_rate=1.6  # GS/s per channel in two-channel mode
+                sample_rate=3.2  # Generate at full rate, extraction decimates to 1.6 GS/s
             )
         else:
             # Single-channel mode: only ch0 at 3.2 GS/s
@@ -628,11 +637,9 @@ class DummyOscilloscopeServer:
         trigger_chan = self.board_state["trigger_chan"]
         if trigger_chan in self.channel_config:
             frequency = self.channel_config[trigger_chan]["frequency"]
-            # Determine sample rate based on channel mode
-            if two_channel_mode:
-                sample_rate_hz = 1.6e9  # 1.6 GS/s per channel in two-channel mode
-            else:
-                sample_rate_hz = 3.2e9  # 3.2 GS/s in single-channel mode
+            # Buffer is always generated at 3.2 GS/s base rate
+            # In two-channel mode, extraction decimates to 1.6 GS/s, but trigger search uses full buffer
+            sample_rate_hz = 3.2e9  # 3.2 GS/s buffer generation rate
 
             # Calculate period in samples
             wave_period_samples = sample_rate_hz / frequency
@@ -961,6 +968,12 @@ class DummyOscilloscopeServer:
             amplitude_max = struct.unpack("<H", data[3:5])[0]
             self.channel_config[channel]["pulse_amplitude_max"] = amplitude_max
             print(f"[DUMMY SERVER] Channel {channel} pulse amplitude max set to: {amplitude_max}")
+
+        # Subcommand 7: Set square wave rise/fall k parameter
+        elif subcommand == 7:
+            k = struct.unpack("<f", data[3:7])[0]
+            self.channel_config[channel]["square_rise_fall_k"] = k
+            print(f"[DUMMY SERVER] Channel {channel} square rise/fall k set to: {k:.2f}")
 
         else:
             print(f"[DUMMY SERVER] Warning: Unknown subcommand {subcommand}")
