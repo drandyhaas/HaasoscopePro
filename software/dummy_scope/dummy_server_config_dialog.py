@@ -37,6 +37,7 @@ class DummyServerConfigDialog(QDialog):
                 "wave_type": "sine",
                 "frequency": 3.2e6,  # 3.2 MHz
                 "amplitude": 1500,
+                "square_rise_fall_k": 10.0,
                 "pulse_tau_rise": 10.0,
                 "pulse_tau_decay": 50.0,
                 "pulse_amplitude_min": 100,
@@ -46,6 +47,7 @@ class DummyServerConfigDialog(QDialog):
                 "wave_type": "pulse",
                 "frequency": 100e6,  # 100 MHz
                 "amplitude": 1500,
+                "square_rise_fall_k": 10.0,
                 "pulse_tau_rise": 8.0,
                 "pulse_tau_decay": 40.0,
                 "pulse_amplitude_min": 10,
@@ -121,6 +123,22 @@ class DummyServerConfigDialog(QDialog):
         common_group.setLayout(common_layout)
         layout.addWidget(common_group)
 
+        # Square-specific parameters group
+        self.square_group = QGroupBox("Square Wave Parameters")
+        square_layout = QFormLayout()
+
+        # Rise/fall time parameter k
+        self.square_k_spin = QDoubleSpinBox()
+        self.square_k_spin.setDecimals(2)
+        self.square_k_spin.setMinimum(1.0)
+        self.square_k_spin.setMaximum(1e6)
+        self.square_k_spin.setSingleStep(1.0)
+        self.square_k_spin.setValue(10.0)
+        square_layout.addRow("Rise/Fall Sharpness (k):", self.square_k_spin)
+
+        self.square_group.setLayout(square_layout)
+        layout.addWidget(self.square_group)
+
         # Pulse-specific parameters group
         self.pulse_group = QGroupBox("Pulse Parameters")
         pulse_layout = QFormLayout()
@@ -182,8 +200,8 @@ class DummyServerConfigDialog(QDialog):
 
         self.setLayout(layout)
 
-        # Initially show/hide pulse parameters based on wave type
-        self.update_pulse_visibility()
+        # Initially show/hide wave-type-specific parameters based on wave type
+        self.update_parameter_visibility()
 
     def on_channel_changed(self):
         """Called when channel selection changes."""
@@ -198,6 +216,7 @@ class DummyServerConfigDialog(QDialog):
         self.wave_type_combo.blockSignals(True)
         self.frequency_spin.blockSignals(True)
         self.amplitude_spin.blockSignals(True)
+        self.square_k_spin.blockSignals(True)
         self.tau_rise_spin.blockSignals(True)
         self.tau_decay_spin.blockSignals(True)
         self.pulse_amp_min_spin.blockSignals(True)
@@ -210,6 +229,7 @@ class DummyServerConfigDialog(QDialog):
 
         self.frequency_spin.setValue(config["frequency"])
         self.amplitude_spin.setValue(config["amplitude"])
+        self.square_k_spin.setValue(config["square_rise_fall_k"])
         self.tau_rise_spin.setValue(config["pulse_tau_rise"])
         self.tau_decay_spin.setValue(config["pulse_tau_decay"])
         self.pulse_amp_min_spin.setValue(config["pulse_amplitude_min"])
@@ -219,22 +239,24 @@ class DummyServerConfigDialog(QDialog):
         self.wave_type_combo.blockSignals(False)
         self.frequency_spin.blockSignals(False)
         self.amplitude_spin.blockSignals(False)
+        self.square_k_spin.blockSignals(False)
         self.tau_rise_spin.blockSignals(False)
         self.tau_decay_spin.blockSignals(False)
         self.pulse_amp_min_spin.blockSignals(False)
         self.pulse_amp_max_spin.blockSignals(False)
 
-        # Update pulse visibility based on wave type
-        self.update_pulse_visibility()
+        # Update parameter visibility based on wave type
+        self.update_parameter_visibility()
 
     def on_wave_type_changed(self, wave_type):
         """Called when wave type selection changes."""
-        # Update pulse parameter visibility
-        self.update_pulse_visibility()
+        # Update parameter visibility
+        self.update_parameter_visibility()
 
-    def update_pulse_visibility(self):
-        """Show/hide pulse parameters based on wave type."""
+    def update_parameter_visibility(self):
+        """Show/hide wave-type-specific parameters based on wave type."""
         wave_type = self.wave_type_combo.currentText()
+        self.square_group.setVisible(wave_type == "square")
         self.pulse_group.setVisible(wave_type == "pulse")
 
     def save_ui_to_config(self):
@@ -245,6 +267,7 @@ class DummyServerConfigDialog(QDialog):
         config["wave_type"] = self.wave_type_combo.currentText()
         config["frequency"] = self.frequency_spin.value()
         config["amplitude"] = self.amplitude_spin.value()
+        config["square_rise_fall_k"] = self.square_k_spin.value()
         config["pulse_tau_rise"] = self.tau_rise_spin.value()
         config["pulse_tau_decay"] = self.tau_decay_spin.value()
         config["pulse_amplitude_min"] = self.pulse_amp_min_spin.value()
@@ -292,6 +315,15 @@ class DummyServerConfigDialog(QDialog):
                     cmd = bytes([12, channel, 2]) + frequency_bytes + bytes([0])
                     usb.send(cmd)
                     usb.recv(4)
+
+                    # Send square wave parameters if wave type is square
+                    if config["wave_type"] == "square":
+                        # Send square rise/fall k parameter (subcommand 7)
+                        k = float(config["square_rise_fall_k"])
+                        k_bytes = struct.pack("<f", k)
+                        cmd = bytes([12, channel, 7]) + k_bytes + bytes([0])
+                        usb.send(cmd)
+                        usb.recv(4)
 
                     # Send pulse parameters if wave type is pulse
                     if config["wave_type"] == "pulse":
