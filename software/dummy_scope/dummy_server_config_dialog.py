@@ -101,14 +101,14 @@ class DummyServerConfigDialog(QDialog):
         common_group = QGroupBox("Common Parameters")
         common_layout = QFormLayout()
 
-        # Frequency control (in Hz, displayed in scientific notation)
+        # Frequency control (in MHz)
         self.frequency_spin = QDoubleSpinBox()
-        self.frequency_spin.setDecimals(2)
-        self.frequency_spin.setMinimum(1e3)  # 1 kHz minimum
-        self.frequency_spin.setMaximum(1e9)  # 1 GHz maximum
-        self.frequency_spin.setSingleStep(1e6)  # 1 MHz step
-        self.frequency_spin.setValue(3.2e6)
-        self.frequency_spin.setSuffix(" Hz")
+        self.frequency_spin.setDecimals(3)
+        self.frequency_spin.setMinimum(0.001)  # 1 kHz minimum
+        self.frequency_spin.setMaximum(1000.0)  # 1 GHz maximum
+        self.frequency_spin.setSingleStep(1.0)  # 1 MHz step
+        self.frequency_spin.setValue(3.2)  # 3.2 MHz
+        self.frequency_spin.setSuffix(" MHz")
         common_layout.addRow("Frequency:", self.frequency_spin)
 
         # Amplitude control (in ADC counts, 0-4095 for 12-bit ADC)
@@ -227,7 +227,7 @@ class DummyServerConfigDialog(QDialog):
         if index >= 0:
             self.wave_type_combo.setCurrentIndex(index)
 
-        self.frequency_spin.setValue(config["frequency"])
+        self.frequency_spin.setValue(config["frequency"] / 1e6)  # Convert Hz to MHz
         self.amplitude_spin.setValue(config["amplitude"])
         self.square_k_spin.setValue(config["square_rise_fall_k"])
         self.tau_rise_spin.setValue(config["pulse_tau_rise"])
@@ -265,7 +265,7 @@ class DummyServerConfigDialog(QDialog):
         config = self.channel_configs[channel]
 
         config["wave_type"] = self.wave_type_combo.currentText()
-        config["frequency"] = self.frequency_spin.value()
+        config["frequency"] = self.frequency_spin.value() * 1e6  # Convert MHz to Hz
         config["amplitude"] = self.amplitude_spin.value()
         config["square_rise_fall_k"] = self.square_k_spin.value()
         config["pulse_tau_rise"] = self.tau_rise_spin.value()

@@ -1001,7 +1001,7 @@ def main():
     parser.add_argument(
         "--host",
         default="localhost",
-        help="Server host (default: localhost)"
+        help="Server host (default: localhost, change to '0.0.0.0' to advertise to internet)"
     )
     parser.add_argument(
         "--port",
