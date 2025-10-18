@@ -641,10 +641,10 @@ class DummyOscilloscopeServer:
             ten_periods_samples = int(10 * wave_period_samples)
 
             # Use the smaller of 1M samples or 10 periods
-            min_search_buffer = min(10_000, ten_periods_samples)
+            min_search_buffer = min(100_000, ten_periods_samples)
         else:
             # Fallback if trigger channel not configured
-            min_search_buffer = 10_000
+            min_search_buffer = 100_000
 
         # Generate a buffer with enough headroom for pre-trigger and post-trigger samples
         # We need: pre-trigger samples + actual data samples + search window
