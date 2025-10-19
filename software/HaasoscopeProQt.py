@@ -11,7 +11,7 @@ from PyQt5.QtCore import Qt
 # Import the new main window and necessary hardware functions
 from main_window import MainWindow
 from utils import oldbytes
-from usbs import connectdevices, orderusbs, tellfirstandlast, version
+from usbs import connectdevices, orderusbs, tellfirstandlast, version, connect_socket_devices
 from board import clkout_ena
 from utils import get_pwd
 
@@ -24,7 +24,14 @@ if __name__ == '__main__':
         # --- Hardware Discovery and Initial Setup ---
         print("Searching for Haasoscope Pro boards...")
         max_devices = 100
-        usbs = connectdevices(max_devices)  # This will now return an empty list if none are found
+        usbs = connectdevices(max_devices)
+
+        # Can maybe try to use dummy server to simulate scope data
+        try_to_use_dummy_server = True
+        if len(usbs) < 1 and try_to_use_dummy_server:
+            print("Looking for dummy scopes...")
+            usbs = connect_socket_devices(["localhost:9998"])
+
         if usbs:
             for b in range(len(usbs)):
 
@@ -35,7 +42,7 @@ if __name__ == '__main__':
                 oldbytes(usbs[b])
 
                 # Turn on lvdsout_clk for multi-board setups
-                if len(usbs) > 1:
+                if len(usbs)>1 and b<len(usbs)-1:
                     clkout_ena(usbs[b], b, True, True)
 
                 # Check for special beta device serial numbers

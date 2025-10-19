@@ -28,7 +28,7 @@
      <widget class="QFrame" name="frame">
       <property name="minimumSize">
        <size>
-        <width>400</width>
+        <width>440</width>
         <height>300</height>
        </size>
       </property>
@@ -46,9 +46,9 @@
       <widget class="QGroupBox" name="groupBox_2">
        <property name="geometry">
         <rect>
-         <x>190</x>
+         <x>200</x>
          <y>0</y>
-         <width>211</width>
+         <width>231</width>
          <height>411</height>
         </rect>
        </property>
@@ -60,10 +60,10 @@
        <widget class="QSlider" name="threshold">
         <property name="geometry">
          <rect>
-          <x>176</x>
+          <x>190</x>
           <y>50</y>
           <width>10</width>
-          <height>251</height>
+          <height>265</height>
          </rect>
         </property>
         <property name="minimumSize">
@@ -101,7 +101,7 @@
          <rect>
           <x>10</x>
           <y>350</y>
-          <width>191</width>
+          <width>211</width>
           <height>10</height>
          </rect>
         </property>
@@ -240,10 +240,10 @@
        <widget class="QPushButton" name="timeslowButton">
         <property name="geometry">
          <rect>
-          <x>90</x>
-          <y>380</y>
+          <x>95</x>
+          <y>375</y>
           <width>61</width>
-          <height>21</height>
+          <height>23</height>
          </rect>
         </property>
         <property name="font">
@@ -261,10 +261,10 @@
        <widget class="QPushButton" name="timefastButton">
         <property name="geometry">
          <rect>
-          <x>150</x>
-          <y>380</y>
+          <x>160</x>
+          <y>375</y>
           <width>61</width>
-          <height>21</height>
+          <height>23</height>
          </rect>
         </property>
         <property name="font">
@@ -283,7 +283,7 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>110</y>
+          <y>106</y>
           <width>141</width>
           <height>211</height>
          </rect>
@@ -312,6 +312,9 @@
          </property>
          <property name="toolTip">
           <string>Time over threshold required to trigger</string>
+         </property>
+         <property name="frame">
+          <bool>false</bool>
          </property>
          <property name="accelerated">
           <bool>true</bool>
@@ -360,6 +363,9 @@
          </property>
          <property name="toolTip">
           <string>Amount needed over threshold to trigger (ADC values)</string>
+         </property>
+         <property name="frame">
+          <bool>false</bool>
          </property>
          <property name="accelerated">
           <bool>true</bool>
@@ -479,6 +485,9 @@
          <property name="toolTip">
           <string>Time to wait before actually firing trigger</string>
          </property>
+         <property name="frame">
+          <bool>false</bool>
+         </property>
          <property name="accelerated">
           <bool>true</bool>
          </property>
@@ -508,6 +517,9 @@
          </property>
          <property name="toolTip">
           <string>Time needed failing threshold before passing threshold</string>
+         </property>
+         <property name="frame">
+          <bool>false</bool>
          </property>
          <property name="accelerated">
           <bool>true</bool>
@@ -564,6 +576,9 @@
         <property name="text">
          <string>0</string>
         </property>
+        <property name="frame">
+         <bool>false</bool>
+        </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>
         </property>
@@ -574,10 +589,10 @@
         </property>
         <property name="geometry">
          <rect>
-          <x>60</x>
-          <y>324</y>
-          <width>91</width>
-          <height>21</height>
+          <x>50</x>
+          <y>320</y>
+          <width>131</width>
+          <height>24</height>
          </rect>
         </property>
         <property name="font">
@@ -603,7 +618,7 @@
          <rect>
           <x>150</x>
           <y>10</y>
-          <width>61</width>
+          <width>81</width>
           <height>35</height>
          </rect>
         </property>
@@ -629,7 +644,7 @@ threshold</string>
         <rect>
          <x>130</x>
          <y>420</y>
-         <width>131</width>
+         <width>141</width>
          <height>171</height>
         </rect>
        </property>
@@ -676,6 +691,9 @@ threshold</string>
         <property name="toolTip">
          <string>Fine ADC delay</string>
         </property>
+        <property name="frame">
+         <bool>false</bool>
+        </property>
         <property name="suffix">
          <string/>
         </property>
@@ -695,10 +713,10 @@ threshold</string>
        <widget class="QLabel" name="label_19">
         <property name="geometry">
          <rect>
-          <x>70</x>
+          <x>80</x>
           <y>116</y>
-          <width>61</width>
-          <height>16</height>
+          <width>51</width>
+          <height>20</height>
          </rect>
         </property>
         <property name="font">
@@ -715,7 +733,7 @@ threshold</string>
          <rect>
           <x>10</x>
           <y>114</y>
-          <width>51</width>
+          <width>61</width>
           <height>22</height>
          </rect>
         </property>
@@ -726,6 +744,9 @@ threshold</string>
         </property>
         <property name="toolTip">
          <string>Course delay of waveform (samples)</string>
+        </property>
+        <property name="frame">
+         <bool>false</bool>
         </property>
         <property name="accelerated">
          <bool>true</bool>
@@ -748,7 +769,7 @@ threshold</string>
          <rect>
           <x>10</x>
           <y>20</y>
-          <width>51</width>
+          <width>61</width>
           <height>22</height>
          </rect>
         </property>
@@ -759,6 +780,9 @@ threshold</string>
         </property>
         <property name="toolTip">
          <string>Memory depth / 40</string>
+        </property>
+        <property name="frame">
+         <bool>false</bool>
         </property>
         <property name="accelerated">
          <bool>true</bool>
@@ -782,10 +806,10 @@ threshold</string>
        <widget class="QLabel" name="label_20">
         <property name="geometry">
          <rect>
-          <x>70</x>
+          <x>80</x>
           <y>22</y>
-          <width>61</width>
-          <height>16</height>
+          <width>51</width>
+          <height>20</height>
          </rect>
         </property>
         <property name="font">
@@ -813,6 +837,9 @@ threshold</string>
         </property>
         <property name="toolTip">
          <string>Number of points per sample via sinc interpolation</string>
+        </property>
+        <property name="frame">
+         <bool>false</bool>
         </property>
         <property name="suffix">
          <string/>
@@ -867,9 +894,9 @@ threshold</string>
       <widget class="QGroupBox" name="viewgroupBox">
        <property name="geometry">
         <rect>
-         <x>270</x>
+         <x>280</x>
          <y>420</y>
-         <width>131</width>
+         <width>151</width>
          <height>171</height>
         </rect>
        </property>
@@ -881,63 +908,12 @@ threshold</string>
        <property name="title">
         <string>View options</string>
        </property>
-       <widget class="QLabel" name="label_16">
-        <property name="geometry">
-         <rect>
-          <x>70</x>
-          <y>91</y>
-          <width>61</width>
-          <height>16</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="text">
-         <string>Fit fraction</string>
-        </property>
-       </widget>
-       <widget class="QSpinBox" name="fwfBox">
-        <property name="geometry">
-         <rect>
-          <x>10</x>
-          <y>89</y>
-          <width>51</width>
-          <height>22</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Arial</family>
-         </font>
-        </property>
-        <property name="toolTip">
-         <string>Fraction of waveform to use for risetime and calibration calculations</string>
-        </property>
-        <property name="accelerated">
-         <bool>true</bool>
-        </property>
-        <property name="suffix">
-         <string>%</string>
-        </property>
-        <property name="minimum">
-         <number>1</number>
-        </property>
-        <property name="maximum">
-         <number>99</number>
-        </property>
-        <property name="value">
-         <number>20</number>
-        </property>
-       </widget>
        <widget class="QLabel" name="label_23">
         <property name="geometry">
          <rect>
           <x>70</x>
           <y>116</y>
-          <width>61</width>
+          <width>71</width>
           <height>16</height>
          </rect>
         </property>
@@ -967,6 +943,9 @@ threshold</string>
         <property name="toolTip">
          <string>Width of plot line (pixels)</string>
         </property>
+        <property name="frame">
+         <bool>false</bool>
+        </property>
         <property name="suffix">
          <string/>
         </property>
@@ -980,7 +959,7 @@ threshold</string>
          <number>1</number>
         </property>
         <property name="value">
-         <number>1</number>
+         <number>2</number>
         </property>
        </widget>
        <widget class="QCheckBox" name="persistlinesCheck">
@@ -1024,6 +1003,9 @@ threshold</string>
         <property name="toolTip">
          <string>Time each line takes to fade out (50*2^x ms)</string>
         </property>
+        <property name="frame">
+         <bool>false</bool>
+        </property>
         <property name="accelerated">
          <bool>false</bool>
         </property>
@@ -1045,7 +1027,7 @@ threshold</string>
          <rect>
           <x>70</x>
           <y>22</y>
-          <width>51</width>
+          <width>71</width>
           <height>20</height>
          </rect>
         </property>
@@ -1063,7 +1045,7 @@ threshold</string>
          <rect>
           <x>90</x>
           <y>142</y>
-          <width>41</width>
+          <width>51</width>
           <height>20</height>
          </rect>
         </property>
@@ -1093,6 +1075,9 @@ threshold</string>
         <property name="toolTip">
          <string>Time skew offset for selected channel</string>
         </property>
+        <property name="frame">
+         <bool>false</bool>
+        </property>
         <property name="accelerated">
          <bool>true</bool>
         </property>
@@ -1112,13 +1097,37 @@ threshold</string>
          <double>0.100000000000000</double>
         </property>
        </widget>
+       <widget class="QCheckBox" name="persistAvgCheck">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>70</y>
+          <width>121</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Whether to draw the persist average line</string>
+        </property>
+        <property name="text">
+         <string>Persist average</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
       </widget>
       <widget class="QGroupBox" name="channelgroupBox_4">
        <property name="geometry">
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>181</width>
+         <width>191</width>
          <height>411</height>
         </rect>
        </property>
@@ -1155,7 +1164,7 @@ threshold</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>160</y>
+          <y>180</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1182,7 +1191,7 @@ threshold</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>180</y>
+          <y>200</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1206,7 +1215,7 @@ threshold</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>140</y>
+          <y>160</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1230,7 +1239,7 @@ threshold</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>270</y>
+          <y>285</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1254,7 +1263,7 @@ threshold</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>320</y>
+          <y>330</y>
           <width>111</width>
           <height>17</height>
          </rect>
@@ -1275,7 +1284,7 @@ threshold</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>84</y>
+          <y>90</y>
           <width>47</width>
           <height>19</height>
          </rect>
@@ -1294,8 +1303,8 @@ threshold</string>
          <rect>
           <x>50</x>
           <y>84</y>
-          <width>51</width>
-          <height>20</height>
+          <width>60</width>
+          <height>30</height>
          </rect>
         </property>
         <property name="font">
@@ -1305,6 +1314,9 @@ threshold</string>
         </property>
         <property name="toolTip">
          <string>Voltage offset of this channel</string>
+        </property>
+        <property name="frame">
+         <bool>false</bool>
         </property>
         <property name="accelerated">
          <bool>true</bool>
@@ -1323,7 +1335,7 @@ threshold</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>110</y>
+          <y>126</y>
           <width>47</width>
           <height>19</height>
          </rect>
@@ -1341,9 +1353,9 @@ threshold</string>
         <property name="geometry">
          <rect>
           <x>50</x>
-          <y>110</y>
-          <width>51</width>
-          <height>20</height>
+          <y>120</y>
+          <width>60</width>
+          <height>30</height>
          </rect>
         </property>
         <property name="font">
@@ -1353,6 +1365,9 @@ threshold</string>
         </property>
         <property name="toolTip">
          <string>Voltage gain of this channel</string>
+        </property>
+        <property name="frame">
+         <bool>false</bool>
         </property>
         <property name="suffix">
          <string> dB</string>
@@ -1374,7 +1389,7 @@ threshold</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>220</y>
+          <y>240</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1419,7 +1434,7 @@ threshold</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>200</y>
+          <y>220</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1445,7 +1460,7 @@ threshold</string>
        <widget class="QTextBrowser" name="chanColor">
         <property name="geometry">
          <rect>
-          <x>117</x>
+          <x>140</x>
           <y>8</y>
           <width>30</width>
           <height>42</height>
@@ -1514,7 +1529,7 @@ Outlined if triggering on this channel</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>290</y>
+          <y>305</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1537,8 +1552,8 @@ Outlined if triggering on this channel</string>
        <widget class="QLineEdit" name="VperD">
         <property name="geometry">
          <rect>
-          <x>107</x>
-          <y>110</y>
+          <x>115</x>
+          <y>126</y>
           <width>71</width>
           <height>20</height>
          </rect>
@@ -1565,8 +1580,8 @@ Outlined if triggering on this channel</string>
        <widget class="QLineEdit" name="Voff">
         <property name="geometry">
          <rect>
-          <x>107</x>
-          <y>84</y>
+          <x>115</x>
+          <y>90</y>
           <width>71</width>
           <height>20</height>
          </rect>
@@ -1593,7 +1608,7 @@ Outlined if triggering on this channel</string>
        <widget class="QLabel" name="label_22">
         <property name="geometry">
          <rect>
-          <x>130</x>
+          <x>120</x>
           <y>380</y>
           <width>47</width>
           <height>20</height>
@@ -1613,7 +1628,7 @@ Outlined if triggering on this channel</string>
          <rect>
           <x>10</x>
           <y>380</y>
-          <width>111</width>
+          <width>91</width>
           <height>20</height>
          </rect>
         </property>
@@ -1654,7 +1669,7 @@ Outlined if triggering on this channel</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>250</y>
+          <y>265</y>
           <width>111</width>
           <height>17</height>
          </rect>
@@ -1675,7 +1690,7 @@ Outlined if triggering on this channel</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>350</y>
+          <y>355</y>
           <width>91</width>
           <height>20</height>
          </rect>
@@ -1742,7 +1757,7 @@ Outlined if triggering on this channel</string>
         <property name="geometry">
          <rect>
           <x>120</x>
-          <y>350</y>
+          <y>355</y>
           <width>61</width>
           <height>20</height>
          </rect>
@@ -1774,6 +1789,9 @@ Outlined if triggering on this channel</string>
         <property name="maxLength">
          <number>25</number>
         </property>
+        <property name="frame">
+         <bool>false</bool>
+        </property>
         <property name="alignment">
          <set>Qt::AlignCenter</set>
         </property>
@@ -1786,7 +1804,7 @@ Outlined if triggering on this channel</string>
          <rect>
           <x>60</x>
           <y>8</y>
-          <width>51</width>
+          <width>71</width>
           <height>20</height>
          </rect>
         </property>
@@ -1818,7 +1836,7 @@ Outlined if triggering on this channel</string>
          <rect>
           <x>60</x>
           <y>30</y>
-          <width>51</width>
+          <width>71</width>
           <height>20</height>
          </rect>
         </property>
@@ -2265,7 +2283,7 @@ Outlined if triggering on this channel</string>
         <rect>
          <x>0</x>
          <y>600</y>
-         <width>400</width>
+         <width>431</width>
          <height>231</height>
         </rect>
        </property>
@@ -2319,6 +2337,7 @@ Outlined if triggering on this channel</string>
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
+    <addaction name="actionConfigure_dummy_scope"/>
     <addaction name="actionForce_split"/>
     <addaction name="actionForce_switch_clocks"/>
     <addaction name="actionClock_reset"/>
@@ -2344,11 +2363,11 @@ Outlined if triggering on this channel</string>
      <bool>true</bool>
     </property>
     <addaction name="actionTrigger_thresh"/>
-    <addaction name="actionN_persist_lines"/>
     <addaction name="separator"/>
     <addaction name="action_For_Board_X_Channel_Y"/>
     <addaction name="actionADC_temperature"/>
     <addaction name="actionBoard_temperature"/>
+    <addaction name="actionN_persist_lines"/>
     <addaction name="actionMean"/>
     <addaction name="actionRMS"/>
     <addaction name="actionMaximum"/>
@@ -2378,7 +2397,6 @@ Outlined if triggering on this channel</string>
     <addaction name="actionHigh_resolution"/>
     <addaction name="actionGrid"/>
     <addaction name="actionVoltage_axis"/>
-    <addaction name="actionPersist_average"/>
     <addaction name="actionChannel_name_legend"/>
     <addaction name="actionMarkers"/>
     <addaction name="actionLine_color"/>
@@ -2595,14 +2613,6 @@ Outlined if triggering on this channel</string>
   <action name="actionTake_screenshot">
    <property name="text">
     <string>Take screenshot</string>
-   </property>
-  </action>
-  <action name="actionPersist">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Persist</string>
    </property>
   </action>
   <action name="actionClock_reset">
@@ -2887,17 +2897,6 @@ Outlined if triggering on this channel</string>
     <string>Peak waveforrm</string>
    </property>
   </action>
-  <action name="actionPersist_average">
-   <property name="checkable">
-    <bool>true</bool>
-   </property>
-   <property name="checked">
-    <bool>true</bool>
-   </property>
-   <property name="text">
-    <string>Persist average</string>
-   </property>
-  </action>
   <action name="actionDuty_cycle">
    <property name="checkable">
     <bool>true</bool>
@@ -2910,6 +2909,9 @@ Outlined if triggering on this channel</string>
    <property name="checkable">
     <bool>true</bool>
    </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Channel name legend</string>
    </property>
@@ -2917,6 +2919,14 @@ Outlined if triggering on this channel</string>
   <action name="actionHistory_window">
    <property name="text">
     <string>History window</string>
+   </property>
+  </action>
+  <action name="actionConfigure_dummy_scope">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Dummy scope</string>
    </property>
   </action>
  </widget>

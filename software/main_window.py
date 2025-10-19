@@ -23,6 +23,7 @@ from calibration import autocalibration, do_meanrms_calibration
 from settings_manager import save_setup, load_setup
 from math_channels_window import MathChannelsWindow
 from reference_manager import save_reference_lines, load_reference_lines
+from dummy_scope.dummy_server_config_dialog import DummyServerConfigDialog
 
 # Import remaining dependencies
 from FFTWindow import FFTWindow
@@ -39,6 +40,14 @@ WindowTemplate, TemplateBaseClass = loadUiType(pwd + "/HaasoscopePro.ui")
 class MainWindow(TemplateBaseClass):
     def __init__(self, usbs):
         super().__init__()
+
+        # Check for dummy scope
+        self.usbs = usbs
+        self.dummy_scope = None
+        for usb in self.usbs:
+            if hasattr(usb, 'socket_addr'):  # UsbSocketAdapter has socket_addr
+                #print(f"  -> Connected to dummy scope server at: {}")
+                self.dummy_scope = usb.socket_addr
 
         # 1. Initialize core components
         self.state = ScopeState(num_boards=len(usbs), num_chan_per_board=2)
@@ -58,11 +67,15 @@ class MainWindow(TemplateBaseClass):
         # 4. Connect all signals from UI widgets to slots in this class
         self._connect_signals()
 
+        # 4b. Sync persistence UI to match state defaults (before any other operations)
+        self.sync_persistence_ui()
+
         # 5. Initialize network socket and other components
         self.socket = None
         self.socket_thread = None
         self.fftui = None
         self.math_window = None
+        self.dummy_server_config_dialog = None
         # Initialize boardBox ComboBox with board numbers
         self.ui.boardBox.blockSignals(True)
         self.ui.boardBox.setMaxVisibleItems(self.state.num_board)
@@ -126,6 +139,9 @@ class MainWindow(TemplateBaseClass):
                     self.ui.tadBox.setEnabled(False)
                     self.ui.actionDo_autocalibration.setEnabled(False)
                     self.ui.actionAuto_oversample_alignment.setEnabled(False)
+                else:
+                    # Update autocalibration enabled state based on initial board configuration
+                    self.update_autocalibration_enabled()
 
                 self.dostartstop()  # Start acquisition
                 self.setup_successful = True
@@ -173,9 +189,9 @@ class MainWindow(TemplateBaseClass):
 
         # Set column widths for the measurement table
         self.ui.tableView.setColumnWidth(0, 215)  # Measurement name column, wider for X button + name
-        self.ui.tableView.setColumnWidth(1, 50)  # Measurement value column
-        self.ui.tableView.setColumnWidth(2, 50)  # Measurement avg column
-        self.ui.tableView.setColumnWidth(3, 50)  # Measurement rms column
+        self.ui.tableView.setColumnWidth(1, 60)  # Measurement value column
+        self.ui.tableView.setColumnWidth(2, 60)  # Measurement avg column
+        self.ui.tableView.setColumnWidth(3, 60)  # Measurement rms column
 
         # Show main window
         self.show()
@@ -190,6 +206,11 @@ class MainWindow(TemplateBaseClass):
         self.fan_timer.start(10031) # every 10 seconds or so afterwares
         self.ui.actionPan_and_zoom.setChecked(False)
         self.plot_manager.set_pan_and_zoom(False)
+        # Initialize line width from state
+        self.ui.linewidthBox.setValue(self.state.line_width)
+        self.line_width_changed(self.state.line_width)
+        # Initialize persistence UI controls from state
+        self.sync_persistence_ui()
 
     def _sync_board_settings_to_hardware(self, board_idx):
         """
@@ -269,13 +290,12 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionTrigger_info.triggered.connect(lambda checked: self.plot_manager.update_trigger_threshold_display())
         self.ui.actionPeak_detect.triggered.connect(lambda checked: self.plot_manager.set_peak_detect(checked))
         self.ui.actionChannel_name_legend.triggered.connect(lambda checked: self.plot_manager.update_legend())
-        self.ui.linewidthBox.valueChanged.connect(self.plot_manager.set_line_width)
+        self.ui.linewidthBox.valueChanged.connect(self.line_width_changed)
         self.ui.lpfBox.currentIndexChanged.connect(self.lpf_changed)
         self.ui.resampBox.valueChanged.connect(self.resamp_changed)
-        self.ui.fwfBox.valueChanged.connect(lambda val: setattr(self.state, 'fitwidthfraction', val / 100.))
         self.ui.fftCheck.stateChanged.connect(self.fft_clicked)
-        self.ui.persistTbox.valueChanged.connect(self.plot_manager.set_persistence)
-        self.ui.actionPersist_average.triggered.connect(self.set_average_line_pen)
+        self.ui.persistTbox.valueChanged.connect(self.set_persistence)
+        self.ui.persistAvgCheck.stateChanged.connect(self.set_average_line_pen)
         self.ui.persistlinesCheck.clicked.connect(self.set_average_line_pen)
         self.ui.actionLine_color.triggered.connect(self.change_channel_color)
         self.ui.actionHigh_resolution.triggered.connect(self.high_resolution_toggled)
@@ -287,6 +307,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.Auxout_comboBox.currentIndexChanged.connect(self.auxout_changed)
         self.ui.actionToggle_PLL_controls.triggered.connect(self.toggle_pll_controls)
         self.ui.actionOversampling_controls.triggered.connect(self.toggle_oversampling_controls)
+        self.ui.actionClock_reset.triggered.connect(lambda: self.controller.adfreset(self.state.activeboard))
         self.ui.upposButton0.clicked.connect(self.uppos)
         self.ui.upposButton1.clicked.connect(self.uppos1)
         self.ui.upposButton2.clicked.connect(self.uppos2)
@@ -299,6 +320,9 @@ class MainWindow(TemplateBaseClass):
         self.ui.downposButton4.clicked.connect(self.downpos4)
         self.ui.actionForce_split.triggered.connect(self.force_split_toggled)
         self.ui.actionForce_switch_clocks.triggered.connect(self.force_switch_clocks_triggered)
+        if self.dummy_scope is not None:
+            self.ui.actionConfigure_dummy_scope.triggered.connect(self.open_dummy_server_config)
+            self.ui.actionConfigure_dummy_scope.setEnabled(True)
 
         # Menu actions
         self.ui.actionAbout.triggered.connect(self.about_dialog)
@@ -409,17 +433,27 @@ class MainWindow(TemplateBaseClass):
             # The index of the second channel on this board
             ch1_idx = board_idx * s.num_chan_per_board + 1
 
-            # Determine if the second channel should be visible
-            is_ch1_visible = s.dotwochannel[board_idx]
-
-            self.plot_manager.lines[ch1_idx].setVisible(is_ch1_visible)
-
-            # If hiding the channel, also clear its data to remove the stale trace
-            if not is_ch1_visible:
+            # Update channel enabled state based on two-channel mode
+            if s.dotwochannel[board_idx]:
+                # In two-channel mode, ch1 should be enabled
+                s.channel_enabled[ch1_idx] = True
+            else:
+                # In single-channel mode, ch1 should be disabled
+                s.channel_enabled[ch1_idx] = False
                 self.plot_manager.lines[ch1_idx].clear()
+
+            # Apply correct visibility based on all state (including persistence)
+            self.update_channel_visibility(ch1_idx)
 
         # Update reference menu states based on initial data
         self.update_clear_all_reference_state()
+
+        # Update persistence UI to reflect the current channel's settings
+        # (important when switching modes causes channel selection to change)
+        self.sync_persistence_ui()
+
+        # Also update visibility for the active channel
+        self.update_channel_visibility(s.activexychannel)
 
     def open_socket(self):
         print("Starting SCPI socket thread...")
@@ -568,7 +602,15 @@ class MainWindow(TemplateBaseClass):
             if len(raw_data) < expect_len:
                 print("Not enough data length in event, not processing.")
                 return
-            nbadA, nbadB, nbadC, nbadD, nbadS = self.processor.process_board_data(raw_data, board_idx, self.xydata)
+            try:
+                nbadA, nbadB, nbadC, nbadD, nbadS = self.processor.process_board_data(raw_data, board_idx, self.xydata)
+            except RuntimeError as e:
+                self.closeEvent(None)
+                title = "Data Processing Failed"
+                message = (f"Data processing failed for board {board_idx}: {e}\n\n"
+                           "Please check the USB connection and restart the application.")
+                QMessageBox.critical(self, title, message)
+                sys.exit(-7)
             if s.plljustreset[board_idx] > -10:
                 # If a reset is already in progress, continue it.
                 self.controller.adjustclocks(board_idx, nbadA, nbadB, nbadC, nbadD, nbadS, self)
@@ -755,6 +797,7 @@ class MainWindow(TemplateBaseClass):
         status_text = (f"{format_freq(effective_sr, 'S/s')}, {self.fps:.2f} fps, "
                        f"{s.nevents} events, {s.lastrate:.2f} Hz, "
                        f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s")
+        if self.dummy_scope is not None: status_text += ", connected to a dummy scope at " + str(self.dummy_scope)
         if self.recorder.is_recording: status_text += ", Recording to "+str(self.recorder.file_handle.name)
         self.ui.statusBar.showMessage(status_text)
 
@@ -947,6 +990,25 @@ class MainWindow(TemplateBaseClass):
             getattr(self.ui, f"upposButton{i}").setEnabled(not is_enabled)
             getattr(self.ui, f"downposButton{i}").setEnabled(not is_enabled)
 
+    def update_autocalibration_enabled(self):
+        """Update the enabled state of the Do Autocalibration action.
+
+        Should be enabled only when the active board is an even-numbered board
+        in an oversampling pair.
+        """
+        s = self.state
+        # Check if we have at least 2 boards
+        if s.num_board < 2:
+            self.ui.actionDo_autocalibration.setEnabled(False)
+            return
+
+        # Check if active board is even and in oversampling mode
+        is_even_board = s.activeboard % 2 == 0
+        is_oversampling = s.dooversample[s.activeboard]
+
+        should_enable = is_even_board and is_oversampling
+        self.ui.actionDo_autocalibration.setEnabled(should_enable)
+
     def toggle_oversampling_controls(self):
         """Shows or hides the oversampling delay and fine delay adjustment buttons."""
         is_enabled = self.ui.actionOversampling_controls.isChecked()
@@ -1055,8 +1117,11 @@ class MainWindow(TemplateBaseClass):
         self.ui.ohmCheck.setChecked(s.mohm[s.activexychannel])
         self.ui.attCheck.setChecked(s.att[s.activexychannel])
         self.ui.tenxCheck.setChecked(s.tenx[s.activexychannel] == 10)
-        self.ui.chanonCheck.setChecked(self.plot_manager.lines[s.activexychannel].isVisible())
+        self.ui.chanonCheck.setChecked(s.channel_enabled[s.activexychannel])
         self.ui.tadBox.setValue(s.tad[s.activeboard])
+
+        # Update persistence UI controls to reflect active channel's settings
+        self.sync_persistence_ui()
 
         # Update per-board trigger settings
         self.ui.trigger_delay_box.setValue(s.trigger_delay[s.activeboard])
@@ -1139,6 +1204,9 @@ class MainWindow(TemplateBaseClass):
         self.update_trigger_spinbox_tooltip(self.ui.totBox, "Time over threshold required to trigger")
         self.update_trigger_spinbox_tooltip(self.ui.trigger_delay_box, "Time to wait before actually firing trigger")
         self.update_trigger_spinbox_tooltip(self.ui.trigger_holdoff_box, "Time needed failing threshold before passing threshold")
+
+        # Update autocalibration enabled state based on new board selection
+        self.update_autocalibration_enabled()
 
     def trigger_pos_changed(self, value):
         """
@@ -1243,6 +1311,11 @@ class MainWindow(TemplateBaseClass):
         self.state.doresamp = value
         if True: #self.state.downsample < 0:
             self.state.saved_doresamp = value
+
+    def line_width_changed(self, value):
+        """Handle line width changes from the UI."""
+        self.state.line_width = value
+        self.plot_manager.set_line_width(value)
 
     def trigger_level_changed(self, value):
         self.state.triggerlevel = value
@@ -1438,52 +1511,112 @@ class MainWindow(TemplateBaseClass):
 
     def chanon_changed(self, checked):
         """Toggles the visibility of the currently selected channel's trace."""
-        # Set the visibility of the main line plot item
-        self.plot_manager.lines[self.state.activexychannel].setVisible(bool(checked))
-
         # Update the average line's pen and visibility, which depends on this checkbox
+        # This will also update the main line visibility correctly via update_channel_visibility()
         self.set_average_line_pen()
+
+    def sync_persistence_ui(self):
+        """Sync persistence UI controls with the active channel's settings."""
+        s = self.state
+        active_channel = s.activexychannel
+        if s.num_board<1: return
+
+        # Block signals to prevent triggering handlers while syncing
+        self.ui.persistTbox.blockSignals(True)
+        self.ui.persistlinesCheck.blockSignals(True)
+        self.ui.persistAvgCheck.blockSignals(True)
+
+        # Convert persist_time back to the spinbox value (reverse of the formula)
+        persist_time_ms = s.persist_time[active_channel]
+        if persist_time_ms > 0:
+            # Reverse formula: value = log2(persist_time_ms / 50)
+            import math
+            value = int(math.log2(persist_time_ms / 50))
+        else:
+            value = 0
+        self.ui.persistTbox.setValue(value)
+
+        # Update checkboxes
+        self.ui.persistlinesCheck.setChecked(s.persist_lines_enabled[active_channel])
+        self.ui.persistAvgCheck.setChecked(s.persist_avg_enabled[active_channel])
+
+        # Unblock signals
+        self.ui.persistTbox.blockSignals(False)
+        self.ui.persistlinesCheck.blockSignals(False)
+        self.ui.persistAvgCheck.blockSignals(False)
+
+    def set_persistence(self, value):
+        """Handle persistence time changes from the UI."""
+        s = self.state
+        active_channel = s.activexychannel
+
+        # Store to state
+        persist_time_ms = 50 * pow(2, value) if value > 0 else 0
+        s.persist_time[active_channel] = persist_time_ms
+
+        # Update plot manager
+        self.plot_manager.set_persistence(value, active_channel)
+        self.set_average_line_pen()
+
+    def update_channel_visibility(self, channel_index):
+        """Update visibility for a specific channel based on its state."""
+        s = self.state
+
+        # Get channel settings
+        is_chan_on = s.channel_enabled[channel_index]
+        show_persist_lines = s.persist_lines_enabled[channel_index]
+        show_persist_avg = s.persist_avg_enabled[channel_index]
+        persist_time = s.persist_time[channel_index]
+
+        # Get the line objects
+        main_line = self.plot_manager.lines[channel_index]
+        average_line = self.plot_manager.average_lines.get(channel_index)
+
+        # If channel is not enabled, hide everything
+        if not is_chan_on:
+            main_line.setVisible(False)
+            if average_line:
+                average_line.setVisible(False)
+            if channel_index in self.plot_manager.persist_lines_per_channel:
+                for item, _, _ in self.plot_manager.persist_lines_per_channel[channel_index]:
+                    item.setVisible(False)
+            return
+
+        # Channel is enabled - apply visibility rules
+
+        # Average line visibility
+        if average_line:
+            average_line.setVisible(show_persist_avg)
+
+        # Persist lines visibility
+        if channel_index in self.plot_manager.persist_lines_per_channel:
+            for item, _, _ in self.plot_manager.persist_lines_per_channel[channel_index]:
+                item.setVisible(show_persist_lines)
+
+        # Main trace visibility: hide ONLY if average is on AND persist lines are off AND persist time > 0
+        if show_persist_avg and not show_persist_lines and persist_time > 0:
+            main_line.setVisible(False)
+        else:
+            main_line.setVisible(True)
 
     def set_average_line_pen(self):
         """
         Updates the appearance and visibility of the main trace, the average trace,
         and the faint persistence traces based on UI settings.
         """
-        # First, tell the plot manager to update the pen style/color of the average line
+        s = self.state
+        active_channel = s.activexychannel
+
+        # Store UI checkbox states to the active channel's state
+        s.persist_lines_enabled[active_channel] = self.ui.persistlinesCheck.isChecked()
+        s.persist_avg_enabled[active_channel] = self.ui.persistAvgCheck.isChecked()
+        s.channel_enabled[active_channel] = self.ui.chanonCheck.isChecked()
+
+        # Update the pen style/color of the average line
         self.plot_manager.set_average_line_pen()
 
-        # Get the state of the relevant UI checkboxes
-        is_chan_on = self.ui.chanonCheck.isChecked()
-        show_persist_lines = self.ui.persistlinesCheck.isChecked()
-        show_persist_avg = self.ui.actionPersist_average.isChecked()
-
-        # Get the line objects from the plot manager
-        active_line = self.plot_manager.lines[self.state.activexychannel]
-        average_line = self.plot_manager.average_line
-
-        # If the main "Channel On" box is unchecked, everything for this channel is hidden.
-        if not is_chan_on:
-            active_line.setVisible(False)
-            average_line.setVisible(False)
-            for item, _, _ in self.plot_manager.persist_lines:
-                item.setVisible(False)
-            return
-
-        # --- VISIBILITY LOGIC WHEN CHANNEL IS ON ---
-
-        # 1. The average line's visibility is directly tied to its checkbox.
-        average_line.setVisible(show_persist_avg)
-
-        # 2. The faint persist lines' visibility is tied to their checkbox.
-        for item, _, _ in self.plot_manager.persist_lines:
-            item.setVisible(show_persist_lines)
-
-        # 3. THIS IS YOUR NEW RULE:
-        #    Hide the main trace ONLY if the average is on AND the faint lines are off.
-        if show_persist_avg and not show_persist_lines:
-            active_line.setVisible(False)
-        else:
-            active_line.setVisible(True)
+        # Update visibility for the active channel
+        self.update_channel_visibility(active_channel)
 
     # #########################################################################
     # ## Slot Implementations (Callbacks for UI events)
@@ -1524,6 +1657,18 @@ class MainWindow(TemplateBaseClass):
             # Use stabilized data (after trigger stabilizers are applied)
             math_results = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data)
             self.plot_manager.update_math_channel_data(math_results)
+
+    def open_dummy_server_config(self):
+        """Open or bring to front the dummy server configuration dialog."""
+        if self.dummy_server_config_dialog is None:
+            self.dummy_server_config_dialog = DummyServerConfigDialog(self, self.usbs)
+            self.dummy_server_config_dialog.position_relative_to_main(self)
+            self.dummy_server_config_dialog.show()
+        else:
+            # Dialog exists - just bring it to front and reposition
+            self.dummy_server_config_dialog.position_relative_to_main(self)
+            self.dummy_server_config_dialog.raise_()
+            self.dummy_server_config_dialog.show()
 
     def open_history_window(self):
         """Slot for the 'History window' menu action."""
@@ -1954,6 +2099,24 @@ class MainWindow(TemplateBaseClass):
         s.dooversample[board] = bool(checked)
         s.dooversample[board + 1] = bool(checked)
         s.skip_next_event = True  # Skip next event after oversampling change
+
+        # Reset persistence settings for both boards in the oversampling pair (ch0 only)
+        ch0_board1 = board * s.num_chan_per_board
+        ch0_board2 = (board + 1) * s.num_chan_per_board
+
+        for ch_idx in [ch0_board1, ch0_board2]:
+            s.persist_time[ch_idx] = 0
+            s.persist_lines_enabled[ch_idx] = True
+            s.persist_avg_enabled[ch_idx] = True
+            # Clear any existing persistence data
+            self.plot_manager.clear_persist(ch_idx)
+            # Update visibility (might have been hidden if persist avg was on and lines were off)
+            self.update_channel_visibility(ch_idx)
+
+        # If we're resetting the active channel, update UI to reflect defaults
+        if s.activexychannel in [ch0_board1, ch0_board2]:
+            self.sync_persistence_ui()
+
         self.controller.set_oversampling(board, bool(checked))
         if bool(checked):
             self.ui.interleavedCheck.setEnabled(True)
@@ -1964,6 +2127,13 @@ class MainWindow(TemplateBaseClass):
             self.ui.interleavedCheck.setEnabled(False)
             self.ui.interleavedCheck.setChecked(False)
             self.ui.twochanCheck.setEnabled(True)
+            # When disabling oversampling, re-enable the odd board's ch0
+            s.channel_enabled[ch0_board2] = True
+            self.update_channel_visibility(ch0_board2)
+
+        # Update autocalibration enabled state based on oversampling change
+        self.update_autocalibration_enabled()
+
         self.gain_changed()
         self.offset_changed()
         all_colors = [pen.color() for pen in self.plot_manager.linepens]
@@ -1975,9 +2145,15 @@ class MainWindow(TemplateBaseClass):
         s.dointerleaved[board] = bool(checked)
         s.dointerleaved[board + 1] = bool(checked)
 
-        # Hide the traces from the secondary board
-        c_secondary = (board + 1) * s.num_chan_per_board
-        self.plot_manager.lines[c_secondary].setVisible(not bool(checked))
+        # Update visibility for the secondary board's channels
+        # When interleaved, secondary board channels should be disabled
+        c_secondary_ch0 = (board + 1) * s.num_chan_per_board
+        c_secondary_ch1 = c_secondary_ch0 + 1
+        if checked:
+            s.channel_enabled[c_secondary_ch0] = False
+            s.channel_enabled[c_secondary_ch1] = False
+        self.update_channel_visibility(c_secondary_ch0)
+        self.update_channel_visibility(c_secondary_ch1)
 
         self.time_changed()
         all_colors = [pen.color() for pen in self.plot_manager.linepens]

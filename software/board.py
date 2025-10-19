@@ -28,7 +28,7 @@ def clkout_ena(usb, board, en: bool, doprint: bool = True):
     usb.send(bytes([2, 9, int(en), 0, 99, 99, 99, 99]))
     res = usb.recv(4)
     if doprint:
-        print(f"Clock out on board {board} now {int(en)}, was {res[0]}")
+        print(f"Clock out on board {board} now {bool(en)}, was {bool(res[0])}")
 
 def flash_erase(usb, doprint: bool = False):
     """Sends the command to bulk erase the configuration flash."""
@@ -252,10 +252,9 @@ def adf4350(usb, freq: float, phase: Union[int, None], r_counter: int = 1,
     set_spi_mode(usb, 0)
 
 
-def setupboard(usb, dopattern: int, twochannel: bool, dooverrange: bool, do1v: bool = False) -> int:
+def setupboard(usb, dopattern: int, twochannel: bool, dooverrange: bool, do1v: bool = False) -> bool:
     """
     Performs the initial configuration of the ADC and front-end amplifiers.
-    Returns 0 on success, non-zero on failure.
     """
     #setfan(usb, True)
     set_spi_mode(usb, 0)
@@ -265,7 +264,7 @@ def setupboard(usb, dopattern: int, twochannel: bool, dooverrange: bool, do1v: b
     res = spicommand2(usb, "VENDOR_ID", 0x00, 0x0c, 0, 0, True)
     if res is None or res[0] != 0x51:
         print("Error: Could not read correct Vendor ID from ADC!")
-        return 1
+        return False
 
     # --- ADC and LVDS Configuration ---
     spicommand(usb, "LVDS_EN", 0x02, 0x00, 0x00, False)
@@ -303,7 +302,7 @@ def setupboard(usb, dopattern: int, twochannel: bool, dooverrange: bool, do1v: b
     setgain(usb, 0, 0, False)
     setgain(usb, 1, 0, False)
 
-    return 0
+    return True
 
 
 def setgain(usb, chan: int, value: int, doswap: bool):
@@ -333,21 +332,24 @@ def clockused(usb, board: int, quiet: bool) -> int:
     """Checks if the board is locked to its internal clock (0) or an external clock (1)."""
     usb.send(bytes([2, 5, 0, 0, 99, 99, 99, 99]))
     clockinfo = usb.recv(4)
-    if not quiet: print(f"Clockinfo for board {board}: {binprint(clockinfo[1])} {binprint(clockinfo[0])}")
-
+    #if not quiet: print(f"Clockinfo for board {board}: {binprint(clockinfo[1])} {binprint(clockinfo[0])}")
     if getbit(clockinfo[1], 1) and not getbit(clockinfo[1], 3):
         if not quiet: print(f"Board {board} locked to external board")
-        return 1
+        return True
     else:
         if not quiet: print(f"Board {board} locked to internal clock")
-        return 0
+        return False
 
 
-def switchclock(usb, board: int):
+def switchclock(usb, board: int, external: bool):
     """Toggles the clock source and checks the new status."""
-    usb.send(bytes([7, 0, 0, 0, 99, 99, 99, 99]))
-    usb.recv(4)
-    return clockused(usb, board, quiet=False)
+    for i in range(4):
+        # Ask for a clock switch
+        usb.send(bytes([7, 0, 0, 0, 99, 99, 99, 99]))
+        usb.recv(4)
+        if clockused(usb, board, quiet=True) == external:
+            return True # success
+    return False # failed to switch clock to desired source
 
 
 def setchanimpedance(usb, chan: int, onemeg: bool, doswap: bool):

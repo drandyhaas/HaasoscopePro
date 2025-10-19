@@ -187,7 +187,9 @@ class DataProcessor:
 
             # Check clock and strobe validity
             vals = unpackedsamples[s * self.nsubsamples + 40: s * self.nsubsamples + 50]
-            if vals[9] != -16657: print("Warning: Beef marker not found!")
+            if vals[9] != -16657:
+                print("Error: Beef marker not found!")
+                raise RuntimeError(f"Data corrupted. No BEEF.")
             if vals[8] != 0 or (self.lastclk != 341 and self.lastclk != 682):
                 for n in range(0, 8):
                     val = vals[n]

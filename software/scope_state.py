@@ -5,7 +5,7 @@ class ScopeState:
 
     def __init__(self, num_boards, num_chan_per_board):
         # General and Hardware Configuration
-        self.softwareversion = 31.02
+        self.softwareversion = 31.03
         self.num_board = num_boards
         self.num_chan_per_board = num_chan_per_board
         self.samplerate = 3.2  # GHz
@@ -52,6 +52,12 @@ class ScopeState:
         self.lpf = [0] * (num_boards * num_chan_per_board)
         self.time_skew = [0] * (num_boards * num_chan_per_board)  # Time offset in nanoseconds per channel
         self.channel_names = [''] * (num_boards * num_chan_per_board)  # Custom names for each channel
+        self.channel_enabled = [True] * (num_boards * num_chan_per_board)  # Whether channel is enabled (chanonCheck)
+
+        # Per-channel persistence settings
+        self.persist_time = [0] * (num_boards * num_chan_per_board)  # Persistence time in ms for each channel
+        self.persist_lines_enabled = [True] * (num_boards * num_chan_per_board)  # Show faint persist lines
+        self.persist_avg_enabled = [True] * (num_boards * num_chan_per_board)  # Show persist average
 
         # Triggering Parameters
         self.triggerlevel = 127
@@ -73,6 +79,7 @@ class ScopeState:
         self.xy_mode = False
         self.skip_next_event = False
         self.fitwidthfraction = 0.2
+        self.line_width = 2  # Default line width for plots
         self.yscale = 3.3 / 2.03 * 10 * 5 / 8 / pow(2, 12) / 16
         self.nsunits = 1
         self.units = "ns"
@@ -85,8 +92,8 @@ class ScopeState:
         self.downsamplemergingcounter = [0] * self.num_board
         self.distcorr = [0] * self.num_board
         self.totdistcorr = [0] * self.num_board
-        self.distcorrtol = 5.0
-        self.distcorrsamp = 50
+        self.distcorrtol = 3.0
+        self.distcorrsamp = 30
         self.noextboard = -1
         self.lvdstrigdelay = [0] * self.num_board
         self.lastlvdstrigdelay = [0] * self.num_board

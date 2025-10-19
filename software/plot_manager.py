@@ -18,13 +18,13 @@ import math
 # Plotting Helper Functions (Moved from utils.py)
 # #############################################################################
 
-def rainbow_colormap(n, start=0.0, end=0.66):
+def rainbow_colormap(n, start, end):
     """Generate rainbow colors using HSV color space.
 
     Args:
         n: Number of colors to generate
-        start: Starting hue (0.0 = red, default)
-        end: Ending hue (0.66 = blue, default 0.66 to match matplotlib rainbow)
+        start: Starting hue (e.g. 0.0 = red)
+        end: Ending hue (e.g. 0.66 = blue)
 
     Returns:
         Array of RGBA colors with shape (n, 4)
@@ -85,7 +85,7 @@ class PlotManager(pg.QtCore.QObject):
         self.linepens = []
         self.otherlines = {}  # For trigger lines, fit lines etc.
         self.trigger_arrows = {}  # Store arrow markers for trigger line ends
-        self.average_line = None
+        self.average_lines = {}  # Dictionary: {channel_index: average line}
         self.right_axis = None
         self.nlines = state.num_board * state.num_chan_per_board
         self.current_vline_pos = 0.0
@@ -99,10 +99,9 @@ class PlotManager(pg.QtCore.QObject):
         # Cursor manager (will be initialized after linepens are created)
         self.cursor_manager = None
 
-        # Persistence attributes
+        # Persistence attributes (per-channel)
         self.max_persist_lines = 16
-        self.persist_time = 0
-        self.persist_lines = deque(maxlen=self.max_persist_lines)
+        self.persist_lines_per_channel = {}  # Dictionary: {channel_index: deque of persist lines}
         self.persist_timer = QtCore.QTimer()
         self.persist_timer.timeout.connect(self.update_persist_effect)
 
@@ -136,9 +135,15 @@ class PlotManager(pg.QtCore.QObject):
         self.set_grid(self.ui.actionGrid.isChecked())
 
         # Create lines for each channel
-        colors = rainbow_colormap(self.nlines, start=0.0, end=0.66)
+        if self.nlines>4:
+            colors = rainbow_colormap(self.nlines, start=0.0, end=0.8)
+        else:
+            colors = [QColor("red"), QColor("cyan"), QColor("yellow"), QColor("magenta")]
         for i in range(self.nlines):
-            c = QColor.fromRgbF(*colors[i])
+            if self.nlines>4:
+                c = QColor.fromRgbF(*colors[i])
+            else:
+                c = colors[i]
             pen = pg.mkPen(color=c)
             line = self.plot.plot(pen=pen, name=f"Channel {i}", skipFiniteCheck=True, connect="finite")
             line.curve.setClickable(True)
@@ -186,9 +191,8 @@ class PlotManager(pg.QtCore.QObject):
             line.setVisible(False)
             self.otherlines[f'fit_{i}'] = line
 
-        # Persistence average line
-        self.average_line = self.plot.plot(pen=pg.mkPen(color='w', width=1), name="persist_avg")
-        self.average_line.setVisible(self.ui.actionPersist_average.isChecked())
+        # Persistence average lines (created per-channel on demand)
+        # self.average_lines = {} already initialized in __init__
 
         # XY plot line (initially hidden)
         self.xy_line = self.plot.plot(pen=pg.mkPen(color="w"), name="XY_Plot", skipFiniteCheck=True, connect="finite")
@@ -362,7 +366,10 @@ class PlotManager(pg.QtCore.QObject):
             # Store stabilized data for math channel calculations
             self.stabilized_data[li] = (xdatanew, ydatanew)
 
-            if li == s.activexychannel and self.persist_time > 0 and self.ui.chanonCheck.isChecked():
+            # Add to persistence if channel is enabled and has persistence enabled
+            # Accumulate if either persist lines OR persist average is enabled (average needs the data)
+            if (s.persist_time[li] > 0 and s.channel_enabled[li] and
+                (s.persist_lines_enabled[li] or s.persist_avg_enabled[li])):
                 self._add_to_persistence(xdatanew, ydatanew, li)
 
             # --- Peak detect update ---
@@ -396,7 +403,9 @@ class PlotManager(pg.QtCore.QObject):
         # Also hide/show the right axis
         if self.right_axis:
             self.right_axis.setVisible(is_time_domain_visible)
-        self.average_line.setVisible(is_time_domain_visible and self.ui.actionPersist_average.isChecked())
+        # Hide/show all per-channel average lines based on their state
+        for channel_idx, avg_line in self.average_lines.items():
+            avg_line.setVisible(is_time_domain_visible and self.state.persist_avg_enabled[channel_idx])
 
         if show_xy:
             self.plot.setLabel('bottom', f"Board {board_num} Ch 1 (V/div)")
@@ -621,21 +630,37 @@ class PlotManager(pg.QtCore.QObject):
         self.current_vline_pos = vline_pos
 
     # Persistence Methods
-    def set_persistence(self, value):
-        self.persist_time = 50 * pow(2, value) if value > 0 else 0
-        if self.persist_time > 0:
-            self.persist_timer.start(50)
+    def set_persistence(self, value, channel_index=None):
+        """Set persistence time for a specific channel."""
+        if channel_index is None:
+            channel_index = self.state.activexychannel
+
+        persist_time_ms = 50 * pow(2, value) if value > 0 else 0
+        self.state.persist_time[channel_index] = persist_time_ms
+
+        # Start/stop timer based on whether ANY channel has persistence active
+        any_persist_active = any(t > 0 for t in self.state.persist_time)
+        if any_persist_active:
+            if not self.persist_timer.isActive():
+                self.persist_timer.start(50)
         else:
             self.persist_timer.stop()
-            self.clear_persist()
+            self.clear_persist(channel_index)
 
         # Update the spinbox tooltip to show the actual time value
-        time_str = f"{self.persist_time / 1000.0:.1f} s" if self.persist_time > 0 else "Off"
+        time_str = f"{persist_time_ms / 1000.0:.1f} s" if persist_time_ms > 0 else "Off"
         self.ui.persistTbox.setToolTip(f"Persistence time: {time_str}")
 
     def _add_to_persistence(self, x, y, line_idx):
-        if len(self.persist_lines) >= self.max_persist_lines:
-            oldest_item, _, _ = self.persist_lines.popleft()  # Use popleft for deque
+        """Add a trace to the persistence buffer for a specific channel."""
+        # Initialize deque for this channel if needed
+        if line_idx not in self.persist_lines_per_channel:
+            self.persist_lines_per_channel[line_idx] = deque(maxlen=self.max_persist_lines)
+
+        persist_lines = self.persist_lines_per_channel[line_idx]
+
+        if len(persist_lines) >= self.max_persist_lines:
+            oldest_item, _, _ = persist_lines.popleft()
             self.plot.removeItem(oldest_item)
 
         pen = self.linepens[line_idx]
@@ -643,61 +668,112 @@ class PlotManager(pg.QtCore.QObject):
         color.setAlpha(100)
         new_pen = pg.mkPen(color, width=1)
         persist_item = self.plot.plot(x, y, pen=new_pen, skipFiniteCheck=True, connect="finite")
-        persist_item.setVisible(self.ui.persistlinesCheck.isChecked())
-        self.persist_lines.append((persist_item, time.time(), line_idx))
+        persist_item.setVisible(self.state.persist_lines_enabled[line_idx])
+        persist_lines.append((persist_item, time.time(), line_idx))
 
     def update_persist_effect(self):
-        """Updates the alpha/transparency of the persistent lines."""
-        if len(self.persist_lines) == 0 and self.persist_time == 0:
+        """Updates the alpha/transparency of persistent lines for all channels."""
+        if not self.persist_lines_per_channel:
             self.persist_timer.stop()
             return
 
         current_time = time.time()
-        # Use a temporary list to avoid issues with modifying the deque while iterating
-        items_to_remove = []
-        for item, creation_time, li in self.persist_lines:
-            age = (current_time - creation_time) * 1000.0
-            if age > self.persist_time:
-                items_to_remove.append((item, creation_time, li))
-            else:
-                alpha = int(100 * (1 - (age / self.persist_time)))
-                pen = self.linepens[li]
-                color = pen.color()
-                color.setAlpha(alpha)
-                new_pen = pg.mkPen(color, width=1)
-                item.setPen(new_pen)
 
-        for item_tuple in items_to_remove:
-            self.plot.removeItem(item_tuple[0])
-            self.persist_lines.remove(item_tuple)
+        # Update each channel's persist lines
+        for channel_idx, persist_lines in list(self.persist_lines_per_channel.items()):
+            channel_persist_time = self.state.persist_time[channel_idx]
+
+            if channel_persist_time == 0:
+                continue
+
+            items_to_remove = []
+            for item, creation_time, li in persist_lines:
+                age = (current_time - creation_time) * 1000.0
+                if age > channel_persist_time:
+                    items_to_remove.append((item, creation_time, li))
+                else:
+                    alpha = int(100 * (1 - (age / channel_persist_time)))
+                    pen = self.linepens[li]
+                    color = pen.color()
+                    color.setAlpha(alpha)
+                    new_pen = pg.mkPen(color, width=1)
+                    item.setPen(new_pen)
+
+            for item_tuple in items_to_remove:
+                self.plot.removeItem(item_tuple[0])
+                persist_lines.remove(item_tuple)
 
     def update_persist_average(self):
-        """Calculates and plots the average of persistent traces."""
-        if len(self.persist_lines) < 2:
-            self.average_line.clear()
-            return
+        """Calculates and plots the average of persistent traces for all channels with data."""
+        s = self.state
 
-        first_line_item = self.persist_lines[0][0]
-        min_x, max_x = first_line_item.xData.min(), first_line_item.xData.max()
+        # Iterate over all channels that have persist lines
+        for channel_idx, persist_lines in self.persist_lines_per_channel.items():
+            if len(persist_lines) < 1:
+                # Clear the average line for this channel if it exists
+                if channel_idx in self.average_lines:
+                    self.average_lines[channel_idx].clear()
+                continue
 
-        num_points = self.state.expect_samples * 40 * (2 if self.state.dointerleaved[self.state.activeboard] else 1)
-        common_x_axis = np.linspace(min_x, max_x, num_points)
+            # Create average line for this channel if it doesn't exist
+            if channel_idx not in self.average_lines:
+                pen = self.linepens[channel_idx]
+                avg_line = self.plot.plot(pen=pg.mkPen(color=pen.color(), width=1),
+                                          name=f"persist_avg_ch{channel_idx}")
+                # Make the average line clickable to select the channel
+                avg_line.curve.setClickable(True)
+                avg_line.curve.sigClicked.connect(self._create_click_handler(channel_idx))
+                self.average_lines[channel_idx] = avg_line
+                # Set initial visibility based on state
+                avg_line.setVisible(s.persist_avg_enabled[channel_idx])
 
-        resampled_y_values = [np.interp(common_x_axis, item.xData, item.yData) for item, _, _ in self.persist_lines]
+            first_line_item = persist_lines[0][0]
+            min_x, max_x = first_line_item.xData.min(), first_line_item.xData.max()
 
-        if resampled_y_values:
-            y_average = np.mean(resampled_y_values, axis=0)
-            if self.state.doresamp:
-                y_average, common_x_axis = resample(y_average, len(common_x_axis) * self.state.doresamp,
-                                                    t=common_x_axis)
-            # Optimization: Use skipFiniteCheck for faster setData
-            self.average_line.setData(common_x_axis, y_average, skipFiniteCheck=True)
+            board_idx = channel_idx // s.num_chan_per_board
+            num_points = s.expect_samples * 40 * (2 if s.dointerleaved[board_idx] else 1)
+            common_x_axis = np.linspace(min_x, max_x, num_points)
 
-    def clear_persist(self):
-        for item, _, _ in list(self.persist_lines):
-            self.plot.removeItem(item)
-        self.persist_lines.clear()
-        self.average_line.clear()
+            resampled_y_values = [np.interp(common_x_axis, item.xData, item.yData) for item, _, _ in persist_lines]
+
+            if resampled_y_values:
+                y_average = np.mean(resampled_y_values, axis=0)
+                if s.doresamp:
+                    y_average, common_x_axis = resample(y_average, len(common_x_axis) * s.doresamp,
+                                                        t=common_x_axis)
+                # Optimization: Use skipFiniteCheck for faster setData
+                self.average_lines[channel_idx].setData(common_x_axis, y_average, skipFiniteCheck=True)
+
+    def clear_persist(self, channel_index=None):
+        """Clear persistence for a specific channel or all channels.
+
+        Args:
+            channel_index: If specified, clear only this channel. If None, clear all channels.
+        """
+        if channel_index is not None:
+            # Clear only the specified channel
+            if channel_index in self.persist_lines_per_channel:
+                persist_lines = self.persist_lines_per_channel[channel_index]
+                for item, _, _ in list(persist_lines):
+                    self.plot.removeItem(item)
+                persist_lines.clear()
+        else:
+            # Clear all channels
+            for channel_idx, persist_lines in list(self.persist_lines_per_channel.items()):
+                for item, _, _ in list(persist_lines):
+                    self.plot.removeItem(item)
+                persist_lines.clear()
+            self.persist_lines_per_channel.clear()
+
+        # Clear the average line(s) for the specified channel(s)
+        if channel_index is not None:
+            # Clear only the specified channel's average line
+            if channel_index in self.average_lines:
+                self.average_lines[channel_index].clear()
+        else:
+            # Clear all channels' average lines
+            for avg_line in self.average_lines.values():
+                avg_line.clear()
 
     # Peak Detect Methods
     def set_peak_detect(self, enabled):
@@ -819,8 +895,10 @@ class PlotManager(pg.QtCore.QObject):
             line.setSymbolSize(size)
             line.setSymbolPen(self.linepens[i].color())
             line.setSymbolBrush(self.linepens[i].color())
-        self.average_line.setSymbol(symbol)
-        self.average_line.setSymbolSize(size)
+        # Set markers on all average lines
+        for avg_line in self.average_lines.values():
+            avg_line.setSymbol(symbol)
+            avg_line.setSymbolSize(size)
 
     def show_trigger_lines(self):
         """Show trigger lines and arrows after PLL calibration is complete."""
@@ -987,11 +1065,14 @@ class PlotManager(pg.QtCore.QObject):
         self.right_axis.update_function()
 
     def set_average_line_pen(self):
-        if self.ui.persistlinesCheck.isChecked():
-            pen = pg.mkPen(color='w', width=self.ui.linewidthBox.value())
-        else:
-            pen = self.linepens[self.state.activexychannel]
-        self.average_line.setPen(pen)
+        """Update the pen for the active channel's average line."""
+        active_channel = self.state.activexychannel
+        if active_channel in self.average_lines:
+            if self.ui.persistlinesCheck.isChecked():
+                pen = pg.mkPen(color='w', width=self.ui.linewidthBox.value())
+            else:
+                pen = self.linepens[active_channel]
+            self.average_lines[active_channel].setPen(pen)
 
     def update_risetime_fit_lines(self, fit_results):
         """Draws or hides the risetime fit visualization lines."""
