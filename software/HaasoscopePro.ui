@@ -2345,6 +2345,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionOversampling_controls"/>
     <addaction name="actionToggle_trig_stabilizer"/>
     <addaction name="actionToggle_extra_trig_stabilizer"/>
+    <addaction name="actionPulse_stabilizer"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -2927,6 +2928,17 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Dummy scope</string>
+   </property>
+  </action>
+  <action name="actionPulse_stabilizer">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Pulse stabilizer</string>
+   </property>
+   <property name="toolTip">
+    <string>Stabilize trigger at edge midpoint instead of threshold crossing</string>
    </property>
   </action>
  </widget>
