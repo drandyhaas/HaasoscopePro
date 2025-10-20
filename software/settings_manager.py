@@ -145,6 +145,7 @@ def save_setup(main_window):
         'high_resolution': main_window.ui.actionHigh_resolution.isChecked(),
         'trig_stabilizer_enabled': s.trig_stabilizer_enabled,
         'extra_trig_stabilizer_enabled': s.extra_trig_stabilizer_enabled,
+        'pulse_stabilizer_enabled': s.pulse_stabilizer_enabled,
         'oversampling_controls': main_window.ui.actionOversampling_controls.isChecked(),
         'pll_controls': main_window.ui.actionToggle_PLL_controls.isChecked(),
         'auto_oversample_alignment': main_window.ui.actionAuto_oversample_alignment.isChecked(),
@@ -465,6 +466,9 @@ def load_setup(main_window):
     if 'extra_trig_stabilizer_enabled' in setup:
         s.extra_trig_stabilizer_enabled = setup['extra_trig_stabilizer_enabled']
         main_window.ui.actionToggle_extra_trig_stabilizer.setChecked(s.extra_trig_stabilizer_enabled)
+    if 'pulse_stabilizer_enabled' in setup:
+        s.pulse_stabilizer_enabled = setup['pulse_stabilizer_enabled']
+        main_window.ui.actionPulse_stabilizer.setChecked(s.pulse_stabilizer_enabled)
     if 'oversampling_controls' in setup:
         main_window.ui.actionOversampling_controls.setChecked(setup['oversampling_controls'])
         # Apply the oversampling controls state

@@ -188,7 +188,7 @@ class MainWindow(TemplateBaseClass):
         self.measurements.adjust_table_view_geometry()
 
         # Set column widths for the measurement table
-        self.ui.tableView.setColumnWidth(0, 215)  # Measurement name column, wider for X button + name
+        self.ui.tableView.setColumnWidth(0, 210)  # Measurement name column, wider for X button + name
         self.ui.tableView.setColumnWidth(1, 60)  # Measurement value column
         self.ui.tableView.setColumnWidth(2, 60)  # Measurement avg column
         self.ui.tableView.setColumnWidth(3, 60)  # Measurement rms column
@@ -336,6 +336,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionOversampling_mean_and_RMS.triggered.connect(lambda: do_meanrms_calibration(self))
         self.ui.actionToggle_trig_stabilizer.triggered.connect(self.trig_stabilizer_toggled)
         self.ui.actionToggle_extra_trig_stabilizer.triggered.connect(self.extra_trig_stabilizer_toggled)
+        self.ui.actionPulse_stabilizer.triggered.connect(self.pulse_stabilizer_toggled)
 
         # Plot manager signals
         self.plot_manager.vline_dragged_signal.connect(self.on_vline_dragged)
@@ -490,6 +491,10 @@ class MainWindow(TemplateBaseClass):
     def extra_trig_stabilizer_toggled(self, checked):
         """Updates the state for the per-line trigger stabilizer."""
         self.state.extra_trig_stabilizer_enabled = checked
+
+    def pulse_stabilizer_toggled(self, checked):
+        """Updates the state for pulse stabilizer mode (uses edge midpoint instead of threshold)."""
+        self.state.pulse_stabilizer_enabled = checked
 
     def update_plot_loop(self):
         """Main acquisition loop, with full status bar and FFT plot updates."""

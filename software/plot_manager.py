@@ -319,6 +319,30 @@ class PlotManager(pg.QtCore.QObject):
                         yc = -yc
                         threshold_to_use = -hline_threshold
 
+                    # Pulse stabilizer mode: use edge midpoint instead of threshold crossing
+                    if s.pulse_stabilizer_enabled and yc.size > 0:
+                        # Find index closest to trigger position
+                        trigger_idx = np.argmin(np.abs(xc - vline_time))
+                        delta_threshold = s.triggerdelta[s.noextboard] * s.yscale * 256
+
+                        # Search forward for maximum (stops when data goes down by more than delta)
+                        edge_max = yc[trigger_idx]
+                        for i in range(trigger_idx, len(yc)):
+                            if yc[i] > edge_max:
+                                edge_max = yc[i]
+                            elif edge_max - yc[i] > delta_threshold:
+                                break
+
+                        # Search backward for minimum (stops when data goes up by more than delta)
+                        edge_min = yc[trigger_idx]
+                        for i in range(trigger_idx, -1, -1):
+                            if yc[i] < edge_min:
+                                edge_min = yc[i]
+                            elif yc[i] - edge_min > delta_threshold:
+                                break
+
+                        threshold_to_use = (edge_min + edge_max) / 2.0
+
                     if xc.size > 1:
                         distcorrtemp = find_crossing_distance(yc, threshold_to_use, vline_time, xc[0], xc[1] - xc[0])
                         if distcorrtemp is not None and abs(

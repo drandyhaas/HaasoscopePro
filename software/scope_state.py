@@ -107,6 +107,7 @@ class ScopeState:
         self.extrigboardmeancorrection = [0] * self.num_board
         self.trig_stabilizer_enabled = True
         self.extra_trig_stabilizer_enabled = True
+        self.pulse_stabilizer_enabled = False
 
         # Performance metrics
         self.nevents = 0
