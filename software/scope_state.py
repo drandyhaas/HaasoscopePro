@@ -92,8 +92,8 @@ class ScopeState:
         self.downsamplemergingcounter = [0] * self.num_board
         self.distcorr = [0] * self.num_board
         self.totdistcorr = [0] * self.num_board
-        self.distcorrtol = 3.0
-        self.distcorrsamp = 30
+        self.distcorrtol = 15.0
+        self.distcorrsamp = 100
         self.noextboard = -1
         self.lvdstrigdelay = [0] * self.num_board
         self.lastlvdstrigdelay = [0] * self.num_board
