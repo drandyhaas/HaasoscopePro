@@ -775,6 +775,6 @@ class MeasurementsManager:
         self.ui.tableView.setGeometry(
             0,  # x
             table_top_y,  # y
-            frame_width,  # width
+            frame_width-10,  # width
             table_height  # height
         )

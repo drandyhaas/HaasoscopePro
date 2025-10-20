@@ -188,7 +188,7 @@ class MainWindow(TemplateBaseClass):
         self.measurements.adjust_table_view_geometry()
 
         # Set column widths for the measurement table
-        self.ui.tableView.setColumnWidth(0, 215)  # Measurement name column, wider for X button + name
+        self.ui.tableView.setColumnWidth(0, 210)  # Measurement name column, wider for X button + name
         self.ui.tableView.setColumnWidth(1, 60)  # Measurement value column
         self.ui.tableView.setColumnWidth(2, 60)  # Measurement avg column
         self.ui.tableView.setColumnWidth(3, 60)  # Measurement rms column
