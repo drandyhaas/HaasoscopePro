@@ -6,7 +6,7 @@
 
 ### [Hackaday.io Page](https://hackaday.io/project/200773-haasoscope-pro)
 
-![haasoscope_pro_adc_fpga_board.png](adc%20board%2Fhaasoscope_pro_adc_fpga_board.png)
+<img src="adc%20board%2Fhaasoscope_pro_adc_fpga_board.png" width="500">
 
 #### Schematics in PDF: [haasoscope_pro_adc_fpga_board_schematics.pdf](adc%20board%2Fhaasoscope_pro_adc_fpga_board_schematics.pdf)
 
@@ -18,31 +18,44 @@
 
 See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiKQQmUUNoTf2oo_m5qS00k) !
 
+### Versions
+
+- old: v27 is the firmware that shipped with the first round of units
+- old: v28 firmware fixed trigger stability
+- "main" branch is currently v29 firmware and adds more software features
+- old: "v29_cleanup" branch has a beta version of the software with yet more features
+- old: "v30" branch has v30 firmware which adds trigger delay and holdoff options and more software features 
+- "v31” branch has v31 firmware which adds fan PWM control and more software features 
+- "v31_test" branch: new development is occuring here
+
+To use a different branch, do <code>git pull && git checkout "branchname"</code>, select the branch name in the drop down box on github and then download the zip file of the code, or (for v30+) [download a release](https://github.com/drandyhaas/HaasoscopePro/releases) zip file for your platform (Windows, Mac, Linux). 
+Then run the new software, update the firmware (if needed) on your board from that new software, and power cycle the board (automatic firmware reload for boards with v29+ firmware).
+
 ### Quick start (Windows/Mac)
 
-1) Download code and unzip it: https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/main.zip
-2) Rename directory HaasoscopePro-main to HaasoscopePro (for consistency with git below)
-3) Install [FTDI D2xx driver](https://ftdichip.com/drivers/d2xx-drivers/) 
+1) [Download code](https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/main.zip) and unzip it, or another zip file version from another branch, or (for v30+) [download a release](https://github.com/drandyhaas/HaasoscopePro/releases) zip file for your platform.
+2) Install [FTDI D2xx driver](https://ftdichip.com/drivers/d2xx-drivers/) 
 - for Windows: install by running the setup exe at <code>HaasoscopePro/software/ftdi_setup.exe</code>
 - for Mac: <code>sudo mkdir -p /usr/local/lib; sudo cp HaasoscopePro/software/libftd2xx.dylib /usr/local/lib/</code> 
 - for Linux: <code>sudo cp HaasoscopePro/software/libftd2xx.so /usr/lib/</code>
-4) Plug Haasoscope Pro into your computer via USB
-5) Run **HaasoscopeProQt** in the <code>HaasoscopePro/software/dist/(OS)_HaasoscopeProQt</code> directory
+3) Plug Haasoscope Pro into your computer via USB (5V 2A at least!)
+4) Run **HaasoscopeProQt** in the <code>HaasoscopePro/software/dist/(OS)_HaasoscopeProQt</code> directory
 
 ### Fuller way of running (Windows/Mac/Linux)
 
 1) Install python3 and git for your operating system
-2) Install dependencies: <br><code>pip3 install numpy scipy pyqtgraph PyQt5 pyftdi matplotlib ftd2xx</code>
+2) Install dependencies: <br><code>pip3 install numpy scipy pyqtgraph PyQt5 pyftdi ftd2xx matplotlib</code> <br>
+(matplotlib not needed for v30+)
 3) Get code: <br><code>git clone https://github.com/drandyhaas/HaasoscopePro.git</code>
 4) Install FTDI driver (see Quick start above)
-5) Plug Haasoscope Pro into your computer via USB
+5) Plug Haasoscope Pro into your computer via USB (5V 2A at least!)
 6) Run:
 <br><code>cd HaasoscopePro/software</code>
 <br><code>python3 HaasoscopeProQt.py</code>
 
 ### Tips
 
-- If not enough power is supplied or issues happen during readout, plug in via a powered USB hub, a USB-A to C cable, or use an external 12V power adapter
+- If not enough power is being supplied, plug in via a [powered USB hub](https://a.co/d/hfAtVhl), a [USB PD hub with 15W reserved for ports](https://a.co/d/174I3v8) and a USB-C cable, or use an external [5-24V 20W+ power adapter with 2.1mm plug](https://a.co/d/1EkzLRP)
 - If you get security issues on Mac, do: <code>xattr -cr Mac_HaasoscopeProQt</code>
 - If the board is not found on Linux, use this udev rule and then plug it in: <code>sudo cp HaasoscopePro/software/ft245.rules /etc/udev/rules.d/</code>
 - If you get an error like "qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found", try: <code>sudo apt install libxcb-xinerama0</code>
@@ -50,13 +63,13 @@ See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiK
 ### To remake exe for quick start
 1) <code>pip3 install pyinstaller</code>
 2) <code>cd HaasoscopePro/software</code>
-3) <code>.\windowspyinstaller.bat</code> or <code>./macpyinstaller.sh</code>
+3) <code>.\windowspyinstaller.bat</code> or <code>./macpyinstaller.sh</code> or <code>./linuxpyinstaller.sh</code>
 
 ### Repository structure
 
 - [adc board](adc%20board/): Design files and documentation for the main board, based on Eagle 9.6.2
 - [adc board/Kicad](adc%20board/Kicad): An import of the main board design files into KiCad 8
-- [adc board firmware](adc%20board%20firmware/): Quartus lite project for the Altera Cyclone IV FPGA firmware (see [README](adc%20board%20firmware/README.md) in there for firmware upload instructions)
+- [adc board firmware](adc%20board%20firmware/): Quartus lite project for the Altera Cyclone IV FPGA firmware (see [README](adc%20board%20firmware/README.md) in there for more info)
 - [case](case/): Front and back PCB panels for the aluminum case
 - [software](software/): Python files for the oscilloscope program
 - [sub boards](sub%20boards/): Eagle design files and documentation for smaller test boards that were used during development 
