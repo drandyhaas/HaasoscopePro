@@ -10,6 +10,7 @@ mkdir ../../HaasoscopePro_Linux
 mkdir "../../HaasoscopePro_Linux/adc board firmware"
 mkdir "../../HaasoscopePro_Linux/adc board firmware/output_files"
 cp "../adc board firmware/output_files/coincidence_auto.rpd" "../../HaasoscopePro_Linux/adc board firmware/output_files/"
+cp "../adc board firmware/blaster.rules" "../../HaasoscopePro_Linux/adc board firmware/"
 
 mv dist/HaasoscopeProQt ../../HaasoscopePro_Linux/Linux_HaasoscopeProQt
 mv dist/dummy_server/dummy_server ../../HaasoscopePro_Linux/Linux_HaasoscopeProQt/
@@ -17,6 +18,7 @@ mv dist/dummy_server/dummy_server ../../HaasoscopePro_Linux/Linux_HaasoscopeProQ
 cp *.ui ../../HaasoscopePro_Linux/Linux_HaasoscopeProQt/
 cp icon.png ../../HaasoscopePro_Linux/Linux_HaasoscopeProQt/
 cp libftd2xx.so ../../HaasoscopePro_Linux/Linux_HaasoscopeProQt/
+cp ft245.rules ../../HaasoscopePro_Linux/Linux_HaasoscopeProQt/
 
 rm -rf build
 rm -rf dist

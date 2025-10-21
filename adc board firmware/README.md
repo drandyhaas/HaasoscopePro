@@ -26,7 +26,7 @@ If you've made changes to the code, recompile
 Plug in the USB blaster device, go to it in the device manager, and do Update driver, then Browse my computer for drivers, Let me pick from a list of devices, select JTAG cables, Have disk, and select the intelFPGA_lite\<version>\quartus\drivers\usb-blaster-ii directory, and install.
 
 ### To setup USB Blaster on Linux:
- - In theory it should work out of the box, but you just need permissions to access it. Try this and then plug it in: <code>sudo cp HaasoscopePro/software/blaster.rules /etc/udev/rules.d/</code>
+ - In theory it should work out of the box, but you just need permissions to access it. Try this and then plug it in: <code>sudo cp blaster.rules /etc/udev/rules.d/</code>
 
 ### Tips in case of problems:
  - Maybe the USB-blaster must first be powered from the board and then connected to the PC. So the procedure step by step: connect the USB-Blaster to your board, power-on the board, plug the USB cable in the PC.
