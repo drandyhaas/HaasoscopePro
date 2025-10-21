@@ -48,6 +48,8 @@ python HaasoscopeProQt.py --socket localhost:9999
 
 The software will connect to the dummy server instead of looking for USB hardware.
 
+**Note:** The `--socket` argument can be specified multiple times for multi-board simulation (see below).
+
 ## Command Line Options
 
 ```bash
@@ -222,10 +224,12 @@ python dummy_server.py --port 9999
 python dummy_server.py --port 10000
 ```
 
-Then connect:
+Then connect (specify `--socket` multiple times):
 ```bash
-python HaasoscopeProQt.py --socket localhost:9998 localhost:9999 localhost:10000
+python HaasoscopeProQt.py --socket localhost:9998 --socket localhost:9999 --socket localhost:10000
 ```
+
+You can also mix hardware and dummy boards - if physical boards are detected, socket boards are added to the list.
 
 ## Troubleshooting
 

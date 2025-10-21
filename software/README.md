@@ -29,6 +29,27 @@ python dummy_server.py --port 9999
 python HaasoscopeProQt.py --socket localhost:9999
 ```
 
+**Command-Line Options:**
+
+```bash
+# Single dummy board on custom port
+python HaasoscopeProQt.py --socket localhost:9999
+
+# Multiple dummy boards (multi-board simulation)
+python HaasoscopeProQt.py --socket localhost:9998 --socket localhost:9999 --socket localhost:10000
+
+# Remote dummy server
+python HaasoscopeProQt.py --socket 192.168.1.100:9999
+
+# Mix hardware and dummy boards (if hardware is detected, socket boards are added)
+python HaasoscopeProQt.py --socket localhost:9999
+
+# Show help
+python HaasoscopeProQt.py --help
+```
+
+**Automatic Fallback:** If no `--socket` is specified and no hardware is detected, the application automatically tries to connect to `localhost:9998`.
+
 See [dummy_scope/README.md](dummy_scope/README.md) for detailed dummy server documentation.
 
 ## Code Architecture
