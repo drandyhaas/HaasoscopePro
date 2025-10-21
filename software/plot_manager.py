@@ -284,8 +284,8 @@ class PlotManager(pg.QtCore.QObject):
                 continue  # Skip if no data for this line (e.g., secondary interleaved line)
 
             # --- Resampling (if enabled) ---
-            if s.doresamp:
-                ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * s.doresamp, t=xdatanew)
+            if s.doresamp[li]:
+                ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * s.doresamp[li], t=xdatanew)
 
             # Store the processed data
             processed_data[li] = (xdatanew, ydatanew)
@@ -308,7 +308,7 @@ class PlotManager(pg.QtCore.QObject):
 
                 if xc.size > 2:
                     numsamp = s.distcorrsamp
-                    if s.doresamp: numsamp *= s.doresamp
+                    if s.doresamp[noext_li]: numsamp *= s.doresamp[noext_li]
                     fitwidth *= numsamp / xc.size
 
                     xc = xdatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]
@@ -759,8 +759,8 @@ class PlotManager(pg.QtCore.QObject):
 
             if resampled_y_values:
                 y_average = np.mean(resampled_y_values, axis=0)
-                if s.doresamp:
-                    y_average, common_x_axis = resample(y_average, len(common_x_axis) * s.doresamp,
+                if s.doresamp[channel_idx]:
+                    y_average, common_x_axis = resample(y_average, len(common_x_axis) * s.doresamp[channel_idx],
                                                         t=common_x_axis)
                 # Optimization: Use skipFiniteCheck for faster setData
                 self.average_lines[channel_idx].setData(common_x_axis, y_average, skipFiniteCheck=True)

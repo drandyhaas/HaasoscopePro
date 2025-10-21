@@ -1187,6 +1187,11 @@ class MainWindow(TemplateBaseClass):
         if lpf_index != -1: self.ui.lpfBox.setCurrentIndex(lpf_index)
         self.ui.lpfBox.blockSignals(False)
 
+        # Update resamp box to show the value for the currently selected channel
+        self.ui.resampBox.blockSignals(True)
+        self.ui.resampBox.setValue(self.state.doresamp[self.state.activexychannel])
+        self.ui.resampBox.blockSignals(False)
+
         # If we are in XY mode but switched to a board that is not in two-channel mode, exit XY mode
         if self.state.xy_mode and not self.state.dotwochannel[self.state.activeboard]:
             self.ui.actionXY_Plot.setChecked(False)
@@ -1317,9 +1322,10 @@ class MainWindow(TemplateBaseClass):
 
     def resamp_changed(self, value):
         """Handle resamp value changes from the UI."""
-        self.state.doresamp = value
+        s = self.state
+        s.doresamp[s.activexychannel] = value
         if True: #self.state.downsample < 0:
-            self.state.saved_doresamp = value
+            s.saved_doresamp[s.activexychannel] = value
 
     def line_width_changed(self, value):
         """Handle line width changes from the UI."""
@@ -1343,9 +1349,10 @@ class MainWindow(TemplateBaseClass):
 
         # When transitioning from downsample=0 to downsample=-1, restore saved resamp value
         if old_downsample == 0 and self.state.downsample == -1:
-            self.state.doresamp = self.state.saved_doresamp
+            s = self.state
+            s.doresamp[s.activexychannel] = s.saved_doresamp[s.activexychannel]
             self.ui.resampBox.blockSignals(True)
-            self.ui.resampBox.setValue(self.state.doresamp)
+            self.ui.resampBox.setValue(s.doresamp[s.activexychannel])
             self.ui.resampBox.blockSignals(False)
 
         is_zoomed = self.state.downsample < 0
@@ -1382,8 +1389,9 @@ class MainWindow(TemplateBaseClass):
 
         # When transitioning from downsample=-1 to downsample=0, save and turn off resamp
         if old_downsample == -1 and self.state.downsample == 0:
-            self.state.saved_doresamp = self.state.doresamp
-            self.state.doresamp = 0
+            s = self.state
+            s.saved_doresamp[s.activexychannel] = s.doresamp[s.activexychannel]
+            s.doresamp[s.activexychannel] = 0
             self.ui.resampBox.blockSignals(True)
             self.ui.resampBox.setValue(0)
             self.ui.resampBox.blockSignals(False)

@@ -301,15 +301,25 @@ def load_setup(main_window):
 
     # Processing settings
     if 'saved_doresamp' in setup:
-        s.saved_doresamp = setup['saved_doresamp']
+        loaded_saved_doresamp = setup['saved_doresamp']
+        # Handle backward compatibility: convert scalar to array
+        if isinstance(loaded_saved_doresamp, (int, float)):
+            s.saved_doresamp = [int(loaded_saved_doresamp)] * (s.num_board * s.num_chan_per_board)
+        else:
+            s.saved_doresamp = loaded_saved_doresamp
     if 'doresamp' in setup:
+        loaded_doresamp = setup['doresamp']
+        # Handle backward compatibility: convert scalar to array
+        if isinstance(loaded_doresamp, (int, float)):
+            loaded_doresamp = [int(loaded_doresamp)] * (s.num_board * s.num_chan_per_board)
+
         # If downsample >= 0, force doresamp to 0 and save the loaded value
         if s.downsample >= 0:
-            s.saved_doresamp = setup['doresamp']
-            s.doresamp = 0
+            s.saved_doresamp = loaded_doresamp
+            s.doresamp = [0] * (s.num_board * s.num_chan_per_board)
         else:
-            s.doresamp = setup['doresamp']
-        main_window.ui.resampBox.setValue(s.doresamp)
+            s.doresamp = loaded_doresamp
+        main_window.ui.resampBox.setValue(s.doresamp[s.activexychannel])
     if 'fitwidthfraction' in setup:
         s.fitwidthfraction = setup['fitwidthfraction']
 

@@ -74,8 +74,8 @@ class ScopeState:
         self.downsamplefactor = 1
         self.downsamplezoom = 1
         self.downsamplemerging = 1
-        self.doresamp = 0  # Start at 0 since downsample starts at 0 (>=0)
-        self.saved_doresamp = 4  # Saved resamp value to restore when downsample < 0
+        self.doresamp = [0] * (num_boards * num_chan_per_board)  # Per-channel resamp
+        self.saved_doresamp = [4] * (num_boards * num_chan_per_board)  # Per-channel saved resamp value
         self.xy_mode = False
         self.skip_next_event = False
         self.fitwidthfraction = 0.2
