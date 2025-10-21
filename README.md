@@ -39,7 +39,7 @@ Then run the new software, update the firmware (if needed) on your board from th
 - for [Mac](https://github.com/drandyhaas/HaasoscopePro/blob/main/software/libftd2xx.dylib): <code>sudo mkdir -p /usr/local/lib; sudo cp HaasoscopePro/software/libftd2xx.dylib /usr/local/lib/</code> 
 - for [Linux](https://github.com/drandyhaas/HaasoscopePro/blob/main/software/libftd2xx.so): <code>sudo cp HaasoscopePro/software/libftd2xx.so /usr/lib/</code>
 3) Plug Haasoscope Pro into your computer via USB (5V 2A at least!)
-4) Run **HaasoscopeProQt** in the <code>HaasoscopePro/software/dist/(OS)_HaasoscopeProQt</code> directory
+4) Run **HaasoscopeProQt** in the <code>(OS)_HaasoscopeProQt</code> directory
 
 ### Fuller way of running (Windows/Mac/Linux)
 
