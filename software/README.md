@@ -242,10 +242,15 @@ graph TD
 ### Utility Modules
 
 **`calibration.py`** - Calibration data management
+
 **`histogram_window.py`** - Histogram display
+
 **`history_window.py`** - Waveform history viewer
+
 **`SCPIsocket.py`** - SCPI remote control interface
+
 **`spi.py`** - SPI communication helpers
+
 **`utils.py`** - Common utility functions
 
 ## Data Flow
