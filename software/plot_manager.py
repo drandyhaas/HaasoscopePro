@@ -81,7 +81,6 @@ class PlotManager(pg.QtCore.QObject):
         self.reference_lines = []
         self.math_channel_lines = {}  # Dictionary: {math_name: plot_line}
         self.math_reference_lines = {}  # Dictionary: {math_name: plot_line}
-        self.xy_line = None
         self.linepens = []
         self.otherlines = {}  # For trigger lines, fit lines etc.
         self.trigger_arrows = {}  # Store arrow markers for trigger line ends
@@ -194,10 +193,6 @@ class PlotManager(pg.QtCore.QObject):
 
         # Persistence average lines (created per-channel on demand)
         # self.average_lines = {} already initialized in __init__
-
-        # XY plot line (initially hidden)
-        self.xy_line = self.plot.plot(pen=pg.mkPen(color="w"), name="XY_Plot", skipFiniteCheck=True, connect="finite")
-        self.xy_line.setVisible(False)
 
         # Peak detect lines are created per-channel on demand (see set_peak_detect)
 
@@ -398,47 +393,6 @@ class PlotManager(pg.QtCore.QObject):
         if self.peak_detect_enabled:  # Check if dictionary is not empty
             self._update_peak_lines()
 
-    def toggle_xy_view(self, show_xy, board_num=0):
-        """Switches between the time-domain view and the XY plot view."""
-        self.state.xy_mode = show_xy
-
-        # Explicitly hide or show all time-domain related plots
-        is_time_domain_visible = not show_xy
-        for line in self.lines:
-            line.setVisible(is_time_domain_visible)
-        for line in self.reference_lines:
-            # Only show reference lines if they have data and we are in time domain
-            line.setVisible(is_time_domain_visible and line.xData is not None)
-        for key, line in self.otherlines.items():
-            line.setVisible(is_time_domain_visible)
-        # Hide/show math channel lines (only if they're marked as displayed)
-        # We need to check with the math window to get the displayed state
-        for math_name, line in self.math_channel_lines.items():
-            # Default to showing in time domain if we can't check displayed state
-            line.setVisible(is_time_domain_visible)
-        # Also hide/show the right axis
-        if self.right_axis:
-            self.right_axis.setVisible(is_time_domain_visible)
-        # Hide/show all per-channel average lines based on their state
-        for channel_idx, avg_line in self.average_lines.items():
-            avg_line.setVisible(is_time_domain_visible and self.state.persist_avg_enabled[channel_idx])
-
-        if show_xy:
-            self.plot.setLabel('bottom', f"Board {board_num} Ch 1 (V/div)")
-            self.plot.setLabel('left', f"Board {board_num} Ch 0 (V/div)")
-            self.plot.setRange(xRange=(-5, 5), yRange=(-5, 5), padding=0.01)
-        else:
-            self.time_changed() # Restore time-domain view
-        
-        # Finally, set the visibility of the XY line itself
-        self.xy_line.setVisible(show_xy)
-
-    def set_xy_pen(self, pen):
-        """Sets the pen for the XY plot line."""
-        color = pen.color()
-        color.setAlphaF(0.5)
-        self.xy_line.setPen(color=color, width=pen.width())
-
     def update_reference_plot(self, channel_index, x_data, y_data):
         """Sets the data for a channel's reference waveform."""
         if 0 <= channel_index < len(self.reference_lines):
@@ -523,13 +477,13 @@ class PlotManager(pg.QtCore.QObject):
                 line.curve.sigClicked.connect(self._create_math_click_handler(math_name))
                 self.math_channel_lines[math_name] = line
                 # Set initial visibility
-                line.setVisible(displayed and not self.state.xy_mode)
+                line.setVisible(displayed)
             else:
                 # Update the color and width of existing line
                 pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DashLine)
                 self.math_channel_lines[math_name].setPen(pen)
                 # Update visibility
-                self.math_channel_lines[math_name].setVisible(displayed and not self.state.xy_mode)
+                self.math_channel_lines[math_name].setVisible(displayed)
 
     def update_math_channel_data(self, math_results):
         """Update the math channel plot lines with calculated data.
@@ -589,13 +543,7 @@ class PlotManager(pg.QtCore.QObject):
 
             # Set visibility
             is_visible = main_window.math_reference_visible.get(math_name, False)
-            self.math_reference_lines[math_name].setVisible(is_visible and not self.state.xy_mode)
-
-    def update_xy_plot(self, x_data, y_data):
-        """Updates the XY plot with new data."""
-        if self.state.xy_mode:
-            # Optimization: Use skipFiniteCheck for faster setData
-            self.xy_line.setData(x=x_data, y=y_data, skipFiniteCheck=True)
+            self.math_reference_lines[math_name].setVisible(is_visible)
 
     def time_changed(self):
         """Updates the x-axis range and units, and handles zooming."""

@@ -77,7 +77,6 @@ class ScopeState:
         self.doresamp = [0] * (num_boards * num_chan_per_board)  # Per-channel resamp
         self.saved_doresamp = [4] * (num_boards * num_chan_per_board)  # Per-channel saved resamp value
         self.xy_mode = False
-        self.xy_mode_saved_resamp = {}  # Temporarily stores resamp values when entering XY mode
         self.skip_next_event = False
         self.fitwidthfraction = 0.2
         self.line_width = 2  # Default line width for plots
