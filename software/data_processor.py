@@ -308,7 +308,7 @@ class DataProcessor:
                 if xc.size > 1:
                     distcorrtemp = find_crossing_distance(yc, threshold_to_use, vline_time, xc[0], xc[1] - xc[0])
 
-        if distcorrtemp is not None and abs(distcorrtemp) < s.distcorrtol * s.downsamplefactor / s.nsunits:
+        if distcorrtemp is not None and abs(distcorrtemp) < s.distcorrtol * s.downsamplefactor:
             s.distcorr[board_idx] = distcorrtemp
             for i in range(s.num_chan_per_board):
                 xy_data_array[board_idx * s.num_chan_per_board + i][0] -= s.distcorr[board_idx]
