@@ -81,6 +81,23 @@ def save_setup(main_window):
         'max_x': s.max_x,
         'xy_mode': s.xy_mode,
 
+        # XY window settings
+        'xy_window_visible': main_window.xy_window is not None and main_window.xy_window.isVisible() if main_window.xy_window else False,
+    }
+
+    # Save XY window geometry and channel selections if window exists
+    if main_window.xy_window is not None:
+        setup['xy_window_geometry'] = {
+            'x': main_window.xy_window.x(),
+            'y': main_window.xy_window.y(),
+            'width': main_window.xy_window.width(),
+            'height': main_window.xy_window.height(),
+        }
+        setup['xy_window_y_channel'] = main_window.xy_window.y_channel
+        setup['xy_window_x_channel'] = main_window.xy_window.x_channel
+
+    # Continue with other settings
+    setup.update({
         # Processing settings
         'doresamp': s.doresamp,
         'saved_doresamp': s.saved_doresamp,
@@ -149,7 +166,7 @@ def save_setup(main_window):
         'oversampling_controls': main_window.ui.actionOversampling_controls.isChecked(),
         'pll_controls': main_window.ui.actionToggle_PLL_controls.isChecked(),
         'auto_oversample_alignment': main_window.ui.actionAuto_oversample_alignment.isChecked(),
-    }
+    })
 
     # Math channels
     if main_window.math_window is not None and len(main_window.math_window.math_channels) > 0:
@@ -298,6 +315,38 @@ def load_setup(main_window):
         if s.dotwochannel[s.activeboard]:
             main_window.ui.actionXY_Plot.setChecked(True)
             main_window.plot_manager.toggle_xy_view(True, s.activeboard)
+
+    # Restore XY window visibility, geometry, and channel selections
+    if 'xy_window_visible' in setup and setup['xy_window_visible']:
+        # Show the XY window if it was visible when saved
+        if main_window.xy_window is None:
+            from xy_window import XYWindow
+            main_window.xy_window = XYWindow(main_window, main_window.state, main_window.plot_manager)
+            main_window.xy_window.window_closed.connect(main_window.on_xy_window_closed)
+
+        # Restore geometry if available
+        if 'xy_window_geometry' in setup:
+            geo = setup['xy_window_geometry']
+            main_window.xy_window.setGeometry(geo['x'], geo['y'], geo['width'], geo['height'])
+
+        # Restore channel selections if available
+        if 'xy_window_y_channel' in setup:
+            main_window.xy_window.y_channel = setup['xy_window_y_channel']
+            # Find the combo box index for this channel
+            for i in range(main_window.xy_window.y_channel_combo.count()):
+                if main_window.xy_window.y_channel_combo.itemData(i) == setup['xy_window_y_channel']:
+                    main_window.xy_window.y_channel_combo.setCurrentIndex(i)
+                    break
+
+        if 'xy_window_x_channel' in setup:
+            main_window.xy_window.x_channel = setup['xy_window_x_channel']
+            # Find the combo box index for this channel
+            for i in range(main_window.xy_window.x_channel_combo.count()):
+                if main_window.xy_window.x_channel_combo.itemData(i) == setup['xy_window_x_channel']:
+                    main_window.xy_window.x_channel_combo.setCurrentIndex(i)
+                    break
+
+        main_window.xy_window.show()
 
     # Processing settings
     if 'saved_doresamp' in setup:

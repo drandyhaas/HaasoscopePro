@@ -284,6 +284,9 @@ class MainWindow(TemplateBaseClass):
         self.ui.twochanCheck.clicked.connect(self.twochan_changed)
         self.ui.oversampCheck.stateChanged.connect(self.oversamp_changed)
         self.ui.interleavedCheck.stateChanged.connect(self.interleave_changed)
+        # Make chanColor clickable to change channel color
+        self.ui.chanColor.installEventFilter(self)
+        self.ui.chanColor.viewport().installEventFilter(self)
 
         # Processing and Display controls
         self.ui.actionDrawing.triggered.connect(self.drawing_toggled)
@@ -959,6 +962,15 @@ class MainWindow(TemplateBaseClass):
                 self.ui.offsetBox.stepDown()
         if event.key() == QtCore.Qt.Key_Left: self.time_slow()
         if event.key() == QtCore.Qt.Key_Right: self.time_fast()
+
+    def eventFilter(self, obj, event):
+        """Event filter to make chanColor clickable."""
+        if (obj == self.ui.chanColor or obj == self.ui.chanColor.viewport()) and \
+           event.type() == QtCore.QEvent.MouseButtonPress:
+            # Trigger the change channel color dialog
+            self.change_channel_color()
+            return True
+        return super().eventFilter(obj, event)
 
     def on_curve_clicked(self, channel_index):
         """Slot for when a waveform on the plot is clicked."""
@@ -1661,6 +1673,8 @@ class MainWindow(TemplateBaseClass):
                 self.xy_window = XYWindow(self, self.state, self.plot_manager)
                 # Connect signal to handle window closing
                 self.xy_window.window_closed.connect(self.on_xy_window_closed)
+                # Position to the left of main window with bottom edges aligned
+                self.xy_window.position_relative_to_main(self)
 
             self.xy_window.show()
             self.xy_window.raise_()
