@@ -968,9 +968,11 @@ class MainWindow(TemplateBaseClass):
         """Event filter to make chanColor clickable."""
         if (obj == self.ui.chanColor or obj == self.ui.chanColor.viewport()) and \
            event.type() == QtCore.QEvent.MouseButtonPress:
-            # Trigger the change channel color dialog
-            self.change_channel_color()
-            return True
+            # Only handle left button clicks
+            if hasattr(event, 'button') and event.button() == QtCore.Qt.LeftButton:
+                # Trigger the change channel color dialog
+                self.change_channel_color()
+                return True
         return super().eventFilter(obj, event)
 
     def on_curve_clicked(self, channel_index):
@@ -1459,7 +1461,12 @@ class MainWindow(TemplateBaseClass):
             options |= QColorDialog.DontUseNativeDialog
         color = QColorDialog.getColor(self.plot_manager.linepens[self.state.activexychannel].color(), self, options=options)
         if color.isValid():
-            self.plot_manager.linepens[self.state.activexychannel].setColor(color)
+            channel_idx = self.state.activexychannel
+            # Update the pen color
+            self.plot_manager.linepens[channel_idx].setColor(color)
+            # Apply the updated pen to the plot line
+            if channel_idx < len(self.plot_manager.lines):
+                self.plot_manager.lines[channel_idx].setPen(self.plot_manager.linepens[channel_idx])
             self.select_channel()  # Re-call to update color box and LEDs
 
     def about_dialog(self):

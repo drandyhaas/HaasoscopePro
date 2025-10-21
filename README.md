@@ -59,11 +59,6 @@ Then run the new software, update the firmware (if needed) on your board from th
 - If the board is not found on Linux, use this udev rule and then plug it in: <code>sudo cp ft245.rules /etc/udev/rules.d/</code>
 - If you get an error like "qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found", try: <code>sudo apt install libxcb-xinerama0</code>
 
-### To remake exe for quick start
-1) <code>pip3 install pyinstaller</code>
-2) <code>cd HaasoscopePro/software</code>
-3) <code>.\windowspyinstaller.bat</code> or <code>./macpyinstaller.sh</code> or <code>./linuxpyinstaller.sh</code>
-
 ### Repository structure
 
 - [adc board](adc%20board/): Design files and documentation for the main board, based on Eagle 9.6.2
