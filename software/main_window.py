@@ -284,6 +284,9 @@ class MainWindow(TemplateBaseClass):
         self.ui.twochanCheck.clicked.connect(self.twochan_changed)
         self.ui.oversampCheck.stateChanged.connect(self.oversamp_changed)
         self.ui.interleavedCheck.stateChanged.connect(self.interleave_changed)
+        # Make chanColor clickable to change channel color
+        self.ui.chanColor.installEventFilter(self)
+        self.ui.chanColor.viewport().installEventFilter(self)
 
         # Processing and Display controls
         self.ui.actionDrawing.triggered.connect(self.drawing_toggled)
@@ -671,15 +674,16 @@ class MainWindow(TemplateBaseClass):
         # --- Plotting Logic: Update normal time-domain plots ---
         self.plot_manager.update_plots(self.xydata, self.xydatainterleaved)
 
-        # --- Update XY window if visible ---
-        if s.xy_mode and self.xy_window is not None and self.xy_window.isVisible():
-            self.xy_window.update_xy_plot(self.xydata)
-
         # Calculate and display math channels if any are defined
+        math_results = {}
         if self.math_window and len(self.math_window.math_channels) > 0:
             # Use stabilized data (after trigger stabilizers are applied)
             math_results = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data)
             self.plot_manager.update_math_channel_data(math_results)
+
+        # --- Update XY window if visible (after math channels calculated) ---
+        if s.xy_mode and self.xy_window is not None and self.xy_window.isVisible():
+            self.xy_window.update_xy_plot(self.xydata, math_results)
 
         # Store event in history buffer (only if not displaying historical data)
         if not self.displaying_history:
@@ -959,6 +963,15 @@ class MainWindow(TemplateBaseClass):
                 self.ui.offsetBox.stepDown()
         if event.key() == QtCore.Qt.Key_Left: self.time_slow()
         if event.key() == QtCore.Qt.Key_Right: self.time_fast()
+
+    def eventFilter(self, obj, event):
+        """Event filter to make chanColor clickable."""
+        if (obj == self.ui.chanColor or obj == self.ui.chanColor.viewport()) and \
+           event.type() == QtCore.QEvent.MouseButtonPress:
+            # Trigger the change channel color dialog
+            self.change_channel_color()
+            return True
+        return super().eventFilter(obj, event)
 
     def on_curve_clicked(self, channel_index):
         """Slot for when a waveform on the plot is clicked."""
@@ -1661,6 +1674,8 @@ class MainWindow(TemplateBaseClass):
                 self.xy_window = XYWindow(self, self.state, self.plot_manager)
                 # Connect signal to handle window closing
                 self.xy_window.window_closed.connect(self.on_xy_window_closed)
+                # Position to the left of main window with bottom edges aligned
+                self.xy_window.position_relative_to_main(self)
 
             self.xy_window.show()
             self.xy_window.raise_()
@@ -1699,6 +1714,10 @@ class MainWindow(TemplateBaseClass):
 
         # Update math reference lines
         self.plot_manager.update_math_reference_lines(self.math_window, self)
+
+        # Refresh XY window channel list if visible
+        if self.xy_window is not None and self.xy_window.isVisible():
+            self.xy_window.refresh_channel_list()
 
         # Calculate and display current data if we have data
         if hasattr(self, 'xydata') and len(self.math_window.math_channels) > 0:
@@ -1755,14 +1774,15 @@ class MainWindow(TemplateBaseClass):
             # Update the plot with the historical data
             self.plot_manager.update_plots(self.xydata, self.xydatainterleaved)
 
-            # Update XY window if visible
-            if self.state.xy_mode and self.xy_window is not None and self.xy_window.isVisible():
-                self.xy_window.update_xy_plot(self.xydata)
-
             # Update math channels if any
+            math_results = {}
             if self.math_window and len(self.math_window.math_channels) > 0:
                 math_results = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data)
                 self.plot_manager.update_math_channel_data(math_results)
+
+            # Update XY window if visible (after math channels calculated)
+            if self.state.xy_mode and self.xy_window is not None and self.xy_window.isVisible():
+                self.xy_window.update_xy_plot(self.xydata, math_results)
 
     def resume_live_acquisition(self):
         """Resume live data acquisition after viewing history."""
