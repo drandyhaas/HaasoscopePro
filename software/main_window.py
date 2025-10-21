@@ -1182,14 +1182,16 @@ class MainWindow(TemplateBaseClass):
         self.ui.lpfBox.blockSignals(False)
 
         # Update resamp box to show the value for the currently selected channel
-        # If not zoomed (downsample >= 0), show doresamp (should be 0)
-        # If zoomed (downsample < 0), restore from saved_doresamp and show it
         self.ui.resampBox.blockSignals(True)
         if self.state.downsample >= 0:
+            # Not zoomed: ensure non-overridden channels are at default of 0
+            if not self.state.resamp_overridden[self.state.activexychannel] and self.state.doresamp[self.state.activexychannel] != 0:
+                self.state.doresamp[self.state.activexychannel] = 0
             self.ui.resampBox.setValue(self.state.doresamp[self.state.activexychannel])
         else:
-            # When zoomed, restore doresamp from saved value for the new channel
-            self.state.doresamp[self.state.activexychannel] = self.state.saved_doresamp[self.state.activexychannel]
+            # Zoomed: ensure non-overridden channels are at default of 4
+            if not self.state.resamp_overridden[self.state.activexychannel] and self.state.doresamp[self.state.activexychannel] != 4:
+                self.state.doresamp[self.state.activexychannel] = 4
             self.ui.resampBox.setValue(self.state.doresamp[self.state.activexychannel])
         self.ui.resampBox.blockSignals(False)
 
@@ -1320,7 +1322,9 @@ class MainWindow(TemplateBaseClass):
         """Handle resamp value changes from the UI."""
         s = self.state
         s.doresamp[s.activexychannel] = value
-        if True: #self.state.downsample < 0:
+        # Mark that this channel's resamp has been manually overridden
+        s.resamp_overridden[s.activexychannel] = True
+        if self.state.downsample < 0:
             s.saved_doresamp[s.activexychannel] = value
 
     def line_width_changed(self, value):
@@ -1343,10 +1347,15 @@ class MainWindow(TemplateBaseClass):
         highres = 1 if self.ui.actionHigh_resolution.isChecked() else 0
         self.controller.tell_downsample_all(self.state.downsample, highres)
 
-        # When transitioning from downsample=0 to downsample=-1, restore saved resamp value
+        # When transitioning from downsample=0 to downsample=-1, set resamp intelligently
         if old_downsample == 0 and self.state.downsample == -1:
             s = self.state
-            s.doresamp[s.activexychannel] = s.saved_doresamp[s.activexychannel]
+            # If resamp has been manually overridden, keep the current value
+            # Otherwise, use default of 4 for zoomed mode
+            if not s.resamp_overridden[s.activexychannel]:
+                s.doresamp[s.activexychannel] = 4
+            # If overridden, keep current value (no change needed)
+
             self.ui.resampBox.blockSignals(True)
             self.ui.resampBox.setValue(s.doresamp[s.activexychannel])
             self.ui.resampBox.blockSignals(False)
@@ -1384,15 +1393,18 @@ class MainWindow(TemplateBaseClass):
         highres = 1 if self.ui.actionHigh_resolution.isChecked() else 0
         self.controller.tell_downsample_all(self.state.downsample, highres)
 
-        # When transitioning from downsample=-1 to downsample=0, save and turn off resamp for ALL channels
+        # When transitioning from downsample=-1 to downsample=0, set resamp intelligently for ALL channels
         if old_downsample == -1 and self.state.downsample == 0:
             s = self.state
-            # Save and clear resamp for all channels (not just active)
+            # For channels not manually overridden, set to default of 0 for non-zoomed mode
+            # For overridden channels, keep their current value
             for ch in range(len(s.doresamp)):
-                s.saved_doresamp[ch] = s.doresamp[ch]
-                s.doresamp[ch] = 0
+                if not s.resamp_overridden[ch]:
+                    s.doresamp[ch] = 0
+                # If overridden, keep current value (no change)
+
             self.ui.resampBox.blockSignals(True)
-            self.ui.resampBox.setValue(0)
+            self.ui.resampBox.setValue(s.doresamp[s.activexychannel])
             self.ui.resampBox.blockSignals(False)
 
         is_zoomed = self.state.downsample < 0
