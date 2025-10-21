@@ -360,7 +360,7 @@ class DummyServerConfigDialog(QDialog):
         board_idx = self.board_indices[selected_board_combo_idx]
         usb = self.socket_usbs[selected_board_combo_idx]
 
-        print(f"Applying configuration to dummy board {board_idx}...")
+        #print(f"Applying configuration to dummy board {board_idx}...")
 
         # Send configuration for both channels on the selected board
         for channel in [0, 1]:
@@ -430,4 +430,4 @@ class DummyServerConfigDialog(QDialog):
             except Exception as e:
                 print(f"Error sending config to dummy board {board_idx}: {e}")
 
-        print(f"Configuration applied to dummy board {board_idx}.")
+        #print(f"Configuration applied to dummy board {board_idx}.")
