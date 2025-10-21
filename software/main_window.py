@@ -882,6 +882,10 @@ class MainWindow(TemplateBaseClass):
             for c in range(s.num_chan_per_board * s.num_board):
                 self.xydatainterleaved[c][0] = interleaved_time_axis
 
+        # Reset accumulated trigger corrections since we've generated fresh time axes
+        for board_idx in range(s.num_board):
+            s.totdistcorr[board_idx] = 0
+
         # --- Update reference waveforms with new scaling and per-channel visibility ---
         for i in range(self.plot_manager.nlines):
             # Check if this specific channel has a reference and it's set to visible
