@@ -60,6 +60,10 @@ class DummyServerConfigDialog(QDialog):
 
         self.setup_ui()
 
+        # Track which board/channel is currently displayed in the UI
+        self.current_board_combo_idx = 0
+        self.current_channel = 0
+
         # Load initial config from server
         self.load_config_from_server()
 
@@ -232,16 +236,30 @@ class DummyServerConfigDialog(QDialog):
 
     def on_board_changed(self):
         """Called when board selection changes."""
-        # Save current UI values to previous board/channel config
-        self.save_ui_to_config()
+        # Save current UI values to the PREVIOUS board/channel config
+        # (using tracked indices, not current combo box values)
+        prev_board_idx = self.board_indices[self.current_board_combo_idx]
+        prev_channel = self.current_channel
+        self.save_ui_to_config_key(prev_board_idx, prev_channel)
+
+        # Update tracked indices to new board
+        self.current_board_combo_idx = self.board_combo.currentIndex()
+        # Keep same channel when switching boards
+        self.current_channel = int(self.channel_combo.currentText())
 
         # Load the new board/channel's config into the UI
         self.load_ui_from_config()
 
     def on_channel_changed(self):
         """Called when channel selection changes."""
-        # First, save current UI values to the previous channel's config
-        self.save_ui_to_config()
+        # Save current UI values to the PREVIOUS channel's config
+        # (using tracked indices, not current combo box values)
+        prev_board_idx = self.board_indices[self.current_board_combo_idx]
+        prev_channel = self.current_channel
+        self.save_ui_to_config_key(prev_board_idx, prev_channel)
+
+        # Update tracked channel to new channel
+        self.current_channel = int(self.channel_combo.currentText())
 
         # Load the new channel's config into the UI
         self.load_ui_from_config()
@@ -251,6 +269,10 @@ class DummyServerConfigDialog(QDialog):
         board_idx = self.board_indices[self.board_combo.currentIndex()]
         channel = int(self.channel_combo.currentText())
         config = self.channel_configs[(board_idx, channel)]
+
+        # Update tracked indices to match what we're loading
+        self.current_board_combo_idx = self.board_combo.currentIndex()
+        self.current_channel = channel
 
         # Block signals to prevent triggering callbacks
         self.wave_type_combo.blockSignals(True)
@@ -299,10 +321,8 @@ class DummyServerConfigDialog(QDialog):
         self.square_group.setVisible(wave_type == "square")
         self.pulse_group.setVisible(wave_type == "pulse")
 
-    def save_ui_to_config(self):
-        """Save current UI values to the channel config cache."""
-        board_idx = self.board_indices[self.board_combo.currentIndex()]
-        channel = int(self.channel_combo.currentText())
+    def save_ui_to_config_key(self, board_idx, channel):
+        """Save current UI values to a specific board/channel config."""
         config = self.channel_configs[(board_idx, channel)]
 
         config["wave_type"] = self.wave_type_combo.currentText()
@@ -313,6 +333,12 @@ class DummyServerConfigDialog(QDialog):
         config["pulse_tau_decay"] = self.tau_decay_spin.value()
         config["pulse_amplitude_min"] = self.pulse_amp_min_spin.value()
         config["pulse_amplitude_max"] = self.pulse_amp_max_spin.value()
+
+    def save_ui_to_config(self):
+        """Save current UI values to the currently displayed board/channel config."""
+        board_idx = self.board_indices[self.current_board_combo_idx]
+        channel = self.current_channel
+        self.save_ui_to_config_key(board_idx, channel)
 
     def load_config_from_server(self):
         """Query the dummy server for current configuration (placeholder for now)."""
