@@ -17,11 +17,13 @@ class DummyServerConfigDialog(QDialog):
         super().__init__(parent)
         self.usbs = usbs
         self.socket_usbs = []
+        self.board_indices = []  # Store the original board indices
 
-        # Find all socket-based USB devices
-        for usb in usbs:
+        # Find all socket-based USB devices and their indices
+        for i, usb in enumerate(usbs):
             if hasattr(usb, 'socket_addr'):  # UsbSocketAdapter has socket_addr
                 self.socket_usbs.append(usb)
+                self.board_indices.append(i)
 
         if not self.socket_usbs:
             return
@@ -30,10 +32,12 @@ class DummyServerConfigDialog(QDialog):
         self.setModal(False)
         self.resize(400, 500)
 
-        # Channel config cache - stores the wave parameters for each channel
+        # Channel config cache - stores the wave parameters for each board and channel
+        # Indexed by (board_index, channel)
         # Default values match the dummy_server.py defaults
-        self.channel_configs = {
-            0: {
+        self.channel_configs = {}
+        for board_idx in self.board_indices:
+            self.channel_configs[(board_idx, 0)] = {
                 "wave_type": "sine",
                 "frequency": 3.2e6,  # 3.2 MHz
                 "amplitude": 1500,
@@ -42,8 +46,8 @@ class DummyServerConfigDialog(QDialog):
                 "pulse_tau_decay": 50.0,
                 "pulse_amplitude_min": 100,
                 "pulse_amplitude_max": 2000
-            },
-            1: {
+            }
+            self.channel_configs[(board_idx, 1)] = {
                 "wave_type": "pulse",
                 "frequency": 100e6,  # 100 MHz
                 "amplitude": 1500,
@@ -53,12 +57,18 @@ class DummyServerConfigDialog(QDialog):
                 "pulse_amplitude_min": 10,
                 "pulse_amplitude_max": 500
             }
-        }
 
         self.setup_ui()
 
+        # Track which board/channel is currently displayed in the UI
+        self.current_board_combo_idx = 0
+        self.current_channel = 0
+
         # Load initial config from server
         self.load_config_from_server()
+
+        # Load the first board/channel's config into the UI
+        self.load_ui_from_config()
 
     def position_relative_to_main(self, main_window):
         """Position the dialog to the right of the main window with tops aligned."""
@@ -70,6 +80,27 @@ class DummyServerConfigDialog(QDialog):
     def setup_ui(self):
         """Setup the dialog UI."""
         layout = QVBoxLayout()
+
+        # Board selection group (only show if multiple dummy boards)
+        if len(self.socket_usbs) > 1:
+            board_group = QGroupBox("Board Selection")
+            board_layout = QHBoxLayout()
+
+            board_layout.addWidget(QLabel("Board:"))
+            self.board_combo = QComboBox()
+            # Add board labels with (D) suffix to indicate dummy boards
+            for board_idx in self.board_indices:
+                self.board_combo.addItem(f"{board_idx} (D)")
+            self.board_combo.currentIndexChanged.connect(self.on_board_changed)
+            board_layout.addWidget(self.board_combo)
+
+            board_group.setLayout(board_layout)
+            layout.addWidget(board_group)
+        else:
+            # Create hidden combo box with single item for consistent indexing
+            self.board_combo = QComboBox()
+            self.board_combo.addItem(f"{self.board_indices[0]} (D)")
+            self.board_combo.setVisible(False)
 
         # Channel selection group
         channel_group = QGroupBox("Channel Selection")
@@ -203,14 +234,45 @@ class DummyServerConfigDialog(QDialog):
         # Initially show/hide wave-type-specific parameters based on wave type
         self.update_parameter_visibility()
 
+    def on_board_changed(self):
+        """Called when board selection changes."""
+        # Save current UI values to the PREVIOUS board/channel config
+        # (using tracked indices, not current combo box values)
+        prev_board_idx = self.board_indices[self.current_board_combo_idx]
+        prev_channel = self.current_channel
+        self.save_ui_to_config_key(prev_board_idx, prev_channel)
+
+        # Update tracked indices to new board
+        self.current_board_combo_idx = self.board_combo.currentIndex()
+        # Keep same channel when switching boards
+        self.current_channel = int(self.channel_combo.currentText())
+
+        # Load the new board/channel's config into the UI
+        self.load_ui_from_config()
+
     def on_channel_changed(self):
         """Called when channel selection changes."""
-        # First, save current UI values to the previous channel's config
-        self.save_ui_to_config()
+        # Save current UI values to the PREVIOUS channel's config
+        # (using tracked indices, not current combo box values)
+        prev_board_idx = self.board_indices[self.current_board_combo_idx]
+        prev_channel = self.current_channel
+        self.save_ui_to_config_key(prev_board_idx, prev_channel)
+
+        # Update tracked channel to new channel
+        self.current_channel = int(self.channel_combo.currentText())
 
         # Load the new channel's config into the UI
+        self.load_ui_from_config()
+
+    def load_ui_from_config(self):
+        """Load config for current board and channel into UI."""
+        board_idx = self.board_indices[self.board_combo.currentIndex()]
         channel = int(self.channel_combo.currentText())
-        config = self.channel_configs[channel]
+        config = self.channel_configs[(board_idx, channel)]
+
+        # Update tracked indices to match what we're loading
+        self.current_board_combo_idx = self.board_combo.currentIndex()
+        self.current_channel = channel
 
         # Block signals to prevent triggering callbacks
         self.wave_type_combo.blockSignals(True)
@@ -259,10 +321,9 @@ class DummyServerConfigDialog(QDialog):
         self.square_group.setVisible(wave_type == "square")
         self.pulse_group.setVisible(wave_type == "pulse")
 
-    def save_ui_to_config(self):
-        """Save current UI values to the channel config cache."""
-        channel = int(self.channel_combo.currentText())
-        config = self.channel_configs[channel]
+    def save_ui_to_config_key(self, board_idx, channel):
+        """Save current UI values to a specific board/channel config."""
+        config = self.channel_configs[(board_idx, channel)]
 
         config["wave_type"] = self.wave_type_combo.currentText()
         config["frequency"] = self.frequency_spin.value() * 1e6  # Convert MHz to Hz
@@ -273,6 +334,12 @@ class DummyServerConfigDialog(QDialog):
         config["pulse_amplitude_min"] = self.pulse_amp_min_spin.value()
         config["pulse_amplitude_max"] = self.pulse_amp_max_spin.value()
 
+    def save_ui_to_config(self):
+        """Save current UI values to the currently displayed board/channel config."""
+        board_idx = self.board_indices[self.current_board_combo_idx]
+        channel = self.current_channel
+        self.save_ui_to_config_key(board_idx, channel)
+
     def load_config_from_server(self):
         """Query the dummy server for current configuration (placeholder for now)."""
         # For now, we'll assume default configuration
@@ -281,79 +348,86 @@ class DummyServerConfigDialog(QDialog):
         pass
 
     def apply_config(self):
-        """Send configuration to the dummy server."""
+        """Send configuration to the currently selected dummy board."""
         if not self.socket_usbs:
             return
 
         # Save current UI values first
         self.save_ui_to_config()
 
-        # For each socket USB device, send configuration commands
-        for usb in self.socket_usbs:
-            # Send configuration for both channels
-            for channel in [0, 1]:
-                config = self.channel_configs[channel]
+        # Get the currently selected board
+        selected_board_combo_idx = self.board_combo.currentIndex()
+        board_idx = self.board_indices[selected_board_combo_idx]
+        usb = self.socket_usbs[selected_board_combo_idx]
 
-                try:
-                    # Send wave type (subcommand 0)
-                    wave_type_codes = {"sine": 0, "square": 1, "pulse": 2}
-                    wave_type_code = wave_type_codes.get(config["wave_type"], 2)
-                    cmd = bytes([12, channel, 0, wave_type_code, 0, 0, 0, 0])
+        #print(f"Applying configuration to dummy board {board_idx}...")
+
+        # Send configuration for both channels on the selected board
+        for channel in [0, 1]:
+            config = self.channel_configs[(board_idx, channel)]
+
+            try:
+                # Send wave type (subcommand 0)
+                wave_type_codes = {"sine": 0, "square": 1, "pulse": 2}
+                wave_type_code = wave_type_codes.get(config["wave_type"], 2)
+                cmd = bytes([12, channel, 0, wave_type_code, 0, 0, 0, 0])
+                usb.send(cmd)
+                usb.recv(4)
+
+                # Send amplitude (subcommand 1)
+                amplitude = int(config["amplitude"])
+                amplitude_bytes = struct.pack("<H", amplitude)
+                cmd = bytes([12, channel, 1]) + amplitude_bytes + bytes([0, 0, 0])
+                usb.send(cmd)
+                usb.recv(4)
+
+                # Send frequency (subcommand 2)
+                frequency = float(config["frequency"])
+                frequency_bytes = struct.pack("<f", frequency)
+                cmd = bytes([12, channel, 2]) + frequency_bytes + bytes([0])
+                usb.send(cmd)
+                usb.recv(4)
+
+                # Send square wave parameters if wave type is square
+                if config["wave_type"] == "square":
+                    # Send square rise/fall k parameter (subcommand 7)
+                    k = float(config["square_rise_fall_k"])
+                    k_bytes = struct.pack("<f", k)
+                    cmd = bytes([12, channel, 7]) + k_bytes + bytes([0])
                     usb.send(cmd)
                     usb.recv(4)
 
-                    # Send amplitude (subcommand 1)
-                    amplitude = int(config["amplitude"])
-                    amplitude_bytes = struct.pack("<H", amplitude)
-                    cmd = bytes([12, channel, 1]) + amplitude_bytes + bytes([0, 0, 0])
+                # Send pulse parameters if wave type is pulse
+                if config["wave_type"] == "pulse":
+                    # Send pulse rise time (subcommand 3)
+                    tau_rise = float(config["pulse_tau_rise"])
+                    tau_rise_bytes = struct.pack("<f", tau_rise)
+                    cmd = bytes([12, channel, 3]) + tau_rise_bytes + bytes([0])
                     usb.send(cmd)
                     usb.recv(4)
 
-                    # Send frequency (subcommand 2)
-                    frequency = float(config["frequency"])
-                    frequency_bytes = struct.pack("<f", frequency)
-                    cmd = bytes([12, channel, 2]) + frequency_bytes + bytes([0])
+                    # Send pulse decay time (subcommand 4)
+                    tau_decay = float(config["pulse_tau_decay"])
+                    tau_decay_bytes = struct.pack("<f", tau_decay)
+                    cmd = bytes([12, channel, 4]) + tau_decay_bytes + bytes([0])
                     usb.send(cmd)
                     usb.recv(4)
 
-                    # Send square wave parameters if wave type is square
-                    if config["wave_type"] == "square":
-                        # Send square rise/fall k parameter (subcommand 7)
-                        k = float(config["square_rise_fall_k"])
-                        k_bytes = struct.pack("<f", k)
-                        cmd = bytes([12, channel, 7]) + k_bytes + bytes([0])
-                        usb.send(cmd)
-                        usb.recv(4)
+                    # Send pulse amplitude min (subcommand 5)
+                    amp_min = int(config["pulse_amplitude_min"])
+                    amp_min_bytes = struct.pack("<H", amp_min)
+                    cmd = bytes([12, channel, 5]) + amp_min_bytes + bytes([0, 0, 0])
+                    usb.send(cmd)
+                    usb.recv(4)
 
-                    # Send pulse parameters if wave type is pulse
-                    if config["wave_type"] == "pulse":
-                        # Send pulse rise time (subcommand 3)
-                        tau_rise = float(config["pulse_tau_rise"])
-                        tau_rise_bytes = struct.pack("<f", tau_rise)
-                        cmd = bytes([12, channel, 3]) + tau_rise_bytes + bytes([0])
-                        usb.send(cmd)
-                        usb.recv(4)
+                    # Send pulse amplitude max (subcommand 6)
+                    amp_max = int(config["pulse_amplitude_max"])
+                    amp_max_bytes = struct.pack("<H", amp_max)
+                    cmd = bytes([12, channel, 6]) + amp_max_bytes + bytes([0, 0, 0])
+                    usb.send(cmd)
+                    usb.recv(4)
 
-                        # Send pulse decay time (subcommand 4)
-                        tau_decay = float(config["pulse_tau_decay"])
-                        tau_decay_bytes = struct.pack("<f", tau_decay)
-                        cmd = bytes([12, channel, 4]) + tau_decay_bytes + bytes([0])
-                        usb.send(cmd)
-                        usb.recv(4)
+            except Exception as e:
+                print(f"Error sending config to dummy board {board_idx}: {e}")
 
-                        # Send pulse amplitude min (subcommand 5)
-                        amp_min = int(config["pulse_amplitude_min"])
-                        amp_min_bytes = struct.pack("<H", amp_min)
-                        cmd = bytes([12, channel, 5]) + amp_min_bytes + bytes([0, 0, 0])
-                        usb.send(cmd)
-                        usb.recv(4)
-
-                        # Send pulse amplitude max (subcommand 6)
-                        amp_max = int(config["pulse_amplitude_max"])
-                        amp_max_bytes = struct.pack("<H", amp_max)
-                        cmd = bytes([12, channel, 6]) + amp_max_bytes + bytes([0, 0, 0])
-                        usb.send(cmd)
-                        usb.recv(4)
-
-                except Exception as e:
-                    print(f"Error sending config to dummy server: {e}")
+        #print(f"Configuration applied to dummy board {board_idx}.")

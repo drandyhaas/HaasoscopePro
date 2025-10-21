@@ -418,6 +418,9 @@ class HardwareController:
             self.state.doexttrig[board] = True
             usb = self.usbs[board]
 
+            # Skip dummy boards
+            if isinstance(usb, UsbSocketAdapter): continue
+
             # Try to set the clock to external
             if not clockused(usb,board,quiet=True): # returns True if on external clock
                 if not self.force_switch_clocks(board): # ask to switch to external

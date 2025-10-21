@@ -24,6 +24,8 @@ if __name__ == '__main__':
                         help='Connect to dummy server via TCP socket (format: host:port). '
                              'Can be specified multiple times for multi-board simulation. '
                              'Example: --socket localhost:9999 --socket localhost:10000')
+    parser.add_argument('--max-devices', type=int, default=100, metavar='N',
+                        help='Maximum number of devices to connect (default: 100)')
     args = parser.parse_args()
 
     print("Python version", sys.version)
@@ -31,7 +33,7 @@ if __name__ == '__main__':
     try:
         # --- Hardware Discovery and Initial Setup ---
         print("Searching for Haasoscope Pro boards...")
-        max_devices = 100
+        max_devices = args.max_devices
         usbs = connectdevices(max_devices)
 
         # Try to use dummy server if requested via --socket or if no hardware found

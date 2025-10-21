@@ -44,6 +44,12 @@ python HaasoscopeProQt.py --socket 192.168.1.100:9999
 # Mix hardware and dummy boards (if hardware is detected, socket boards are added)
 python HaasoscopeProQt.py --socket localhost:9999
 
+# Limit maximum number of devices to connect (default: 100)
+python HaasoscopeProQt.py --max-devices 4
+
+# Combine options
+python HaasoscopeProQt.py --max-devices 5 --socket localhost:9999
+
 # Show help
 python HaasoscopeProQt.py --help
 ```

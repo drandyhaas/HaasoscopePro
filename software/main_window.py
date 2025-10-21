@@ -17,6 +17,7 @@ from data_processor import DataProcessor, format_freq
 from plot_manager import PlotManager
 from data_recorder import DataRecorder
 from histogram_window import HistogramWindow
+from xy_window import XYWindow
 from history_window import HistoryWindow
 from measurements_manager import MeasurementsManager
 from calibration import autocalibration, do_meanrms_calibration
@@ -30,6 +31,7 @@ from FFTWindow import FFTWindow
 from SCPIsocket import DataSocket
 from board import setupboard
 from utils import get_pwd
+from dummy_scope.USB_Socket import UsbSocketAdapter
 import ftd2xx
 
 pwd = get_pwd()
@@ -75,13 +77,18 @@ class MainWindow(TemplateBaseClass):
         self.socket_thread = None
         self.fftui = None
         self.math_window = None
+        self.xy_window = None
         self.dummy_server_config_dialog = None
         # Initialize boardBox ComboBox with board numbers
         self.ui.boardBox.blockSignals(True)
         self.ui.boardBox.setMaxVisibleItems(self.state.num_board)
         self.ui.boardBox.clear()
         for i in range(self.state.num_board):
-            self.ui.boardBox.addItem(str(i))
+            # Check if this board is a dummy board (UsbSocketAdapter)
+            if isinstance(self.usbs[i], UsbSocketAdapter):
+                self.ui.boardBox.addItem(f"{i} (D)")
+            else:
+                self.ui.boardBox.addItem(str(i))
         self.ui.boardBox.blockSignals(False)
         self.setup_successful = False
         self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
@@ -367,10 +374,6 @@ class MainWindow(TemplateBaseClass):
         A centralized function to synchronize all UI elements related to the
         channel mode (Single, Two Channel, Oversampling).
         """
-        # If in XY mode, do not alter the visibility of any time-domain plots.
-        if self.state.xy_mode:
-            return
-
         s = self.state
         if s.num_board<1: return
 
@@ -665,22 +668,12 @@ class MainWindow(TemplateBaseClass):
     def update_plot_data(self):
         s = self.state
 
-        # --- Plotting Logic: Switch between Time Domain and XY Mode ---
-        if s.xy_mode:
-            # For XY mode, we need to ensure the data lengths match.
-            # We'll use the data from the first two channels of the active board.
-            board = s.activeboard
-            # Ensure channel 1 is enabled for two-channel mode to get data
-            if s.dotwochannel[board]:
-                ch0_index = board * s.num_chan_per_board
-                ch1_index = ch0_index + 1
-                # In two-channel mode, only the first half of the buffer is valid data
-                num_valid_samples = self.xydata.shape[2] // 2
-                y_data_ch0 = self.xydata[ch0_index][1][:num_valid_samples]
-                x_data_ch1 = self.xydata[ch1_index][1][:num_valid_samples]
-                self.plot_manager.update_xy_plot(x_data=x_data_ch1, y_data=y_data_ch0)
-        else:
-            self.plot_manager.update_plots(self.xydata, self.xydatainterleaved)
+        # --- Plotting Logic: Update normal time-domain plots ---
+        self.plot_manager.update_plots(self.xydata, self.xydatainterleaved)
+
+        # --- Update XY window if visible ---
+        if s.xy_mode and self.xy_window is not None and self.xy_window.isVisible():
+            self.xy_window.update_xy_plot(self.xydata)
 
         # Calculate and display math channels if any are defined
         if self.math_window and len(self.math_window.math_channels) > 0:
@@ -1171,8 +1164,9 @@ class MainWindow(TemplateBaseClass):
         all_colors = [pen.color() for pen in self.plot_manager.linepens]
         self.controller.do_leds(all_colors)
 
-        # Update XY menu item based on whether the active board is in two-channel mode
-        self.ui.actionXY_Plot.setEnabled(self.state.dotwochannel[self.state.activeboard])
+        # Update XY menu item based on whether there are at least 2 channels total
+        total_channels = self.state.num_board * self.state.num_chan_per_board
+        self.ui.actionXY_Plot.setEnabled(total_channels >= 2)
 
         # Update Aux Out box to show the value for the currently selected board
         self.ui.Auxout_comboBox.blockSignals(True)
@@ -1188,27 +1182,18 @@ class MainWindow(TemplateBaseClass):
         self.ui.lpfBox.blockSignals(False)
 
         # Update resamp box to show the value for the currently selected channel
-        # If not zoomed (downsample >= 0), show doresamp (should be 0)
-        # If zoomed (downsample < 0), restore from saved_doresamp and show it
         self.ui.resampBox.blockSignals(True)
         if self.state.downsample >= 0:
+            # Not zoomed: ensure non-overridden channels are at default of 0
+            if not self.state.resamp_overridden[self.state.activexychannel] and self.state.doresamp[self.state.activexychannel] != 0:
+                self.state.doresamp[self.state.activexychannel] = 0
             self.ui.resampBox.setValue(self.state.doresamp[self.state.activexychannel])
         else:
-            # When zoomed, restore doresamp from saved value for the new channel
-            self.state.doresamp[self.state.activexychannel] = self.state.saved_doresamp[self.state.activexychannel]
+            # Zoomed: ensure non-overridden channels are at default of 4
+            if not self.state.resamp_overridden[self.state.activexychannel] and self.state.doresamp[self.state.activexychannel] != 4:
+                self.state.doresamp[self.state.activexychannel] = 4
             self.ui.resampBox.setValue(self.state.doresamp[self.state.activexychannel])
         self.ui.resampBox.blockSignals(False)
-
-        # If we are in XY mode but switched to a board that is not in two-channel mode, exit XY mode
-        if self.state.xy_mode and not self.state.dotwochannel[self.state.activeboard]:
-            self.ui.actionXY_Plot.setChecked(False)
-            self.plot_manager.toggle_xy_view(False, self.state.activeboard)
-
-        # If in XY mode, update the pen color to match the new active board's CH1
-        if self.state.xy_mode:
-            ch0_index = self.state.activeboard * self.state.num_chan_per_board + 0
-            new_pen = self.plot_manager.linepens[ch0_index]
-            self.plot_manager.set_xy_pen(new_pen)
 
         # Reset FFT analysis when channel changes
         if self.fftui:
@@ -1337,7 +1322,9 @@ class MainWindow(TemplateBaseClass):
         """Handle resamp value changes from the UI."""
         s = self.state
         s.doresamp[s.activexychannel] = value
-        if True: #self.state.downsample < 0:
+        # Mark that this channel's resamp has been manually overridden
+        s.resamp_overridden[s.activexychannel] = True
+        if self.state.downsample < 0:
             s.saved_doresamp[s.activexychannel] = value
 
     def line_width_changed(self, value):
@@ -1360,10 +1347,15 @@ class MainWindow(TemplateBaseClass):
         highres = 1 if self.ui.actionHigh_resolution.isChecked() else 0
         self.controller.tell_downsample_all(self.state.downsample, highres)
 
-        # When transitioning from downsample=0 to downsample=-1, restore saved resamp value
+        # When transitioning from downsample=0 to downsample=-1, set resamp intelligently
         if old_downsample == 0 and self.state.downsample == -1:
             s = self.state
-            s.doresamp[s.activexychannel] = s.saved_doresamp[s.activexychannel]
+            # If resamp has been manually overridden, keep the current value
+            # Otherwise, use default of 4 for zoomed mode
+            if not s.resamp_overridden[s.activexychannel]:
+                s.doresamp[s.activexychannel] = 4
+            # If overridden, keep current value (no change needed)
+
             self.ui.resampBox.blockSignals(True)
             self.ui.resampBox.setValue(s.doresamp[s.activexychannel])
             self.ui.resampBox.blockSignals(False)
@@ -1401,13 +1393,18 @@ class MainWindow(TemplateBaseClass):
         highres = 1 if self.ui.actionHigh_resolution.isChecked() else 0
         self.controller.tell_downsample_all(self.state.downsample, highres)
 
-        # When transitioning from downsample=-1 to downsample=0, save and turn off resamp
+        # When transitioning from downsample=-1 to downsample=0, set resamp intelligently for ALL channels
         if old_downsample == -1 and self.state.downsample == 0:
             s = self.state
-            s.saved_doresamp[s.activexychannel] = s.doresamp[s.activexychannel]
-            s.doresamp[s.activexychannel] = 0
+            # For channels not manually overridden, set to default of 0 for non-zoomed mode
+            # For overridden channels, keep their current value
+            for ch in range(len(s.doresamp)):
+                if not s.resamp_overridden[ch]:
+                    s.doresamp[ch] = 0
+                # If overridden, keep current value (no change)
+
             self.ui.resampBox.blockSignals(True)
-            self.ui.resampBox.setValue(0)
+            self.ui.resampBox.setValue(s.doresamp[s.activexychannel])
             self.ui.resampBox.blockSignals(False)
 
         is_zoomed = self.state.downsample < 0
@@ -1656,12 +1653,31 @@ class MainWindow(TemplateBaseClass):
 
     def toggle_xy_view_slot(self, checked):
         """Slot for the 'XY Plot' menu action."""
-        board = self.state.activeboard
+        s = self.state
+
         if checked:
-            ch0_index = board * self.state.num_chan_per_board
-            pen = self.plot_manager.linepens[ch0_index]
-            self.plot_manager.set_xy_pen(pen)
-        self.plot_manager.toggle_xy_view(checked, board)
+            # Entering XY mode - create and show XY window
+            if self.xy_window is None:
+                self.xy_window = XYWindow(self, self.state, self.plot_manager)
+                # Connect signal to handle window closing
+                self.xy_window.window_closed.connect(self.on_xy_window_closed)
+
+            self.xy_window.show()
+            self.xy_window.raise_()
+            self.xy_window.activateWindow()
+            s.xy_mode = True
+        else:
+            # Exiting XY mode - hide XY window
+            if self.xy_window is not None:
+                self.xy_window.hide()
+            s.xy_mode = False
+
+    def on_xy_window_closed(self):
+        """Slot called when the XY window is closed by the user."""
+        # Uncheck the menu item
+        self.ui.actionXY_Plot.setChecked(False)
+        # Update state
+        self.state.xy_mode = False
 
     def open_math_channels(self):
         """Slot for the 'Math Channels' menu action."""
@@ -1737,17 +1753,11 @@ class MainWindow(TemplateBaseClass):
             self.xydatainterleaved = event['xydatainterleaved']
 
             # Update the plot with the historical data
-            if self.state.xy_mode:
-                board = self.state.activeboard
-                if self.state.dotwochannel[board]:
-                    ch0_index = board * self.state.num_chan_per_board
-                    ch1_index = ch0_index + 1
-                    num_valid_samples = self.xydata.shape[2] // 2
-                    y_data_ch0 = self.xydata[ch0_index][1][:num_valid_samples]
-                    x_data_ch1 = self.xydata[ch1_index][1][:num_valid_samples]
-                    self.plot_manager.update_xy_plot(x_data=x_data_ch1, y_data=y_data_ch0)
-            else:
-                self.plot_manager.update_plots(self.xydata, self.xydatainterleaved)
+            self.plot_manager.update_plots(self.xydata, self.xydatainterleaved)
+
+            # Update XY window if visible
+            if self.state.xy_mode and self.xy_window is not None and self.xy_window.isVisible():
+                self.xy_window.update_xy_plot(self.xydata)
 
             # Update math channels if any
             if self.math_window and len(self.math_window.math_channels) > 0:
@@ -1960,11 +1970,6 @@ class MainWindow(TemplateBaseClass):
             elif current_trigger_index == 3:  # Falling (Ch 1) -> Falling (Ch 0)
                 self.ui.risingfalling_comboBox.setCurrentIndex(1)
 
-        # If we are in XY mode and two-channel is turned off, exit XY mode
-        if s.xy_mode and not is_two_channel:
-            self.ui.actionXY_Plot.setChecked(False)
-            self.plot_manager.toggle_xy_view(False, s.activeboard)
-        
         # The next event after a mode switch can be glitchy, so we'll skip it.
         s.skip_next_event = True
 
@@ -2203,6 +2208,10 @@ class MainWindow(TemplateBaseClass):
         if checked:
             s.channel_enabled[c_secondary_ch0] = False
             s.channel_enabled[c_secondary_ch1] = False
+        else:
+            # When disabling interleaving, re-enable the secondary board's channels
+            s.channel_enabled[c_secondary_ch0] = True
+            s.channel_enabled[c_secondary_ch1] = True
         self.update_channel_visibility(c_secondary_ch0)
         self.update_channel_visibility(c_secondary_ch1)
 

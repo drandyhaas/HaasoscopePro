@@ -357,7 +357,7 @@ class DataProcessor:
 
         sampling_rate = (state.samplerate * 1e9) / state.downsamplefactor
         if state.dotwochannel[state.activeboard]: sampling_rate /= 2
-        # Account for resampling - if resampling is applied, effective sampling rate is reduced
+        # Account for resampling - if resampling is applied, it increases sample density and effective sampling rate
         if state.doresamp[state.activexychannel] > 1: sampling_rate *= state.doresamp[state.activexychannel]
         found_freq = find_fundamental_frequency_scipy(y_data, sampling_rate)
         measurements["Freq"] = found_freq

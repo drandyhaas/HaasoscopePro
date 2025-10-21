@@ -5,7 +5,7 @@ class ScopeState:
 
     def __init__(self, num_boards, num_chan_per_board):
         # General and Hardware Configuration
-        self.softwareversion = 31.04
+        self.softwareversion = 31.05
         self.num_board = num_boards
         self.num_chan_per_board = num_chan_per_board
         self.samplerate = 3.2  # GHz
@@ -76,6 +76,7 @@ class ScopeState:
         self.downsamplemerging = 1
         self.doresamp = [0] * (num_boards * num_chan_per_board)  # Per-channel resamp
         self.saved_doresamp = [4] * (num_boards * num_chan_per_board)  # Per-channel saved resamp value
+        self.resamp_overridden = [False] * (num_boards * num_chan_per_board)  # Per-channel flag: has user manually set resamp?
         self.xy_mode = False
         self.skip_next_event = False
         self.fitwidthfraction = 0.2

@@ -88,7 +88,9 @@ def _find_next_board_in_chain(current_board_idx: int, first_board_idx: int, usbs
 
         usb.send(bytes([2, 5, (i == current_board_idx), 0, 99, 99, 99, 99]))
         res = usb.recv(4)
-        if len(res) < 4: continue
+        if len(res) < 4:
+            print("Warning in _find_next_board_in_chain: no response received from board",i)
+            continue
 
         spare_in_is_high = getbit(res[2], 0)
         if spare_in_is_high:
@@ -111,18 +113,40 @@ def orderusbs(usbs: List[UsbFt232hSync245mode]) -> List[UsbFt232hSync245mode]:
     Subsequent boards are found by activating a signal on the last known board
     and polling the others to see which one received it.
 
+    Dummy boards (UsbSocketAdapter instances) are not ordered via hardware discovery.
+    They are appended to the end of the list in their original order.
+
     Returns:
         A new list of UsbFt232hSync245mode objects, sorted in their physical order.
     """
     if len(usbs) <= 1:
         return usbs
 
-    first_board_idx = -1
+    # Separate real boards from dummy boards (UsbSocketAdapter)
+    real_boards = []
+    real_indices = []
+    dummy_boards = []
+
     for i, usb in enumerate(usbs):
+        # Check if this is a dummy board by checking the class type
+        if isinstance(usb, UsbSocketAdapter):
+            dummy_boards.append(usb)
+            print(f"Board index {i} (Serial: {usb.serial.decode()}) is a dummy board - will not be ordered via hardware.")
+        else:
+            real_boards.append(usb)
+            real_indices.append(i)
+
+    # If there are no real boards or only one real board, just return the original order
+    if len(real_boards) <= 1:
+        return usbs
+
+    first_board_idx = -1
+    for i, usb in enumerate(real_boards):
         usb.send(bytes([2, 5, 0, 0, 99, 99, 99, 99]))  # Get clock info
         res = usb.recv(4)
         if len(res) < 4:
-            raise RuntimeError(f"Board ordering failed: Could not get LVDS info from board index {i}.")
+            orig_idx = real_indices[i]
+            raise RuntimeError(f"Board ordering failed: Could not get LVDS info from board index {orig_idx}.")
 
         # The first board in the chain has no external clock, so this bit will be high.
         if getbit(res[1], 3):
@@ -135,14 +159,17 @@ def orderusbs(usbs: List[UsbFt232hSync245mode]) -> List[UsbFt232hSync245mode]:
         raise RuntimeError("Board ordering failed: Could not find the first board. Check sync cables.")
 
     ordered_indices = [first_board_idx]
-    while len(ordered_indices) < len(usbs):
+    while len(ordered_indices) < len(real_boards):
         last_found_idx = ordered_indices[-1]
-        next_idx = _find_next_board_in_chain(last_found_idx, first_board_idx, usbs)
-        print(f"Found board index {next_idx} (Serial: {usbs[next_idx].serial.decode()}) is next.")
+        next_idx = _find_next_board_in_chain(last_found_idx, first_board_idx, real_boards)
+        print(f"Found board index {next_idx} (Serial: {real_boards[next_idx].serial.decode()}) is next.")
         ordered_indices.append(next_idx)
 
-    # Create the new, ordered list of usb objects
-    return [usbs[i] for i in ordered_indices]
+    # Create the new, ordered list of real boards
+    ordered_real_boards = [real_boards[i] for i in ordered_indices]
+
+    # Append dummy boards at the end in their original order
+    return ordered_real_boards + dummy_boards
 
 
 def tellfirstandlast(usbs: List[Union[UsbFt232hSync245mode, UsbSocketAdapter]]):
