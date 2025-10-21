@@ -31,33 +31,32 @@ To use a different branch, do <code>git pull && git checkout "branchname"</code>
 For v30+ you can [download a release](https://github.com/drandyhaas/HaasoscopePro/releases) zip file for your platform (Windows, Mac, Linux). 
 Then run the new software, update the firmware (if needed) on your board from that new software, and power cycle the board (automatic firmware reload for boards with v29+ firmware).
 
-### Quick start (Windows/Mac)
+### Quick start for Windows / Mac (M1+ chip) / Linux
 
-1) [Download a release](https://github.com/drandyhaas/HaasoscopePro/releases) zip file for your platform.
-2) Install [FTDI D2xx driver](https://ftdichip.com/drivers/d2xx-drivers/) or download one of the below files:
-- for [Windows](https://github.com/drandyhaas/HaasoscopePro/blob/main/software/ftdi_setup.exe): install by running the setup exe at <code>HaasoscopePro/software/ftdi_setup.exe</code>
-- for [Mac](https://github.com/drandyhaas/HaasoscopePro/blob/main/software/libftd2xx.dylib): <code>sudo mkdir -p /usr/local/lib; sudo cp HaasoscopePro/software/libftd2xx.dylib /usr/local/lib/</code> 
-- for [Linux](https://github.com/drandyhaas/HaasoscopePro/blob/main/software/libftd2xx.so): <code>sudo cp HaasoscopePro/software/libftd2xx.so /usr/lib/</code>
+1) [Download a release](https://github.com/drandyhaas/HaasoscopePro/releases) zip file for your OS
+2) Install [FTDI D2xx driver](https://ftdichip.com/drivers/d2xx-drivers/) for your OS:
+- for Windows: run the setup exe at <code>ftdi_setup.exe</code>
+- for Mac: <code>sudo mkdir -p /usr/local/lib; sudo cp libftd2xx.dylib /usr/local/lib/</code> 
+- for Linux: <code>sudo cp libftd2xx.so /usr/lib/</code>
 3) Plug Haasoscope Pro into your computer via USB (5V 2A at least!)
 4) Run **HaasoscopeProQt** in the <code>(OS)_HaasoscopeProQt</code> directory
 
-### Fuller way of running (Windows/Mac/Linux)
+### Fuller way of running
 
 1) Install python3 and git for your operating system
-2) Install dependencies: <br><code>pip3 install numpy scipy pyqtgraph PyQt5 pyftdi ftd2xx matplotlib</code> <br>
-(matplotlib not needed for v30+)
-3) Get code: <br><code>git clone https://github.com/drandyhaas/HaasoscopePro.git</code>
-4) Install FTDI driver (see Quick start above)
-5) Plug Haasoscope Pro into your computer via USB (5V 2A at least!)
-6) Run:
-<br><code>cd HaasoscopePro/software</code>
-<br><code>python3 HaasoscopeProQt.py</code>
+2) Install dependencies: <code>pip3 install numpy scipy pyqtgraph PyQt5 pyftdi ftd2xx</code> <br>
+(<code>matplotlib</code> also needed before v30)
+3) Get code: <code>git clone https://github.com/drandyhaas/HaasoscopePro.git</code>
+4) <code>cd HaasoscopePro/software</code>
+5) Install FTDI driver (see Quick start above)
+6) Plug Haasoscope Pro into your computer via USB (5V 2A at least!)
+7) Run: <code>python3 HaasoscopeProQt.py</code>
 
 ### Tips
 
-- If not enough power is being supplied, plug in via a [powered USB hub](https://a.co/d/hfAtVhl), a [USB PD hub with 15W reserved for ports](https://a.co/d/174I3v8) and a USB-C cable, or use an external [5-24V 20W+ power adapter with 2.1mm plug](https://a.co/d/1EkzLRP)
+- If not enough power is being supplied, plug in via a [powered USB hub](https://a.co/d/hfAtVhl), a [USB PD hub with 15W reserved for ports](https://a.co/d/174I3v8), or use an external [5-24V 20W+ power adapter with 2.1mm plug](https://a.co/d/1EkzLRP)
 - If you get security issues on Mac, do: <code>xattr -cr Mac_HaasoscopeProQt</code>
-- If the board is not found on Linux, use this udev rule and then plug it in: <code>sudo cp HaasoscopePro/software/ft245.rules /etc/udev/rules.d/</code>
+- If the board is not found on Linux, use this udev rule and then plug it in: <code>sudo cp ft245.rules /etc/udev/rules.d/</code>
 - If you get an error like "qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found", try: <code>sudo apt install libxcb-xinerama0</code>
 
 ### To remake exe for quick start
@@ -84,6 +83,4 @@ The Haasoscope Pro GUI can be edited using [Qt Designer](https://www.pythonguis.
 
 ### Other GUIs
 
-1) [HaasoscopeProGUI](https://github.com/priimak/HaasoscopeProGUI) is a PyQt6-based GUI aimed to provide a professional look and experience, but may not have all the latest features, like multi-scope support, oversampling, etc.
-2) [ngscopeclient](https://www.ngscopeclient.org/) is a very powerful multi-instrument analysis suite. HaasoscopeProQt must be running, which then automatically opens the LAN port and accepts connections from ngscopeclient. See the ngscopeclient user manual for details.
-
+ - [ngscopeclient](https://www.ngscopeclient.org/) is a very powerful multi-instrument analysis suite. HaasoscopeProQt must be running, which then automatically opens the LAN port and accepts connections from ngscopeclient. See the ngscopeclient user manual for details.
