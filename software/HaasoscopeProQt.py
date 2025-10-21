@@ -3,6 +3,7 @@
 import sys
 import os
 import time
+import argparse
 import ftd2xx
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QIcon
@@ -17,20 +18,35 @@ from utils import get_pwd
 
 # --- Main Application Execution ---
 if __name__ == '__main__':
-    #print('Argument List:', str(sys.argv))
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(description='HaasoscopePro Oscilloscope Software')
+    parser.add_argument('--socket', action='append', metavar='ADDRESS',
+                        help='Connect to dummy server via TCP socket (format: host:port). '
+                             'Can be specified multiple times for multi-board simulation. '
+                             'Example: --socket localhost:9999 --socket localhost:10000')
+    args = parser.parse_args()
+
     print("Python version", sys.version)
 
     try:
         # --- Hardware Discovery and Initial Setup ---
         print("Searching for Haasoscope Pro boards...")
-        max_devices = 100
+        max_devices = 0
         usbs = connectdevices(max_devices)
 
-        # Can maybe try to use dummy server to simulate scope data
-        try_to_use_dummy_server = True
-        if len(usbs) < 1 and try_to_use_dummy_server:
-            print("Looking for dummy scopes...")
-            usbs = connect_socket_devices(["localhost:9998"])
+        # Try to use dummy server if requested via --socket or if no hardware found
+        socket_addresses = args.socket if args.socket else None
+
+        if socket_addresses:
+            # User specified --socket argument(s), connect to those
+            print(f"Connecting to socket device(s): {socket_addresses}")
+            socket_usbs = connect_socket_devices(socket_addresses)
+            usbs.extend(socket_usbs)
+        elif len(usbs) < 1:
+            # No hardware found and no --socket specified, try default dummy server
+            print("No hardware found. Looking for dummy scope at localhost:9998...")
+            socket_usbs = connect_socket_devices(["localhost:9998"])
+            usbs.extend(socket_usbs)
 
         if usbs:
             for b in range(len(usbs)):
