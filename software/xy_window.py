@@ -87,14 +87,16 @@ class XYWindow(QtWidgets.QWidget):
 
     def position_relative_to_main(self, main_window):
         """Position the window to the left of the main window with bottom edges aligned."""
-        # Get main window frame geometry (includes window decorations)
-        main_frame = main_window.frameGeometry()
+        main_geometry = main_window.geometry()
 
-        # Position to the left of main window with 10px gap
-        x = main_frame.x() - self.width() - 10
+        # Calculate position: 10 pixels to the right of main window's right edge
+        x = main_geometry.x() + main_geometry.width() + 10
 
         # Align bottom edges
-        y = main_frame.y() + main_frame.height() - self.height()
+        y = main_geometry.y() + main_geometry.height() - self.height() - 32
+
+        # Position to the left of main window with 10px gap
+        x = main_geometry.x() - self.width() - 10
 
         self.move(x, y)
 
