@@ -30,6 +30,7 @@ from FFTWindow import FFTWindow
 from SCPIsocket import DataSocket
 from board import setupboard
 from utils import get_pwd
+from dummy_scope.USB_Socket import UsbSocketAdapter
 import ftd2xx
 
 pwd = get_pwd()
@@ -81,7 +82,11 @@ class MainWindow(TemplateBaseClass):
         self.ui.boardBox.setMaxVisibleItems(self.state.num_board)
         self.ui.boardBox.clear()
         for i in range(self.state.num_board):
-            self.ui.boardBox.addItem(str(i))
+            # Check if this board is a dummy board (UsbSocketAdapter)
+            if isinstance(self.usbs[i], UsbSocketAdapter):
+                self.ui.boardBox.addItem(f"{i} (D)")
+            else:
+                self.ui.boardBox.addItem(str(i))
         self.ui.boardBox.blockSignals(False)
         self.setup_successful = False
         self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
