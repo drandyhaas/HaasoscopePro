@@ -20,26 +20,26 @@ See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiK
 
 ### Versions
 
-- old: v27 is the firmware that shipped with the first round of units
-- old: v28 firmware fixed trigger stability
-- "main" branch is currently v29 firmware and adds more software features
-- old: "v29_cleanup" branch has a beta version of the software with yet more features
-- old: "v30" branch has v30 firmware which adds trigger delay and holdoff options and more software features 
-- "v31” branch has v31 firmware which adds fan PWM control and more software features 
+- "main" branch currently has v31 firmware which adds fan PWM control and more software features 
 - "v31_test" branch: new development is occuring here
+- old: "v30" branch has v30 firmware which adds trigger delay and holdoff options and more software features
+- old: "v29_cleanup" branch has a beta version of the software with yet more features
+- old: "v29" branch has v29 firmware and adds more software features
+- old: "v27" branch has v27 firmware that shipped with the first round of units
 
-To use a different branch, do <code>git pull && git checkout "branchname"</code>, select the branch name in the drop down box on github and then download the zip file of the code, or (for v30+) [download a release](https://github.com/drandyhaas/HaasoscopePro/releases) zip file for your platform (Windows, Mac, Linux). 
+To use a different branch, do <code>git pull && git checkout "branchname"</code>. 
+For v30+ you can [download a release](https://github.com/drandyhaas/HaasoscopePro/releases) zip file for your platform (Windows, Mac, Linux). 
 Then run the new software, update the firmware (if needed) on your board from that new software, and power cycle the board (automatic firmware reload for boards with v29+ firmware).
 
 ### Quick start (Windows/Mac)
 
-1) [Download code](https://github.com/drandyhaas/HaasoscopePro/archive/refs/heads/main.zip) and unzip it, or another zip file version from another branch, or (for v30+) [download a release](https://github.com/drandyhaas/HaasoscopePro/releases) zip file for your platform.
-2) Install [FTDI D2xx driver](https://ftdichip.com/drivers/d2xx-drivers/) 
-- for Windows: install by running the setup exe at <code>HaasoscopePro/software/ftdi_setup.exe</code>
-- for Mac: <code>sudo mkdir -p /usr/local/lib; sudo cp HaasoscopePro/software/libftd2xx.dylib /usr/local/lib/</code> 
-- for Linux: <code>sudo cp HaasoscopePro/software/libftd2xx.so /usr/lib/</code>
+1) [Download a release](https://github.com/drandyhaas/HaasoscopePro/releases) zip file for your platform.
+2) Install [FTDI D2xx driver](https://ftdichip.com/drivers/d2xx-drivers/) or download one of the below files:
+- for [Windows](https://github.com/drandyhaas/HaasoscopePro/blob/main/software/ftdi_setup.exe): install by running the setup exe at <code>HaasoscopePro/software/ftdi_setup.exe</code>
+- for [Mac](https://github.com/drandyhaas/HaasoscopePro/blob/main/software/libftd2xx.dylib): <code>sudo mkdir -p /usr/local/lib; sudo cp HaasoscopePro/software/libftd2xx.dylib /usr/local/lib/</code> 
+- for [Linux](https://github.com/drandyhaas/HaasoscopePro/blob/main/software/libftd2xx.so): <code>sudo cp HaasoscopePro/software/libftd2xx.so /usr/lib/</code>
 3) Plug Haasoscope Pro into your computer via USB (5V 2A at least!)
-4) Run **HaasoscopeProQt** in the <code>HaasoscopePro/software/dist/(OS)_HaasoscopeProQt</code> directory
+4) Run **HaasoscopeProQt** in the <code>(OS)_HaasoscopeProQt</code> directory
 
 ### Fuller way of running (Windows/Mac/Linux)
 
