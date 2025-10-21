@@ -16,6 +16,7 @@ move dist\dummy_server\dummy_server.exe ..\..\HaasoscopePro_Windows\Windows_Haas
 
 copy *.ui ..\..\HaasoscopePro_Windows\Windows_HaasoscopeProQt\
 copy icon.png ..\..\HaasoscopePro_Windows\Windows_HaasoscopeProQt\
+copy ftdi_setup.exe ..\..\HaasoscopePro_Windows\Windows_HaasoscopeProQt\
 
 rmdir /s /q build
 rmdir /s /q  dist

@@ -16,6 +16,7 @@ mv dist/dummy_server/dummy_server ../../HaasoscopePro_Linux/Linux_HaasoscopeProQ
 
 cp *.ui ../../HaasoscopePro_Linux/Linux_HaasoscopeProQt/
 cp icon.png ../../HaasoscopePro_Linux/Linux_HaasoscopeProQt/
+cp libftd2xx.so ../../HaasoscopePro_Linux/Linux_HaasoscopeProQt/
 
 rm -rf build
 rm -rf dist

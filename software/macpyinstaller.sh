@@ -16,6 +16,7 @@ mv dist/dummy_server/dummy_server ../../HaasoscopePro_Mac/Mac_HaasoscopeProQt/
 
 cp *.ui ../../HaasoscopePro_Mac/Mac_HaasoscopeProQt/
 cp icon.png ../../HaasoscopePro_Mac/Mac_HaasoscopeProQt/
+cp libftd2xx.dylib ../../HaasoscopePro_Mac/Mac_HaasoscopeProQt/
 
 rm -rf build
 rm -rf dist
