@@ -1280,7 +1280,9 @@ class MathChannelsWindow(QWidget):
                     elif operation == 'Smooth':
                         # Moving average smoothing
                         window_size = 10  # this is how many samples we average
-                        if self.state.doresamp: window_size *= self.state.doresamp
+                        # Use the first input channel's resamp if it's a regular channel, otherwise use active channel
+                        resamp_factor = self.state.doresamp[ch1_idx] if isinstance(ch1_idx, int) else self.state.doresamp[self.state.activexychannel]
+                        if resamp_factor: window_size *= resamp_factor
                         y_result = np.zeros_like(y1)
                         for i in range(len(y1)):
                             start = max(0, i - window_size // 2)

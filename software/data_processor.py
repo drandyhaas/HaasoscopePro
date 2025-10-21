@@ -308,7 +308,7 @@ class DataProcessor:
                 if xc.size > 1:
                     distcorrtemp = find_crossing_distance(yc, threshold_to_use, vline_time, xc[0], xc[1] - xc[0])
 
-        if distcorrtemp is not None and abs(distcorrtemp) < s.distcorrtol * s.downsamplefactor / s.nsunits:
+        if distcorrtemp is not None and abs(distcorrtemp) < s.distcorrtol * s.downsamplefactor:
             s.distcorr[board_idx] = distcorrtemp
             for i in range(s.num_chan_per_board):
                 xy_data_array[board_idx * s.num_chan_per_board + i][0] -= s.distcorr[board_idx]
@@ -358,7 +358,7 @@ class DataProcessor:
         sampling_rate = (state.samplerate * 1e9) / state.downsamplefactor
         if state.dotwochannel[state.activeboard]: sampling_rate /= 2
         # Account for resampling - if resampling is applied, effective sampling rate is reduced
-        if state.doresamp > 1: sampling_rate *= state.doresamp
+        if state.doresamp[state.activexychannel] > 1: sampling_rate *= state.doresamp[state.activexychannel]
         found_freq = find_fundamental_frequency_scipy(y_data, sampling_rate)
         measurements["Freq"] = found_freq
 

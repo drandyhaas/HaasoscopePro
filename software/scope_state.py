@@ -5,7 +5,7 @@ class ScopeState:
 
     def __init__(self, num_boards, num_chan_per_board):
         # General and Hardware Configuration
-        self.softwareversion = 31.03
+        self.softwareversion = 31.04
         self.num_board = num_boards
         self.num_chan_per_board = num_chan_per_board
         self.samplerate = 3.2  # GHz
@@ -74,8 +74,8 @@ class ScopeState:
         self.downsamplefactor = 1
         self.downsamplezoom = 1
         self.downsamplemerging = 1
-        self.doresamp = 0  # Start at 0 since downsample starts at 0 (>=0)
-        self.saved_doresamp = 4  # Saved resamp value to restore when downsample < 0
+        self.doresamp = [0] * (num_boards * num_chan_per_board)  # Per-channel resamp
+        self.saved_doresamp = [4] * (num_boards * num_chan_per_board)  # Per-channel saved resamp value
         self.xy_mode = False
         self.skip_next_event = False
         self.fitwidthfraction = 0.2
@@ -107,7 +107,7 @@ class ScopeState:
         self.extrigboardmeancorrection = [0] * self.num_board
         self.trig_stabilizer_enabled = True
         self.extra_trig_stabilizer_enabled = True
-        self.pulse_stabilizer_enabled = False
+        self.pulse_stabilizer_enabled = [False] * self.num_board  # Per-board pulse stabilizer
 
         # Performance metrics
         self.nevents = 0

@@ -111,7 +111,7 @@ def save_setup(main_window):
         'markers_visible': main_window.ui.actionMarkers.isChecked(),
         'voltage_axis_visible': main_window.ui.actionVoltage_axis.isChecked(),
         'pan_and_zoom': main_window.ui.actionPan_and_zoom.isChecked(),
-        'peak_detect': main_window.ui.actionPeak_detect.isChecked(),
+        'peak_detect_per_channel': main_window.plot_manager.peak_detect_enabled,  # Per-channel dict
         'channel_name_legend': main_window.ui.actionChannel_name_legend.isChecked(),
 
         # Cursor menu states
@@ -301,15 +301,25 @@ def load_setup(main_window):
 
     # Processing settings
     if 'saved_doresamp' in setup:
-        s.saved_doresamp = setup['saved_doresamp']
+        loaded_saved_doresamp = setup['saved_doresamp']
+        # Handle backward compatibility: convert scalar to array
+        if isinstance(loaded_saved_doresamp, (int, float)):
+            s.saved_doresamp = [int(loaded_saved_doresamp)] * (s.num_board * s.num_chan_per_board)
+        else:
+            s.saved_doresamp = loaded_saved_doresamp
     if 'doresamp' in setup:
+        loaded_doresamp = setup['doresamp']
+        # Handle backward compatibility: convert scalar to array
+        if isinstance(loaded_doresamp, (int, float)):
+            loaded_doresamp = [int(loaded_doresamp)] * (s.num_board * s.num_chan_per_board)
+
         # If downsample >= 0, force doresamp to 0 and save the loaded value
         if s.downsample >= 0:
-            s.saved_doresamp = setup['doresamp']
-            s.doresamp = 0
+            s.saved_doresamp = loaded_doresamp
+            s.doresamp = [0] * (s.num_board * s.num_chan_per_board)
         else:
-            s.doresamp = setup['doresamp']
-        main_window.ui.resampBox.setValue(s.doresamp)
+            s.doresamp = loaded_doresamp
+        main_window.ui.resampBox.setValue(s.doresamp[s.activexychannel])
     if 'fitwidthfraction' in setup:
         s.fitwidthfraction = setup['fitwidthfraction']
 
@@ -386,9 +396,30 @@ def load_setup(main_window):
     if 'pan_and_zoom' in setup:
         main_window.ui.actionPan_and_zoom.setChecked(setup['pan_and_zoom'])
         main_window.plot_manager.set_pan_and_zoom(setup['pan_and_zoom'])
-    if 'peak_detect' in setup:
+
+    # Handle both old (single boolean) and new (per-channel dict) peak detect settings
+    if 'peak_detect_per_channel' in setup:
+        # New format: per-channel dictionary
+        loaded_peak_detect = setup['peak_detect_per_channel']
+        # Convert channel indices from strings to ints if necessary (JSON serialization)
+        main_window.plot_manager.peak_detect_enabled = {int(k): v for k, v in loaded_peak_detect.items()}
+        # Restore peak lines for enabled channels by temporarily switching to each channel
+        saved_active_channel = s.activexychannel
+        for channel_idx, enabled in main_window.plot_manager.peak_detect_enabled.items():
+            if enabled:
+                s.activexychannel = channel_idx  # Temporarily switch to this channel
+                main_window.plot_manager.set_peak_detect(True)
+        s.activexychannel = saved_active_channel  # Restore original active channel
+        # Update checkbox for active channel
+        main_window.update_peak_detect_checkbox_state()
+    elif 'peak_detect' in setup:
+        # Old format: single boolean for active channel (backward compatibility)
+        active_channel = s.activexychannel
+        main_window.plot_manager.peak_detect_enabled[active_channel] = setup['peak_detect']
+        if setup['peak_detect']:
+            main_window.plot_manager.set_peak_detect(True)
         main_window.ui.actionPeak_detect.setChecked(setup['peak_detect'])
-        main_window.plot_manager.set_peak_detect(setup['peak_detect'])
+
     if 'channel_name_legend' in setup:
         main_window.ui.actionChannel_name_legend.setChecked(setup['channel_name_legend'])
         main_window.plot_manager.update_legend()
@@ -467,8 +498,13 @@ def load_setup(main_window):
         s.extra_trig_stabilizer_enabled = setup['extra_trig_stabilizer_enabled']
         main_window.ui.actionToggle_extra_trig_stabilizer.setChecked(s.extra_trig_stabilizer_enabled)
     if 'pulse_stabilizer_enabled' in setup:
-        s.pulse_stabilizer_enabled = setup['pulse_stabilizer_enabled']
-        main_window.ui.actionPulse_stabilizer.setChecked(s.pulse_stabilizer_enabled)
+        loaded_pulse_stabilizer = setup['pulse_stabilizer_enabled']
+        # Handle backward compatibility: convert scalar to array
+        if isinstance(loaded_pulse_stabilizer, bool):
+            s.pulse_stabilizer_enabled = [loaded_pulse_stabilizer] * s.num_board
+        else:
+            s.pulse_stabilizer_enabled = loaded_pulse_stabilizer
+        main_window.ui.actionPulse_stabilizer.setChecked(s.pulse_stabilizer_enabled[s.activeboard])
     if 'oversampling_controls' in setup:
         main_window.ui.actionOversampling_controls.setChecked(setup['oversampling_controls'])
         # Apply the oversampling controls state

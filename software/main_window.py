@@ -494,7 +494,7 @@ class MainWindow(TemplateBaseClass):
 
     def pulse_stabilizer_toggled(self, checked):
         """Updates the state for pulse stabilizer mode (uses edge midpoint instead of threshold)."""
-        self.state.pulse_stabilizer_enabled = checked
+        self.state.pulse_stabilizer_enabled[self.state.activeboard] = checked
 
     def update_plot_loop(self):
         """Main acquisition loop, with full status bar and FFT plot updates."""
@@ -882,6 +882,10 @@ class MainWindow(TemplateBaseClass):
             for c in range(s.num_chan_per_board * s.num_board):
                 self.xydatainterleaved[c][0] = interleaved_time_axis
 
+        # Reset accumulated trigger corrections since we've generated fresh time axes
+        for board_idx in range(s.num_board):
+            s.totdistcorr[board_idx] = 0
+
         # --- Update reference waveforms with new scaling and per-channel visibility ---
         for i in range(self.plot_manager.nlines):
             # Check if this specific channel has a reference and it's set to visible
@@ -1183,6 +1187,18 @@ class MainWindow(TemplateBaseClass):
         if lpf_index != -1: self.ui.lpfBox.setCurrentIndex(lpf_index)
         self.ui.lpfBox.blockSignals(False)
 
+        # Update resamp box to show the value for the currently selected channel
+        # If not zoomed (downsample >= 0), show doresamp (should be 0)
+        # If zoomed (downsample < 0), restore from saved_doresamp and show it
+        self.ui.resampBox.blockSignals(True)
+        if self.state.downsample >= 0:
+            self.ui.resampBox.setValue(self.state.doresamp[self.state.activexychannel])
+        else:
+            # When zoomed, restore doresamp from saved value for the new channel
+            self.state.doresamp[self.state.activexychannel] = self.state.saved_doresamp[self.state.activexychannel]
+            self.ui.resampBox.setValue(self.state.doresamp[self.state.activexychannel])
+        self.ui.resampBox.blockSignals(False)
+
         # If we are in XY mode but switched to a board that is not in two-channel mode, exit XY mode
         if self.state.xy_mode and not self.state.dotwochannel[self.state.activeboard]:
             self.ui.actionXY_Plot.setChecked(False)
@@ -1200,6 +1216,12 @@ class MainWindow(TemplateBaseClass):
 
         # Update Show Reference menu checkbox to reflect active channel's reference visibility
         self.update_reference_checkbox_state()
+
+        # Update Peak Detect menu checkbox to reflect active channel's peak detect state
+        self.update_peak_detect_checkbox_state()
+
+        # Update Pulse Stabilizer menu checkbox to reflect active board's state
+        self.update_pulse_stabilizer_checkbox_state()
 
         # Update measurement table header to reflect new active channel (if not measuring a math channel)
         if self.measurements.selected_math_channel is None:
@@ -1313,9 +1335,10 @@ class MainWindow(TemplateBaseClass):
 
     def resamp_changed(self, value):
         """Handle resamp value changes from the UI."""
-        self.state.doresamp = value
+        s = self.state
+        s.doresamp[s.activexychannel] = value
         if True: #self.state.downsample < 0:
-            self.state.saved_doresamp = value
+            s.saved_doresamp[s.activexychannel] = value
 
     def line_width_changed(self, value):
         """Handle line width changes from the UI."""
@@ -1339,9 +1362,10 @@ class MainWindow(TemplateBaseClass):
 
         # When transitioning from downsample=0 to downsample=-1, restore saved resamp value
         if old_downsample == 0 and self.state.downsample == -1:
-            self.state.doresamp = self.state.saved_doresamp
+            s = self.state
+            s.doresamp[s.activexychannel] = s.saved_doresamp[s.activexychannel]
             self.ui.resampBox.blockSignals(True)
-            self.ui.resampBox.setValue(self.state.doresamp)
+            self.ui.resampBox.setValue(s.doresamp[s.activexychannel])
             self.ui.resampBox.blockSignals(False)
 
         is_zoomed = self.state.downsample < 0
@@ -1353,8 +1377,9 @@ class MainWindow(TemplateBaseClass):
         # Update the plot range and text box
         self.time_changed()
 
-        # Clear peak detect data when timebase changes
-        if self.plot_manager.peak_detect_enabled:
+        # Clear peak detect data when timebase changes (for active channel)
+        active_channel = self.state.activexychannel
+        if active_channel in self.plot_manager.peak_detect_enabled and self.plot_manager.peak_detect_enabled[active_channel]:
             self.plot_manager.clear_peak_data()
 
         # If we are zoomed in, reset the pan slider to its center position.
@@ -1378,8 +1403,9 @@ class MainWindow(TemplateBaseClass):
 
         # When transitioning from downsample=-1 to downsample=0, save and turn off resamp
         if old_downsample == -1 and self.state.downsample == 0:
-            self.state.saved_doresamp = self.state.doresamp
-            self.state.doresamp = 0
+            s = self.state
+            s.saved_doresamp[s.activexychannel] = s.doresamp[s.activexychannel]
+            s.doresamp[s.activexychannel] = 0
             self.ui.resampBox.blockSignals(True)
             self.ui.resampBox.setValue(0)
             self.ui.resampBox.blockSignals(False)
@@ -1394,8 +1420,9 @@ class MainWindow(TemplateBaseClass):
         # Update the plot range and text box
         self.time_changed()
 
-        # Clear peak detect data when timebase changes
-        if self.plot_manager.peak_detect_enabled:
+        # Clear peak detect data when timebase changes (for active channel)
+        active_channel = self.state.activexychannel
+        if active_channel in self.plot_manager.peak_detect_enabled and self.plot_manager.peak_detect_enabled[active_channel]:
             self.plot_manager.clear_peak_data()
 
         # If we are zoomed in, reset the pan slider to its center position.
@@ -1886,6 +1913,25 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionShow_Reference.blockSignals(True)
         self.ui.actionShow_Reference.setChecked(is_visible)
         self.ui.actionShow_Reference.blockSignals(False)
+
+    def update_peak_detect_checkbox_state(self):
+        """Updates the 'Peak waveform' checkbox to reflect the active channel's peak detect state."""
+        active_channel = self.state.activexychannel
+
+        # Check if this channel has peak detect enabled
+        is_enabled = self.plot_manager.peak_detect_enabled.get(active_channel, False)
+
+        self.ui.actionPeak_detect.blockSignals(True)
+        self.ui.actionPeak_detect.setChecked(is_enabled)
+        self.ui.actionPeak_detect.blockSignals(False)
+
+    def update_pulse_stabilizer_checkbox_state(self):
+        """Updates the 'Pulse stabilizer' checkbox to reflect the active board's state."""
+        active_board = self.state.activeboard
+
+        self.ui.actionPulse_stabilizer.blockSignals(True)
+        self.ui.actionPulse_stabilizer.setChecked(self.state.pulse_stabilizer_enabled[active_board])
+        self.ui.actionPulse_stabilizer.blockSignals(False)
 
     def twochan_changed(self):
         """Switches between single and dual channel mode FOR THE ACTIVE BOARD."""
