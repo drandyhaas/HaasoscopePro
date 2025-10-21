@@ -498,8 +498,13 @@ def load_setup(main_window):
         s.extra_trig_stabilizer_enabled = setup['extra_trig_stabilizer_enabled']
         main_window.ui.actionToggle_extra_trig_stabilizer.setChecked(s.extra_trig_stabilizer_enabled)
     if 'pulse_stabilizer_enabled' in setup:
-        s.pulse_stabilizer_enabled = setup['pulse_stabilizer_enabled']
-        main_window.ui.actionPulse_stabilizer.setChecked(s.pulse_stabilizer_enabled)
+        loaded_pulse_stabilizer = setup['pulse_stabilizer_enabled']
+        # Handle backward compatibility: convert scalar to array
+        if isinstance(loaded_pulse_stabilizer, bool):
+            s.pulse_stabilizer_enabled = [loaded_pulse_stabilizer] * s.num_board
+        else:
+            s.pulse_stabilizer_enabled = loaded_pulse_stabilizer
+        main_window.ui.actionPulse_stabilizer.setChecked(s.pulse_stabilizer_enabled[s.activeboard])
     if 'oversampling_controls' in setup:
         main_window.ui.actionOversampling_controls.setChecked(setup['oversampling_controls'])
         # Apply the oversampling controls state

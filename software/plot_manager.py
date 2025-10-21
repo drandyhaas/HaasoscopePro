@@ -316,7 +316,7 @@ class PlotManager(pg.QtCore.QObject):
                         threshold_to_use = -hline_threshold
 
                     # Pulse stabilizer mode: use edge midpoint instead of threshold crossing
-                    if s.pulse_stabilizer_enabled and yc.size > 0:
+                    if s.pulse_stabilizer_enabled[s.noextboard] and yc.size > 0:
                         # Find index closest to trigger position
                         trigger_idx = np.argmin(np.abs(xc - vline_time))
                         delta_threshold = s.triggerdelta[s.noextboard] * s.yscale * 256

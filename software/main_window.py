@@ -494,7 +494,7 @@ class MainWindow(TemplateBaseClass):
 
     def pulse_stabilizer_toggled(self, checked):
         """Updates the state for pulse stabilizer mode (uses edge midpoint instead of threshold)."""
-        self.state.pulse_stabilizer_enabled = checked
+        self.state.pulse_stabilizer_enabled[self.state.activeboard] = checked
 
     def update_plot_loop(self):
         """Main acquisition loop, with full status bar and FFT plot updates."""
@@ -1220,6 +1220,9 @@ class MainWindow(TemplateBaseClass):
         # Update Peak Detect menu checkbox to reflect active channel's peak detect state
         self.update_peak_detect_checkbox_state()
 
+        # Update Pulse Stabilizer menu checkbox to reflect active board's state
+        self.update_pulse_stabilizer_checkbox_state()
+
         # Update measurement table header to reflect new active channel (if not measuring a math channel)
         if self.measurements.selected_math_channel is None:
             self.measurements.update_measurement_header()
@@ -1921,6 +1924,14 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionPeak_detect.blockSignals(True)
         self.ui.actionPeak_detect.setChecked(is_enabled)
         self.ui.actionPeak_detect.blockSignals(False)
+
+    def update_pulse_stabilizer_checkbox_state(self):
+        """Updates the 'Pulse stabilizer' checkbox to reflect the active board's state."""
+        active_board = self.state.activeboard
+
+        self.ui.actionPulse_stabilizer.blockSignals(True)
+        self.ui.actionPulse_stabilizer.setChecked(self.state.pulse_stabilizer_enabled[active_board])
+        self.ui.actionPulse_stabilizer.blockSignals(False)
 
     def twochan_changed(self):
         """Switches between single and dual channel mode FOR THE ACTIVE BOARD."""
