@@ -374,10 +374,6 @@ class MainWindow(TemplateBaseClass):
         A centralized function to synchronize all UI elements related to the
         channel mode (Single, Two Channel, Oversampling).
         """
-        # If in XY mode, do not alter the visibility of any time-domain plots.
-        if self.state.xy_mode:
-            return
-
         s = self.state
         if s.num_board<1: return
 
@@ -2200,6 +2196,10 @@ class MainWindow(TemplateBaseClass):
         if checked:
             s.channel_enabled[c_secondary_ch0] = False
             s.channel_enabled[c_secondary_ch1] = False
+        else:
+            # When disabling interleaving, re-enable the secondary board's channels
+            s.channel_enabled[c_secondary_ch0] = True
+            s.channel_enabled[c_secondary_ch1] = True
         self.update_channel_visibility(c_secondary_ch0)
         self.update_channel_visibility(c_secondary_ch1)
 
