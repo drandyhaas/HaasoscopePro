@@ -345,16 +345,12 @@ class PlotManager(pg.QtCore.QObject):
 
                     if xc.size > 1:
                         distcorrtemp = find_crossing_distance(yc, threshold_to_use, vline_time, xc[0], xc[1] - xc[0])
-                        if distcorrtemp is not None and abs(
-                                distcorrtemp) < s.distcorrtol * 100 * s.downsamplefactor / s.nsunits:
-
-                            # Limit cumulative correction to prevent unbounded drift
-                            max_correction = s.distcorrtol * 100 * s.downsamplefactor / s.nsunits
-                            new_cumulative = self.cumulative_correction[noext_li] + distcorrtemp
+                        max_correction = s.distcorrtol * 100 * s.downsamplefactor / s.nsunits
+                        if distcorrtemp is not None and abs(distcorrtemp) < max_correction:
 
                             # Clamp the correction to stay within the limit
+                            new_cumulative = self.cumulative_correction[noext_li] + distcorrtemp
                             if abs(new_cumulative) > max_correction:
-                                # Adjust distcorrtemp to reach but not exceed the limit
                                 if new_cumulative > 0:
                                     distcorrtemp = max_correction - self.cumulative_correction[noext_li]
                                 else:
