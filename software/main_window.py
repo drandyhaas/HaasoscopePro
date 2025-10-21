@@ -674,15 +674,16 @@ class MainWindow(TemplateBaseClass):
         # --- Plotting Logic: Update normal time-domain plots ---
         self.plot_manager.update_plots(self.xydata, self.xydatainterleaved)
 
-        # --- Update XY window if visible ---
-        if s.xy_mode and self.xy_window is not None and self.xy_window.isVisible():
-            self.xy_window.update_xy_plot(self.xydata)
-
         # Calculate and display math channels if any are defined
+        math_results = {}
         if self.math_window and len(self.math_window.math_channels) > 0:
             # Use stabilized data (after trigger stabilizers are applied)
             math_results = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data)
             self.plot_manager.update_math_channel_data(math_results)
+
+        # --- Update XY window if visible (after math channels calculated) ---
+        if s.xy_mode and self.xy_window is not None and self.xy_window.isVisible():
+            self.xy_window.update_xy_plot(self.xydata, math_results)
 
         # Store event in history buffer (only if not displaying historical data)
         if not self.displaying_history:
@@ -1714,6 +1715,10 @@ class MainWindow(TemplateBaseClass):
         # Update math reference lines
         self.plot_manager.update_math_reference_lines(self.math_window, self)
 
+        # Refresh XY window channel list if visible
+        if self.xy_window is not None and self.xy_window.isVisible():
+            self.xy_window.refresh_channel_list()
+
         # Calculate and display current data if we have data
         if hasattr(self, 'xydata') and len(self.math_window.math_channels) > 0:
             # Use stabilized data (after trigger stabilizers are applied)
@@ -1769,14 +1774,15 @@ class MainWindow(TemplateBaseClass):
             # Update the plot with the historical data
             self.plot_manager.update_plots(self.xydata, self.xydatainterleaved)
 
-            # Update XY window if visible
-            if self.state.xy_mode and self.xy_window is not None and self.xy_window.isVisible():
-                self.xy_window.update_xy_plot(self.xydata)
-
             # Update math channels if any
+            math_results = {}
             if self.math_window and len(self.math_window.math_channels) > 0:
                 math_results = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data)
                 self.plot_manager.update_math_channel_data(math_results)
+
+            # Update XY window if visible (after math channels calculated)
+            if self.state.xy_mode and self.xy_window is not None and self.xy_window.isVisible():
+                self.xy_window.update_xy_plot(self.xydata, math_results)
 
     def resume_live_acquisition(self):
         """Resume live data acquisition after viewing history."""
