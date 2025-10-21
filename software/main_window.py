@@ -1188,8 +1188,15 @@ class MainWindow(TemplateBaseClass):
         self.ui.lpfBox.blockSignals(False)
 
         # Update resamp box to show the value for the currently selected channel
+        # If not zoomed (downsample >= 0), show doresamp (should be 0)
+        # If zoomed (downsample < 0), restore from saved_doresamp and show it
         self.ui.resampBox.blockSignals(True)
-        self.ui.resampBox.setValue(self.state.doresamp[self.state.activexychannel])
+        if self.state.downsample >= 0:
+            self.ui.resampBox.setValue(self.state.doresamp[self.state.activexychannel])
+        else:
+            # When zoomed, restore doresamp from saved value for the new channel
+            self.state.doresamp[self.state.activexychannel] = self.state.saved_doresamp[self.state.activexychannel]
+            self.ui.resampBox.setValue(self.state.doresamp[self.state.activexychannel])
         self.ui.resampBox.blockSignals(False)
 
         # If we are in XY mode but switched to a board that is not in two-channel mode, exit XY mode
