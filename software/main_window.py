@@ -1202,6 +1202,7 @@ class MainWindow(TemplateBaseClass):
         # If we are in XY mode but switched to a board that is not in two-channel mode, exit XY mode
         if self.state.xy_mode and not self.state.dotwochannel[self.state.activeboard]:
             self.ui.actionXY_Plot.setChecked(False)
+            self._handle_xy_mode_resamp(False, self.state.activeboard)  # Restore resamp
             self.plot_manager.toggle_xy_view(False, self.state.activeboard)
 
         # If in XY mode, update the pen color to match the new active board's CH1
@@ -1401,11 +1402,13 @@ class MainWindow(TemplateBaseClass):
         highres = 1 if self.ui.actionHigh_resolution.isChecked() else 0
         self.controller.tell_downsample_all(self.state.downsample, highres)
 
-        # When transitioning from downsample=-1 to downsample=0, save and turn off resamp
+        # When transitioning from downsample=-1 to downsample=0, save and turn off resamp for ALL channels
         if old_downsample == -1 and self.state.downsample == 0:
             s = self.state
-            s.saved_doresamp[s.activexychannel] = s.doresamp[s.activexychannel]
-            s.doresamp[s.activexychannel] = 0
+            # Save and clear resamp for all channels (not just active)
+            for ch in range(len(s.doresamp)):
+                s.saved_doresamp[ch] = s.doresamp[ch]
+                s.doresamp[ch] = 0
             self.ui.resampBox.blockSignals(True)
             self.ui.resampBox.setValue(0)
             self.ui.resampBox.blockSignals(False)
@@ -1654,13 +1657,57 @@ class MainWindow(TemplateBaseClass):
     # ## Slot Implementations (Callbacks for UI events)
     # #########################################################################
 
+    def _handle_xy_mode_resamp(self, entering_xy, board):
+        """Handle resamp save/restore when entering/leaving XY mode."""
+        s = self.state
+        ch0_index = board * s.num_chan_per_board
+        ch1_index = ch0_index + 1
+
+        if entering_xy:
+            # Save current resamp values for both channels
+            s.xy_mode_saved_resamp = {
+                ch0_index: s.doresamp[ch0_index],
+                ch1_index: s.doresamp[ch1_index]
+            }
+
+            # Disable resampling for XY mode to prevent array size mismatches
+            s.doresamp[ch0_index] = 0
+            s.doresamp[ch1_index] = 0
+
+            # Update GUI if showing one of these channels
+            if s.activexychannel == ch0_index or s.activexychannel == ch1_index:
+                self.ui.resampBox.blockSignals(True)
+                self.ui.resampBox.setValue(0)
+                self.ui.resampBox.blockSignals(False)
+        else:
+            # Leaving XY mode - restore saved resamp values
+            if s.xy_mode_saved_resamp:
+                for ch_idx, resamp_val in s.xy_mode_saved_resamp.items():
+                    s.doresamp[ch_idx] = resamp_val
+
+                # Update GUI if showing one of these channels
+                if s.activexychannel in s.xy_mode_saved_resamp:
+                    self.ui.resampBox.blockSignals(True)
+                    self.ui.resampBox.setValue(s.doresamp[s.activexychannel])
+                    self.ui.resampBox.blockSignals(False)
+
+                # Clear saved values
+                s.xy_mode_saved_resamp = {}
+
     def toggle_xy_view_slot(self, checked):
         """Slot for the 'XY Plot' menu action."""
-        board = self.state.activeboard
+        s = self.state
+        board = s.activeboard
+
+        # Handle resamp save/restore
+        self._handle_xy_mode_resamp(checked, board)
+
         if checked:
-            ch0_index = board * self.state.num_chan_per_board
+            # Entering XY mode
+            ch0_index = board * s.num_chan_per_board
             pen = self.plot_manager.linepens[ch0_index]
             self.plot_manager.set_xy_pen(pen)
+
         self.plot_manager.toggle_xy_view(checked, board)
 
     def open_math_channels(self):
@@ -1963,6 +2010,7 @@ class MainWindow(TemplateBaseClass):
         # If we are in XY mode and two-channel is turned off, exit XY mode
         if s.xy_mode and not is_two_channel:
             self.ui.actionXY_Plot.setChecked(False)
+            self._handle_xy_mode_resamp(False, s.activeboard)  # Restore resamp when leaving XY mode
             self.plot_manager.toggle_xy_view(False, s.activeboard)
         
         # The next event after a mode switch can be glitchy, so we'll skip it.
