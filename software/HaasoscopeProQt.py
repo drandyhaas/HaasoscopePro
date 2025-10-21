@@ -31,7 +31,7 @@ if __name__ == '__main__':
     try:
         # --- Hardware Discovery and Initial Setup ---
         print("Searching for Haasoscope Pro boards...")
-        max_devices = 0
+        max_devices = 100
         usbs = connectdevices(max_devices)
 
         # Try to use dummy server if requested via --socket or if no hardware found
