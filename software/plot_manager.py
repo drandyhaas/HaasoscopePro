@@ -106,9 +106,9 @@ class PlotManager(pg.QtCore.QObject):
         self.persist_timer.timeout.connect(self.update_persist_effect)
 
         # Peak detect attributes
-        self.peak_detect_enabled = False
-        self.peak_max_line = None
-        self.peak_min_line = None
+        self.peak_detect_enabled = {}  # {channel_index: bool} - per-channel peak detect enabled state
+        self.peak_max_line = {}  # {channel_index: PlotDataItem} - peak max line per channel
+        self.peak_min_line = {}  # {channel_index: PlotDataItem} - peak min line per channel
         self.peak_max_data = {}  # {channel_index: y_data} - peak max values on fixed x-axis
         self.peak_min_data = {}  # {channel_index: y_data} - peak min values on fixed x-axis
         self.peak_x_data = {}    # {channel_index: x_data} - fixed reference x-axis
@@ -199,12 +199,7 @@ class PlotManager(pg.QtCore.QObject):
         self.xy_line = self.plot.plot(pen=pg.mkPen(color="w"), name="XY_Plot", skipFiniteCheck=True, connect="finite")
         self.xy_line.setVisible(False)
 
-        # Peak detect lines (initially hidden, will use active channel color when enabled)
-        peak_pen = pg.mkPen(color='w', width=1, style=QtCore.Qt.DotLine)
-        self.peak_max_line = self.plot.plot(pen=peak_pen, name="Peak_Max", skipFiniteCheck=True, connect="finite")
-        self.peak_max_line.setVisible(False)
-        self.peak_min_line = self.plot.plot(pen=peak_pen, name="Peak_Min", skipFiniteCheck=True, connect="finite")
-        self.peak_min_line.setVisible(False)
+        # Peak detect lines are created per-channel on demand (see set_peak_detect)
 
         # Cursor manager (initialized after linepens and lines are created)
         self.cursor_manager = CursorManager(self.plot, self.state, self.linepens, self.ui, self.otherlines, self.lines)
@@ -394,13 +389,13 @@ class PlotManager(pg.QtCore.QObject):
                 self._add_to_persistence(xdatanew, ydatanew, li)
 
             # --- Peak detect update ---
-            if self.peak_detect_enabled and li == s.activexychannel:
+            if li in self.peak_detect_enabled and self.peak_detect_enabled[li]:
                 self._update_peak_data(li, xdatanew, ydatanew)
 
         self.update_persist_average()
 
-        # Update peak detect lines if enabled
-        if self.peak_detect_enabled:
+        # Update peak detect lines for all enabled channels
+        if self.peak_detect_enabled:  # Check if dictionary is not empty
             self._update_peak_lines()
 
     def toggle_xy_view(self, show_xy, board_num=0):
@@ -798,31 +793,42 @@ class PlotManager(pg.QtCore.QObject):
 
     # Peak Detect Methods
     def set_peak_detect(self, enabled):
-        """Enable or disable peak detect mode."""
-        self.peak_detect_enabled = enabled
+        """Enable or disable peak detect mode for the active channel."""
+        active_channel = self.state.activexychannel
+        self.peak_detect_enabled[active_channel] = enabled
+
         if enabled:
+            # Create peak lines for this channel if they don't exist
+            if active_channel not in self.peak_max_line:
+                peak_pen = pg.mkPen(color='w', width=1, style=QtCore.Qt.DotLine)
+                self.peak_max_line[active_channel] = self.plot.plot(pen=peak_pen, name=f"Peak_Max_CH{active_channel+1}",
+                                                                     skipFiniteCheck=True, connect="finite")
+                self.peak_min_line[active_channel] = self.plot.plot(pen=peak_pen, name=f"Peak_Min_CH{active_channel+1}",
+                                                                     skipFiniteCheck=True, connect="finite")
+
             # Set peak line colors and width to match active channel
-            active_channel = self.state.activexychannel
             if active_channel < len(self.linepens):
                 base_pen = self.linepens[active_channel]
                 color = base_pen.color()
                 width = base_pen.width()
                 peak_pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DotLine)
-                self.peak_max_line.setPen(peak_pen)
-                self.peak_min_line.setPen(peak_pen)
+                self.peak_max_line[active_channel].setPen(peak_pen)
+                self.peak_min_line[active_channel].setPen(peak_pen)
+
             # Clear any existing peak data for this channel
             self.clear_peak_data()
             # Show the lines
-            self.peak_max_line.setVisible(True)
-            self.peak_min_line.setVisible(True)
+            self.peak_max_line[active_channel].setVisible(True)
+            self.peak_min_line[active_channel].setVisible(True)
         else:
             # Hide the lines and clear data
-            self.peak_max_line.setVisible(False)
-            self.peak_min_line.setVisible(False)
+            if active_channel in self.peak_max_line:
+                self.peak_max_line[active_channel].setVisible(False)
+                self.peak_min_line[active_channel].setVisible(False)
             self.clear_peak_data()
 
     def clear_peak_data(self):
-        """Clear all peak detect data."""
+        """Clear peak detect data for the active channel."""
         active_channel = self.state.activexychannel
         if active_channel in self.peak_max_data:
             del self.peak_max_data[active_channel]
@@ -830,8 +836,9 @@ class PlotManager(pg.QtCore.QObject):
             del self.peak_min_data[active_channel]
         if active_channel in self.peak_x_data:
             del self.peak_x_data[active_channel]
-        self.peak_max_line.clear()
-        self.peak_min_line.clear()
+        if active_channel in self.peak_max_line:
+            self.peak_max_line[active_channel].clear()
+            self.peak_min_line[active_channel].clear()
         # Skip the next event to avoid glitches after timebase changes
         self.peak_skip_events = 1
 
@@ -880,39 +887,27 @@ class PlotManager(pg.QtCore.QObject):
 
     def _update_peak_lines(self):
         """Update the peak detect line plots using the fixed reference x-axis."""
-        active_channel = self.state.activexychannel
+        # Update lines for all channels that have peak detect enabled
+        for channel_index in self.peak_detect_enabled:
+            if self.peak_detect_enabled[channel_index] and channel_index in self.peak_x_data:
+                x_data = self.peak_x_data[channel_index]
 
-        # Use fixed reference x-axis for stable display
-        if active_channel in self.peak_x_data:
-            x_data = self.peak_x_data[active_channel]
+                # Update max line
+                if channel_index in self.peak_max_data and channel_index in self.peak_max_line:
+                    y_data = self.peak_max_data[channel_index]
+                    # Optimization: Use skipFiniteCheck for faster setData
+                    self.peak_max_line[channel_index].setData(x_data, y_data, skipFiniteCheck=True)
 
-            # Update max line
-            if active_channel in self.peak_max_data:
-                y_data = self.peak_max_data[active_channel]
-                # Optimization: Use skipFiniteCheck for faster setData
-                self.peak_max_line.setData(x_data, y_data, skipFiniteCheck=True)
-
-            # Update min line
-            if active_channel in self.peak_min_data:
-                y_data = self.peak_min_data[active_channel]
-                # Optimization: Use skipFiniteCheck for faster setData
-                self.peak_min_line.setData(x_data, y_data, skipFiniteCheck=True)
+                # Update min line
+                if channel_index in self.peak_min_data and channel_index in self.peak_min_line:
+                    y_data = self.peak_min_data[channel_index]
+                    # Optimization: Use skipFiniteCheck for faster setData
+                    self.peak_min_line[channel_index].setData(x_data, y_data, skipFiniteCheck=True)
 
     def update_peak_channel(self):
-        """Called when the active channel changes - update peak line colors and clear data."""
-        if self.peak_detect_enabled:
-            # Clear old channel's peak data
-            self.clear_peak_data()
-
-            # Update peak line colors and width to match new active channel
-            active_channel = self.state.activexychannel
-            if active_channel < len(self.linepens):
-                base_pen = self.linepens[active_channel]
-                color = base_pen.color()
-                width = base_pen.width()
-                peak_pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DotLine)
-                self.peak_max_line.setPen(peak_pen)
-                self.peak_min_line.setPen(peak_pen)
+        """Called when the active channel changes - no longer needed with per-channel peak detect."""
+        # Peak detect is now per-channel, so nothing to do here
+        pass
 
     # UI Control Methods
     def set_line_width(self, width):
@@ -925,15 +920,15 @@ class PlotManager(pg.QtCore.QObject):
             ref_pen.setWidth(width)
         self.set_average_line_pen()
 
-        # Update peak line width if peak detect is enabled
-        if self.peak_detect_enabled:
-            active_channel = self.state.activexychannel
-            if active_channel < len(self.linepens):
-                base_pen = self.linepens[active_channel]
-                color = base_pen.color()
-                peak_pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DotLine)
-                self.peak_max_line.setPen(peak_pen)
-                self.peak_min_line.setPen(peak_pen)
+        # Update peak line widths for all enabled channels
+        for channel_index in self.peak_detect_enabled:
+            if self.peak_detect_enabled[channel_index] and channel_index < len(self.linepens):
+                if channel_index in self.peak_max_line:
+                    base_pen = self.linepens[channel_index]
+                    color = base_pen.color()
+                    peak_pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DotLine)
+                    self.peak_max_line[channel_index].setPen(peak_pen)
+                    self.peak_min_line[channel_index].setPen(peak_pen)
 
     def set_grid(self, is_checked):
         self.plot.showGrid(x=is_checked, y=is_checked, alpha=0.8)

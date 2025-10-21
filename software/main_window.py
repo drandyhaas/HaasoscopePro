@@ -1217,6 +1217,9 @@ class MainWindow(TemplateBaseClass):
         # Update Show Reference menu checkbox to reflect active channel's reference visibility
         self.update_reference_checkbox_state()
 
+        # Update Peak Detect menu checkbox to reflect active channel's peak detect state
+        self.update_peak_detect_checkbox_state()
+
         # Update measurement table header to reflect new active channel (if not measuring a math channel)
         if self.measurements.selected_math_channel is None:
             self.measurements.update_measurement_header()
@@ -1371,8 +1374,9 @@ class MainWindow(TemplateBaseClass):
         # Update the plot range and text box
         self.time_changed()
 
-        # Clear peak detect data when timebase changes
-        if self.plot_manager.peak_detect_enabled:
+        # Clear peak detect data when timebase changes (for active channel)
+        active_channel = self.state.activexychannel
+        if active_channel in self.plot_manager.peak_detect_enabled and self.plot_manager.peak_detect_enabled[active_channel]:
             self.plot_manager.clear_peak_data()
 
         # If we are zoomed in, reset the pan slider to its center position.
@@ -1413,8 +1417,9 @@ class MainWindow(TemplateBaseClass):
         # Update the plot range and text box
         self.time_changed()
 
-        # Clear peak detect data when timebase changes
-        if self.plot_manager.peak_detect_enabled:
+        # Clear peak detect data when timebase changes (for active channel)
+        active_channel = self.state.activexychannel
+        if active_channel in self.plot_manager.peak_detect_enabled and self.plot_manager.peak_detect_enabled[active_channel]:
             self.plot_manager.clear_peak_data()
 
         # If we are zoomed in, reset the pan slider to its center position.
@@ -1905,6 +1910,17 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionShow_Reference.blockSignals(True)
         self.ui.actionShow_Reference.setChecked(is_visible)
         self.ui.actionShow_Reference.blockSignals(False)
+
+    def update_peak_detect_checkbox_state(self):
+        """Updates the 'Peak waveform' checkbox to reflect the active channel's peak detect state."""
+        active_channel = self.state.activexychannel
+
+        # Check if this channel has peak detect enabled
+        is_enabled = self.plot_manager.peak_detect_enabled.get(active_channel, False)
+
+        self.ui.actionPeak_detect.blockSignals(True)
+        self.ui.actionPeak_detect.setChecked(is_enabled)
+        self.ui.actionPeak_detect.blockSignals(False)
 
     def twochan_changed(self):
         """Switches between single and dual channel mode FOR THE ACTIVE BOARD."""
