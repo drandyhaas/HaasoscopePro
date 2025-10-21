@@ -63,6 +63,9 @@ class DummyServerConfigDialog(QDialog):
         # Load initial config from server
         self.load_config_from_server()
 
+        # Load the first board/channel's config into the UI
+        self.load_ui_from_config()
+
     def position_relative_to_main(self, main_window):
         """Position the dialog to the right of the main window with tops aligned."""
         main_geo = main_window.geometry()
