@@ -124,3 +124,9 @@ class ScopeState:
     @property
     def activexychannel(self):
         return self.activeboard * self.num_chan_per_board + self.selectedchannel
+
+    @activexychannel.setter
+    def activexychannel(self, value):
+        """Set the active channel by decomposing into board and channel."""
+        self.activeboard = value // self.num_chan_per_board
+        self.selectedchannel = value % self.num_chan_per_board
