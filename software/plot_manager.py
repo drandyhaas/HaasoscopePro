@@ -393,10 +393,27 @@ class PlotManager(pg.QtCore.QObject):
         if self.peak_detect_enabled:  # Check if dictionary is not empty
             self._update_peak_lines()
 
+    def update_reference_line_color(self, channel_index):
+        """Update the reference line color to match the channel color."""
+        if 0 <= channel_index < len(self.reference_lines) and channel_index < len(self.linepens):
+            # Get the current channel color
+            channel_pen = self.linepens[channel_index]
+            channel_color = QColor(channel_pen.color())
+
+            # Create reference color with transparency
+            ref_color = QColor(channel_color)
+            ref_color.setAlphaF(0.5)
+
+            # Update reference line pen
+            ref_pen = pg.mkPen(color=ref_color, width=channel_pen.width())
+            self.reference_lines[channel_index].setPen(ref_pen)
+
     def update_reference_plot(self, channel_index, x_data, y_data):
         """Sets the data for a channel's reference waveform."""
         if 0 <= channel_index < len(self.reference_lines):
             ref_line = self.reference_lines[channel_index]
+            # Update the reference line color to match current channel color
+            self.update_reference_line_color(channel_index)
             # Optimization: Use skipFiniteCheck for faster setData
             ref_line.setData(x_data, y_data, skipFiniteCheck=True)
             ref_line.setVisible(True)
@@ -526,14 +543,18 @@ class PlotManager(pg.QtCore.QObject):
             color = math_def.get('color', '#00FFFF')
             width = math_def.get('width', 2)
 
+            # Create reference color with transparency to match channel behavior
+            ref_color = QColor(color)
+            ref_color.setAlphaF(0.5)
+
             if math_name not in self.math_reference_lines:
                 # Create a new dotted reference line with the same color but semi-transparent
-                pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DotLine)
+                pen = pg.mkPen(color=ref_color, width=width, style=QtCore.Qt.DotLine)
                 line = self.plot.plot(pen=pen, name=f"{math_name}_ref", skipFiniteCheck=True, connect="finite")
                 self.math_reference_lines[math_name] = line
             else:
                 # Update the color and width of existing line
-                pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DotLine)
+                pen = pg.mkPen(color=ref_color, width=width, style=QtCore.Qt.DotLine)
                 self.math_reference_lines[math_name].setPen(pen)
 
             # Update data and visibility
