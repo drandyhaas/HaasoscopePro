@@ -461,7 +461,7 @@ class MeasurementsManager:
         def _set_global_measurement(name, value, value_unit=""):
             """Helper to add or update a global measurement row."""
             key = (name, "Global")  # Use "Global" as channel_key for global measurements
-            value = round(value, 2)
+            value = round(value, 3)
             display_name = name
             if value_unit != "":
                 display_name += f" ({value_unit})"
@@ -471,20 +471,20 @@ class MeasurementsManager:
 
             self.measurement_history[key].append(value)
             history = self.measurement_history[key]
-            avg_value = round(np.mean(history), 2)
-            rms_value = round(np.std(history), 2)
+            avg_value = round(np.mean(history), 3)
+            rms_value = round(np.std(history), 3)
 
             if key in self.measurement_items:
                 name_widget, value_item, avg_item, rms_item = self.measurement_items[key]
-                value_item.setText(str(value))
+                value_item.setText(f"{value:.3f}")
                 name_widget.label.setText(display_name)
-                avg_item.setText(str(avg_value))
-                rms_item.setText(str(rms_value))
+                avg_item.setText(f"{avg_value:.3f}")
+                rms_item.setText(f"{rms_value:.3f}")
             else:
                 name_item = QStandardItem("")
-                value_item = QStandardItem(str(value))
-                avg_item = QStandardItem(str(avg_value))
-                rms_item = QStandardItem(str(rms_value))
+                value_item = QStandardItem(f"{value:.3f}")
+                avg_item = QStandardItem(f"{avg_value:.3f}")
+                rms_item = QStandardItem(f"{rms_value:.3f}")
                 self.measurement_model.appendRow([name_item, value_item, avg_item, rms_item])
 
                 # Create name widget with X button for global measurements
@@ -504,7 +504,7 @@ class MeasurementsManager:
                 value_unit: Optional unit string (e.g., "mV", "ns")
             """
             measurement_name, channel_key = measurement_key
-            value = round(value, 2)
+            value = round(value, 3)
 
             # Display name includes channel
             display_name = f"{measurement_name} ({channel_key})"
@@ -520,8 +520,8 @@ class MeasurementsManager:
 
             # Calculate average and RMS
             history = self.measurement_history[measurement_key]
-            avg_value = round(np.mean(history), 2)
-            rms_value = round(np.std(history), 2)
+            avg_value = round(np.mean(history), 3)
+            rms_value = round(np.std(history), 3)
 
             # Get the color for this channel
             channel_color = self.get_channel_color(channel_key)
@@ -529,10 +529,10 @@ class MeasurementsManager:
             if measurement_key in self.measurement_items:
                 # Update existing item's value, average, and RMS
                 name_widget, value_item, avg_item, rms_item = self.measurement_items[measurement_key]
-                value_item.setText(str(value))
+                value_item.setText(f"{value:.3f}")
                 name_widget.label.setText(display_name)
-                avg_item.setText(str(avg_value))
-                rms_item.setText(str(rms_value))
+                avg_item.setText(f"{avg_value:.3f}")
+                rms_item.setText(f"{rms_value:.3f}")
                 # Update button color in case channel color changed
                 name_widget.button.setStyleSheet(
                     f"QPushButton {{ font-size: 14px; font-weight: bold; border: 2px solid {channel_color.name()}; }}"
@@ -540,9 +540,9 @@ class MeasurementsManager:
             else:
                 # Add new row
                 name_item = QStandardItem("")
-                value_item = QStandardItem(str(value))
-                avg_item = QStandardItem(str(avg_value))
-                rms_item = QStandardItem(str(rms_value))
+                value_item = QStandardItem(f"{value:.3f}")
+                avg_item = QStandardItem(f"{avg_value:.3f}")
+                rms_item = QStandardItem(f"{rms_value:.3f}")
 
                 self.measurement_model.appendRow([name_item, value_item, avg_item, rms_item])
 
