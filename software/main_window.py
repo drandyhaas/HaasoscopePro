@@ -2223,6 +2223,9 @@ class MainWindow(TemplateBaseClass):
         if bool(checked):
             self.ui.interleavedCheck.setEnabled(True)
             self.ui.twochanCheck.setEnabled(False)
+            # Set second board (+1) to external trigger mode
+            s.doexttrig[board + 1] = True
+            self.controller.set_exttrig(board + 1, True)
             if self.ui.actionAuto_oversample_alignment.isChecked():
                 autocalibration(self)
         else:
@@ -2237,6 +2240,7 @@ class MainWindow(TemplateBaseClass):
             self.ui.ToffBox.blockSignals(True)
             self.ui.ToffBox.setValue(100)
             self.ui.ToffBox.blockSignals(False)
+            # Note: board+1 stays in external trigger mode for multi-board synchronization
 
         # Update autocalibration enabled state based on oversampling change
         self.update_autocalibration_enabled()
