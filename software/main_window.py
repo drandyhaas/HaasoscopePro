@@ -1369,6 +1369,13 @@ class MainWindow(TemplateBaseClass):
             # Otherwise, use default of 4 for zoomed mode
             if not s.resamp_overridden[s.activexychannel]:
                 s.doresamp[s.activexychannel] = 4
+
+            # If in two-channel mode, also set doresamp for channel 1 of the active board
+            if s.dotwochannel[s.activeboard]:
+                ch1_index = s.activeboard * s.num_chan_per_board + 1
+                if not s.resamp_overridden[ch1_index]:
+                    s.doresamp[ch1_index] = 4
+
             # If overridden, keep current value (no change needed)
 
             self.ui.resampBox.blockSignals(True)
@@ -1467,6 +1474,9 @@ class MainWindow(TemplateBaseClass):
             # Apply the updated pen to the plot line
             if channel_idx < len(self.plot_manager.lines):
                 self.plot_manager.lines[channel_idx].setPen(self.plot_manager.linepens[channel_idx])
+            # Update reference line color if a reference exists for this channel
+            if channel_idx in self.reference_data:
+                self.plot_manager.update_reference_line_color(channel_idx)
             self.select_channel()  # Re-call to update color box and LEDs
 
     def about_dialog(self):
@@ -2049,10 +2059,16 @@ class MainWindow(TemplateBaseClass):
         # 3. Re-apply all stored settings for the active board back to the hardware
         self._sync_board_settings_to_hardware(active_board)
 
-        # 4. Set a grace period to prevent false PLL resets during the switch
+        # 4. When enabling two-channel mode while zoomed, ensure channel 1 has correct doresamp
+        if is_two_channel and s.downsample < 0:
+            ch1_index = active_board * s.num_chan_per_board + 1
+            if not s.resamp_overridden[ch1_index] and s.doresamp[ch1_index] != 4:
+                s.doresamp[ch1_index] = 4
+
+        # 5. Set a grace period to prevent false PLL resets during the switch
         s.pll_reset_grace_period = 5
 
-        # 5. Update the rest of the application
+        # 6. Update the rest of the application
         self.allocate_xy_data()
         self.time_changed()
         self._update_channel_mode_ui()
