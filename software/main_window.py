@@ -1463,8 +1463,7 @@ class MainWindow(TemplateBaseClass):
     def depth_changed(self):
         self.state.expect_samples = self.ui.depthBox.value()
         self.allocate_xy_data()
-        self.trigger_pos_changed(self.ui.thresholdPos.value())
-        self.time_changed()
+        self.trigger_pos_reset()  # Reset trigger position to center after depth change
 
     def change_channel_color(self):
         options = QColorDialog.ColorDialogOptions()
@@ -2233,6 +2232,11 @@ class MainWindow(TemplateBaseClass):
             # When disabling oversampling, re-enable the odd board's ch0
             s.channel_enabled[ch0_board2] = True
             self.update_channel_visibility(ch0_board2)
+            # Reset toff to default value of 100
+            s.toff = 100
+            self.ui.ToffBox.blockSignals(True)
+            self.ui.ToffBox.setValue(100)
+            self.ui.ToffBox.blockSignals(False)
 
         # Update autocalibration enabled state based on oversampling change
         self.update_autocalibration_enabled()
