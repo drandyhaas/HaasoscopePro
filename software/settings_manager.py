@@ -214,6 +214,38 @@ def load_setup(main_window):
 
     s = main_window.state
 
+    # Board mode settings - LOAD THESE FIRST before other settings
+    # These affect which channels are available and how the hardware is configured
+    if 'dotwochannel' in setup:
+        s.dotwochannel = setup['dotwochannel']
+    if 'dooversample' in setup:
+        s.dooversample = setup['dooversample']
+    if 'dointerleaved' in setup:
+        s.dointerleaved = setup['dointerleaved']
+
+    # Apply board modes to hardware by reconfiguring each board
+    for board_idx in range(s.num_board):
+        from board import setupboard
+        usb = main_window.controller.usbs[board_idx]
+        # Reconfigure the board with the loaded two-channel mode setting
+        if not setupboard(usb, s.dopattern, s.dotwochannel[board_idx], s.dooverrange, s.basevoltage == 200):
+            print(f"Warning: Failed to reconfigure board {board_idx} with loaded settings")
+
+        # Set oversampling if needed
+        if s.dooversample[board_idx] and board_idx % 2 == 0:
+            main_window.controller.set_oversampling(board_idx, True)
+            # Set external trigger for second board in oversampling pair
+            s.doexttrig[board_idx + 1] = True
+            main_window.controller.set_exttrig(board_idx + 1, True)
+
+        # Update channel enabled states for interleaved mode
+        if s.dointerleaved[board_idx] and board_idx % 2 == 0:
+            # Disable secondary board's channels when interleaved
+            c_secondary_ch0 = (board_idx + 1) * s.num_chan_per_board
+            c_secondary_ch1 = c_secondary_ch0 + 1
+            s.channel_enabled[c_secondary_ch0] = False
+            s.channel_enabled[c_secondary_ch1] = False
+
     # Restore state variables
     # Timebase and acquisition
     if 'downsample' in setup:
@@ -283,13 +315,7 @@ def load_setup(main_window):
     if 'channel_names' in setup:
         s.channel_names = setup['channel_names']
 
-    # Board mode settings
-    if 'dotwochannel' in setup:
-        s.dotwochannel = setup['dotwochannel']
-    if 'dooversample' in setup:
-        s.dooversample = setup['dooversample']
-    if 'dointerleaved' in setup:
-        s.dointerleaved = setup['dointerleaved']
+    # Board mode settings were already loaded and applied at the beginning of this function
 
     # TAD settings
     if 'tad' in setup:
@@ -596,6 +622,14 @@ def load_setup(main_window):
 
     # Update persistence display after restoring visibility and persistence settings
     main_window.set_average_line_pen()
+
+    # Refresh math window channel list if it exists (channel availability may have changed)
+    if main_window.math_window:
+        main_window.math_window.update_channel_list()
+
+    # Refresh XY window channel list if visible (channel availability may have changed)
+    if main_window.xy_window is not None and main_window.xy_window.isVisible():
+        main_window.xy_window.refresh_channel_list()
 
     # Restore math channels
     if 'math_channels' in setup and len(setup['math_channels']) > 0:
