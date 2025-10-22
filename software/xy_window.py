@@ -122,6 +122,10 @@ class XYWindow(QtWidgets.QWidget):
             local_ch = ch_idx % self.state.num_chan_per_board
 
             # Check if this channel is available
+            # Skip if channel is disabled (due to oversampling, interleaving, etc.)
+            if not self.state.channel_enabled[ch_idx]:
+                continue
+
             # For single-channel mode (not two-channel), only ch 0 is available
             # For two-channel mode, both ch 0 and ch 1 are available
             if not self.state.dotwochannel[board_idx] and local_ch != 0:
