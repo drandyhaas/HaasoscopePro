@@ -1261,6 +1261,10 @@ class MainWindow(TemplateBaseClass):
             # Apply the new panned range to the plot
             self.plot_manager.plot.setRange(xRange=(s.min_x, s.max_x), padding=0.01)
 
+            # Reset cursor positions if they are outside the visible range
+            if self.plot_manager.cursor_manager:
+                self.plot_manager.cursor_manager.adjust_cursor_positions()
+
         else:  # Normal trigger adjust mode
             s.triggerpos = int(s.expect_samples * value / 10000.)
             self.controller.send_trigger_info_all()
