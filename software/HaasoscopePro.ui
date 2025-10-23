@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1200</width>
-    <height>800</height>
+    <width>1314</width>
+    <height>909</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -2300,7 +2300,7 @@ Outlined if triggering on this channel</string>
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1200</width>
+     <width>1314</width>
      <height>21</height>
     </rect>
    </property>
