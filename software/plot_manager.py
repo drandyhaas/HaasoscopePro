@@ -333,7 +333,7 @@ class PlotManager(pg.QtCore.QObject):
 
         # Calculate extra trig stabilizer correction using noextboard
         extra_trig_correction = None
-        if s.extra_trig_stabilizer_enabled and s.noextboard != -1 and s.downsamplefactor==1:
+        if s.extra_trig_stabilizer_enabled and s.noextboard != -1: # and s.downsamplefactor==1: # disable at less zoom?
             # Use the first channel of the noextboard for correction calculation
             noext_li = s.noextboard * s.num_chan_per_board
             if s.dotwochannel: noext_li += s.triggerchan[s.noextboard]

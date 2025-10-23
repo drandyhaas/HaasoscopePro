@@ -266,7 +266,7 @@ class DataProcessor:
     def _apply_board_stabilizer(self, board_idx, xy_data_array):
         """Applies board-level trigger stabilization."""
         s = self.state
-        if not s.trig_stabilizer_enabled or s.downsamplefactor>1:
+        if not s.trig_stabilizer_enabled: # or s.downsamplefactor>1: # disable at less zoom?
             return
 
         # Calculate vline_time - the position in the raw data where we expect the trigger crossing.
@@ -283,6 +283,7 @@ class DataProcessor:
             for i in range(s.num_chan_per_board):
                 xy_data_array[board_idx * s.num_chan_per_board + i][0] += s.totdistcorr[board_idx]
             s.totdistcorr[board_idx] = 0
+            #print("totdistcorr cleared")
 
         distcorrtemp = None
         if s.doexttrig[board_idx]:
@@ -307,12 +308,14 @@ class DataProcessor:
 
                 if xc.size > 1:
                     distcorrtemp = find_crossing_distance(yc, threshold_to_use, vline_time, xc[0], xc[1] - xc[0])
+                    #print("distcorrtemp", distcorrtemp)
 
         if distcorrtemp is not None and abs(distcorrtemp) < s.distcorrtol * s.downsamplefactor:
             s.distcorr[board_idx] = distcorrtemp
             for i in range(s.num_chan_per_board):
                 xy_data_array[board_idx * s.num_chan_per_board + i][0] -= s.distcorr[board_idx]
             s.totdistcorr[board_idx] += s.distcorr[board_idx]
+            #print("totdistcorr", s.totdistcorr)
 
     def _calculate_pulse_width(self, x_data, y_data, vline, threshold):
         """Calculate the width of the pulse nearest to the trigger point (vline).
