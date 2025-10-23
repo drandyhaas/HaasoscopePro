@@ -696,6 +696,7 @@ class MainWindow(TemplateBaseClass):
         # --- Update Zoom window if visible ---
         if self.zoom_window is not None and self.zoom_window.isVisible():
             self.zoom_window.update_zoom_plot(self.xydata, math_results)
+            self.zoom_window.update_trigger_and_cursor_lines(self.plot_manager)
 
         # Store event in history buffer (only if not displaying historical data)
         if not self.displaying_history:
@@ -1433,6 +1434,10 @@ class MainWindow(TemplateBaseClass):
         # Update the plot range and text box
         self.time_changed()
 
+        # Adjust zoom ROI width if zoom window is open
+        if self.zoom_window and self.zoom_window.isVisible():
+            self.plot_manager.adjust_zoom_roi_for_downsample()
+
         # Clear peak detect data when timebase changes (for active channel)
         active_channel = self.state.activexychannel
         if active_channel in self.plot_manager.peak_detect_enabled and self.plot_manager.peak_detect_enabled[active_channel]:
@@ -1480,6 +1485,10 @@ class MainWindow(TemplateBaseClass):
 
         # Update the plot range and text box
         self.time_changed()
+
+        # Adjust zoom ROI width if zoom window is open
+        if self.zoom_window and self.zoom_window.isVisible():
+            self.plot_manager.adjust_zoom_roi_for_downsample()
 
         # Clear peak detect data when timebase changes (for active channel)
         active_channel = self.state.activexychannel
@@ -1881,6 +1890,7 @@ class MainWindow(TemplateBaseClass):
             # Update Zoom window if visible
             if self.zoom_window is not None and self.zoom_window.isVisible():
                 self.zoom_window.update_zoom_plot(self.xydata, math_results)
+                self.zoom_window.update_trigger_and_cursor_lines(self.plot_manager)
 
     def resume_live_acquisition(self):
         """Resume live data acquisition after viewing history."""
@@ -2167,6 +2177,10 @@ class MainWindow(TemplateBaseClass):
         # 7. Update XY window channel lists (availability of Ch 1 changed)
         if self.xy_window is not None and self.xy_window.isVisible():
             self.xy_window.refresh_channel_list()
+
+        # 8. Clear zoom window channel lines (they'll be recreated with correct channels)
+        if self.zoom_window is not None and self.zoom_window.isVisible():
+            self.zoom_window.clear_channel_lines()
 
     def gain_changed(self):
         """Handles changes to the gain slider."""

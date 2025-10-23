@@ -2,8 +2,9 @@
 
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtWidgets
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QPen
 from PyQt5.QtCore import pyqtSignal
+from plot_manager import add_secondary_axis
 
 
 class ZoomWindow(QtWidgets.QWidget):
@@ -42,11 +43,12 @@ class ZoomWindow(QtWidgets.QWidget):
         font = QtWidgets.QApplication.font()
         font.setPixelSize(11)
 
-        for axis in ['bottom', 'left']:
+        for axis in ['bottom', 'left', 'right']:
             axis_item = self.plot.getAxis(axis)
             axis_item.setStyle(tickFont=font)
-            axis_item.setPen('grey')
-            axis_item.setTextPen('grey')
+            if axis != 'right':  # Don't set grey for right axis - will be colored per channel
+                axis_item.setPen('grey')
+                axis_item.setTextPen('grey')
 
         # Set axis labels
         self.plot.setLabel('bottom', 'Time (ns)')
@@ -60,6 +62,41 @@ class ZoomWindow(QtWidgets.QWidget):
         view_box.setMouseEnabled(x=False, y=False)
         # Disable right-click menu (already done above but making sure)
         view_box.setMenuEnabled(False)
+
+        # Add secondary Y-axis for voltage display
+        self.right_axis = None
+        if state and state.num_board > 0:
+            self.right_axis = add_secondary_axis(
+                plot_item=self.plot,
+                conversion_func=lambda val: val * self.state.VperD[self.state.activexychannel],
+                text='Voltage', units='V', color="w"
+            )
+            self.right_axis.setWidth(w=40)
+            self.right_axis.setVisible(True)
+            # Update the axis to match the active channel
+            self.update_right_axis()
+
+        # Create view-only trigger lines (non-movable)
+        self.trigger_lines = {}
+        dashedpen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
+        self.trigger_lines['vline'] = pg.InfiniteLine(pos=0.0, angle=90, movable=False, pen=dashedpen)
+        self.trigger_lines['hline'] = pg.InfiniteLine(pos=0.0, angle=0, movable=False, pen=dashedpen)
+        self.plot.addItem(self.trigger_lines['vline'])
+        self.plot.addItem(self.trigger_lines['hline'])
+        # Initially hidden - will be shown when main plot shows them
+        self.trigger_lines['vline'].setVisible(False)
+        self.trigger_lines['hline'].setVisible(False)
+
+        # Create view-only cursor lines (non-movable)
+        self.cursor_lines = {}
+        cursor_pen = pg.mkPen(color=QColor('gray'), width=2.0, style=QtCore.Qt.DotLine)
+        self.cursor_lines['t1'] = pg.InfiniteLine(pos=0.0, angle=90, movable=False, pen=cursor_pen)
+        self.cursor_lines['t2'] = pg.InfiniteLine(pos=0.0, angle=90, movable=False, pen=cursor_pen)
+        self.cursor_lines['v1'] = pg.InfiniteLine(pos=0.0, angle=0, movable=False, pen=cursor_pen)
+        self.cursor_lines['v2'] = pg.InfiniteLine(pos=0.0, angle=0, movable=False, pen=cursor_pen)
+        for cursor in self.cursor_lines.values():
+            self.plot.addItem(cursor)
+            cursor.setVisible(False)  # Initially hidden
 
         # Create plot lines for each channel (will be created dynamically)
         self.channel_lines = {}  # {channel_index: plot_line}
@@ -175,6 +212,69 @@ class ZoomWindow(QtWidgets.QWidget):
             if math_name not in existing_math_names:
                 self.plot.removeItem(self.math_channel_lines[math_name])
                 del self.math_channel_lines[math_name]
+
+        # Update the right axis to reflect the active channel
+        self.update_right_axis()
+
+    def update_trigger_and_cursor_lines(self, main_plot_manager):
+        """Update the zoom window's trigger and cursor lines to match the main plot.
+
+        Args:
+            main_plot_manager: The main window's plot manager to get line positions from
+        """
+        if not main_plot_manager:
+            return
+
+        # Update trigger lines (vline, hline)
+        if hasattr(main_plot_manager, 'otherlines'):
+            if 'vline' in main_plot_manager.otherlines:
+                vline = main_plot_manager.otherlines['vline']
+                self.trigger_lines['vline'].setPos(vline.value())
+                self.trigger_lines['vline'].setVisible(vline.isVisible())
+
+            if 'hline' in main_plot_manager.otherlines:
+                hline = main_plot_manager.otherlines['hline']
+                self.trigger_lines['hline'].setPos(hline.value())
+                self.trigger_lines['hline'].setVisible(hline.isVisible())
+
+        # Update cursor lines (t1, t2, v1, v2)
+        if hasattr(main_plot_manager, 'cursor_manager') and main_plot_manager.cursor_manager:
+            cursor_mgr = main_plot_manager.cursor_manager
+            if hasattr(cursor_mgr, 'cursor_lines'):
+                for cursor_name in ['t1', 't2', 'v1', 'v2']:
+                    if cursor_name in cursor_mgr.cursor_lines and cursor_name in self.cursor_lines:
+                        main_cursor = cursor_mgr.cursor_lines[cursor_name]
+                        self.cursor_lines[cursor_name].setPos(main_cursor.value())
+                        self.cursor_lines[cursor_name].setVisible(main_cursor.isVisible())
+
+    def update_right_axis(self):
+        """Update the secondary Y-axis to show voltage for the active channel."""
+        if not self.right_axis or not self.state:
+            return
+
+        # Get the active channel color and properties
+        active_channel = self.state.activexychannel
+        if active_channel < len(self.plot_manager.linepens):
+            active_pen = QPen(self.plot_manager.linepens[active_channel])
+            active_pen.setWidth(1)
+            self.right_axis.setPen(active_pen)
+            self.right_axis.setTextPen(color=active_pen.color())
+
+        # Update the axis label
+        board = self.state.activeboard
+        channel = self.state.selectedchannel
+        self.right_axis.setLabel(text=f"Voltage for Board {board} Channel {channel}", units='V')
+
+        # Update the conversion function to use the active channel's VperD
+        self.right_axis.conversion_func = lambda val: val * self.state.VperD[active_channel]
+
+        # Update tick spacing based on the channel's voltage per division
+        tick_span = round(2 * 5 * self.state.VperD[active_channel], 1)
+        self.right_axis.setTickSpacing(tick_span, 0.1 * tick_span)
+
+        # Apply the update
+        if hasattr(self.right_axis, 'update_function'):
+            self.right_axis.update_function()
 
     def _get_math_channel_color(self, math_name):
         """Get the color for a math channel by name."""

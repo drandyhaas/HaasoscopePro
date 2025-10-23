@@ -1056,6 +1056,54 @@ class PlotManager(pg.QtCore.QObject):
             size = self.zoom_roi.size()
             self.zoom_roi_fill.setRect(0, 0, size[0], size[1])
 
+    def adjust_zoom_roi_for_downsample(self):
+        """Adjust the zoom ROI width based on downsample factor."""
+        if not self.zoom_roi or not self.zoom_roi.isVisible():
+            return
+
+        # Get current plot range
+        view_range = self.plot.getViewBox().viewRange()
+        x_range = view_range[0]
+        x_span = x_range[1] - x_range[0]
+
+        # Calculate the zoom factor based on downsample
+        # When downsample < 0, we're zoomed in by factor of 2^(-downsample)
+        downsample = self.state.downsample
+        if downsample < 0:
+            zoom_factor = pow(2, -downsample)
+        else:
+            zoom_factor = 1
+
+        # Base width is 20% of view (±10% around trigger)
+        # Divide by zoom factor when zoomed in
+        base_width = x_span * 0.2
+        roi_width = base_width / zoom_factor
+
+        # Maintain minimum width of 5% of full window width
+        min_width = x_span * 0.05
+        if roi_width < min_width:
+            roi_width = min_width
+
+        # Get current ROI position and height
+        current_pos = self.zoom_roi.pos()
+        current_size = self.zoom_roi.size()
+
+        # Calculate new position to keep it centered on the same point
+        # Current center x
+        center_x = current_pos[0] + current_size[0] / 2
+        # New position with adjusted width
+        new_x = center_x - roi_width / 2
+
+        # Update ROI size and position
+        self.zoom_roi.setSize([roi_width, current_size[1]])
+        self.zoom_roi.setPos([new_x, current_pos[1]])
+
+        # Update the fill
+        self._update_zoom_roi_fill()
+
+        # Emit signal to update zoom window
+        self.on_zoom_roi_changed()
+
     def _create_trigger_arrows(self):
         """Create triangular arrow markers at the ends of trigger lines."""
         trigger_color = QColor('white')
