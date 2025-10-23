@@ -613,6 +613,10 @@ class MeasurementsManager:
             if key in self.measurement_history:
                 del self.measurement_history[key]
 
+        # Cache fit_results for active channel to avoid recalculating
+        cached_active_channel_fit_results = None
+        current_channel_key = self.get_current_channel_key()
+
         # Process each active measurement
         for measurement_key in list(self.active_measurements.keys()):
             measurement_name, channel_key = measurement_key
@@ -684,6 +688,10 @@ class MeasurementsManager:
                 channel_index=measurement_channel_index
             )
 
+            # Cache fit_results if this is a risetime/falltime measurement for the active channel
+            if needs_risetime and channel_key == current_channel_key and fit_results is not None:
+                cached_active_channel_fit_results = fit_results
+
             # Set the measurement value based on type
             if measurement_name == "Mean":
                 _set_measurement(measurement_key, measurements.get('Mean', 0), "mV")
@@ -721,21 +729,24 @@ class MeasurementsManager:
 
         # Update fit lines if risetime is being measured for active channel
         if hasattr(self.main_window, 'xydata') and self.state.num_board > 0:
-            current_channel_key = self.get_current_channel_key()
             if (("Risetime", current_channel_key) in self.active_measurements or
                     ("Falltime", current_channel_key) in self.active_measurements):
-                # Get active channel data
-                x_data = self.plot_manager.lines[self.state.activexychannel].xData
-                y_data = self.plot_manager.lines[self.state.activexychannel].yData
-                if y_data is not None and len(y_data) > 0:
-                    vline_val = self.plot_manager.otherlines['vline'].value()
-                    _, fit_results = self.processor.calculate_measurements(
-                        x_data, y_data, vline_val,
-                        do_risetime_calc=True,
-                        use_edge_fit=self.ui.actionEdge_fit_method.isChecked(),
-                        channel_index=self.state.activexychannel
-                    )
-                    self.plot_manager.update_risetime_fit_lines(fit_results)
+                # Use cached fit_results if available (avoids recalculating)
+                if cached_active_channel_fit_results is not None:
+                    self.plot_manager.update_risetime_fit_lines(cached_active_channel_fit_results)
+                else:
+                    # If not cached, calculate now (shouldn't happen in normal operation)
+                    x_data = self.plot_manager.lines[self.state.activexychannel].xData
+                    y_data = self.plot_manager.lines[self.state.activexychannel].yData
+                    if y_data is not None and len(y_data) > 0:
+                        vline_val = self.plot_manager.otherlines['vline'].value()
+                        _, fit_results = self.processor.calculate_measurements(
+                            x_data, y_data, vline_val,
+                            do_risetime_calc=True,
+                            use_edge_fit=self.ui.actionEdge_fit_method.isChecked(),
+                            channel_index=self.state.activexychannel
+                        )
+                        self.plot_manager.update_risetime_fit_lines(fit_results)
             else:
                 self.plot_manager.update_risetime_fit_lines(None)
 
