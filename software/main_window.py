@@ -25,6 +25,7 @@ from settings_manager import save_setup, load_setup
 from math_channels_window import MathChannelsWindow
 from reference_manager import save_reference_lines, load_reference_lines
 from dummy_scope.dummy_server_config_dialog import DummyServerConfigDialog
+from update_checker import UpdateChecker
 
 # Import remaining dependencies
 from FFTWindow import FFTWindow
@@ -202,6 +203,11 @@ class MainWindow(TemplateBaseClass):
 
         # Show main window
         self.show()
+
+        # Check for software updates (non-blocking, runs in background thread)
+        self.update_checker = UpdateChecker(self.state.softwareversion)
+        self.update_checker.update_available.connect(self._show_update_notification)
+        self.update_checker.check_for_updates()
 
     def _sync_initial_ui_state(self):
         """A one-time function to sync the UI's visual state after the window has loaded."""
@@ -906,6 +912,26 @@ class MainWindow(TemplateBaseClass):
         self.update_trigger_spinbox_tooltip(self.ui.totBox, "Time over threshold required to trigger")
         self.update_trigger_spinbox_tooltip(self.ui.trigger_delay_box, "Time to wait before actually firing trigger")
         self.update_trigger_spinbox_tooltip(self.ui.trigger_holdoff_box, "Time needed failing threshold before passing threshold")
+
+    def _show_update_notification(self, current, latest, release_url):
+        """
+        Show a notification dialog when a new software version is available.
+        Called by the update_checker when it detects a newer release.
+        """
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Information)
+        msg.setWindowTitle("Update Available")
+        msg.setText(f"A new version is available: v{latest}\n(You have v{current})")
+        msg.setInformativeText("Visit GitHub releases to download?")
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg.buttonClicked.connect(lambda btn: self._open_releases_page(btn, msg, release_url))
+        msg.show()
+
+    def _open_releases_page(self, button, msg, release_url):
+        """Open the GitHub releases page in the default web browser."""
+        if msg.standardButton(button) == QMessageBox.Yes:
+            import webbrowser
+            webbrowser.open(release_url)
 
     def handle_critical_error(self, title, message):
         """
