@@ -52,8 +52,14 @@ class ZoomWindow(QtWidgets.QWidget):
         self.plot.setLabel('bottom', 'Time (ns)')
         self.plot.setLabel('left', 'Voltage (V/div)')
 
-        # Enable mouse interactions for pan/zoom
-        self.plot.setMouseEnabled(x=True, y=True)
+        # Disable mouse interactions for pan/zoom
+        self.plot.setMouseEnabled(x=False, y=False)
+        self.plot_widget.setMouseEnabled(x=False, y=False)
+        # Disable all mouse interactions on the ViewBox
+        view_box = self.plot.getViewBox()
+        view_box.setMouseEnabled(x=False, y=False)
+        # Disable right-click menu (already done above but making sure)
+        view_box.setMenuEnabled(False)
 
         # Create plot lines for each channel (will be created dynamically)
         self.channel_lines = {}  # {channel_index: plot_line}
