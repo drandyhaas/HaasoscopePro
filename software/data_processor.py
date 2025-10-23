@@ -314,6 +314,78 @@ class DataProcessor:
                 xy_data_array[board_idx * s.num_chan_per_board + i][0] -= s.distcorr[board_idx]
             s.totdistcorr[board_idx] += s.distcorr[board_idx]
 
+    def _calculate_pulse_width(self, x_data, y_data, vline, threshold):
+        """Calculate the width of the pulse nearest to the trigger point (vline).
+
+        Args:
+            x_data: Time data
+            y_data: Signal data
+            vline: Trigger position (time)
+            threshold: Signal threshold (typically 50% between min and max)
+
+        Returns:
+            Pulse width in nanoseconds, or 0 if no pulse found
+        """
+        if len(y_data) < 2:
+            return 0.0
+
+        # Find all threshold crossings
+        crossings = np.where(np.diff(np.sign(y_data - threshold)))[0]
+
+        if len(crossings) < 2:
+            # Need at least 2 crossings for a pulse
+            return 0.0
+
+        # Find the crossing closest to vline
+        closest_crossing_idx = np.argmin(np.abs(x_data[crossings] - vline))
+        crossing_pos = crossings[closest_crossing_idx]
+
+        # Determine if this is a rising or falling edge
+        is_rising = y_data[crossing_pos + 1] > y_data[crossing_pos]
+
+        # Find the next opposite-direction crossing
+        next_crossing_idx = None
+        for i in range(closest_crossing_idx + 1, len(crossings)):
+            next_pos = crossings[i]
+            next_is_rising = y_data[next_pos + 1] > y_data[next_pos]
+            if next_is_rising != is_rising:
+                next_crossing_idx = i
+                break
+
+        # If no opposite crossing found, try looking backwards
+        if next_crossing_idx is None:
+            for i in range(closest_crossing_idx - 1, -1, -1):
+                prev_pos = crossings[i]
+                prev_is_rising = y_data[prev_pos + 1] > y_data[prev_pos]
+                if prev_is_rising != is_rising:
+                    next_crossing_idx = i
+                    break
+
+        if next_crossing_idx is None:
+            # No opposite crossing found
+            return 0.0
+
+        # Interpolate to find exact crossing times
+        def interpolate_crossing(idx):
+            y1 = y_data[crossings[idx]]
+            y2 = y_data[crossings[idx] + 1]
+            x1 = x_data[crossings[idx]]
+            x2 = x_data[crossings[idx] + 1]
+            # Linear interpolation: x = x1 + (threshold - y1) / (y2 - y1) * (x2 - x1)
+            if abs(y2 - y1) > 1e-10:
+                fraction = (threshold - y1) / (y2 - y1)
+                return x1 + fraction * (x2 - x1)
+            else:
+                return x1
+
+        crossing_time = interpolate_crossing(closest_crossing_idx)
+        next_crossing_time = interpolate_crossing(next_crossing_idx)
+
+        # Calculate pulse width in nanoseconds
+        pulse_width_ns = abs(next_crossing_time - crossing_time)
+
+        return pulse_width_ns
+
     def calculate_fft(self, y_data, board_idx):
         """Calculates the FFT for a given channel's y-data."""
         n = len(y_data)
@@ -383,6 +455,10 @@ class DataProcessor:
         above_threshold = np.sum(y_data > threshold)
         duty_cycle = (above_threshold / len(y_data)) * 100 if len(y_data) > 0 else 0
         measurements["Duty cycle"] = duty_cycle
+
+        # Calculate pulse width (width of pulse nearest to trigger point)
+        pulse_width = self._calculate_pulse_width(x_data, y_data, vline, threshold)
+        measurements["Pulse width"] = pulse_width
 
         # Initialize fit results to None
         fit_results = None

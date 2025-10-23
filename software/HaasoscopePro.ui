@@ -2377,6 +2377,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionFreq"/>
     <addaction name="actionPeriod"/>
     <addaction name="actionDuty_cycle"/>
+    <addaction name="actionPulse_width"/>
     <addaction name="actionRisetime"/>
     <addaction name="actionRisetime_error"/>
     <addaction name="separator"/>
@@ -2408,6 +2409,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionXY_Plot"/>
     <addaction name="actionMath_channels"/>
     <addaction name="actionHistory_window"/>
+    <addaction name="actionZoom_window"/>
     <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuReference">
@@ -2939,6 +2941,19 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="toolTip">
     <string>Stabilize trigger at edge midpoint instead of threshold crossing</string>
+   </property>
+  </action>
+  <action name="actionPulse_width">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Pulse width</string>
+   </property>
+  </action>
+  <action name="actionZoom_window">
+   <property name="text">
+    <string>Zoom window</string>
    </property>
   </action>
  </widget>
