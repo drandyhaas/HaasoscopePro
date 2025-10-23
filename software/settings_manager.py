@@ -605,6 +605,19 @@ def load_setup(main_window):
         s.selectedchannel = setup['selectedchannel']
         main_window.ui.chanBox.setCurrentIndex(s.selectedchannel)
 
+    # Recalculate VperD for all channels based on loaded gain values
+    # This MUST be done before syncing to hardware because offset calculation depends on VperD
+    if 'gain' in setup:
+        for ch_idx in range(s.num_board * s.num_chan_per_board):
+            board_idx = ch_idx // s.num_chan_per_board
+            db = s.gain[ch_idx]
+            v_per_div = (s.basevoltage / 1000.) * s.tenx[ch_idx] / pow(10, db / 20.)
+            if s.dooversample[board_idx]:
+                v_per_div *= 2.0
+            if not s.mohm[ch_idx]:
+                v_per_div /= 2.0
+            s.VperD[ch_idx] = v_per_div
+
     # Apply all settings to hardware and update UI
     for board_idx in range(s.num_board):
         main_window._sync_board_settings_to_hardware(board_idx)
@@ -619,6 +632,11 @@ def load_setup(main_window):
     main_window.time_changed()
     main_window.plot_manager.show_cursors(main_window.ui.actionCursors.isChecked())
     main_window._update_channel_mode_ui()
+
+    # Note: We don't call gain_changed() or offset_changed() here because:
+    # 1. VperD has already been recalculated for all channels above
+    # 2. _sync_board_settings_to_hardware() has already applied all settings
+    # 3. gain_changed() would adjust offsetBox which could reset the loaded offset value
 
     # Update persistence display after restoring visibility and persistence settings
     main_window.set_average_line_pen()
