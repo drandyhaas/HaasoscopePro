@@ -207,12 +207,23 @@ class PlotManager(pg.QtCore.QObject):
             size=[1, 1],  # Will be set when shown
             pen=roi_pen,
             movable=True,
-            resizable=True
+            removable=False  # Don't allow removing the ROI
         )
 
-        # Set the handle colors to be semi-transparent
-        self.zoom_roi.handlePen = pg.mkPen(color=QColor(128, 128, 128, 100), width=1)
-        self.zoom_roi.handleHoverPen = pg.mkPen(color=QColor(255, 255, 255, 200), width=2)
+        # Add corner handles for resizing - this gives 4 corner handles
+        # The RectROI by default has corner handles when created
+        # But we'll explicitly set up the handle appearance
+
+        # Set the handle colors to be more visible
+        self.zoom_roi.handlePen = pg.mkPen(color=QColor(150, 150, 150, 200), width=2)
+        self.zoom_roi.handleHoverPen = pg.mkPen(color=QColor(255, 255, 255, 255), width=3)
+
+        # Add side handles for edge resizing (top, bottom, left, right)
+        # This allows dragging individual edges
+        self.zoom_roi.addScaleHandle([1, 0.5], [0, 0.5])  # Right edge
+        self.zoom_roi.addScaleHandle([0, 0.5], [1, 0.5])  # Left edge
+        self.zoom_roi.addScaleHandle([0.5, 1], [0.5, 0])  # Bottom edge
+        self.zoom_roi.addScaleHandle([0.5, 0], [0.5, 1])  # Top edge
 
         # Create a semi-transparent fill by adding a rectangle inside the ROI
         self.zoom_roi_fill = QGraphicsRectItem(0, 0, 1, 1, self.zoom_roi)
@@ -1010,12 +1021,12 @@ class PlotManager(pg.QtCore.QObject):
         x_range = view_range[0]
         y_range = view_range[1]
 
-        # Calculate default region: ±10% around vline (time), ±50% around hline (voltage)
+        # Calculate default region: ±10% around vline (time), ±25% around hline (voltage)
         x_span = x_range[1] - x_range[0]
         y_span = y_range[1] - y_range[0]
 
         roi_width = x_span * 0.2  # ±10% = 20% total width
-        roi_height = y_span * 1.0  # ±50% = 100% total height
+        roi_height = y_span * 0.5  # ±25% = 50% total height
 
         # Center ROI on trigger lines
         roi_x = vline_pos - roi_width / 2
