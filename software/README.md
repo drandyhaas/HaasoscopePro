@@ -8,7 +8,7 @@ Python-based oscilloscope software for the HaasoscopePro hardware.
 
 ```bash
 # Install dependencies
-pip3 install numpy scipy pyqtgraph PyQt5 pyftdi ftd2xx matplotlib
+pip3 install numpy scipy pyqtgraph PyQt5 pyftdi ftd2xx requests packaging
 
 # Run the application
 python HaasoscopeProQt.py

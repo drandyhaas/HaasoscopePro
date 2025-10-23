@@ -25,6 +25,7 @@ from settings_manager import save_setup, load_setup
 from math_channels_window import MathChannelsWindow
 from reference_manager import save_reference_lines, load_reference_lines
 from dummy_scope.dummy_server_config_dialog import DummyServerConfigDialog
+from update_checker import UpdateChecker
 
 # Import remaining dependencies
 from FFTWindow import FFTWindow
@@ -202,6 +203,11 @@ class MainWindow(TemplateBaseClass):
 
         # Show main window
         self.show()
+
+        # Check for software updates (non-blocking, runs in background thread)
+        self.update_checker = UpdateChecker(self.state.softwareversion)
+        self.update_checker.update_available.connect(self._show_update_notification)
+        self.update_checker.check_for_updates()
 
     def _sync_initial_ui_state(self):
         """A one-time function to sync the UI's visual state after the window has loaded."""
@@ -906,6 +912,32 @@ class MainWindow(TemplateBaseClass):
         self.update_trigger_spinbox_tooltip(self.ui.totBox, "Time over threshold required to trigger")
         self.update_trigger_spinbox_tooltip(self.ui.trigger_delay_box, "Time to wait before actually firing trigger")
         self.update_trigger_spinbox_tooltip(self.ui.trigger_holdoff_box, "Time needed failing threshold before passing threshold")
+
+    def _show_update_notification(self, current, latest, release_url):
+        """
+        Show a notification dialog when a new software version is available.
+        Called by the update_checker when it detects a newer release.
+        """
+        msg = QMessageBox(self)
+        msg.setIcon(QMessageBox.Information)
+        msg.setWindowTitle("Update Available")
+        msg.setText(f"A new version is available: v{latest}\n(You have v{current})")
+        msg.setInformativeText("Would you like to download the new version?")
+
+        # Create custom buttons
+        yes_button = msg.addButton("Yes", QMessageBox.YesRole)
+        ignore_button = msg.addButton(" Ignore this release ", QMessageBox.NoRole)
+        remind_button = msg.addButton(" Remind me next time ", QMessageBox.RejectRole)
+        msg.exec_()
+
+        # Handle button clicks
+        clicked_button = msg.clickedButton()
+        if clicked_button == yes_button:
+            import webbrowser
+            webbrowser.open(release_url)
+        elif clicked_button == ignore_button:
+            self.update_checker.ignore_version(latest)
+            print(f"Version {latest} will be ignored in future update checks")
 
     def handle_critical_error(self, title, message):
         """
