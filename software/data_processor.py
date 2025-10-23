@@ -354,12 +354,16 @@ class DataProcessor:
         VperD = state.VperD[channel_index]
         board_index = channel_index // state.num_chan_per_board
 
+        # Calculate min/max once to avoid redundant computation
+        y_min = np.min(y_data)
+        y_max = np.max(y_data)
+
         measurements = {
             "Mean": 1000 * VperD * np.mean(y_data),
             "RMS": 1000 * VperD * np.std(y_data),
-            "Max": 1000 * VperD * np.max(y_data),
-            "Min": 1000 * VperD * np.min(y_data),
-            "Vpp": 1000 * VperD * (np.max(y_data) - np.min(y_data))
+            "Max": 1000 * VperD * y_max,
+            "Min": 1000 * VperD * y_min,
+            "Vpp": 1000 * VperD * (y_max - y_min)
         }
 
         sampling_rate = (state.samplerate * 1e9) / state.downsamplefactor
@@ -370,8 +374,6 @@ class DataProcessor:
         measurements["Freq"] = found_freq
 
         # Calculate duty cycle (percentage of time signal is above 50% threshold)
-        y_min = np.min(y_data)
-        y_max = np.max(y_data)
         threshold = (y_min + y_max) / 2
         above_threshold = np.sum(y_data > threshold)
         duty_cycle = (above_threshold / len(y_data)) * 100 if len(y_data) > 0 else 0
