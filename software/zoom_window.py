@@ -136,11 +136,11 @@ class ZoomWindow(QtWidgets.QWidget):
         if x_range and y_range:
             self.plot.setRange(xRange=x_range, yRange=y_range, padding=0)
 
-    def update_zoom_plot(self, xydata, math_results=None):
+    def update_zoom_plot(self, stabilized_data, math_results=None):
         """Update the zoom plot with new data.
 
         Args:
-            xydata: The full xydata array from main_window
+            stabilized_data: Dictionary mapping channel index to (x_data, y_data) tuples of post-processed data
             math_results: Optional dictionary mapping math channel names to (x_data, y_data) tuples
         """
         if not self.zoom_x_range or not self.zoom_y_range:
@@ -148,7 +148,6 @@ class ZoomWindow(QtWidgets.QWidget):
 
         # Update physical channels
         total_channels = self.state.num_board * self.state.num_chan_per_board
-        active_channels = set()  # Track which channels should be visible
 
         for ch_idx in range(total_channels):
             board_idx = ch_idx // self.state.num_chan_per_board
@@ -166,27 +165,14 @@ class ZoomWindow(QtWidgets.QWidget):
                     self.channel_lines[ch_idx].setVisible(False)
                 continue
 
-            active_channels.add(ch_idx)
-
-            # Get data
-            if ch_idx >= len(xydata):
+            # Get post-processed data from stabilized_data (a list indexed by channel)
+            if ch_idx >= len(stabilized_data) or stabilized_data[ch_idx] is None:
                 continue
 
-            x_data_full = xydata[ch_idx][0]
-            y_data_full = xydata[ch_idx][1]
+            x_data, y_data = stabilized_data[ch_idx]
 
-            if x_data_full is None or y_data_full is None or len(x_data_full) == 0:
+            if x_data is None or y_data is None or len(x_data) == 0:
                 continue
-
-            # Handle two-channel mode: only half the samples are valid, spacing is doubled
-            if self.state.dotwochannel[board_idx]:
-                num_valid_samples = xydata.shape[2] // 2
-                y_data = y_data_full[:num_valid_samples]
-                # Multiply x by 2 to get correct sample spacing in two-channel mode
-                x_data = x_data_full[:num_valid_samples] * 2.0
-            else:
-                x_data = x_data_full
-                y_data = y_data_full
 
             # Create line if it doesn't exist
             if ch_idx not in self.channel_lines:
@@ -304,6 +290,28 @@ class ZoomWindow(QtWidgets.QWidget):
                 if math_def['name'] == math_name:
                     return QColor(math_def['color'])
         return QColor('white')  # Default color if not found
+
+    def set_markers(self, is_checked):
+        """Set marker visibility on all zoom window plot lines.
+
+        Args:
+            is_checked: True to show markers, False to hide them
+        """
+        symbol = "o" if is_checked else None
+        size = 3 if is_checked else 0
+
+        # Set markers on physical channel lines
+        for ch_idx, line in self.channel_lines.items():
+            line.setSymbol(symbol)
+            line.setSymbolSize(size)
+            if is_checked and ch_idx < len(self.plot_manager.linepens):
+                line.setSymbolPen(self.plot_manager.linepens[ch_idx].color())
+                line.setSymbolBrush(self.plot_manager.linepens[ch_idx].color())
+
+        # Set markers on math channel lines
+        for math_name, line in self.math_channel_lines.items():
+            line.setSymbol(symbol)
+            line.setSymbolSize(size)
 
     def clear_channel_lines(self):
         """Clear all channel lines when channel configuration changes."""

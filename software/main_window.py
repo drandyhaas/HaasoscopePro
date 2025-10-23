@@ -299,7 +299,7 @@ class MainWindow(TemplateBaseClass):
         # Processing and Display controls
         self.ui.actionDrawing.triggered.connect(self.drawing_toggled)
         self.ui.actionGrid.triggered.connect(lambda checked: self.plot_manager.set_grid(checked))
-        self.ui.actionMarkers.triggered.connect(lambda checked: self.plot_manager.set_markers(checked))
+        self.ui.actionMarkers.triggered.connect(self.toggle_markers_slot)
         self.ui.actionPan_and_zoom.triggered.connect(lambda checked: self.plot_manager.set_pan_and_zoom(checked))
         self.ui.actionVoltage_axis.triggered.connect(lambda checked: self.plot_manager.right_axis.setVisible(checked))
         self.ui.actionCursors.triggered.connect(lambda checked: self.plot_manager.show_cursors(checked))
@@ -695,7 +695,7 @@ class MainWindow(TemplateBaseClass):
 
         # --- Update Zoom window if visible ---
         if self.zoom_window is not None and self.zoom_window.isVisible():
-            self.zoom_window.update_zoom_plot(self.xydata, math_results)
+            self.zoom_window.update_zoom_plot(self.plot_manager.stabilized_data, math_results)
             self.zoom_window.update_trigger_and_cursor_lines(self.plot_manager)
 
         # Store event in history buffer (only if not displaying historical data)
@@ -1779,6 +1779,15 @@ class MainWindow(TemplateBaseClass):
         # Update state
         self.state.xy_mode = False
 
+    def toggle_markers_slot(self, checked):
+        """Slot for the 'Markers' menu action - updates both main and zoom windows."""
+        # Update main plot markers
+        self.plot_manager.set_markers(checked)
+
+        # Update zoom window markers if it exists and is visible
+        if self.zoom_window is not None and self.zoom_window.isVisible():
+            self.zoom_window.set_markers(checked)
+
     def toggle_zoom_window_slot(self, checked):
         """Slot for the 'Zoom Window' menu action."""
         if checked:
@@ -1796,6 +1805,10 @@ class MainWindow(TemplateBaseClass):
 
             # Show the zoom ROI on the main plot
             self.plot_manager.show_zoom_roi()
+
+            # Sync marker state to zoom window
+            if self.ui.actionMarkers.isChecked():
+                self.zoom_window.set_markers(True)
         else:
             # Hide zoom window and ROI
             if self.zoom_window is not None:
@@ -1907,7 +1920,7 @@ class MainWindow(TemplateBaseClass):
 
             # Update Zoom window if visible
             if self.zoom_window is not None and self.zoom_window.isVisible():
-                self.zoom_window.update_zoom_plot(self.xydata, math_results)
+                self.zoom_window.update_zoom_plot(self.plot_manager.stabilized_data, math_results)
                 self.zoom_window.update_trigger_and_cursor_lines(self.plot_manager)
 
     def resume_live_acquisition(self):
