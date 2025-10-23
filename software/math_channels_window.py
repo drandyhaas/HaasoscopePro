@@ -8,7 +8,7 @@ from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QComboBox,
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QPixmap, QIcon
 import numpy as np
-from scipy import signal
+from scipy import signal, interpolate
 
 
 class RefreshingComboBox(QComboBox):
@@ -239,11 +239,24 @@ class TimeShiftConfigDialog(QDialog):
         shift_layout.addWidget(self.unit_label)
         layout.addLayout(shift_layout)
 
+        # Interpolation checkbox
+        interp_layout = QHBoxLayout()
+        self.interpolate_checkbox = QCheckBox("Interpolate between samples")
+        self.interpolate_checkbox.setChecked(True)
+        self.interpolate_checkbox.setToolTip(
+            "When checked, uses interpolation for sub-sample accurate shifts.\n"
+            "When unchecked, rounds to nearest sample (faster but less accurate)."
+        )
+        interp_layout.addWidget(self.interpolate_checkbox)
+        interp_layout.addStretch()
+        layout.addLayout(interp_layout)
+
         # Help text
         help_text = QLabel(
             "Time shift moves the waveform in time:\n"
             "• Positive values: shift right (delay signal)\n"
             "• Negative values: shift left (advance signal)\n"
+            "• Interpolation enables sub-sample accurate shifts\n"
             "• Shifted portions wrap around (circular shift)"
         )
         help_text.setWordWrap(True)
@@ -270,8 +283,8 @@ class TimeShiftConfigDialog(QDialog):
             self.shift_spinbox.setSingleStep(1.0)
         else:  # Nanoseconds
             self.unit_label.setText("ns")
-            self.shift_spinbox.setDecimals(3)
-            self.shift_spinbox.setSingleStep(0.1)
+            self.shift_spinbox.setDecimals(6)  # Allow very precise values like 0.0023 ns
+            self.shift_spinbox.setSingleStep(0.001)
 
     def _load_existing_config(self):
         """Load existing time shift configuration into dialog."""
@@ -283,11 +296,15 @@ class TimeShiftConfigDialog(QDialog):
         if 'shift_amount' in self.existing_config:
             self.shift_spinbox.setValue(self.existing_config['shift_amount'])
 
+        if 'interpolate' in self.existing_config:
+            self.interpolate_checkbox.setChecked(self.existing_config['interpolate'])
+
     def get_shift_config(self):
         """Get the time shift configuration entered by the user."""
         return {
             'shift_unit': self.unit_combo.currentText(),
-            'shift_amount': self.shift_spinbox.value()
+            'shift_amount': self.shift_spinbox.value(),
+            'interpolate': self.interpolate_checkbox.isChecked()
         }
 
 
@@ -1073,26 +1090,51 @@ class MathChannelsWindow(QWidget):
         try:
             shift_unit = shift_config['shift_unit']
             shift_amount = shift_config['shift_amount']
+            use_interpolation = shift_config.get('interpolate', False)
 
+            if len(x_data) < 2:
+                return y_data.copy()
+
+            dt = x_data[1] - x_data[0]  # Time step in current units
+
+            # Calculate the exact shift in samples (may be fractional)
             if shift_unit == 'Samples':
-                # Shift by integer number of samples
-                shift_samples = int(shift_amount)
+                shift_samples = shift_amount
             else:  # Nanoseconds
-                # Calculate sample rate from x_data
-                if len(x_data) < 2:
-                    return y_data.copy()
-
-                dt = x_data[1] - x_data[0]  # Time step in current units
                 # Convert shift from nanoseconds to current time units
                 shift_in_current_units = shift_amount / self.state.nsunits
-                # Calculate number of samples
-                shift_samples = int(round(shift_in_current_units / dt))
+                # Calculate number of samples (keep fractional part)
+                shift_samples = shift_in_current_units / dt
 
-            # Apply circular shift using np.roll
-            # Positive shift = delay (shift right), Negative shift = advance (shift left)
-            y_shifted = np.roll(y_data, shift_samples)
+            # Check if we have a fractional shift and interpolation is enabled
+            fractional_part = abs(shift_samples - round(shift_samples))
+            has_fractional_shift = fractional_part > 1e-9  # Tolerance for floating point comparison
 
-            return y_shifted
+            if use_interpolation and has_fractional_shift:
+                # Use interpolation for sub-sample accurate shifting
+                # Create interpolation function (linear interpolation)
+                # Use 'extrapolate' to handle edge cases
+                interp_func = interpolate.interp1d(
+                    x_data, y_data, kind='linear',
+                    bounds_error=False, fill_value='extrapolate'
+                )
+
+                # Calculate shifted time points
+                # Positive shift = delay (shift right), so subtract from time
+                # Negative shift = advance (shift left), so add to time
+                x_shifted = x_data - (shift_samples * dt)
+
+                # Interpolate at the shifted time points
+                y_shifted = interp_func(x_shifted)
+
+                return y_shifted
+            else:
+                # Use integer sample shift with circular wrapping
+                # Positive shift = delay (shift right), Negative shift = advance (shift left)
+                shift_samples_int = int(round(shift_samples))
+                y_shifted = np.roll(y_data, shift_samples_int)
+
+                return y_shifted
 
         except Exception as e:
             print(f"Error applying time shift: {e}")
