@@ -4,10 +4,11 @@
 import sys
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QComboBox,
                              QPushButton, QListWidget, QLabel, QGroupBox, QColorDialog, QListWidgetItem, QCheckBox,
-                             QDialog, QLineEdit, QTextEdit, QDialogButtonBox, QMessageBox)
+                             QDialog, QLineEdit, QTextEdit, QDialogButtonBox, QMessageBox, QDoubleSpinBox, QSpinBox)
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QPixmap, QIcon
 import numpy as np
+from scipy import signal
 
 
 class RefreshingComboBox(QComboBox):
@@ -22,6 +23,177 @@ class RefreshingComboBox(QComboBox):
         if self.refresh_callback:
             self.refresh_callback()
         super().showPopup()
+
+
+class FilterConfigDialog(QDialog):
+    """Dialog for configuring digital filter parameters."""
+
+    def __init__(self, filter_type, parent=None, existing_config=None):
+        """
+        Args:
+            filter_type: Type of filter ('Low-pass', 'High-pass', 'Band-pass', 'Band-stop')
+            parent: Parent widget
+            existing_config: Dictionary with existing filter config (for editing)
+        """
+        super().__init__(parent)
+        self.filter_type = filter_type
+        self.existing_config = existing_config
+        self.setWindowTitle(f"Configure {filter_type} Filter")
+        self.setModal(True)
+        self.setup_ui()
+
+    def setup_ui(self):
+        """Setup the UI layout."""
+        layout = QVBoxLayout()
+
+        # Filter design type (Butterworth, Chebyshev)
+        design_layout = QHBoxLayout()
+        design_layout.addWidget(QLabel("Filter Design:"))
+        self.design_combo = QComboBox()
+        self.design_combo.addItems(['Butterworth', 'Chebyshev Type I'])
+        design_layout.addWidget(self.design_combo)
+        layout.addLayout(design_layout)
+
+        # Filter order
+        order_layout = QHBoxLayout()
+        order_layout.addWidget(QLabel("Filter Order:"))
+        self.order_spinbox = QSpinBox()
+        self.order_spinbox.setRange(1, 10)
+        self.order_spinbox.setValue(4)
+        self.order_spinbox.setToolTip("Higher order = sharper cutoff, but more computation")
+        order_layout.addWidget(self.order_spinbox)
+        layout.addLayout(order_layout)
+
+        # Cutoff frequency (or frequencies for band-pass/stop)
+        if self.filter_type in ['Band-pass', 'Band-stop']:
+            # Two cutoff frequencies needed
+            freq_layout1 = QHBoxLayout()
+            freq_layout1.addWidget(QLabel("Lower Cutoff (MHz):"))
+            self.cutoff_spinbox1 = QDoubleSpinBox()
+            self.cutoff_spinbox1.setRange(0.001, 10000)
+            self.cutoff_spinbox1.setValue(10.0)
+            self.cutoff_spinbox1.setDecimals(3)
+            self.cutoff_spinbox1.setSingleStep(1.0)
+            freq_layout1.addWidget(self.cutoff_spinbox1)
+            layout.addLayout(freq_layout1)
+
+            freq_layout2 = QHBoxLayout()
+            freq_layout2.addWidget(QLabel("Upper Cutoff (MHz):"))
+            self.cutoff_spinbox2 = QDoubleSpinBox()
+            self.cutoff_spinbox2.setRange(0.001, 10000)
+            self.cutoff_spinbox2.setValue(100.0)
+            self.cutoff_spinbox2.setDecimals(3)
+            self.cutoff_spinbox2.setSingleStep(1.0)
+            freq_layout2.addWidget(self.cutoff_spinbox2)
+            layout.addLayout(freq_layout2)
+        else:
+            # Single cutoff frequency
+            freq_layout = QHBoxLayout()
+            freq_layout.addWidget(QLabel("Cutoff Frequency (MHz):"))
+            self.cutoff_spinbox1 = QDoubleSpinBox()
+            self.cutoff_spinbox1.setRange(0.001, 10000)
+            self.cutoff_spinbox1.setValue(50.0)
+            self.cutoff_spinbox1.setDecimals(3)
+            self.cutoff_spinbox1.setSingleStep(1.0)
+            freq_layout.addWidget(self.cutoff_spinbox1)
+            layout.addLayout(freq_layout)
+
+        # Chebyshev ripple (only shown for Chebyshev)
+        ripple_layout = QHBoxLayout()
+        self.ripple_label = QLabel("Passband Ripple (dB):")
+        ripple_layout.addWidget(self.ripple_label)
+        self.ripple_spinbox = QDoubleSpinBox()
+        self.ripple_spinbox.setRange(0.01, 10.0)
+        self.ripple_spinbox.setValue(0.5)
+        self.ripple_spinbox.setDecimals(2)
+        self.ripple_spinbox.setSingleStep(0.1)
+        self.ripple_spinbox.setToolTip("Smaller values = flatter passband, but slower rolloff")
+        ripple_layout.addWidget(self.ripple_spinbox)
+        layout.addLayout(ripple_layout)
+
+        # Show/hide ripple based on design type
+        self.design_combo.currentTextChanged.connect(self._update_ripple_visibility)
+        self._update_ripple_visibility()
+
+        # Help text
+        help_text = QLabel(
+            f"{self.filter_type} filter will be applied to the signal.\n"
+            "Cutoff frequency should be less than half the sample rate (Nyquist)."
+        )
+        help_text.setWordWrap(True)
+        help_text.setStyleSheet("color: gray; font-size: 9pt;")
+        layout.addWidget(help_text)
+
+        # Buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.validate_and_accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+        self.setLayout(layout)
+
+        # Load existing config if provided
+        if self.existing_config:
+            self._load_existing_config()
+
+    def _update_ripple_visibility(self):
+        """Show/hide ripple controls based on filter design type."""
+        is_chebyshev = 'Chebyshev' in self.design_combo.currentText()
+        self.ripple_label.setVisible(is_chebyshev)
+        self.ripple_spinbox.setVisible(is_chebyshev)
+
+    def _load_existing_config(self):
+        """Load existing filter configuration into dialog."""
+        if 'filter_design' in self.existing_config:
+            index = self.design_combo.findText(self.existing_config['filter_design'])
+            if index >= 0:
+                self.design_combo.setCurrentIndex(index)
+
+        if 'filter_order' in self.existing_config:
+            self.order_spinbox.setValue(self.existing_config['filter_order'])
+
+        if 'cutoff_freq' in self.existing_config:
+            if isinstance(self.existing_config['cutoff_freq'], (list, tuple)):
+                self.cutoff_spinbox1.setValue(self.existing_config['cutoff_freq'][0])
+                if hasattr(self, 'cutoff_spinbox2'):
+                    self.cutoff_spinbox2.setValue(self.existing_config['cutoff_freq'][1])
+            else:
+                self.cutoff_spinbox1.setValue(self.existing_config['cutoff_freq'])
+
+        if 'ripple_db' in self.existing_config:
+            self.ripple_spinbox.setValue(self.existing_config['ripple_db'])
+
+    def validate_and_accept(self):
+        """Validate inputs before accepting."""
+        # For band-pass/stop, ensure lower < upper
+        if self.filter_type in ['Band-pass', 'Band-stop']:
+            lower = self.cutoff_spinbox1.value()
+            upper = self.cutoff_spinbox2.value()
+            if lower >= upper:
+                QMessageBox.warning(self, "Invalid Frequencies",
+                                  "Lower cutoff must be less than upper cutoff.")
+                return
+
+        self.accept()
+
+    def get_filter_config(self):
+        """Get the filter configuration entered by the user."""
+        config = {
+            'filter_design': self.design_combo.currentText(),
+            'filter_order': self.order_spinbox.value(),
+        }
+
+        # Get cutoff frequency(s)
+        if self.filter_type in ['Band-pass', 'Band-stop']:
+            config['cutoff_freq'] = [self.cutoff_spinbox1.value(), self.cutoff_spinbox2.value()]
+        else:
+            config['cutoff_freq'] = self.cutoff_spinbox1.value()
+
+        # Get ripple for Chebyshev
+        if 'Chebyshev' in self.design_combo.currentText():
+            config['ripple_db'] = self.ripple_spinbox.value()
+
+        return config
 
 
 class CustomOperationDialog(QDialog):
@@ -403,6 +575,15 @@ class MathChannelsWindow(QWidget):
         self.operation_combo.addItems(['Invert', 'Abs', 'Square', 'Sqrt', 'Log', 'Exp',
                                        'Integrate', 'Differentiate', 'Envelope', 'Smooth', 'Minimum', 'Maximum'])
 
+        # Add separator for filters
+        filter_separator_idx = self.operation_combo.count()
+        self.operation_combo.insertSeparator(filter_separator_idx)
+        self.operation_combo.addItem('--- Digital Filters ---')
+        self.operation_combo.model().item(filter_separator_idx + 1).setEnabled(False)  # Make it non-selectable
+
+        # Filter operations
+        self.operation_combo.addItems(['Low-pass', 'High-pass', 'Band-pass', 'Band-stop'])
+
         # Add custom operations if any
         if self.custom_operations:
             separator_idx = self.operation_combo.count()
@@ -424,6 +605,11 @@ class MathChannelsWindow(QWidget):
         """
         two_channel_ops = ['A-B', 'A+B', 'A*B', 'A/B', 'min(A,B)', 'max(A,B)',
                           '-', '+', '*', '/']  # Include old format for backward compatibility
+
+        # Filter operations are single-channel
+        filter_ops = ['Low-pass', 'High-pass', 'Band-pass', 'Band-stop']
+        if operation in filter_ops:
+            return False
 
         # Check built-in operations
         if operation in two_channel_ops:
@@ -678,6 +864,94 @@ class MathChannelsWindow(QWidget):
 
         return math_name in deps
 
+    def is_filter_operation(self, operation):
+        """Check if an operation is a digital filter.
+
+        Args:
+            operation: The operation string
+
+        Returns:
+            True if operation is a filter, False otherwise
+        """
+        return operation in ['Low-pass', 'High-pass', 'Band-pass', 'Band-stop']
+
+    def _apply_digital_filter(self, y_data, x_data, filter_type, filter_config):
+        """Apply a digital filter to the signal.
+
+        Args:
+            y_data: Signal data to filter
+            x_data: Time axis data
+            filter_type: Type of filter ('Low-pass', 'High-pass', 'Band-pass', 'Band-stop')
+            filter_config: Dictionary containing filter parameters
+
+        Returns:
+            Filtered signal data
+        """
+        try:
+            # Calculate sample rate from x_data (assume uniform spacing)
+            if len(x_data) < 2:
+                return y_data.copy()
+
+            # Sample rate in Hz (x_data is in current time units, need to convert)
+            dt = x_data[1] - x_data[0]  # Time step in current units (ns, us, ms, etc.)
+            # Convert to seconds based on state.nsunits
+            dt_seconds = dt * self.state.nsunits / 1e9  # Convert from current units to seconds
+            sample_rate_hz = 1.0 / dt_seconds
+
+            # Get filter parameters
+            cutoff_freq_mhz = filter_config['cutoff_freq']  # MHz
+            filter_order = filter_config['filter_order']
+            filter_design = filter_config['filter_design']
+
+            # Convert cutoff frequency from MHz to Hz
+            if isinstance(cutoff_freq_mhz, (list, tuple)):
+                cutoff_freq_hz = [f * 1e6 for f in cutoff_freq_mhz]
+            else:
+                cutoff_freq_hz = cutoff_freq_mhz * 1e6
+
+            # Normalize cutoff frequency to Nyquist frequency
+            nyquist_freq = sample_rate_hz / 2.0
+            if isinstance(cutoff_freq_hz, (list, tuple)):
+                wn = [f / nyquist_freq for f in cutoff_freq_hz]
+                # Check if frequencies are valid
+                if any(w <= 0 or w >= 1 for w in wn):
+                    print(f"Warning: Filter cutoff frequencies {cutoff_freq_mhz} MHz are outside valid range (0 to {nyquist_freq/1e6:.3f} MHz)")
+                    return y_data.copy()
+            else:
+                wn = cutoff_freq_hz / nyquist_freq
+                # Check if frequency is valid
+                if wn <= 0 or wn >= 1:
+                    print(f"Warning: Filter cutoff frequency {cutoff_freq_mhz} MHz is outside valid range (0 to {nyquist_freq/1e6:.3f} MHz)")
+                    return y_data.copy()
+
+            # Map filter type to scipy btype
+            btype_map = {
+                'Low-pass': 'lowpass',
+                'High-pass': 'highpass',
+                'Band-pass': 'bandpass',
+                'Band-stop': 'bandstop'
+            }
+            btype = btype_map[filter_type]
+
+            # Design the filter based on filter design type
+            if 'Butterworth' in filter_design:
+                b, a = signal.butter(filter_order, wn, btype=btype)
+            elif 'Chebyshev' in filter_design:
+                ripple_db = filter_config.get('ripple_db', 0.5)
+                b, a = signal.cheby1(filter_order, ripple_db, wn, btype=btype)
+            else:
+                # Default to Butterworth
+                b, a = signal.butter(filter_order, wn, btype=btype)
+
+            # Apply the filter using filtfilt for zero-phase filtering
+            y_filtered = signal.filtfilt(b, a, y_data)
+
+            return y_filtered
+
+        except Exception as e:
+            print(f"Error applying {filter_type} filter: {e}")
+            return y_data.copy()
+
     def add_math_channel(self):
         """Add a new math channel to the list."""
         ch_a = self.channel_a_combo.currentData()
@@ -693,6 +967,14 @@ class MathChannelsWindow(QWidget):
                 return
         else:
             ch_b = None  # Single-channel operation
+
+        # If it's a filter operation, open configuration dialog
+        filter_config = None
+        if self.is_filter_operation(op):
+            dialog = FilterConfigDialog(op, self)
+            if dialog.exec_() != QDialog.Accepted:
+                return  # User cancelled
+            filter_config = dialog.get_filter_config()
 
         # Create a unique name for this math channel
         math_name = f"Math{len(self.math_channels) + 1}"
@@ -723,7 +1005,8 @@ class MathChannelsWindow(QWidget):
             'color': color,
             'displayed': not uses_disabled_channel,  # False if using disabled channel, True otherwise
             'width': line_width,  # Store the line width that was active when math channel was created
-            'fft_enabled': False  # Track FFT state for this math channel
+            'fft_enabled': False,  # Track FFT state for this math channel
+            'filter_config': filter_config  # Store filter configuration if it's a filter operation
         }
 
         self.math_channels.append(math_def)
@@ -738,6 +1021,13 @@ class MathChannelsWindow(QWidget):
             # Replace A and B in the operation string with actual channel names
             op_display = op.replace('B', " "+ch_b_text).replace('A', ch_a_text+" ")
             display_text = f"{math_name}: {op_display}"
+        elif self.is_filter_operation(op) and filter_config:
+            # For filters, show the cutoff frequency
+            cutoff = filter_config['cutoff_freq']
+            if isinstance(cutoff, (list, tuple)):
+                display_text = f"{math_name}: {op}({ch_a_text}, {cutoff[0]}-{cutoff[1]} MHz)"
+            else:
+                display_text = f"{math_name}: {op}({ch_a_text}, {cutoff} MHz)"
         else:
             display_text = f"{math_name}: {op}({ch_a_text})"
 
@@ -771,6 +1061,16 @@ class MathChannelsWindow(QWidget):
         else:
             ch_b = None  # Single-channel operation
 
+        # If it's a filter operation, open configuration dialog with existing config if available
+        filter_config = None
+        if self.is_filter_operation(op):
+            # Get existing filter config if this was already a filter operation
+            existing_config = self.math_channels[current_row].get('filter_config') if self.math_channels[current_row]['operation'] == op else None
+            dialog = FilterConfigDialog(op, self, existing_config)
+            if dialog.exec_() != QDialog.Accepted:
+                return  # User cancelled
+            filter_config = dialog.get_filter_config()
+
         # Get the math channel name
         math_name = self.math_channels[current_row]['name']
 
@@ -788,6 +1088,7 @@ class MathChannelsWindow(QWidget):
         self.math_channels[current_row]['ch1'] = ch_a
         self.math_channels[current_row]['ch2'] = ch_b
         self.math_channels[current_row]['operation'] = op
+        self.math_channels[current_row]['filter_config'] = filter_config
         # Update displayed state if using disabled channel
         if uses_disabled_channel:
             self.math_channels[current_row]['displayed'] = False
@@ -802,6 +1103,13 @@ class MathChannelsWindow(QWidget):
             # Replace A and B in the operation string with actual channel names
             op_display = op.replace('B', " "+ch_b_text).replace('A', ch_a_text+" ")
             display_text = f"{math_name}: {op_display}"
+        elif self.is_filter_operation(op) and filter_config:
+            # For filters, show the cutoff frequency
+            cutoff = filter_config['cutoff_freq']
+            if isinstance(cutoff, (list, tuple)):
+                display_text = f"{math_name}: {op}({ch_a_text}, {cutoff[0]}-{cutoff[1]} MHz)"
+            else:
+                display_text = f"{math_name}: {op}({ch_a_text}, {cutoff} MHz)"
         else:
             display_text = f"{math_name}: {op}({ch_a_text})"
 
@@ -1314,6 +1622,14 @@ class MathChannelsWindow(QWidget):
                                 self.running_minmax[math_name]['max'], y1
                             )
                             y_result = self.running_minmax[math_name]['max'].copy()
+                    elif self.is_filter_operation(operation):
+                        # Digital filter operations
+                        filter_config = math_def.get('filter_config')
+                        if filter_config:
+                            y_result = self._apply_digital_filter(y1, x1, operation, filter_config)
+                        else:
+                            # No filter config, just pass through
+                            y_result = y1.copy()
                     else:
                         # Check if it's a custom single-channel operation
                         custom_op = next((op for op in self.custom_operations if op['name'] == operation), None)
