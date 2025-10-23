@@ -380,10 +380,11 @@ class PlotManager(pg.QtCore.QObject):
                         for i in range(trigger_idx, -1, -1):
                             if yc[i] < edge_min:
                                 edge_min = yc[i]
-                            elif yc[i] - edge_min > delta_threshold:
+                            elif yc[i] - edge_min > 0: # delta_threshold: # finding the min we just ask it to be about flat
                                 break
 
                         threshold_to_use = (edge_min + edge_max) / 2.0
+                        #print(edge_max, edge_min)
 
                     if xc.size > 1:
                         distcorrtemp = find_crossing_distance(yc, threshold_to_use, vline_time, xc[0], xc[1] - xc[0])
