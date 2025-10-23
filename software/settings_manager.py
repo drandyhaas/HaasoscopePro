@@ -336,43 +336,9 @@ def load_setup(main_window):
         s.min_x = setup['min_x']
     if 'max_x' in setup:
         s.max_x = setup['max_x']
-    if 'xy_mode' in setup and setup['xy_mode']:
-        # Restore XY mode if it was enabled
-        if s.dotwochannel[s.activeboard]:
-            main_window.ui.actionXY_Plot.setChecked(True)
-            main_window.plot_manager.toggle_xy_view(True, s.activeboard)
 
-    # Restore XY window visibility, geometry, and channel selections
-    if 'xy_window_visible' in setup and setup['xy_window_visible']:
-        # Show the XY window if it was visible when saved
-        if main_window.xy_window is None:
-            from xy_window import XYWindow
-            main_window.xy_window = XYWindow(main_window, main_window.state, main_window.plot_manager)
-            main_window.xy_window.window_closed.connect(main_window.on_xy_window_closed)
-
-        # Restore geometry if available
-        if 'xy_window_geometry' in setup:
-            geo = setup['xy_window_geometry']
-            main_window.xy_window.setGeometry(geo['x'], geo['y'], geo['width'], geo['height'])
-
-        # Restore channel selections if available
-        if 'xy_window_y_channel' in setup:
-            main_window.xy_window.y_channel = setup['xy_window_y_channel']
-            # Find the combo box index for this channel
-            for i in range(main_window.xy_window.y_channel_combo.count()):
-                if main_window.xy_window.y_channel_combo.itemData(i) == setup['xy_window_y_channel']:
-                    main_window.xy_window.y_channel_combo.setCurrentIndex(i)
-                    break
-
-        if 'xy_window_x_channel' in setup:
-            main_window.xy_window.x_channel = setup['xy_window_x_channel']
-            # Find the combo box index for this channel
-            for i in range(main_window.xy_window.x_channel_combo.count()):
-                if main_window.xy_window.x_channel_combo.itemData(i) == setup['xy_window_x_channel']:
-                    main_window.xy_window.x_channel_combo.setCurrentIndex(i)
-                    break
-
-        main_window.xy_window.show()
+    # Note: xy_mode and XY window restoration moved to after display updates
+    # so that channel lists are properly populated based on loaded board modes
 
     # Processing settings
     if 'saved_doresamp' in setup:
@@ -695,6 +661,43 @@ def load_setup(main_window):
 
         # Repopulate the operations combo box
         main_window.math_window.populate_operations()
+
+    # Restore XY window visibility, geometry, and channel selections
+    # This is done AFTER display updates and channel list refreshes to ensure
+    # the XY window has the correct available channels
+    if 'xy_window_visible' in setup and setup['xy_window_visible']:
+        # Show the XY window if it was visible when saved
+        if main_window.xy_window is None:
+            from xy_window import XYWindow
+            main_window.xy_window = XYWindow(main_window, main_window.state, main_window.plot_manager)
+            main_window.xy_window.window_closed.connect(main_window.on_xy_window_closed)
+
+        # Restore geometry if available
+        if 'xy_window_geometry' in setup:
+            geo = setup['xy_window_geometry']
+            main_window.xy_window.setGeometry(geo['x'], geo['y'], geo['width'], geo['height'])
+
+        # Restore channel selections if available
+        if 'xy_window_y_channel' in setup:
+            main_window.xy_window.y_channel = setup['xy_window_y_channel']
+            # Find the combo box index for this channel
+            for i in range(main_window.xy_window.y_channel_combo.count()):
+                if main_window.xy_window.y_channel_combo.itemData(i) == setup['xy_window_y_channel']:
+                    main_window.xy_window.y_channel_combo.setCurrentIndex(i)
+                    break
+
+        if 'xy_window_x_channel' in setup:
+            main_window.xy_window.x_channel = setup['xy_window_x_channel']
+            # Find the combo box index for this channel
+            for i in range(main_window.xy_window.x_channel_combo.count()):
+                if main_window.xy_window.x_channel_combo.itemData(i) == setup['xy_window_x_channel']:
+                    main_window.xy_window.x_channel_combo.setCurrentIndex(i)
+                    break
+
+        # Show the XY window and update state to match
+        main_window.xy_window.show()
+        s.xy_mode = True
+        main_window.ui.actionXY_Plot.setChecked(True)
 
     # Resume acquisition if it was running
     if not was_paused:
