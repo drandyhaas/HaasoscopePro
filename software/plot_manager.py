@@ -94,9 +94,6 @@ class PlotManager(pg.QtCore.QObject):
         # Stabilized data for math channel calculations (after trigger stabilizers)
         self.stabilized_data = [None] * self.nlines
 
-        # Cumulative correction tracking for extra trig stabilizer (in ns)
-        self.cumulative_correction = [0.0] * self.nlines
-
         # Cursor manager (will be initialized after linepens are created)
         self.cursor_manager = None
 
@@ -348,7 +345,7 @@ class PlotManager(pg.QtCore.QObject):
                 xc = xdatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]
 
                 if xc.size > 2:
-                    numsamp = s.distcorrsamp
+                    numsamp = s.distcorrsamp*10
                     if s.doresamp[noext_li]: numsamp *= s.doresamp[noext_li]
                     fitwidth *= numsamp / xc.size
 
@@ -388,20 +385,13 @@ class PlotManager(pg.QtCore.QObject):
 
                     if xc.size > 1:
                         distcorrtemp = find_crossing_distance(yc, threshold_to_use, vline_time, xc[0], xc[1] - xc[0])
-                        max_correction = s.distcorrtol * 100 * s.downsamplefactor / s.nsunits
+                        #print("distcorrtemp", distcorrtemp)
+                        max_correction = s.distcorrtol * 10 * s.downsamplefactor / s.nsunits
+                        #print("max_correction", max_correction)
                         if distcorrtemp is not None and abs(distcorrtemp) < max_correction:
-
-                            # Clamp the correction to stay within the limit
-                            new_cumulative = self.cumulative_correction[noext_li] + distcorrtemp
-                            if abs(new_cumulative) > max_correction:
-                                if new_cumulative > 0:
-                                    distcorrtemp = max_correction - self.cumulative_correction[noext_li]
-                                else:
-                                    distcorrtemp = -max_correction - self.cumulative_correction[noext_li]
-
+                            # No need to clamp the correction to stay within the limit, since it is starting fresh every time
                             # Store the correction to apply to all boards
                             extra_trig_correction = distcorrtemp
-                            self.cumulative_correction[noext_li] += distcorrtemp
 
         # Second pass: apply correction and plot
         for li in range(self.nlines):
@@ -865,10 +855,6 @@ class PlotManager(pg.QtCore.QObject):
             self.peak_min_line[active_channel].clear()
         # Skip the next event to avoid glitches after timebase changes
         self.peak_skip_events = 1
-
-    def reset_cumulative_correction(self):
-        """Reset cumulative trigger correction when depth or other settings change."""
-        self.cumulative_correction = [0.0] * self.nlines
 
     def _update_peak_data(self, channel_index, x_data, y_data):
         """Update peak max/min data for a channel.
