@@ -196,6 +196,101 @@ class FilterConfigDialog(QDialog):
         return config
 
 
+class TimeShiftConfigDialog(QDialog):
+    """Dialog for configuring time shift parameters."""
+
+    def __init__(self, parent=None, existing_config=None):
+        """
+        Args:
+            parent: Parent widget
+            existing_config: Dictionary with existing time shift config (for editing)
+        """
+        super().__init__(parent)
+        self.existing_config = existing_config
+        self.setWindowTitle("Configure Time Shift")
+        self.setModal(True)
+        self.setup_ui()
+
+    def setup_ui(self):
+        """Setup the UI layout."""
+        layout = QVBoxLayout()
+
+        # Shift unit selector (Samples or Nanoseconds)
+        unit_layout = QHBoxLayout()
+        unit_layout.addWidget(QLabel("Shift Unit:"))
+        self.unit_combo = QComboBox()
+        self.unit_combo.addItems(['Samples', 'Nanoseconds'])
+        self.unit_combo.currentTextChanged.connect(self._update_unit_label)
+        unit_layout.addWidget(self.unit_combo)
+        layout.addLayout(unit_layout)
+
+        # Shift amount
+        shift_layout = QHBoxLayout()
+        self.shift_label = QLabel("Shift Amount:")
+        shift_layout.addWidget(self.shift_label)
+        self.shift_spinbox = QDoubleSpinBox()
+        self.shift_spinbox.setRange(-1000000, 1000000)
+        self.shift_spinbox.setValue(0)
+        self.shift_spinbox.setDecimals(3)
+        self.shift_spinbox.setSingleStep(1.0)
+        self.shift_spinbox.setToolTip("Positive = shift right (delay), Negative = shift left (advance)")
+        shift_layout.addWidget(self.shift_spinbox)
+        self.unit_label = QLabel("samples")
+        shift_layout.addWidget(self.unit_label)
+        layout.addLayout(shift_layout)
+
+        # Help text
+        help_text = QLabel(
+            "Time shift moves the waveform in time:\n"
+            "• Positive values: shift right (delay signal)\n"
+            "• Negative values: shift left (advance signal)\n"
+            "• Shifted portions wrap around (circular shift)"
+        )
+        help_text.setWordWrap(True)
+        help_text.setStyleSheet("color: gray; font-size: 9pt;")
+        layout.addWidget(help_text)
+
+        # Buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+        self.setLayout(layout)
+
+        # Load existing config if provided
+        if self.existing_config:
+            self._load_existing_config()
+
+    def _update_unit_label(self):
+        """Update the unit label based on selected unit type."""
+        if self.unit_combo.currentText() == 'Samples':
+            self.unit_label.setText("samples")
+            self.shift_spinbox.setDecimals(0)
+            self.shift_spinbox.setSingleStep(1.0)
+        else:  # Nanoseconds
+            self.unit_label.setText("ns")
+            self.shift_spinbox.setDecimals(3)
+            self.shift_spinbox.setSingleStep(0.1)
+
+    def _load_existing_config(self):
+        """Load existing time shift configuration into dialog."""
+        if 'shift_unit' in self.existing_config:
+            index = self.unit_combo.findText(self.existing_config['shift_unit'])
+            if index >= 0:
+                self.unit_combo.setCurrentIndex(index)
+
+        if 'shift_amount' in self.existing_config:
+            self.shift_spinbox.setValue(self.existing_config['shift_amount'])
+
+    def get_shift_config(self):
+        """Get the time shift configuration entered by the user."""
+        return {
+            'shift_unit': self.unit_combo.currentText(),
+            'shift_amount': self.shift_spinbox.value()
+        }
+
+
 class CustomOperationDialog(QDialog):
     """Dialog for creating custom math operations."""
 
@@ -573,7 +668,8 @@ class MathChannelsWindow(QWidget):
 
         # Single-channel operations
         self.operation_combo.addItems(['Invert', 'Abs', 'Square', 'Sqrt', 'Log', 'Exp',
-                                       'Integrate', 'Differentiate', 'Envelope', 'Smooth', 'Minimum', 'Maximum'])
+                                       'Integrate', 'Differentiate', 'Envelope', 'Smooth', 'Minimum', 'Maximum',
+                                       'AC Coupling'])
 
         # Add separator for filters
         filter_separator_idx = self.operation_combo.count()
@@ -582,7 +678,7 @@ class MathChannelsWindow(QWidget):
         self.operation_combo.model().item(filter_separator_idx + 1).setEnabled(False)  # Make it non-selectable
 
         # Filter operations
-        self.operation_combo.addItems(['Low-pass', 'High-pass', 'Band-pass', 'Band-stop'])
+        self.operation_combo.addItems(['Low-pass', 'High-pass', 'Band-pass', 'Band-stop', 'Time Shift'])
 
         # Add custom operations if any
         if self.custom_operations:
@@ -875,6 +971,17 @@ class MathChannelsWindow(QWidget):
         """
         return operation in ['Low-pass', 'High-pass', 'Band-pass', 'Band-stop']
 
+    def is_configurable_operation(self, operation):
+        """Check if an operation requires a configuration dialog.
+
+        Args:
+            operation: The operation string
+
+        Returns:
+            True if operation needs configuration, False otherwise
+        """
+        return operation in ['Low-pass', 'High-pass', 'Band-pass', 'Band-stop', 'Time Shift']
+
     def _apply_digital_filter(self, y_data, x_data, filter_type, filter_config):
         """Apply a digital filter to the signal.
 
@@ -952,6 +1059,45 @@ class MathChannelsWindow(QWidget):
             print(f"Error applying {filter_type} filter: {e}")
             return y_data.copy()
 
+    def _apply_time_shift(self, y_data, x_data, shift_config):
+        """Apply a time shift to the signal.
+
+        Args:
+            y_data: Signal data to shift
+            x_data: Time axis data
+            shift_config: Dictionary containing shift parameters
+
+        Returns:
+            Time-shifted signal data
+        """
+        try:
+            shift_unit = shift_config['shift_unit']
+            shift_amount = shift_config['shift_amount']
+
+            if shift_unit == 'Samples':
+                # Shift by integer number of samples
+                shift_samples = int(shift_amount)
+            else:  # Nanoseconds
+                # Calculate sample rate from x_data
+                if len(x_data) < 2:
+                    return y_data.copy()
+
+                dt = x_data[1] - x_data[0]  # Time step in current units
+                # Convert shift from nanoseconds to current time units
+                shift_in_current_units = shift_amount / self.state.nsunits
+                # Calculate number of samples
+                shift_samples = int(round(shift_in_current_units / dt))
+
+            # Apply circular shift using np.roll
+            # Positive shift = delay (shift right), Negative shift = advance (shift left)
+            y_shifted = np.roll(y_data, shift_samples)
+
+            return y_shifted
+
+        except Exception as e:
+            print(f"Error applying time shift: {e}")
+            return y_data.copy()
+
     def add_math_channel(self):
         """Add a new math channel to the list."""
         ch_a = self.channel_a_combo.currentData()
@@ -968,13 +1114,19 @@ class MathChannelsWindow(QWidget):
         else:
             ch_b = None  # Single-channel operation
 
-        # If it's a filter operation, open configuration dialog
-        filter_config = None
-        if self.is_filter_operation(op):
-            dialog = FilterConfigDialog(op, self)
-            if dialog.exec_() != QDialog.Accepted:
-                return  # User cancelled
-            filter_config = dialog.get_filter_config()
+        # If it's a configurable operation, open appropriate configuration dialog
+        operation_config = None
+        if self.is_configurable_operation(op):
+            if self.is_filter_operation(op):
+                dialog = FilterConfigDialog(op, self)
+                if dialog.exec_() != QDialog.Accepted:
+                    return  # User cancelled
+                operation_config = dialog.get_filter_config()
+            elif op == 'Time Shift':
+                dialog = TimeShiftConfigDialog(self)
+                if dialog.exec_() != QDialog.Accepted:
+                    return  # User cancelled
+                operation_config = dialog.get_shift_config()
 
         # Create a unique name for this math channel
         math_name = f"Math{len(self.math_channels) + 1}"
@@ -1006,7 +1158,7 @@ class MathChannelsWindow(QWidget):
             'displayed': not uses_disabled_channel,  # False if using disabled channel, True otherwise
             'width': line_width,  # Store the line width that was active when math channel was created
             'fft_enabled': False,  # Track FFT state for this math channel
-            'filter_config': filter_config  # Store filter configuration if it's a filter operation
+            'operation_config': operation_config  # Store operation configuration (for filters, time shift, etc.)
         }
 
         self.math_channels.append(math_def)
@@ -1021,13 +1173,19 @@ class MathChannelsWindow(QWidget):
             # Replace A and B in the operation string with actual channel names
             op_display = op.replace('B', " "+ch_b_text).replace('A', ch_a_text+" ")
             display_text = f"{math_name}: {op_display}"
-        elif self.is_filter_operation(op) and filter_config:
+        elif self.is_filter_operation(op) and operation_config:
             # For filters, show the cutoff frequency
-            cutoff = filter_config['cutoff_freq']
+            cutoff = operation_config['cutoff_freq']
             if isinstance(cutoff, (list, tuple)):
                 display_text = f"{math_name}: {op}({ch_a_text}, {cutoff[0]}-{cutoff[1]} MHz)"
             else:
                 display_text = f"{math_name}: {op}({ch_a_text}, {cutoff} MHz)"
+        elif op == 'Time Shift' and operation_config:
+            # For time shift, show the shift amount and unit
+            shift_amount = operation_config['shift_amount']
+            shift_unit = operation_config['shift_unit']
+            unit_abbr = 'smp' if shift_unit == 'Samples' else 'ns'
+            display_text = f"{math_name}: {op}({ch_a_text}, {shift_amount:+.0f} {unit_abbr})"
         else:
             display_text = f"{math_name}: {op}({ch_a_text})"
 
@@ -1061,15 +1219,22 @@ class MathChannelsWindow(QWidget):
         else:
             ch_b = None  # Single-channel operation
 
-        # If it's a filter operation, open configuration dialog with existing config if available
-        filter_config = None
-        if self.is_filter_operation(op):
-            # Get existing filter config if this was already a filter operation
-            existing_config = self.math_channels[current_row].get('filter_config') if self.math_channels[current_row]['operation'] == op else None
-            dialog = FilterConfigDialog(op, self, existing_config)
-            if dialog.exec_() != QDialog.Accepted:
-                return  # User cancelled
-            filter_config = dialog.get_filter_config()
+        # If it's a configurable operation, open appropriate configuration dialog with existing config if available
+        operation_config = None
+        if self.is_configurable_operation(op):
+            # Get existing config if this was already the same operation
+            existing_config = self.math_channels[current_row].get('operation_config') if self.math_channels[current_row]['operation'] == op else None
+
+            if self.is_filter_operation(op):
+                dialog = FilterConfigDialog(op, self, existing_config)
+                if dialog.exec_() != QDialog.Accepted:
+                    return  # User cancelled
+                operation_config = dialog.get_filter_config()
+            elif op == 'Time Shift':
+                dialog = TimeShiftConfigDialog(self, existing_config)
+                if dialog.exec_() != QDialog.Accepted:
+                    return  # User cancelled
+                operation_config = dialog.get_shift_config()
 
         # Get the math channel name
         math_name = self.math_channels[current_row]['name']
@@ -1088,7 +1253,7 @@ class MathChannelsWindow(QWidget):
         self.math_channels[current_row]['ch1'] = ch_a
         self.math_channels[current_row]['ch2'] = ch_b
         self.math_channels[current_row]['operation'] = op
-        self.math_channels[current_row]['filter_config'] = filter_config
+        self.math_channels[current_row]['operation_config'] = operation_config
         # Update displayed state if using disabled channel
         if uses_disabled_channel:
             self.math_channels[current_row]['displayed'] = False
@@ -1103,13 +1268,19 @@ class MathChannelsWindow(QWidget):
             # Replace A and B in the operation string with actual channel names
             op_display = op.replace('B', " "+ch_b_text).replace('A', ch_a_text+" ")
             display_text = f"{math_name}: {op_display}"
-        elif self.is_filter_operation(op) and filter_config:
+        elif self.is_filter_operation(op) and operation_config:
             # For filters, show the cutoff frequency
-            cutoff = filter_config['cutoff_freq']
+            cutoff = operation_config['cutoff_freq']
             if isinstance(cutoff, (list, tuple)):
                 display_text = f"{math_name}: {op}({ch_a_text}, {cutoff[0]}-{cutoff[1]} MHz)"
             else:
                 display_text = f"{math_name}: {op}({ch_a_text}, {cutoff} MHz)"
+        elif op == 'Time Shift' and operation_config:
+            # For time shift, show the shift amount and unit
+            shift_amount = operation_config['shift_amount']
+            shift_unit = operation_config['shift_unit']
+            unit_abbr = 'smp' if shift_unit == 'Samples' else 'ns'
+            display_text = f"{math_name}: {op}({ch_a_text}, {shift_amount:+.0f} {unit_abbr})"
         else:
             display_text = f"{math_name}: {op}({ch_a_text})"
 
@@ -1622,9 +1793,20 @@ class MathChannelsWindow(QWidget):
                                 self.running_minmax[math_name]['max'], y1
                             )
                             y_result = self.running_minmax[math_name]['max'].copy()
+                    elif operation == 'AC Coupling':
+                        # Remove DC offset (AC coupling)
+                        y_result = y1 - np.mean(y1)
+                    elif operation == 'Time Shift':
+                        # Time shift operation
+                        shift_config = math_def.get('operation_config')
+                        if shift_config:
+                            y_result = self._apply_time_shift(y1, x1, shift_config)
+                        else:
+                            # No shift config, just pass through
+                            y_result = y1.copy()
                     elif self.is_filter_operation(operation):
                         # Digital filter operations
-                        filter_config = math_def.get('filter_config')
+                        filter_config = math_def.get('operation_config')
                         if filter_config:
                             y_result = self._apply_digital_filter(y1, x1, operation, filter_config)
                         else:
