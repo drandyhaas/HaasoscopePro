@@ -62,6 +62,8 @@ class ZoomWindow(QtWidgets.QWidget):
         view_box.setMouseEnabled(x=False, y=False)
         # Disable right-click menu (already done above but making sure)
         view_box.setMenuEnabled(False)
+        # Hide the autoscale button (accessed through PlotItem)
+        self.plot.hideButtons()
 
         # Add secondary Y-axis for voltage display
         self.right_axis = None
@@ -146,27 +148,45 @@ class ZoomWindow(QtWidgets.QWidget):
 
         # Update physical channels
         total_channels = self.state.num_board * self.state.num_chan_per_board
-        for ch_idx in range(total_channels):
-            # Skip disabled channels
-            if not self.state.channel_enabled[ch_idx]:
-                continue
+        active_channels = set()  # Track which channels should be visible
 
+        for ch_idx in range(total_channels):
             board_idx = ch_idx // self.state.num_chan_per_board
             local_ch = ch_idx % self.state.num_chan_per_board
 
-            # Skip ch 1 if board is in single-channel mode
-            if not self.state.dotwochannel[board_idx] and local_ch != 0:
+            # Determine if this channel should be shown
+            should_show = (
+                self.state.channel_enabled[ch_idx] and
+                (self.state.dotwochannel[board_idx] or local_ch == 0)
+            )
+
+            if not should_show:
+                # Hide this channel's line if it exists
+                if ch_idx in self.channel_lines:
+                    self.channel_lines[ch_idx].setVisible(False)
                 continue
+
+            active_channels.add(ch_idx)
 
             # Get data
             if ch_idx >= len(xydata):
                 continue
 
-            x_data = xydata[ch_idx][0]
-            y_data = xydata[ch_idx][1]
+            x_data_full = xydata[ch_idx][0]
+            y_data_full = xydata[ch_idx][1]
 
-            if x_data is None or y_data is None or len(x_data) == 0:
+            if x_data_full is None or y_data_full is None or len(x_data_full) == 0:
                 continue
+
+            # Handle two-channel mode: only half the samples are valid, spacing is doubled
+            if self.state.dotwochannel[board_idx]:
+                num_valid_samples = xydata.shape[2] // 2
+                y_data = y_data_full[:num_valid_samples]
+                # Multiply x by 2 to get correct sample spacing in two-channel mode
+                x_data = x_data_full[:num_valid_samples] * 2.0
+            else:
+                x_data = x_data_full
+                y_data = y_data_full
 
             # Create line if it doesn't exist
             if ch_idx not in self.channel_lines:
@@ -182,7 +202,8 @@ class ZoomWindow(QtWidgets.QWidget):
                     connect="finite"
                 )
 
-            # Update line data
+            # Show and update line data
+            self.channel_lines[ch_idx].setVisible(True)
             self.channel_lines[ch_idx].setData(x=x_data, y=y_data, skipFiniteCheck=True)
 
         # Update math channels

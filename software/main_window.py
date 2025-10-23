@@ -1401,7 +1401,9 @@ class MainWindow(TemplateBaseClass):
             self.ui.timefastButton.setEnabled(False)
 
         old_downsample = self.state.downsample
+        old_downsamplezoom = self.state.downsamplezoom
         self.state.downsample -= 1
+        new_downsample = self.state.downsample
         highres = 1 if self.ui.actionHigh_resolution.isChecked() else 0
         self.controller.tell_downsample_all(self.state.downsample, highres)
 
@@ -1430,13 +1432,20 @@ class MainWindow(TemplateBaseClass):
             self.state.downsamplezoom = pow(2, -self.state.downsample)
         else:
             self.state.downsamplezoom = 1
+        new_downsamplezoom = self.state.downsamplezoom
 
         # Update the plot range and text box
         self.time_changed()
 
-        # Adjust zoom ROI width if zoom window is open
+        # Adjust zoom ROI width based on downsample change type
         if self.zoom_window and self.zoom_window.isVisible():
-            self.plot_manager.adjust_zoom_roi_for_downsample()
+            if old_downsample >= 0 and new_downsample >= 0:
+                # Both in normal acquisition modes - use standard adjustment
+                self.plot_manager.adjust_zoom_roi_for_downsample()
+            elif old_downsamplezoom != new_downsamplezoom:
+                # Zoom factor changed - scale ROI width by the zoom ratio
+                zoom_ratio = new_downsamplezoom / old_downsamplezoom
+                self.plot_manager.scale_zoom_roi_width(1.0 / zoom_ratio)
 
         # Clear peak detect data when timebase changes (for active channel)
         active_channel = self.state.activexychannel
@@ -1458,7 +1467,9 @@ class MainWindow(TemplateBaseClass):
     def time_slow(self):
         self.ui.timefastButton.setEnabled(True)
         old_downsample = self.state.downsample
+        old_downsamplezoom = self.state.downsamplezoom
         self.state.downsample += 1
+        new_downsample = self.state.downsample
         highres = 1 if self.ui.actionHigh_resolution.isChecked() else 0
         self.controller.tell_downsample_all(self.state.downsample, highres)
 
@@ -1482,13 +1493,20 @@ class MainWindow(TemplateBaseClass):
             self.state.downsamplezoom = pow(2, -self.state.downsample)
         else:
             self.state.downsamplezoom = 1
+        new_downsamplezoom = self.state.downsamplezoom
 
         # Update the plot range and text box
         self.time_changed()
 
-        # Adjust zoom ROI width if zoom window is open
+        # Adjust zoom ROI width based on downsample change type
         if self.zoom_window and self.zoom_window.isVisible():
-            self.plot_manager.adjust_zoom_roi_for_downsample()
+            if old_downsample >= 0 and new_downsample >= 0:
+                # Both in normal acquisition modes - use standard adjustment
+                self.plot_manager.adjust_zoom_roi_for_downsample()
+            elif old_downsamplezoom != new_downsamplezoom:
+                # Zoom factor changed - scale ROI width by the zoom ratio
+                zoom_ratio = new_downsamplezoom / old_downsamplezoom
+                self.plot_manager.scale_zoom_roi_width(1.0 / zoom_ratio)
 
         # Clear peak detect data when timebase changes (for active channel)
         active_channel = self.state.activexychannel
@@ -2178,7 +2196,7 @@ class MainWindow(TemplateBaseClass):
         if self.xy_window is not None and self.xy_window.isVisible():
             self.xy_window.refresh_channel_list()
 
-        # 8. Clear zoom window channel lines (they'll be recreated with correct channels)
+        # 8. Clear and recreate zoom window channel lines (x-axis structure changes in two-channel mode)
         if self.zoom_window is not None and self.zoom_window.isVisible():
             self.zoom_window.clear_channel_lines()
 

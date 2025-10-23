@@ -651,6 +651,9 @@ class PlotManager(pg.QtCore.QObject):
         if self.cursor_manager:
             self.cursor_manager.adjust_cursor_positions()
 
+        # Update zoom ROI if it's visible (units or range may have changed)
+        self.update_zoom_roi_for_time_change()
+
     def draw_trigger_lines(self):
         """Draws the horizontal and vertical trigger lines on the plot."""
         state = self.state
@@ -1097,6 +1100,78 @@ class PlotManager(pg.QtCore.QObject):
         # Update ROI size and position
         self.zoom_roi.setSize([roi_width, current_size[1]])
         self.zoom_roi.setPos([new_x, current_pos[1]])
+
+        # Update the fill
+        self._update_zoom_roi_fill()
+
+        # Emit signal to update zoom window
+        self.on_zoom_roi_changed()
+
+    def update_zoom_roi_for_time_change(self):
+        """Update zoom ROI position when time axis units/range change."""
+        if not self.zoom_roi or not self.zoom_roi.isVisible():
+            return
+
+        # Get new trigger positions (already updated in new units)
+        vline_pos = self.otherlines['vline'].value()
+        hline_pos = self.otherlines['hline'].value()
+
+        # Get current plot range (already in new units)
+        view_range = self.plot.getViewBox().viewRange()
+        x_range = view_range[0]
+        y_range = view_range[1]
+        x_span = x_range[1] - x_range[0]
+        y_span = y_range[1] - y_range[0]
+
+        # Get current ROI size to preserve it (don't resize based on downsample)
+        current_size = self.zoom_roi.size()
+
+        # If ROI has never been sized (first time), set a default based on view
+        if current_size[0] == 1 and current_size[1] == 1:
+            roi_width = x_span * 0.2  # 20% of view
+            roi_height = y_span * 0.5  # 50% of view
+        else:
+            # Preserve current ROI dimensions (in terms of absolute units)
+            roi_width = current_size[0]
+            roi_height = current_size[1]
+
+        # Center ROI on trigger lines
+        roi_x = vline_pos - roi_width / 2
+        roi_y = hline_pos - roi_height / 2
+
+        # Update ROI position (but not size)
+        self.zoom_roi.setPos([roi_x, roi_y])
+        self.zoom_roi.setSize([roi_width, roi_height])
+
+        # Update the fill
+        self._update_zoom_roi_fill()
+
+        # Emit signal to update zoom window
+        self.on_zoom_roi_changed()
+
+    def scale_zoom_roi_width(self, scale_factor):
+        """Scale the zoom ROI width by a given factor.
+
+        Args:
+            scale_factor: Factor to multiply the width by (e.g., 0.5 to halve, 2.0 to double)
+        """
+        if not self.zoom_roi or not self.zoom_roi.isVisible():
+            return
+
+        # Get current ROI position and size
+        current_pos = self.zoom_roi.pos()
+        current_size = self.zoom_roi.size()
+
+        # Calculate new width
+        new_width = current_size[0] * scale_factor
+
+        # Calculate new position to keep ROI centered
+        center_x = current_pos[0] + current_size[0] / 2
+        new_x = center_x - new_width / 2
+
+        # Update ROI (keep height the same)
+        self.zoom_roi.setPos([new_x, current_pos[1]])
+        self.zoom_roi.setSize([new_width, current_size[1]])
 
         # Update the fill
         self._update_zoom_roi_fill()
