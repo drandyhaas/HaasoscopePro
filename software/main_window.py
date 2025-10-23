@@ -2081,6 +2081,10 @@ class MainWindow(TemplateBaseClass):
         if self.math_window:
             self.math_window.update_channel_list()
 
+        # 7. Update XY window channel lists (availability of Ch 1 changed)
+        if self.xy_window is not None and self.xy_window.isVisible():
+            self.xy_window.refresh_channel_list()
+
     def gain_changed(self):
         """Handles changes to the gain slider."""
         s = self.state
@@ -2250,6 +2254,10 @@ class MainWindow(TemplateBaseClass):
         all_colors = [pen.color() for pen in self.plot_manager.linepens]
         self.controller.do_leds(all_colors)
 
+        # Update XY window channel lists (channel availability changed)
+        if self.xy_window is not None and self.xy_window.isVisible():
+            self.xy_window.refresh_channel_list()
+
     def interleave_changed(self, checked):
         s = self.state
         board = s.activeboard
@@ -2273,6 +2281,10 @@ class MainWindow(TemplateBaseClass):
         self.time_changed()
         all_colors = [pen.color() for pen in self.plot_manager.linepens]
         self.controller.do_leds(all_colors)
+
+        # Update XY window channel lists (channel availability changed)
+        if self.xy_window is not None and self.xy_window.isVisible():
+            self.xy_window.refresh_channel_list()
 
     def dopllreset(self):
         while self.state.downsamplezoom>1: self.time_slow()

@@ -214,6 +214,38 @@ def load_setup(main_window):
 
     s = main_window.state
 
+    # Board mode settings - LOAD THESE FIRST before other settings
+    # These affect which channels are available and how the hardware is configured
+    if 'dotwochannel' in setup:
+        s.dotwochannel = setup['dotwochannel']
+    if 'dooversample' in setup:
+        s.dooversample = setup['dooversample']
+    if 'dointerleaved' in setup:
+        s.dointerleaved = setup['dointerleaved']
+
+    # Apply board modes to hardware by reconfiguring each board
+    for board_idx in range(s.num_board):
+        from board import setupboard
+        usb = main_window.controller.usbs[board_idx]
+        # Reconfigure the board with the loaded two-channel mode setting
+        if not setupboard(usb, s.dopattern, s.dotwochannel[board_idx], s.dooverrange, s.basevoltage == 200):
+            print(f"Warning: Failed to reconfigure board {board_idx} with loaded settings")
+
+        # Set oversampling if needed
+        if s.dooversample[board_idx] and board_idx % 2 == 0:
+            main_window.controller.set_oversampling(board_idx, True)
+            # Set external trigger for second board in oversampling pair
+            s.doexttrig[board_idx + 1] = True
+            main_window.controller.set_exttrig(board_idx + 1, True)
+
+        # Update channel enabled states for interleaved mode
+        if s.dointerleaved[board_idx] and board_idx % 2 == 0:
+            # Disable secondary board's channels when interleaved
+            c_secondary_ch0 = (board_idx + 1) * s.num_chan_per_board
+            c_secondary_ch1 = c_secondary_ch0 + 1
+            s.channel_enabled[c_secondary_ch0] = False
+            s.channel_enabled[c_secondary_ch1] = False
+
     # Restore state variables
     # Timebase and acquisition
     if 'downsample' in setup:
@@ -249,6 +281,15 @@ def load_setup(main_window):
         s.fallingedge = setup['fallingedge']
     if 'triggertype' in setup:
         s.triggertype = setup['triggertype']
+
+    # Update rising/falling combo box based on loaded trigger settings
+    if 'fallingedge' in setup and 'triggerchan' in setup:
+        # Calculate combo box index: 0=Rising(Ch0), 1=Falling(Ch0), 2=Rising(Ch1), 3=Falling(Ch1)
+        combo_index = s.fallingedge[s.activeboard] + (2 * s.triggerchan[s.activeboard])
+        main_window.ui.risingfalling_comboBox.blockSignals(True)
+        main_window.ui.risingfalling_comboBox.setCurrentIndex(combo_index)
+        main_window.ui.risingfalling_comboBox.blockSignals(False)
+
     if 'triggertimethresh' in setup:
         s.triggertimethresh = setup['triggertimethresh']
         main_window.ui.totBox.setValue(s.triggertimethresh[s.activeboard])
@@ -283,13 +324,7 @@ def load_setup(main_window):
     if 'channel_names' in setup:
         s.channel_names = setup['channel_names']
 
-    # Board mode settings
-    if 'dotwochannel' in setup:
-        s.dotwochannel = setup['dotwochannel']
-    if 'dooversample' in setup:
-        s.dooversample = setup['dooversample']
-    if 'dointerleaved' in setup:
-        s.dointerleaved = setup['dointerleaved']
+    # Board mode settings were already loaded and applied at the beginning of this function
 
     # TAD settings
     if 'tad' in setup:
@@ -310,43 +345,9 @@ def load_setup(main_window):
         s.min_x = setup['min_x']
     if 'max_x' in setup:
         s.max_x = setup['max_x']
-    if 'xy_mode' in setup and setup['xy_mode']:
-        # Restore XY mode if it was enabled
-        if s.dotwochannel[s.activeboard]:
-            main_window.ui.actionXY_Plot.setChecked(True)
-            main_window.plot_manager.toggle_xy_view(True, s.activeboard)
 
-    # Restore XY window visibility, geometry, and channel selections
-    if 'xy_window_visible' in setup and setup['xy_window_visible']:
-        # Show the XY window if it was visible when saved
-        if main_window.xy_window is None:
-            from xy_window import XYWindow
-            main_window.xy_window = XYWindow(main_window, main_window.state, main_window.plot_manager)
-            main_window.xy_window.window_closed.connect(main_window.on_xy_window_closed)
-
-        # Restore geometry if available
-        if 'xy_window_geometry' in setup:
-            geo = setup['xy_window_geometry']
-            main_window.xy_window.setGeometry(geo['x'], geo['y'], geo['width'], geo['height'])
-
-        # Restore channel selections if available
-        if 'xy_window_y_channel' in setup:
-            main_window.xy_window.y_channel = setup['xy_window_y_channel']
-            # Find the combo box index for this channel
-            for i in range(main_window.xy_window.y_channel_combo.count()):
-                if main_window.xy_window.y_channel_combo.itemData(i) == setup['xy_window_y_channel']:
-                    main_window.xy_window.y_channel_combo.setCurrentIndex(i)
-                    break
-
-        if 'xy_window_x_channel' in setup:
-            main_window.xy_window.x_channel = setup['xy_window_x_channel']
-            # Find the combo box index for this channel
-            for i in range(main_window.xy_window.x_channel_combo.count()):
-                if main_window.xy_window.x_channel_combo.itemData(i) == setup['xy_window_x_channel']:
-                    main_window.xy_window.x_channel_combo.setCurrentIndex(i)
-                    break
-
-        main_window.xy_window.show()
+    # Note: xy_mode and XY window restoration moved to after display updates
+    # so that channel lists are properly populated based on loaded board modes
 
     # Processing settings
     if 'saved_doresamp' in setup:
@@ -579,6 +580,19 @@ def load_setup(main_window):
         s.selectedchannel = setup['selectedchannel']
         main_window.ui.chanBox.setCurrentIndex(s.selectedchannel)
 
+    # Recalculate VperD for all channels based on loaded gain values
+    # This MUST be done before syncing to hardware because offset calculation depends on VperD
+    if 'gain' in setup:
+        for ch_idx in range(s.num_board * s.num_chan_per_board):
+            board_idx = ch_idx // s.num_chan_per_board
+            db = s.gain[ch_idx]
+            v_per_div = (s.basevoltage / 1000.) * s.tenx[ch_idx] / pow(10, db / 20.)
+            if s.dooversample[board_idx]:
+                v_per_div *= 2.0
+            if not s.mohm[ch_idx]:
+                v_per_div /= 2.0
+            s.VperD[ch_idx] = v_per_div
+
     # Apply all settings to hardware and update UI
     for board_idx in range(s.num_board):
         main_window._sync_board_settings_to_hardware(board_idx)
@@ -594,8 +608,21 @@ def load_setup(main_window):
     main_window.plot_manager.show_cursors(main_window.ui.actionCursors.isChecked())
     main_window._update_channel_mode_ui()
 
+    # Note: We don't call gain_changed() or offset_changed() here because:
+    # 1. VperD has already been recalculated for all channels above
+    # 2. _sync_board_settings_to_hardware() has already applied all settings
+    # 3. gain_changed() would adjust offsetBox which could reset the loaded offset value
+
     # Update persistence display after restoring visibility and persistence settings
     main_window.set_average_line_pen()
+
+    # Refresh math window channel list if it exists (channel availability may have changed)
+    if main_window.math_window:
+        main_window.math_window.update_channel_list()
+
+    # Refresh XY window channel list if visible (channel availability may have changed)
+    if main_window.xy_window is not None and main_window.xy_window.isVisible():
+        main_window.xy_window.refresh_channel_list()
 
     # Restore math channels
     if 'math_channels' in setup and len(setup['math_channels']) > 0:
@@ -643,6 +670,43 @@ def load_setup(main_window):
 
         # Repopulate the operations combo box
         main_window.math_window.populate_operations()
+
+    # Restore XY window visibility, geometry, and channel selections
+    # This is done AFTER display updates and channel list refreshes to ensure
+    # the XY window has the correct available channels
+    if 'xy_window_visible' in setup and setup['xy_window_visible']:
+        # Show the XY window if it was visible when saved
+        if main_window.xy_window is None:
+            from xy_window import XYWindow
+            main_window.xy_window = XYWindow(main_window, main_window.state, main_window.plot_manager)
+            main_window.xy_window.window_closed.connect(main_window.on_xy_window_closed)
+
+        # Restore geometry if available
+        if 'xy_window_geometry' in setup:
+            geo = setup['xy_window_geometry']
+            main_window.xy_window.setGeometry(geo['x'], geo['y'], geo['width'], geo['height'])
+
+        # Restore channel selections if available
+        if 'xy_window_y_channel' in setup:
+            main_window.xy_window.y_channel = setup['xy_window_y_channel']
+            # Find the combo box index for this channel
+            for i in range(main_window.xy_window.y_channel_combo.count()):
+                if main_window.xy_window.y_channel_combo.itemData(i) == setup['xy_window_y_channel']:
+                    main_window.xy_window.y_channel_combo.setCurrentIndex(i)
+                    break
+
+        if 'xy_window_x_channel' in setup:
+            main_window.xy_window.x_channel = setup['xy_window_x_channel']
+            # Find the combo box index for this channel
+            for i in range(main_window.xy_window.x_channel_combo.count()):
+                if main_window.xy_window.x_channel_combo.itemData(i) == setup['xy_window_x_channel']:
+                    main_window.xy_window.x_channel_combo.setCurrentIndex(i)
+                    break
+
+        # Show the XY window and update state to match
+        main_window.xy_window.show()
+        s.xy_mode = True
+        main_window.ui.actionXY_Plot.setChecked(True)
 
     # Resume acquisition if it was running
     if not was_paused:
