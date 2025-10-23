@@ -281,6 +281,15 @@ def load_setup(main_window):
         s.fallingedge = setup['fallingedge']
     if 'triggertype' in setup:
         s.triggertype = setup['triggertype']
+
+    # Update rising/falling combo box based on loaded trigger settings
+    if 'fallingedge' in setup and 'triggerchan' in setup:
+        # Calculate combo box index: 0=Rising(Ch0), 1=Falling(Ch0), 2=Rising(Ch1), 3=Falling(Ch1)
+        combo_index = s.fallingedge[s.activeboard] + (2 * s.triggerchan[s.activeboard])
+        main_window.ui.risingfalling_comboBox.blockSignals(True)
+        main_window.ui.risingfalling_comboBox.setCurrentIndex(combo_index)
+        main_window.ui.risingfalling_comboBox.blockSignals(False)
+
     if 'triggertimethresh' in setup:
         s.triggertimethresh = setup['triggertimethresh']
         main_window.ui.totBox.setValue(s.triggertimethresh[s.activeboard])
