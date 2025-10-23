@@ -11,7 +11,7 @@ class UpdateChecker(QObject):
     """
     update_available = pyqtSignal(str, str, str)  # (current_version, latest_version, release_url)
 
-    def __init__(self, current_version, ignore_file=".haasoscope_update_ignore"):
+    def __init__(self, current_version, ignore_file=".haasoscope_pro_update_ignore"):
         super().__init__()
         self.current_version = str(current_version)
         self.ignore_file = ignore_file
@@ -36,11 +36,16 @@ class UpdateChecker(QObject):
 
             if response.status_code == 200:
                 data = response.json()
-                latest_tag = data.get('tag_name', '').replace('-beta', '')
+                # Remove anything after "-" in tag name (e.g., "31.06-beta2" becomes "31.06")
+                latest_tag = data.get('tag_name', '').split('-')[0]
                 release_url = data.get('html_url', 'https://github.com/drandyhaas/HaasoscopePro/releases')
-                print("Found latest version on github:",latest_tag)
-                if self._is_newer_version(latest_tag) and not self._is_version_ignored(latest_tag):
-                    self.update_available.emit(self.current_version, latest_tag, release_url)
+                if self._is_newer_version(latest_tag):
+                    if not self._is_version_ignored(latest_tag):
+                        self.update_available.emit(self.current_version, latest_tag, release_url)
+                    else:
+                        print("Ignoring newer release:", latest_tag)
+                else:
+                    print(f"Latest version on github ({latest_tag}) is not newer")
         except Exception as e:
             # Silent fail - don't interrupt startup for update check failures
             print(f"Update check failed (non-critical): {e}")
@@ -95,6 +100,6 @@ class UpdateChecker(QObject):
                 ignored_versions.append(version)
                 with open(self.ignore_file, 'w') as f:
                     f.write('\n'.join(ignored_versions) + '\n')
-                print(f"Version {version} added to ignore list")
+                #print(f"Version {version} added to ignore list")
         except Exception as e:
             print(f"Error saving ignored version: {e}")

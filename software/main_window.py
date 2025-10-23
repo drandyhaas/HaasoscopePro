@@ -926,9 +926,8 @@ class MainWindow(TemplateBaseClass):
 
         # Create custom buttons
         yes_button = msg.addButton("Yes", QMessageBox.YesRole)
-        remind_button = msg.addButton("Remind me next time", QMessageBox.NoRole)
-        ignore_button = msg.addButton("Ignore this release", QMessageBox.RejectRole)
-
+        ignore_button = msg.addButton(" Ignore this release ", QMessageBox.NoRole)
+        remind_button = msg.addButton(" Remind me next time ", QMessageBox.RejectRole)
         msg.exec_()
 
         # Handle button clicks
