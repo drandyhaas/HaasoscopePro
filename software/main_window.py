@@ -447,13 +447,11 @@ class MainWindow(TemplateBaseClass):
             ch1_idx = board_idx * s.num_chan_per_board + 1
 
             # Update channel enabled state based on two-channel mode
-            if s.dotwochannel[board_idx]:
-                # In two-channel mode, ch1 should be enabled
-                s.channel_enabled[ch1_idx] = True
-            else:
-                # In single-channel mode, ch1 should be disabled
+            if not s.dotwochannel[board_idx]:
+                # In single-channel mode, ch1 doesn't exist - must be disabled
                 s.channel_enabled[ch1_idx] = False
                 self.plot_manager.lines[ch1_idx].clear()
+            # In two-channel mode: don't force enable - let user control visibility
 
             # Apply correct visibility based on all state (including persistence)
             self.update_channel_visibility(ch1_idx)
@@ -2050,6 +2048,11 @@ class MainWindow(TemplateBaseClass):
 
         # 1. Update the state for the active board ONLY
         s.dotwochannel[active_board] = is_two_channel
+
+        # When switching TO two-channel mode, enable ch1 (switching FROM two-channel mode, ch1 stays as user set it)
+        if not old_two_channel_state and is_two_channel:
+            ch1_index = active_board * s.num_chan_per_board + 1
+            s.channel_enabled[ch1_index] = True
 
         # Handle math channel display updates after state change
         if self.math_window:

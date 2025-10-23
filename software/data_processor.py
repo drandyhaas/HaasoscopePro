@@ -332,7 +332,7 @@ class DataProcessor:
 
         return freq, abs(Y)
 
-    def calculate_measurements(self, x_data, y_data, vline, do_risetime_calc=False, use_edge_fit=True):
+    def calculate_measurements(self, x_data, y_data, vline, do_risetime_calc=False, use_edge_fit=True, channel_index=None, needs_freq=True):
         """Calculates all requested measurements and returns fit results if requested.
 
         Args:
@@ -342,29 +342,43 @@ class DataProcessor:
             do_risetime_calc: Whether to calculate rise time
             use_edge_fit: If True, use edge-based fitting (works for any signal).
                          If False, use piecewise fitting (works for square waves).
+            channel_index: Index of the channel being measured (if None, uses activexychannel)
+            needs_freq: Whether to calculate frequency (expensive FFT operation). Defaults to True for backward compatibility.
         """
         if len(y_data) < 2: return {}, None
         state = self.state
-        VperD = state.VperD[state.activexychannel]
+
+        # Use the specified channel_index, or fall back to activexychannel if not provided
+        if channel_index is None:
+            channel_index = state.activexychannel
+
+        VperD = state.VperD[channel_index]
+        board_index = channel_index // state.num_chan_per_board
+
+        # Calculate min/max once to avoid redundant computation
+        y_min = np.min(y_data)
+        y_max = np.max(y_data)
 
         measurements = {
             "Mean": 1000 * VperD * np.mean(y_data),
             "RMS": 1000 * VperD * np.std(y_data),
-            "Max": 1000 * VperD * np.max(y_data),
-            "Min": 1000 * VperD * np.min(y_data),
-            "Vpp": 1000 * VperD * (np.max(y_data) - np.min(y_data))
+            "Max": 1000 * VperD * y_max,
+            "Min": 1000 * VperD * y_min,
+            "Vpp": 1000 * VperD * (y_max - y_min)
         }
 
-        sampling_rate = (state.samplerate * 1e9) / state.downsamplefactor
-        if state.dotwochannel[state.activeboard]: sampling_rate /= 2
-        # Account for resampling - if resampling is applied, it increases sample density and effective sampling rate
-        if state.doresamp[state.activexychannel] > 1: sampling_rate *= state.doresamp[state.activexychannel]
-        found_freq = find_fundamental_frequency_scipy(y_data, sampling_rate)
-        measurements["Freq"] = found_freq
+        # Only calculate frequency if needed (expensive FFT operation)
+        if needs_freq:
+            sampling_rate = (state.samplerate * 1e9) / state.downsamplefactor
+            if state.dotwochannel[board_index]: sampling_rate /= 2
+            # Account for resampling - if resampling is applied, it increases sample density and effective sampling rate
+            if state.doresamp[channel_index] > 1: sampling_rate *= state.doresamp[channel_index]
+            found_freq = find_fundamental_frequency_scipy(y_data, sampling_rate)
+            measurements["Freq"] = found_freq
+        else:
+            measurements["Freq"] = 0.0
 
         # Calculate duty cycle (percentage of time signal is above 50% threshold)
-        y_min = np.min(y_data)
-        y_max = np.max(y_data)
         threshold = (y_min + y_max) / 2
         above_threshold = np.sum(y_data > threshold)
         duty_cycle = (above_threshold / len(y_data)) * 100 if len(y_data) > 0 else 0

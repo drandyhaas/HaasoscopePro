@@ -4,10 +4,11 @@
 import sys
 from PyQt5.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QComboBox,
                              QPushButton, QListWidget, QLabel, QGroupBox, QColorDialog, QListWidgetItem, QCheckBox,
-                             QDialog, QLineEdit, QTextEdit, QDialogButtonBox, QMessageBox)
+                             QDialog, QLineEdit, QTextEdit, QDialogButtonBox, QMessageBox, QDoubleSpinBox, QSpinBox)
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QPixmap, QIcon
 import numpy as np
+from scipy import signal, interpolate
 
 
 class RefreshingComboBox(QComboBox):
@@ -22,6 +23,342 @@ class RefreshingComboBox(QComboBox):
         if self.refresh_callback:
             self.refresh_callback()
         super().showPopup()
+
+
+class FilterConfigDialog(QDialog):
+    """Dialog for configuring digital filter parameters."""
+
+    def __init__(self, filter_type, parent=None, existing_config=None):
+        """
+        Args:
+            filter_type: Type of filter ('Low-pass', 'High-pass', 'Band-pass', 'Band-stop')
+            parent: Parent widget
+            existing_config: Dictionary with existing filter config (for editing)
+        """
+        super().__init__(parent)
+        self.filter_type = filter_type
+        self.existing_config = existing_config
+        self.setWindowTitle(f"Configure {filter_type} Filter")
+        self.setModal(True)
+        self.setup_ui()
+
+    def setup_ui(self):
+        """Setup the UI layout."""
+        layout = QVBoxLayout()
+
+        # Filter design type (Butterworth, Chebyshev)
+        design_layout = QHBoxLayout()
+        design_layout.addWidget(QLabel("Filter Design:"))
+        self.design_combo = QComboBox()
+        self.design_combo.addItems(['Butterworth', 'Chebyshev Type I'])
+        design_layout.addWidget(self.design_combo)
+        layout.addLayout(design_layout)
+
+        # Filter order
+        order_layout = QHBoxLayout()
+        order_layout.addWidget(QLabel("Filter Order:"))
+        self.order_spinbox = QSpinBox()
+        self.order_spinbox.setRange(1, 10)
+        self.order_spinbox.setValue(4)
+        self.order_spinbox.setToolTip("Higher order = sharper cutoff, but more computation")
+        order_layout.addWidget(self.order_spinbox)
+        layout.addLayout(order_layout)
+
+        # Frequency units selection
+        units_layout = QHBoxLayout()
+        units_layout.addWidget(QLabel("Frequency Units:"))
+        self.units_combo = QComboBox()
+        self.units_combo.addItems(['Hz', 'kHz', 'MHz', 'GHz'])
+        self.units_combo.setCurrentText('MHz')  # Default to MHz
+        self.units_combo.currentTextChanged.connect(self._update_frequency_labels)
+        units_layout.addWidget(self.units_combo)
+        layout.addLayout(units_layout)
+
+        # Cutoff frequency (or frequencies for band-pass/stop)
+        if self.filter_type in ['Band-pass', 'Band-stop']:
+            # Two cutoff frequencies needed
+            freq_layout1 = QHBoxLayout()
+            self.freq_label1 = QLabel("Lower Cutoff (MHz):")
+            freq_layout1.addWidget(self.freq_label1)
+            self.cutoff_spinbox1 = QDoubleSpinBox()
+            self.cutoff_spinbox1.setRange(0.001, 10000)
+            self.cutoff_spinbox1.setValue(10.0)
+            self.cutoff_spinbox1.setDecimals(3)
+            self.cutoff_spinbox1.setSingleStep(1.0)
+            freq_layout1.addWidget(self.cutoff_spinbox1)
+            layout.addLayout(freq_layout1)
+
+            freq_layout2 = QHBoxLayout()
+            self.freq_label2 = QLabel("Upper Cutoff (MHz):")
+            freq_layout2.addWidget(self.freq_label2)
+            self.cutoff_spinbox2 = QDoubleSpinBox()
+            self.cutoff_spinbox2.setRange(0.001, 10000)
+            self.cutoff_spinbox2.setValue(100.0)
+            self.cutoff_spinbox2.setDecimals(3)
+            self.cutoff_spinbox2.setSingleStep(1.0)
+            freq_layout2.addWidget(self.cutoff_spinbox2)
+            layout.addLayout(freq_layout2)
+        else:
+            # Single cutoff frequency
+            freq_layout = QHBoxLayout()
+            self.freq_label1 = QLabel("Cutoff Frequency (MHz):")
+            freq_layout.addWidget(self.freq_label1)
+            self.cutoff_spinbox1 = QDoubleSpinBox()
+            self.cutoff_spinbox1.setRange(0.001, 10000)
+            self.cutoff_spinbox1.setValue(50.0)
+            self.cutoff_spinbox1.setDecimals(3)
+            self.cutoff_spinbox1.setSingleStep(1.0)
+            freq_layout.addWidget(self.cutoff_spinbox1)
+            layout.addLayout(freq_layout)
+
+        # Chebyshev ripple (only shown for Chebyshev)
+        ripple_layout = QHBoxLayout()
+        self.ripple_label = QLabel("Passband Ripple (dB):")
+        ripple_layout.addWidget(self.ripple_label)
+        self.ripple_spinbox = QDoubleSpinBox()
+        self.ripple_spinbox.setRange(0.01, 10.0)
+        self.ripple_spinbox.setValue(0.5)
+        self.ripple_spinbox.setDecimals(2)
+        self.ripple_spinbox.setSingleStep(0.1)
+        self.ripple_spinbox.setToolTip("Smaller values = flatter passband, but slower rolloff")
+        ripple_layout.addWidget(self.ripple_spinbox)
+        layout.addLayout(ripple_layout)
+
+        # Show/hide ripple based on design type
+        self.design_combo.currentTextChanged.connect(self._update_ripple_visibility)
+        self._update_ripple_visibility()
+
+        # Help text
+        help_text = QLabel(
+            f"{self.filter_type} filter will be applied to the signal.\n"
+            "Cutoff frequency should be less than half the sample rate (Nyquist)."
+        )
+        help_text.setWordWrap(True)
+        help_text.setStyleSheet("color: gray; font-size: 9pt;")
+        layout.addWidget(help_text)
+
+        # Buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.validate_and_accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+        self.setLayout(layout)
+
+        # Load existing config if provided
+        if self.existing_config:
+            self._load_existing_config()
+
+    def _update_ripple_visibility(self):
+        """Show/hide ripple controls based on filter design type."""
+        is_chebyshev = 'Chebyshev' in self.design_combo.currentText()
+        self.ripple_label.setVisible(is_chebyshev)
+        self.ripple_spinbox.setVisible(is_chebyshev)
+
+    def _update_frequency_labels(self):
+        """Update frequency labels when unit changes."""
+        unit = self.units_combo.currentText()
+        if self.filter_type in ['Band-pass', 'Band-stop']:
+            self.freq_label1.setText(f"Lower Cutoff ({unit}):")
+            self.freq_label2.setText(f"Upper Cutoff ({unit}):")
+        else:
+            self.freq_label1.setText(f"Cutoff Frequency ({unit}):")
+
+    def _load_existing_config(self):
+        """Load existing filter configuration into dialog."""
+        if 'filter_design' in self.existing_config:
+            index = self.design_combo.findText(self.existing_config['filter_design'])
+            if index >= 0:
+                self.design_combo.setCurrentIndex(index)
+
+        if 'filter_order' in self.existing_config:
+            self.order_spinbox.setValue(self.existing_config['filter_order'])
+
+        # Load frequency unit if stored, otherwise default to MHz
+        freq_unit = self.existing_config.get('freq_unit', 'MHz')
+        unit_index = self.units_combo.findText(freq_unit)
+        if unit_index >= 0:
+            self.units_combo.setCurrentIndex(unit_index)
+
+        # Load cutoff frequencies (stored in Hz, need to convert to display units)
+        if 'cutoff_freq_hz' in self.existing_config:
+            # Convert from Hz to display units
+            unit_multipliers = {'Hz': 1, 'kHz': 1e3, 'MHz': 1e6, 'GHz': 1e9}
+            multiplier = unit_multipliers.get(freq_unit, 1e6)
+
+            if isinstance(self.existing_config['cutoff_freq_hz'], (list, tuple)):
+                self.cutoff_spinbox1.setValue(self.existing_config['cutoff_freq_hz'][0] / multiplier)
+                if hasattr(self, 'cutoff_spinbox2'):
+                    self.cutoff_spinbox2.setValue(self.existing_config['cutoff_freq_hz'][1] / multiplier)
+            else:
+                self.cutoff_spinbox1.setValue(self.existing_config['cutoff_freq_hz'] / multiplier)
+        elif 'cutoff_freq' in self.existing_config:
+            # Legacy: cutoff_freq was in MHz
+            if isinstance(self.existing_config['cutoff_freq'], (list, tuple)):
+                self.cutoff_spinbox1.setValue(self.existing_config['cutoff_freq'][0])
+                if hasattr(self, 'cutoff_spinbox2'):
+                    self.cutoff_spinbox2.setValue(self.existing_config['cutoff_freq'][1])
+            else:
+                self.cutoff_spinbox1.setValue(self.existing_config['cutoff_freq'])
+
+        if 'ripple_db' in self.existing_config:
+            self.ripple_spinbox.setValue(self.existing_config['ripple_db'])
+
+    def validate_and_accept(self):
+        """Validate inputs before accepting."""
+        # For band-pass/stop, ensure lower < upper
+        if self.filter_type in ['Band-pass', 'Band-stop']:
+            lower = self.cutoff_spinbox1.value()
+            upper = self.cutoff_spinbox2.value()
+            if lower >= upper:
+                QMessageBox.warning(self, "Invalid Frequencies",
+                                  "Lower cutoff must be less than upper cutoff.")
+                return
+
+        self.accept()
+
+    def get_filter_config(self):
+        """Get the filter configuration entered by the user.
+        Frequencies are converted to Hz for internal use."""
+        config = {
+            'filter_design': self.design_combo.currentText(),
+            'filter_order': self.order_spinbox.value(),
+        }
+
+        # Get frequency unit and convert to Hz
+        freq_unit = self.units_combo.currentText()
+        unit_multipliers = {'Hz': 1, 'kHz': 1e3, 'MHz': 1e6, 'GHz': 1e9}
+        multiplier = unit_multipliers.get(freq_unit, 1e6)
+
+        # Store the display unit for future editing
+        config['freq_unit'] = freq_unit
+
+        # Get cutoff frequency(s) and convert to Hz
+        if self.filter_type in ['Band-pass', 'Band-stop']:
+            freq1_hz = self.cutoff_spinbox1.value() * multiplier
+            freq2_hz = self.cutoff_spinbox2.value() * multiplier
+            config['cutoff_freq_hz'] = [freq1_hz, freq2_hz]
+        else:
+            freq_hz = self.cutoff_spinbox1.value() * multiplier
+            config['cutoff_freq_hz'] = freq_hz
+
+        # Get ripple for Chebyshev
+        if 'Chebyshev' in self.design_combo.currentText():
+            config['ripple_db'] = self.ripple_spinbox.value()
+
+        return config
+
+
+class TimeShiftConfigDialog(QDialog):
+    """Dialog for configuring time shift parameters."""
+
+    def __init__(self, parent=None, existing_config=None):
+        """
+        Args:
+            parent: Parent widget
+            existing_config: Dictionary with existing time shift config (for editing)
+        """
+        super().__init__(parent)
+        self.existing_config = existing_config
+        self.setWindowTitle("Configure Time Shift")
+        self.setModal(True)
+        self.setup_ui()
+
+    def setup_ui(self):
+        """Setup the UI layout."""
+        layout = QVBoxLayout()
+
+        # Shift unit selector (Samples or Nanoseconds)
+        unit_layout = QHBoxLayout()
+        unit_layout.addWidget(QLabel("Shift Unit:"))
+        self.unit_combo = QComboBox()
+        self.unit_combo.addItems(['Samples', 'Nanoseconds'])
+        self.unit_combo.currentTextChanged.connect(self._update_unit_label)
+        unit_layout.addWidget(self.unit_combo)
+        layout.addLayout(unit_layout)
+
+        # Shift amount
+        shift_layout = QHBoxLayout()
+        self.shift_label = QLabel("Shift Amount:")
+        shift_layout.addWidget(self.shift_label)
+        self.shift_spinbox = QDoubleSpinBox()
+        self.shift_spinbox.setRange(-1000000, 1000000)
+        self.shift_spinbox.setValue(0)
+        self.shift_spinbox.setDecimals(3)
+        self.shift_spinbox.setSingleStep(1.0)
+        self.shift_spinbox.setToolTip("Positive = shift right (delay), Negative = shift left (advance)")
+        shift_layout.addWidget(self.shift_spinbox)
+        self.unit_label = QLabel("samples")
+        shift_layout.addWidget(self.unit_label)
+        layout.addLayout(shift_layout)
+
+        # Interpolation checkbox
+        interp_layout = QHBoxLayout()
+        self.interpolate_checkbox = QCheckBox("Interpolate between samples")
+        self.interpolate_checkbox.setChecked(True)
+        self.interpolate_checkbox.setToolTip(
+            "When checked, uses interpolation for sub-sample accurate shifts.\n"
+            "When unchecked, rounds to nearest sample (faster but less accurate)."
+        )
+        interp_layout.addWidget(self.interpolate_checkbox)
+        interp_layout.addStretch()
+        layout.addLayout(interp_layout)
+
+        # Help text
+        help_text = QLabel(
+            "Time shift moves the waveform in time:\n"
+            "• Positive values: shift right (delay signal)\n"
+            "• Negative values: shift left (advance signal)\n"
+            "• Interpolation enables sub-sample accurate shifts\n"
+            "• Shifted portions wrap around (circular shift)"
+        )
+        help_text.setWordWrap(True)
+        help_text.setStyleSheet("color: gray; font-size: 9pt;")
+        layout.addWidget(help_text)
+
+        # Buttons
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+        self.setLayout(layout)
+
+        # Load existing config if provided
+        if self.existing_config:
+            self._load_existing_config()
+
+    def _update_unit_label(self):
+        """Update the unit label based on selected unit type."""
+        if self.unit_combo.currentText() == 'Samples':
+            self.unit_label.setText("samples")
+            self.shift_spinbox.setDecimals(0)
+            self.shift_spinbox.setSingleStep(1.0)
+        else:  # Nanoseconds
+            self.unit_label.setText("ns")
+            self.shift_spinbox.setDecimals(6)  # Allow very precise values like 0.0023 ns
+            self.shift_spinbox.setSingleStep(0.001)
+
+    def _load_existing_config(self):
+        """Load existing time shift configuration into dialog."""
+        if 'shift_unit' in self.existing_config:
+            index = self.unit_combo.findText(self.existing_config['shift_unit'])
+            if index >= 0:
+                self.unit_combo.setCurrentIndex(index)
+
+        if 'shift_amount' in self.existing_config:
+            self.shift_spinbox.setValue(self.existing_config['shift_amount'])
+
+        if 'interpolate' in self.existing_config:
+            self.interpolate_checkbox.setChecked(self.existing_config['interpolate'])
+
+    def get_shift_config(self):
+        """Get the time shift configuration entered by the user."""
+        return {
+            'shift_unit': self.unit_combo.currentText(),
+            'shift_amount': self.shift_spinbox.value(),
+            'interpolate': self.interpolate_checkbox.isChecked()
+        }
 
 
 class CustomOperationDialog(QDialog):
@@ -401,7 +738,17 @@ class MathChannelsWindow(QWidget):
 
         # Single-channel operations
         self.operation_combo.addItems(['Invert', 'Abs', 'Square', 'Sqrt', 'Log', 'Exp',
-                                       'Integrate', 'Differentiate', 'Envelope', 'Smooth', 'Minimum', 'Maximum'])
+                                       'Integrate', 'Differentiate', 'Envelope', 'Smooth', 'Minimum', 'Maximum',
+                                       'AC Coupling'])
+
+        # Add separator for filters
+        filter_separator_idx = self.operation_combo.count()
+        self.operation_combo.insertSeparator(filter_separator_idx)
+        self.operation_combo.addItem('--- Digital Filters ---')
+        self.operation_combo.model().item(filter_separator_idx + 1).setEnabled(False)  # Make it non-selectable
+
+        # Filter operations
+        self.operation_combo.addItems(['Low-pass', 'High-pass', 'Band-pass', 'Band-stop', 'Time Shift'])
 
         # Add custom operations if any
         if self.custom_operations:
@@ -424,6 +771,11 @@ class MathChannelsWindow(QWidget):
         """
         two_channel_ops = ['A-B', 'A+B', 'A*B', 'A/B', 'min(A,B)', 'max(A,B)',
                           '-', '+', '*', '/']  # Include old format for backward compatibility
+
+        # Filter operations are single-channel
+        filter_ops = ['Low-pass', 'High-pass', 'Band-pass', 'Band-stop']
+        if operation in filter_ops:
+            return False
 
         # Check built-in operations
         if operation in two_channel_ops:
@@ -534,6 +886,59 @@ class MathChannelsWindow(QWidget):
             board = ch_data // self.state.num_chan_per_board
             chan = ch_data % self.state.num_chan_per_board
             return f"Board {board} Channel {chan}"
+
+    def create_math_channel_display_text(self, math_def):
+        """Create formatted display text for a math channel.
+
+        Args:
+            math_def: Dictionary containing math channel definition
+
+        Returns:
+            Formatted display text string
+        """
+        math_name = math_def['name']
+        op = math_def['operation']
+        ch_a = math_def['ch1']
+        ch_b = math_def.get('ch2')
+        operation_config = math_def.get('operation_config')
+
+        ch_a_text = self.get_channel_display_name(ch_a)
+
+        if self.is_two_channel_operation(op):
+            ch_b_text = self.get_channel_display_name(ch_b)
+            op_display = op.replace('B', " "+ch_b_text).replace('A', ch_a_text+" ")
+            return f"{math_name}: {op_display}"
+        elif self.is_filter_operation(op) and operation_config:
+            # For filters, show the cutoff frequency with units
+            freq_unit = operation_config.get('freq_unit', 'MHz')
+            unit_multipliers = {'Hz': 1, 'kHz': 1e3, 'MHz': 1e6, 'GHz': 1e9}
+            multiplier = unit_multipliers.get(freq_unit, 1e6)
+
+            # Handle both new (cutoff_freq_hz) and legacy (cutoff_freq) formats
+            if 'cutoff_freq_hz' in operation_config:
+                cutoff_hz = operation_config['cutoff_freq_hz']
+                if isinstance(cutoff_hz, (list, tuple)):
+                    cutoff_display = [f / multiplier for f in cutoff_hz]
+                    return f"{math_name}: {op}({ch_a_text}, {cutoff_display[0]:.3g}-{cutoff_display[1]:.3g} {freq_unit})"
+                else:
+                    cutoff_display = cutoff_hz / multiplier
+                    return f"{math_name}: {op}({ch_a_text}, {cutoff_display:.3g} {freq_unit})"
+            else:
+                # Legacy format
+                cutoff = operation_config.get('cutoff_freq', 0)
+                if isinstance(cutoff, (list, tuple)):
+                    return f"{math_name}: {op}({ch_a_text}, {cutoff[0]}-{cutoff[1]} MHz)"
+                else:
+                    return f"{math_name}: {op}({ch_a_text}, {cutoff} MHz)"
+        elif op == 'Time Shift' and operation_config:
+            # For time shift, show the shift amount and unit
+            shift_amount = operation_config['shift_amount']
+            shift_unit = operation_config['shift_unit']
+            unit_abbr = 'smp' if shift_unit == 'Samples' else 'ns'
+            interp_str = " (interp)" if operation_config.get('interpolate', False) else ""
+            return f"{math_name}: {op}({ch_a_text}, {shift_amount:+.3g} {unit_abbr}{interp_str})"
+        else:
+            return f"{math_name}: {op}({ch_a_text})"
 
     def update_preview(self):
         """Update the preview label showing what the math channel will be."""
@@ -678,6 +1083,177 @@ class MathChannelsWindow(QWidget):
 
         return math_name in deps
 
+    def is_filter_operation(self, operation):
+        """Check if an operation is a digital filter.
+
+        Args:
+            operation: The operation string
+
+        Returns:
+            True if operation is a filter, False otherwise
+        """
+        return operation in ['Low-pass', 'High-pass', 'Band-pass', 'Band-stop']
+
+    def is_configurable_operation(self, operation):
+        """Check if an operation requires a configuration dialog.
+
+        Args:
+            operation: The operation string
+
+        Returns:
+            True if operation needs configuration, False otherwise
+        """
+        return operation in ['Low-pass', 'High-pass', 'Band-pass', 'Band-stop', 'Time Shift']
+
+    def _apply_digital_filter(self, y_data, x_data, filter_type, filter_config):
+        """Apply a digital filter to the signal.
+
+        Args:
+            y_data: Signal data to filter
+            x_data: Time axis data
+            filter_type: Type of filter ('Low-pass', 'High-pass', 'Band-pass', 'Band-stop')
+            filter_config: Dictionary containing filter parameters
+
+        Returns:
+            Filtered signal data
+        """
+        try:
+            # Calculate sample rate from x_data (assume uniform spacing)
+            if len(x_data) < 2:
+                return y_data.copy()
+
+            # Sample rate in Hz (x_data is in current time units, need to convert)
+            dt = x_data[1] - x_data[0]  # Time step in current units (ns, us, ms, etc.)
+            # Convert to seconds based on state.nsunits
+            dt_seconds = dt * self.state.nsunits / 1e9  # Convert from current units to seconds
+            sample_rate_hz = 1.0 / dt_seconds
+
+            # Get filter parameters
+            filter_order = filter_config['filter_order']
+            filter_design = filter_config['filter_design']
+
+            # Get cutoff frequency in Hz (handle both new and legacy formats)
+            if 'cutoff_freq_hz' in filter_config:
+                # New format: frequencies stored in Hz
+                cutoff_freq_hz = filter_config['cutoff_freq_hz']
+            elif 'cutoff_freq' in filter_config:
+                # Legacy format: frequencies were in MHz
+                cutoff_freq_mhz = filter_config['cutoff_freq']
+                if isinstance(cutoff_freq_mhz, (list, tuple)):
+                    cutoff_freq_hz = [f * 1e6 for f in cutoff_freq_mhz]
+                else:
+                    cutoff_freq_hz = cutoff_freq_mhz * 1e6
+            else:
+                print("Error: No cutoff frequency specified in filter config")
+                return y_data.copy()
+
+            # Normalize cutoff frequency to Nyquist frequency
+            nyquist_freq = sample_rate_hz / 2.0
+            if isinstance(cutoff_freq_hz, (list, tuple)):
+                wn = [f / nyquist_freq for f in cutoff_freq_hz]
+                # Check if frequencies are valid
+                if any(w <= 0 or w >= 1 for w in wn):
+                    print(f"Warning: Filter cutoff frequencies {[f/1e6 for f in cutoff_freq_hz]} MHz are outside valid range (0 to {nyquist_freq/1e6:.3f} MHz)")
+                    return y_data.copy()
+            else:
+                wn = cutoff_freq_hz / nyquist_freq
+                # Check if frequency is valid
+                if wn <= 0 or wn >= 1:
+                    print(f"Warning: Filter cutoff frequency {cutoff_freq_hz/1e6:.3f} MHz is outside valid range (0 to {nyquist_freq/1e6:.3f} MHz)")
+                    return y_data.copy()
+
+            # Map filter type to scipy btype
+            btype_map = {
+                'Low-pass': 'lowpass',
+                'High-pass': 'highpass',
+                'Band-pass': 'bandpass',
+                'Band-stop': 'bandstop'
+            }
+            btype = btype_map[filter_type]
+
+            # Design the filter based on filter design type
+            if 'Butterworth' in filter_design:
+                b, a = signal.butter(filter_order, wn, btype=btype)
+            elif 'Chebyshev' in filter_design:
+                ripple_db = filter_config.get('ripple_db', 0.5)
+                b, a = signal.cheby1(filter_order, ripple_db, wn, btype=btype)
+            else:
+                # Default to Butterworth
+                b, a = signal.butter(filter_order, wn, btype=btype)
+
+            # Apply the filter using filtfilt for zero-phase filtering
+            y_filtered = signal.filtfilt(b, a, y_data)
+
+            return y_filtered
+
+        except Exception as e:
+            print(f"Error applying {filter_type} filter: {e}")
+            return y_data.copy()
+
+    def _apply_time_shift(self, y_data, x_data, shift_config):
+        """Apply a time shift to the signal.
+
+        Args:
+            y_data: Signal data to shift
+            x_data: Time axis data
+            shift_config: Dictionary containing shift parameters
+
+        Returns:
+            Time-shifted signal data
+        """
+        try:
+            shift_unit = shift_config['shift_unit']
+            shift_amount = shift_config['shift_amount']
+            use_interpolation = shift_config.get('interpolate', False)
+
+            if len(x_data) < 2:
+                return y_data.copy()
+
+            dt = x_data[1] - x_data[0]  # Time step in current units
+
+            # Calculate the exact shift in samples (may be fractional)
+            if shift_unit == 'Samples':
+                shift_samples = shift_amount
+            else:  # Nanoseconds
+                # Convert shift from nanoseconds to current time units
+                shift_in_current_units = shift_amount / self.state.nsunits
+                # Calculate number of samples (keep fractional part)
+                shift_samples = shift_in_current_units / dt
+
+            # Check if we have a fractional shift and interpolation is enabled
+            fractional_part = abs(shift_samples - round(shift_samples))
+            has_fractional_shift = fractional_part > 1e-9  # Tolerance for floating point comparison
+
+            if use_interpolation and has_fractional_shift:
+                # Use interpolation for sub-sample accurate shifting
+                # Create interpolation function (linear interpolation)
+                # Use 'extrapolate' to handle edge cases
+                interp_func = interpolate.interp1d(
+                    x_data, y_data, kind='linear',
+                    bounds_error=False, fill_value='extrapolate'
+                )
+
+                # Calculate shifted time points
+                # Positive shift = delay (shift right), so subtract from time
+                # Negative shift = advance (shift left), so add to time
+                x_shifted = x_data - (shift_samples * dt)
+
+                # Interpolate at the shifted time points
+                y_shifted = interp_func(x_shifted)
+
+                return y_shifted
+            else:
+                # Use integer sample shift with circular wrapping
+                # Positive shift = delay (shift right), Negative shift = advance (shift left)
+                shift_samples_int = int(round(shift_samples))
+                y_shifted = np.roll(y_data, shift_samples_int)
+
+                return y_shifted
+
+        except Exception as e:
+            print(f"Error applying time shift: {e}")
+            return y_data.copy()
+
     def add_math_channel(self):
         """Add a new math channel to the list."""
         ch_a = self.channel_a_combo.currentData()
@@ -693,6 +1269,20 @@ class MathChannelsWindow(QWidget):
                 return
         else:
             ch_b = None  # Single-channel operation
+
+        # If it's a configurable operation, open appropriate configuration dialog
+        operation_config = None
+        if self.is_configurable_operation(op):
+            if self.is_filter_operation(op):
+                dialog = FilterConfigDialog(op, self)
+                if dialog.exec_() != QDialog.Accepted:
+                    return  # User cancelled
+                operation_config = dialog.get_filter_config()
+            elif op == 'Time Shift':
+                dialog = TimeShiftConfigDialog(self)
+                if dialog.exec_() != QDialog.Accepted:
+                    return  # User cancelled
+                operation_config = dialog.get_shift_config()
 
         # Create a unique name for this math channel
         math_name = f"Math{len(self.math_channels) + 1}"
@@ -723,7 +1313,8 @@ class MathChannelsWindow(QWidget):
             'color': color,
             'displayed': not uses_disabled_channel,  # False if using disabled channel, True otherwise
             'width': line_width,  # Store the line width that was active when math channel was created
-            'fft_enabled': False  # Track FFT state for this math channel
+            'fft_enabled': False,  # Track FFT state for this math channel
+            'operation_config': operation_config  # Store operation configuration (for filters, time shift, etc.)
         }
 
         self.math_channels.append(math_def)
@@ -738,6 +1329,34 @@ class MathChannelsWindow(QWidget):
             # Replace A and B in the operation string with actual channel names
             op_display = op.replace('B', " "+ch_b_text).replace('A', ch_a_text+" ")
             display_text = f"{math_name}: {op_display}"
+        elif self.is_filter_operation(op) and operation_config:
+            # For filters, show the cutoff frequency with units
+            freq_unit = operation_config.get('freq_unit', 'MHz')
+            unit_multipliers = {'Hz': 1, 'kHz': 1e3, 'MHz': 1e6, 'GHz': 1e9}
+            multiplier = unit_multipliers.get(freq_unit, 1e6)
+
+            # Handle both new (cutoff_freq_hz) and legacy (cutoff_freq) formats
+            if 'cutoff_freq_hz' in operation_config:
+                cutoff_hz = operation_config['cutoff_freq_hz']
+                if isinstance(cutoff_hz, (list, tuple)):
+                    cutoff_display = [f / multiplier for f in cutoff_hz]
+                    display_text = f"{math_name}: {op}({ch_a_text}, {cutoff_display[0]:.3g}-{cutoff_display[1]:.3g} {freq_unit})"
+                else:
+                    cutoff_display = cutoff_hz / multiplier
+                    display_text = f"{math_name}: {op}({ch_a_text}, {cutoff_display:.3g} {freq_unit})"
+            else:
+                # Legacy format
+                cutoff = operation_config.get('cutoff_freq', 0)
+                if isinstance(cutoff, (list, tuple)):
+                    display_text = f"{math_name}: {op}({ch_a_text}, {cutoff[0]}-{cutoff[1]} MHz)"
+                else:
+                    display_text = f"{math_name}: {op}({ch_a_text}, {cutoff} MHz)"
+        elif op == 'Time Shift' and operation_config:
+            # For time shift, show the shift amount and unit
+            shift_amount = operation_config['shift_amount']
+            shift_unit = operation_config['shift_unit']
+            unit_abbr = 'smp' if shift_unit == 'Samples' else 'ns'
+            display_text = f"{math_name}: {op}({ch_a_text}, {shift_amount:+.0f} {unit_abbr})"
         else:
             display_text = f"{math_name}: {op}({ch_a_text})"
 
@@ -771,6 +1390,23 @@ class MathChannelsWindow(QWidget):
         else:
             ch_b = None  # Single-channel operation
 
+        # If it's a configurable operation, open appropriate configuration dialog with existing config if available
+        operation_config = None
+        if self.is_configurable_operation(op):
+            # Get existing config if this was already the same operation
+            existing_config = self.math_channels[current_row].get('operation_config') if self.math_channels[current_row]['operation'] == op else None
+
+            if self.is_filter_operation(op):
+                dialog = FilterConfigDialog(op, self, existing_config)
+                if dialog.exec_() != QDialog.Accepted:
+                    return  # User cancelled
+                operation_config = dialog.get_filter_config()
+            elif op == 'Time Shift':
+                dialog = TimeShiftConfigDialog(self, existing_config)
+                if dialog.exec_() != QDialog.Accepted:
+                    return  # User cancelled
+                operation_config = dialog.get_shift_config()
+
         # Get the math channel name
         math_name = self.math_channels[current_row]['name']
 
@@ -788,6 +1424,7 @@ class MathChannelsWindow(QWidget):
         self.math_channels[current_row]['ch1'] = ch_a
         self.math_channels[current_row]['ch2'] = ch_b
         self.math_channels[current_row]['operation'] = op
+        self.math_channels[current_row]['operation_config'] = operation_config
         # Update displayed state if using disabled channel
         if uses_disabled_channel:
             self.math_channels[current_row]['displayed'] = False
@@ -802,6 +1439,34 @@ class MathChannelsWindow(QWidget):
             # Replace A and B in the operation string with actual channel names
             op_display = op.replace('B', " "+ch_b_text).replace('A', ch_a_text+" ")
             display_text = f"{math_name}: {op_display}"
+        elif self.is_filter_operation(op) and operation_config:
+            # For filters, show the cutoff frequency with units
+            freq_unit = operation_config.get('freq_unit', 'MHz')
+            unit_multipliers = {'Hz': 1, 'kHz': 1e3, 'MHz': 1e6, 'GHz': 1e9}
+            multiplier = unit_multipliers.get(freq_unit, 1e6)
+
+            # Handle both new (cutoff_freq_hz) and legacy (cutoff_freq) formats
+            if 'cutoff_freq_hz' in operation_config:
+                cutoff_hz = operation_config['cutoff_freq_hz']
+                if isinstance(cutoff_hz, (list, tuple)):
+                    cutoff_display = [f / multiplier for f in cutoff_hz]
+                    display_text = f"{math_name}: {op}({ch_a_text}, {cutoff_display[0]:.3g}-{cutoff_display[1]:.3g} {freq_unit})"
+                else:
+                    cutoff_display = cutoff_hz / multiplier
+                    display_text = f"{math_name}: {op}({ch_a_text}, {cutoff_display:.3g} {freq_unit})"
+            else:
+                # Legacy format
+                cutoff = operation_config.get('cutoff_freq', 0)
+                if isinstance(cutoff, (list, tuple)):
+                    display_text = f"{math_name}: {op}({ch_a_text}, {cutoff[0]}-{cutoff[1]} MHz)"
+                else:
+                    display_text = f"{math_name}: {op}({ch_a_text}, {cutoff} MHz)"
+        elif op == 'Time Shift' and operation_config:
+            # For time shift, show the shift amount and unit
+            shift_amount = operation_config['shift_amount']
+            shift_unit = operation_config['shift_unit']
+            unit_abbr = 'smp' if shift_unit == 'Samples' else 'ns'
+            display_text = f"{math_name}: {op}({ch_a_text}, {shift_amount:+.0f} {unit_abbr})"
         else:
             display_text = f"{math_name}: {op}({ch_a_text})"
 
@@ -1314,6 +1979,25 @@ class MathChannelsWindow(QWidget):
                                 self.running_minmax[math_name]['max'], y1
                             )
                             y_result = self.running_minmax[math_name]['max'].copy()
+                    elif operation == 'AC Coupling':
+                        # Remove DC offset (AC coupling)
+                        y_result = y1 - np.mean(y1)
+                    elif operation == 'Time Shift':
+                        # Time shift operation
+                        shift_config = math_def.get('operation_config')
+                        if shift_config:
+                            y_result = self._apply_time_shift(y1, x1, shift_config)
+                        else:
+                            # No shift config, just pass through
+                            y_result = y1.copy()
+                    elif self.is_filter_operation(operation):
+                        # Digital filter operations
+                        filter_config = math_def.get('operation_config')
+                        if filter_config:
+                            y_result = self._apply_digital_filter(y1, x1, operation, filter_config)
+                        else:
+                            # No filter config, just pass through
+                            y_result = y1.copy()
                     else:
                         # Check if it's a custom single-channel operation
                         custom_op = next((op for op in self.custom_operations if op['name'] == operation), None)
