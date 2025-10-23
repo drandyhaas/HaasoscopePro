@@ -2,7 +2,8 @@
 
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore
-from PyQt5.QtGui import QColor, QPen
+from PyQt5.QtGui import QColor, QPen, QBrush
+from PyQt5.QtWidgets import QGraphicsRectItem
 import numpy as np
 import time
 from collections import deque
@@ -71,6 +72,7 @@ class PlotManager(pg.QtCore.QObject):
     hline_dragged_signal = pg.QtCore.Signal(float)
     curve_clicked_signal = pg.QtCore.Signal(int)
     math_curve_clicked_signal = pg.QtCore.Signal(str)  # Emits math channel name
+    zoom_region_changed_signal = pg.QtCore.Signal(tuple, tuple)  # Emits (x_range, y_range)
 
     def __init__(self, ui, state):
         super().__init__()
@@ -97,6 +99,9 @@ class PlotManager(pg.QtCore.QObject):
 
         # Cursor manager (will be initialized after linepens are created)
         self.cursor_manager = None
+
+        # Zoom window ROI
+        self.zoom_roi = None
 
         # Persistence attributes (per-channel)
         self.max_persist_lines = 16
@@ -191,6 +196,52 @@ class PlotManager(pg.QtCore.QObject):
             line.setVisible(False)
             self.otherlines[f'fit_{i}'] = line
 
+        # Zoom window ROI (initially invisible)
+        # Create a rectangular ROI with semi-transparent gray fill
+        # Create semi-transparent gray pen and brush
+        roi_pen = pg.mkPen(color=QColor(128, 128, 128, 100), width=2)  # Semi-transparent gray border
+        roi_hover_pen = pg.mkPen(color=QColor(255, 255, 255, 200), width=2)  # Semi-transparent white hover
+
+        self.zoom_roi = pg.RectROI(
+            pos=[0, 0],  # Will be set when shown
+            size=[1, 1],  # Will be set when shown
+            pen=roi_pen,
+            movable=True,
+            removable=False  # Don't allow removing the ROI
+        )
+
+        # Set the hover pen for the ROI border
+        self.zoom_roi.pen = roi_pen
+        self.zoom_roi.hoverPen = roi_hover_pen
+        self.zoom_roi.currentPen = roi_pen
+
+        # Add corner handles for resizing - this gives 4 corner handles
+        # The RectROI by default has corner handles when created
+        # But we'll explicitly set up the handle appearance
+
+        # Set the handle colors to be more visible
+        self.zoom_roi.handlePen = pg.mkPen(color=QColor(150, 150, 150, 200), width=2)
+        self.zoom_roi.handleHoverPen = pg.mkPen(color=QColor(255, 255, 255, 255), width=3)
+
+        # Add side handles for edge resizing (top, bottom, left, right)
+        # This allows dragging individual edges
+        self.zoom_roi.addScaleHandle([1, 0.5], [0, 0.5])  # Right edge
+        self.zoom_roi.addScaleHandle([0, 0.5], [1, 0.5])  # Left edge
+        self.zoom_roi.addScaleHandle([0.5, 1], [0.5, 0])  # Bottom edge
+        self.zoom_roi.addScaleHandle([0.5, 0], [0.5, 1])  # Top edge
+
+        # Create a semi-transparent fill by adding a rectangle inside the ROI
+        self.zoom_roi_fill = QGraphicsRectItem(0, 0, 1, 1, self.zoom_roi)
+        fill_brush = QBrush(QColor(128, 128, 128, 26))  # Gray with alpha ~0.1 (26/255)
+        self.zoom_roi_fill.setBrush(fill_brush)
+        self.zoom_roi_fill.setPen(pg.mkPen(None))  # No border for the fill
+
+        self.plot.addItem(self.zoom_roi)
+        self.zoom_roi.setVisible(False)
+        # Connect signal to notify when ROI changes
+        self.zoom_roi.sigRegionChanged.connect(self.on_zoom_roi_changed)
+        self.zoom_roi.sigRegionChanged.connect(self._update_zoom_roi_fill)
+
         # Persistence average lines (created per-channel on demand)
         # self.average_lines = {} already initialized in __init__
 
@@ -282,7 +333,7 @@ class PlotManager(pg.QtCore.QObject):
 
         # Calculate extra trig stabilizer correction using noextboard
         extra_trig_correction = None
-        if s.extra_trig_stabilizer_enabled and s.noextboard != -1 and s.downsamplefactor==1:
+        if s.extra_trig_stabilizer_enabled and s.noextboard != -1: # and s.downsamplefactor==1: # disable at less zoom?
             # Use the first channel of the noextboard for correction calculation
             noext_li = s.noextboard * s.num_chan_per_board
             if s.dotwochannel: noext_li += s.triggerchan[s.noextboard]
@@ -605,6 +656,9 @@ class PlotManager(pg.QtCore.QObject):
         if self.cursor_manager:
             self.cursor_manager.adjust_cursor_positions()
 
+        # Update zoom ROI if it's visible (units or range may have changed)
+        self.update_zoom_roi_for_time_change()
+
     def draw_trigger_lines(self):
         """Draws the horizontal and vertical trigger lines on the plot."""
         state = self.state
@@ -811,6 +865,10 @@ class PlotManager(pg.QtCore.QObject):
         # Skip the next event to avoid glitches after timebase changes
         self.peak_skip_events = 1
 
+    def reset_cumulative_correction(self):
+        """Reset cumulative trigger correction when depth or other settings change."""
+        self.cumulative_correction = [0.0] * self.nlines
+
     def _update_peak_data(self, channel_index, x_data, y_data):
         """Update peak max/min data for a channel.
 
@@ -949,6 +1007,221 @@ class PlotManager(pg.QtCore.QObject):
         # Update trigger threshold text if it's enabled
         if self.cursor_manager:
             self.cursor_manager.update_trigger_threshold_text()
+
+    def on_zoom_roi_changed(self):
+        """Called when zoom ROI is moved or resized."""
+        if self.zoom_roi and self.zoom_roi.isVisible():
+            # Get the ROI bounds
+            pos = self.zoom_roi.pos()
+            size = self.zoom_roi.size()
+            x_range = (pos[0], pos[0] + size[0])
+            y_range = (pos[1], pos[1] + size[1])
+            # Emit signal with the new range
+            self.zoom_region_changed_signal.emit(x_range, y_range)
+
+    def show_zoom_roi(self):
+        """Show the zoom ROI and set its default position based on trigger lines."""
+        if self.zoom_roi is None:
+            return
+
+        # Get current trigger positions
+        vline_pos = self.otherlines['vline'].value()
+        hline_pos = self.otherlines['hline'].value()
+
+        # Get current plot range for calculating defaults
+        view_range = self.plot.getViewBox().viewRange()
+        x_range = view_range[0]
+        y_range = view_range[1]
+
+        # Calculate default region: ±10% around vline (time), ±25% around hline (voltage)
+        x_span = x_range[1] - x_range[0]
+        y_span = y_range[1] - y_range[0]
+
+        roi_width = x_span * 0.2  # ±10% = 20% total width
+        roi_height = y_span * 0.5  # ±25% = 50% total height
+
+        # Center ROI on trigger lines
+        roi_x = vline_pos - roi_width / 2
+        roi_y = hline_pos - roi_height / 2
+
+        # Set ROI position and size
+        self.zoom_roi.setPos([roi_x, roi_y])
+        self.zoom_roi.setSize([roi_width, roi_height])
+
+        # Show the ROI
+        self.zoom_roi.setVisible(True)
+
+        # Update the fill to match the ROI size
+        self._update_zoom_roi_fill()
+
+        # Emit initial position
+        self.on_zoom_roi_changed()
+
+    def hide_zoom_roi(self):
+        """Hide the zoom ROI."""
+        if self.zoom_roi:
+            self.zoom_roi.setVisible(False)
+
+    def reset_zoom_roi_position(self):
+        """Reset the zoom ROI to its default position centered on trigger lines."""
+        if not self.zoom_roi or not self.zoom_roi.isVisible():
+            return
+
+        # Get current trigger positions
+        vline_pos = self.otherlines['vline'].value()
+        hline_pos = self.otherlines['hline'].value()
+
+        # Get current plot range for calculating defaults
+        view_range = self.plot.getViewBox().viewRange()
+        x_range = view_range[0]
+        y_range = view_range[1]
+
+        # Calculate default region: ±10% around vline (time), ±25% around hline (voltage)
+        x_span = x_range[1] - x_range[0]
+        y_span = y_range[1] - y_range[0]
+
+        roi_width = x_span * 0.2  # ±10% = 20% total width
+        roi_height = y_span * 0.5  # ±25% = 50% total height
+
+        # Center ROI on trigger lines
+        roi_x = vline_pos - roi_width / 2
+        roi_y = hline_pos - roi_height / 2
+
+        # Set ROI position and size
+        self.zoom_roi.setPos([roi_x, roi_y])
+        self.zoom_roi.setSize([roi_width, roi_height])
+
+        # Update the fill to match the ROI size
+        self._update_zoom_roi_fill()
+
+        # Emit new position
+        self.on_zoom_roi_changed()
+
+    def _update_zoom_roi_fill(self):
+        """Update the fill rectangle to match the ROI size."""
+        if hasattr(self, 'zoom_roi_fill') and self.zoom_roi_fill is not None:
+            size = self.zoom_roi.size()
+            self.zoom_roi_fill.setRect(0, 0, size[0], size[1])
+
+    def adjust_zoom_roi_for_downsample(self):
+        """Adjust the zoom ROI width based on downsample factor."""
+        if not self.zoom_roi or not self.zoom_roi.isVisible():
+            return
+
+        # Get current plot range
+        view_range = self.plot.getViewBox().viewRange()
+        x_range = view_range[0]
+        x_span = x_range[1] - x_range[0]
+
+        # Calculate the zoom factor based on downsample
+        # When downsample < 0, we're zoomed in by factor of 2^(-downsample)
+        downsample = self.state.downsample
+        if downsample < 0:
+            zoom_factor = pow(2, -downsample)
+        else:
+            zoom_factor = 1
+
+        # Base width is 20% of view (±10% around trigger)
+        # Divide by zoom factor when zoomed in
+        base_width = x_span * 0.2
+        roi_width = base_width / zoom_factor
+
+        # Maintain minimum width of 5% of full window width
+        min_width = x_span * 0.05
+        if roi_width < min_width:
+            roi_width = min_width
+
+        # Get current ROI position and height
+        current_pos = self.zoom_roi.pos()
+        current_size = self.zoom_roi.size()
+
+        # Calculate new position to keep it centered on the same point
+        # Current center x
+        center_x = current_pos[0] + current_size[0] / 2
+        # New position with adjusted width
+        new_x = center_x - roi_width / 2
+
+        # Update ROI size and position
+        self.zoom_roi.setSize([roi_width, current_size[1]])
+        self.zoom_roi.setPos([new_x, current_pos[1]])
+
+        # Update the fill
+        self._update_zoom_roi_fill()
+
+        # Emit signal to update zoom window
+        self.on_zoom_roi_changed()
+
+    def update_zoom_roi_for_time_change(self):
+        """Update zoom ROI position when time axis units/range change."""
+        if not self.zoom_roi or not self.zoom_roi.isVisible():
+            return
+
+        # Get new trigger positions (already updated in new units)
+        vline_pos = self.otherlines['vline'].value()
+        hline_pos = self.otherlines['hline'].value()
+
+        # Get current plot range (already in new units)
+        view_range = self.plot.getViewBox().viewRange()
+        x_range = view_range[0]
+        y_range = view_range[1]
+        x_span = x_range[1] - x_range[0]
+        y_span = y_range[1] - y_range[0]
+
+        # Get current ROI size to preserve it (don't resize based on downsample)
+        current_size = self.zoom_roi.size()
+
+        # If ROI has never been sized (first time), set a default based on view
+        if current_size[0] == 1 and current_size[1] == 1:
+            roi_width = x_span * 0.2  # 20% of view
+            roi_height = y_span * 0.5  # 50% of view
+        else:
+            # Preserve current ROI dimensions (in terms of absolute units)
+            roi_width = current_size[0]
+            roi_height = current_size[1]
+
+        # Center ROI on trigger lines
+        roi_x = vline_pos - roi_width / 2
+        roi_y = hline_pos - roi_height / 2
+
+        # Update ROI position (but not size)
+        self.zoom_roi.setPos([roi_x, roi_y])
+        self.zoom_roi.setSize([roi_width, roi_height])
+
+        # Update the fill
+        self._update_zoom_roi_fill()
+
+        # Emit signal to update zoom window
+        self.on_zoom_roi_changed()
+
+    def scale_zoom_roi_width(self, scale_factor):
+        """Scale the zoom ROI width by a given factor.
+
+        Args:
+            scale_factor: Factor to multiply the width by (e.g., 0.5 to halve, 2.0 to double)
+        """
+        if not self.zoom_roi or not self.zoom_roi.isVisible():
+            return
+
+        # Get current ROI position and size
+        current_pos = self.zoom_roi.pos()
+        current_size = self.zoom_roi.size()
+
+        # Calculate new width
+        new_width = current_size[0] * scale_factor
+
+        # Calculate new position to keep ROI centered
+        center_x = current_pos[0] + current_size[0] / 2
+        new_x = center_x - new_width / 2
+
+        # Update ROI (keep height the same)
+        self.zoom_roi.setPos([new_x, current_pos[1]])
+        self.zoom_roi.setSize([new_width, current_size[1]])
+
+        # Update the fill
+        self._update_zoom_roi_fill()
+
+        # Emit signal to update zoom window
+        self.on_zoom_roi_changed()
 
     def _create_trigger_arrows(self):
         """Create triangular arrow markers at the ends of trigger lines."""

@@ -160,6 +160,7 @@ class MeasurementsManager:
             (self.ui.actionFreq, "Freq"),
             (self.ui.actionPeriod, "Period"),
             (self.ui.actionDuty_cycle, "Duty cycle"),
+            (self.ui.actionPulse_width, "Pulse width"),
             (self.ui.actionRisetime, "Risetime"),  # Special: also handles Falltime
             (self.ui.actionRisetime_error, "Risetime error"),  # Special: also handles Falltime error
             (self.ui.actionN_persist_lines, "Persist lines"),  # Per-channel persist line count
@@ -271,8 +272,8 @@ class MeasurementsManager:
     def add_all_measurements_for_channel(self):
         """Add all available measurements for the current channel."""
         # Manually add each measurement (setting checkbox doesn't trigger the signal)
-        measurement_types = ["Mean", "RMS", "Min", "Max", "Vpp", "Freq", "Period", "Duty cycle", "Risetime",
-                             "Risetime error", "Persist lines"]
+        measurement_types = ["Mean", "RMS", "Min", "Max", "Vpp", "Freq", "Period", "Duty cycle", "Pulse width",
+                             "Risetime", "Risetime error", "Persist lines"]
 
         for measurement_name in measurement_types:
             self.toggle_measurement(measurement_name, True)
@@ -343,6 +344,7 @@ class MeasurementsManager:
         self.ui.actionFreq.setChecked((("Freq", channel_key) in self.active_measurements))
         self.ui.actionPeriod.setChecked((("Period", channel_key) in self.active_measurements))
         self.ui.actionDuty_cycle.setChecked((("Duty cycle", channel_key) in self.active_measurements))
+        self.ui.actionPulse_width.setChecked((("Pulse width", channel_key) in self.active_measurements))
         self.ui.actionRisetime.setChecked((("Risetime", channel_key) in self.active_measurements or ("Falltime",
                                                                                                      channel_key) in self.active_measurements))
         self.ui.actionRisetime_error.setChecked((("Risetime error", channel_key) in self.active_measurements or (
@@ -744,6 +746,10 @@ class MeasurementsManager:
             elif measurement_name == "Duty cycle":
                 duty_cycle = measurements.get('Duty cycle', 0)
                 _set_measurement(measurement_key, duty_cycle, "%")
+            elif measurement_name == "Pulse width":
+                pulse_width_ns = measurements.get('Pulse width', 0)
+                pulse_width, unit = format_period(pulse_width_ns, "s", False)
+                _set_measurement(measurement_key, pulse_width, unit)
             elif measurement_name in ["Risetime", "Falltime"]:
                 val = measurements.get(measurement_name, 0)
                 if math.isfinite(val):

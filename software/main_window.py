@@ -18,6 +18,7 @@ from plot_manager import PlotManager
 from data_recorder import DataRecorder
 from histogram_window import HistogramWindow
 from xy_window import XYWindow
+from zoom_window import ZoomWindow
 from history_window import HistoryWindow
 from measurements_manager import MeasurementsManager
 from calibration import autocalibration, do_meanrms_calibration
@@ -79,6 +80,7 @@ class MainWindow(TemplateBaseClass):
         self.fftui = None
         self.math_window = None
         self.xy_window = None
+        self.zoom_window = None
         self.dummy_server_config_dialog = None
         # Initialize boardBox ComboBox with board numbers
         self.ui.boardBox.blockSignals(True)
@@ -297,7 +299,7 @@ class MainWindow(TemplateBaseClass):
         # Processing and Display controls
         self.ui.actionDrawing.triggered.connect(self.drawing_toggled)
         self.ui.actionGrid.triggered.connect(lambda checked: self.plot_manager.set_grid(checked))
-        self.ui.actionMarkers.triggered.connect(lambda checked: self.plot_manager.set_markers(checked))
+        self.ui.actionMarkers.triggered.connect(self.toggle_markers_slot)
         self.ui.actionPan_and_zoom.triggered.connect(lambda checked: self.plot_manager.set_pan_and_zoom(checked))
         self.ui.actionVoltage_axis.triggered.connect(lambda checked: self.plot_manager.right_axis.setVisible(checked))
         self.ui.actionCursors.triggered.connect(lambda checked: self.plot_manager.show_cursors(checked))
@@ -369,11 +371,13 @@ class MainWindow(TemplateBaseClass):
 
         # View menu actions
         self.ui.actionXY_Plot.triggered.connect(self.toggle_xy_view_slot)
+        self.ui.actionZoom_window.triggered.connect(self.toggle_zoom_window_slot)
         self.ui.actionMath_channels.triggered.connect(self.open_math_channels)
         self.ui.actionHistory_window.triggered.connect(self.open_history_window)
 
         # Plot manager signals
         self.plot_manager.curve_clicked_signal.connect(self.on_curve_clicked)
+        self.plot_manager.zoom_region_changed_signal.connect(self.on_zoom_region_changed)
 
         # Connect the controller's error signal to our handler slot
         self.controller.signals.critical_error_occurred.connect(self.handle_critical_error)
@@ -688,6 +692,15 @@ class MainWindow(TemplateBaseClass):
         # --- Update XY window if visible (after math channels calculated) ---
         if s.xy_mode and self.xy_window is not None and self.xy_window.isVisible():
             self.xy_window.update_xy_plot(self.xydata, math_results)
+
+        # --- Update Zoom window if visible ---
+        if self.zoom_window is not None and self.zoom_window.isVisible():
+            self.zoom_window.update_zoom_plot(self.plot_manager.stabilized_data, math_results)
+            self.zoom_window.update_trigger_and_cursor_lines(self.plot_manager)
+            self.zoom_window.update_reference_waveforms(
+                self.reference_data, self.reference_visible,
+                self.math_reference_data, self.math_reference_visible
+            )
 
         # Store event in history buffer (only if not displaying historical data)
         if not self.displaying_history:
@@ -1392,7 +1405,9 @@ class MainWindow(TemplateBaseClass):
             self.ui.timefastButton.setEnabled(False)
 
         old_downsample = self.state.downsample
+        old_downsamplezoom = self.state.downsamplezoom
         self.state.downsample -= 1
+        new_downsample = self.state.downsample
         highres = 1 if self.ui.actionHigh_resolution.isChecked() else 0
         self.controller.tell_downsample_all(self.state.downsample, highres)
 
@@ -1421,9 +1436,20 @@ class MainWindow(TemplateBaseClass):
             self.state.downsamplezoom = pow(2, -self.state.downsample)
         else:
             self.state.downsamplezoom = 1
+        new_downsamplezoom = self.state.downsamplezoom
 
         # Update the plot range and text box
         self.time_changed()
+
+        # Adjust zoom ROI width based on downsample change type
+        if self.zoom_window and self.zoom_window.isVisible():
+            if old_downsample >= 0 and new_downsample >= 0:
+                # Both in normal acquisition modes - use standard adjustment
+                self.plot_manager.adjust_zoom_roi_for_downsample()
+            elif old_downsamplezoom != new_downsamplezoom:
+                # Zoom factor changed - scale ROI width by the zoom ratio
+                zoom_ratio = new_downsamplezoom / old_downsamplezoom
+                self.plot_manager.scale_zoom_roi_width(1.0 / zoom_ratio)
 
         # Clear peak detect data when timebase changes (for active channel)
         active_channel = self.state.activexychannel
@@ -1445,7 +1471,9 @@ class MainWindow(TemplateBaseClass):
     def time_slow(self):
         self.ui.timefastButton.setEnabled(True)
         old_downsample = self.state.downsample
+        old_downsamplezoom = self.state.downsamplezoom
         self.state.downsample += 1
+        new_downsample = self.state.downsample
         highres = 1 if self.ui.actionHigh_resolution.isChecked() else 0
         self.controller.tell_downsample_all(self.state.downsample, highres)
 
@@ -1469,9 +1497,20 @@ class MainWindow(TemplateBaseClass):
             self.state.downsamplezoom = pow(2, -self.state.downsample)
         else:
             self.state.downsamplezoom = 1
+        new_downsamplezoom = self.state.downsamplezoom
 
         # Update the plot range and text box
         self.time_changed()
+
+        # Adjust zoom ROI width based on downsample change type
+        if self.zoom_window and self.zoom_window.isVisible():
+            if old_downsample >= 0 and new_downsample >= 0:
+                # Both in normal acquisition modes - use standard adjustment
+                self.plot_manager.adjust_zoom_roi_for_downsample()
+            elif old_downsamplezoom != new_downsamplezoom:
+                # Zoom factor changed - scale ROI width by the zoom ratio
+                zoom_ratio = new_downsamplezoom / old_downsamplezoom
+                self.plot_manager.scale_zoom_roi_width(1.0 / zoom_ratio)
 
         # Clear peak detect data when timebase changes (for active channel)
         active_channel = self.state.activexychannel
@@ -1494,6 +1533,9 @@ class MainWindow(TemplateBaseClass):
         self.state.expect_samples = self.ui.depthBox.value()
         self.allocate_xy_data()
         self.trigger_pos_reset()  # Reset trigger position to center after depth change
+        self.plot_manager.reset_cumulative_correction()  # Reset trigger stabilization correction
+        self.controller.send_trigger_info_all()  # Update hardware with new trigger position
+        self.plot_manager.reset_zoom_roi_position()  # Reset zoom ROI to default position
 
     def change_channel_color(self):
         options = QColorDialog.ColorDialogOptions()
@@ -1744,6 +1786,55 @@ class MainWindow(TemplateBaseClass):
         # Update state
         self.state.xy_mode = False
 
+    def toggle_markers_slot(self, checked):
+        """Slot for the 'Markers' menu action - updates both main and zoom windows."""
+        # Update main plot markers
+        self.plot_manager.set_markers(checked)
+
+        # Update zoom window markers if it exists and is visible
+        if self.zoom_window is not None and self.zoom_window.isVisible():
+            self.zoom_window.set_markers(checked)
+
+    def toggle_zoom_window_slot(self, checked):
+        """Slot for the 'Zoom Window' menu action."""
+        if checked:
+            # Create and show zoom window
+            if self.zoom_window is None:
+                self.zoom_window = ZoomWindow(self, self.state, self.plot_manager)
+                # Connect signal to handle window closing
+                self.zoom_window.window_closed.connect(self.on_zoom_window_closed)
+                # Position to the right of main window with tops aligned
+                self.zoom_window.position_relative_to_main(self)
+
+            self.zoom_window.show()
+            self.zoom_window.raise_()
+            self.zoom_window.activateWindow()
+
+            # Show the zoom ROI on the main plot
+            self.plot_manager.show_zoom_roi()
+
+            # Sync marker state to zoom window
+            if self.ui.actionMarkers.isChecked():
+                self.zoom_window.set_markers(True)
+        else:
+            # Hide zoom window and ROI
+            if self.zoom_window is not None:
+                self.zoom_window.hide()
+            self.plot_manager.hide_zoom_roi()
+
+    def on_zoom_window_closed(self):
+        """Slot called when the zoom window is closed by the user."""
+        # Uncheck the menu item
+        self.ui.actionZoom_window.setChecked(False)
+        # Hide the ROI
+        self.plot_manager.hide_zoom_roi()
+
+    def on_zoom_region_changed(self, x_range, y_range):
+        """Slot called when the zoom ROI is moved or resized."""
+        if self.zoom_window and self.zoom_window.isVisible():
+            # Update the zoom window's view range
+            self.zoom_window.set_zoom_region(x_range, y_range)
+
     def open_math_channels(self):
         """Slot for the 'Math Channels' menu action."""
         if self.math_window is None:
@@ -1833,6 +1924,15 @@ class MainWindow(TemplateBaseClass):
             # Update XY window if visible (after math channels calculated)
             if self.state.xy_mode and self.xy_window is not None and self.xy_window.isVisible():
                 self.xy_window.update_xy_plot(self.xydata, math_results)
+
+            # Update Zoom window if visible
+            if self.zoom_window is not None and self.zoom_window.isVisible():
+                self.zoom_window.update_zoom_plot(self.plot_manager.stabilized_data, math_results)
+                self.zoom_window.update_trigger_and_cursor_lines(self.plot_manager)
+                self.zoom_window.update_reference_waveforms(
+                    self.reference_data, self.reference_visible,
+                    self.math_reference_data, self.math_reference_visible
+                )
 
     def resume_live_acquisition(self):
         """Resume live data acquisition after viewing history."""
@@ -2119,6 +2219,10 @@ class MainWindow(TemplateBaseClass):
         # 7. Update XY window channel lists (availability of Ch 1 changed)
         if self.xy_window is not None and self.xy_window.isVisible():
             self.xy_window.refresh_channel_list()
+
+        # 8. Clear and recreate zoom window channel lines (x-axis structure changes in two-channel mode)
+        if self.zoom_window is not None and self.zoom_window.isVisible():
+            self.zoom_window.clear_channel_lines()
 
     def gain_changed(self):
         """Handles changes to the gain slider."""
