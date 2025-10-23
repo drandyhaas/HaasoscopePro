@@ -922,16 +922,23 @@ class MainWindow(TemplateBaseClass):
         msg.setIcon(QMessageBox.Information)
         msg.setWindowTitle("Update Available")
         msg.setText(f"A new version is available: v{latest}\n(You have v{current})")
-        msg.setInformativeText("Visit GitHub releases to download?")
-        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-        msg.buttonClicked.connect(lambda btn: self._open_releases_page(btn, msg, release_url))
-        msg.show()
+        msg.setInformativeText("Would you like to download the new version?")
 
-    def _open_releases_page(self, button, msg, release_url):
-        """Open the GitHub releases page in the default web browser."""
-        if msg.standardButton(button) == QMessageBox.Yes:
+        # Create custom buttons
+        yes_button = msg.addButton("Yes", QMessageBox.YesRole)
+        remind_button = msg.addButton("Remind me next time", QMessageBox.NoRole)
+        ignore_button = msg.addButton("Ignore this release", QMessageBox.RejectRole)
+
+        msg.exec_()
+
+        # Handle button clicks
+        clicked_button = msg.clickedButton()
+        if clicked_button == yes_button:
             import webbrowser
             webbrowser.open(release_url)
+        elif clicked_button == ignore_button:
+            self.update_checker.ignore_version(latest)
+            print(f"Version {latest} will be ignored in future update checks")
 
     def handle_critical_error(self, title, message):
         """
