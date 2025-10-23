@@ -211,7 +211,9 @@ class PlotManager(pg.QtCore.QObject):
         )
 
         # Set the hover pen for the ROI border
-        self.zoom_roi.setPen(roi_pen, hoverable=True, hoverPen=roi_hover_pen)
+        self.zoom_roi.pen = roi_pen
+        self.zoom_roi.hoverPen = roi_hover_pen
+        self.zoom_roi.currentPen = roi_pen
 
         # Add corner handles for resizing - this gives 4 corner handles
         # The RectROI by default has corner handles when created
