@@ -510,9 +510,7 @@ class MathChannelsWindow(QWidget):
         op_layout = QHBoxLayout()
         op_layout.addWidget(QLabel("Operation:"))
         self.operation_combo = QComboBox()
-        self.populate_operations()
-        # Show all items in dropdown
-        self.operation_combo.setMaxVisibleItems(20)
+        self.populate_operations()  # This now sets max visible items dynamically
         op_layout.addWidget(self.operation_combo)
         selection_layout.addLayout(op_layout)
 
@@ -759,6 +757,9 @@ class MathChannelsWindow(QWidget):
 
             for custom_op in self.custom_operations:
                 self.operation_combo.addItem(custom_op['name'])
+
+        # Set max visible items to show all operations without scrolling
+        self.operation_combo.setMaxVisibleItems(self.operation_combo.count())
 
     def is_two_channel_operation(self, operation):
         """Check if an operation requires two channels.
