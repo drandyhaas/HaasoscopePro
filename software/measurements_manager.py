@@ -617,6 +617,18 @@ class MeasurementsManager:
         cached_active_channel_fit_results = None
         current_channel_key = self.get_current_channel_key()
 
+        # Group measurements by channel to avoid redundant calculations
+        measurements_by_channel = {}
+        for measurement_key in self.active_measurements.keys():
+            measurement_name, channel_key = measurement_key
+            if channel_key not in measurements_by_channel:
+                measurements_by_channel[channel_key] = []
+            measurements_by_channel[channel_key].append(measurement_name)
+
+        # Cache to store calculated measurements per channel (to avoid recalculating)
+        channel_measurements_cache = {}
+        channel_fit_results_cache = {}
+
         # Process each active measurement
         for measurement_key in list(self.active_measurements.keys()):
             measurement_name, channel_key = measurement_key
@@ -672,25 +684,39 @@ class MeasurementsManager:
             if y_data is None or len(y_data) == 0:
                 continue
 
-            # Calculate measurements based on type
-            vline_val = self.plot_manager.otherlines['vline'].value()
+            # Check if we've already calculated measurements for this channel
+            if channel_key not in channel_measurements_cache:
+                # Calculate measurements based on type
+                vline_val = self.plot_manager.otherlines['vline'].value()
 
-            # Determine if we need risetime calculation for this measurement
-            needs_risetime = measurement_name in ["Risetime", "Falltime", "Risetime error", "Falltime error"]
+                # Determine what measurements are needed for this channel
+                channel_measurement_types = measurements_by_channel[channel_key]
+                needs_risetime = any(m in ["Risetime", "Falltime", "Risetime error", "Falltime error"]
+                                    for m in channel_measurement_types)
+                needs_freq = any(m in ["Freq", "Period"] for m in channel_measurement_types)
 
-            # For regular channels, pass channel_index; for math channels, use None (defaults to activexychannel)
-            measurement_channel_index = channel_index if not channel_key.startswith("Math") else None
+                # For regular channels, pass channel_index; for math channels, use None (defaults to activexychannel)
+                measurement_channel_index = channel_index if not channel_key.startswith("Math") else None
 
-            measurements, fit_results = self.processor.calculate_measurements(
-                x_data, y_data, vline_val,
-                do_risetime_calc=needs_risetime,
-                use_edge_fit=self.ui.actionEdge_fit_method.isChecked(),
-                channel_index=measurement_channel_index
-            )
+                measurements, fit_results = self.processor.calculate_measurements(
+                    x_data, y_data, vline_val,
+                    do_risetime_calc=needs_risetime,
+                    use_edge_fit=self.ui.actionEdge_fit_method.isChecked(),
+                    channel_index=measurement_channel_index,
+                    needs_freq=needs_freq
+                )
 
-            # Cache fit_results if this is a risetime/falltime measurement for the active channel
-            if needs_risetime and channel_key == current_channel_key and fit_results is not None:
-                cached_active_channel_fit_results = fit_results
+                # Cache results for this channel
+                channel_measurements_cache[channel_key] = measurements
+                channel_fit_results_cache[channel_key] = fit_results
+
+                # Cache fit_results if this is a risetime/falltime measurement for the active channel
+                if needs_risetime and channel_key == current_channel_key and fit_results is not None:
+                    cached_active_channel_fit_results = fit_results
+            else:
+                # Reuse cached measurements for this channel
+                measurements = channel_measurements_cache[channel_key]
+                fit_results = channel_fit_results_cache.get(channel_key)
 
             # Set the measurement value based on type
             if measurement_name == "Mean":

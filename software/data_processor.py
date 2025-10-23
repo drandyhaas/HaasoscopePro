@@ -332,7 +332,7 @@ class DataProcessor:
 
         return freq, abs(Y)
 
-    def calculate_measurements(self, x_data, y_data, vline, do_risetime_calc=False, use_edge_fit=True, channel_index=None):
+    def calculate_measurements(self, x_data, y_data, vline, do_risetime_calc=False, use_edge_fit=True, channel_index=None, needs_freq=True):
         """Calculates all requested measurements and returns fit results if requested.
 
         Args:
@@ -343,6 +343,7 @@ class DataProcessor:
             use_edge_fit: If True, use edge-based fitting (works for any signal).
                          If False, use piecewise fitting (works for square waves).
             channel_index: Index of the channel being measured (if None, uses activexychannel)
+            needs_freq: Whether to calculate frequency (expensive FFT operation). Defaults to True for backward compatibility.
         """
         if len(y_data) < 2: return {}, None
         state = self.state
@@ -366,12 +367,16 @@ class DataProcessor:
             "Vpp": 1000 * VperD * (y_max - y_min)
         }
 
-        sampling_rate = (state.samplerate * 1e9) / state.downsamplefactor
-        if state.dotwochannel[board_index]: sampling_rate /= 2
-        # Account for resampling - if resampling is applied, it increases sample density and effective sampling rate
-        if state.doresamp[channel_index] > 1: sampling_rate *= state.doresamp[channel_index]
-        found_freq = find_fundamental_frequency_scipy(y_data, sampling_rate)
-        measurements["Freq"] = found_freq
+        # Only calculate frequency if needed (expensive FFT operation)
+        if needs_freq:
+            sampling_rate = (state.samplerate * 1e9) / state.downsamplefactor
+            if state.dotwochannel[board_index]: sampling_rate /= 2
+            # Account for resampling - if resampling is applied, it increases sample density and effective sampling rate
+            if state.doresamp[channel_index] > 1: sampling_rate *= state.doresamp[channel_index]
+            found_freq = find_fundamental_frequency_scipy(y_data, sampling_rate)
+            measurements["Freq"] = found_freq
+        else:
+            measurements["Freq"] = 0.0
 
         # Calculate duty cycle (percentage of time signal is above 50% threshold)
         threshold = (y_min + y_max) / 2
