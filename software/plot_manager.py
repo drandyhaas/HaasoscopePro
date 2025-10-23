@@ -200,7 +200,7 @@ class PlotManager(pg.QtCore.QObject):
         # Create a rectangular ROI with semi-transparent gray fill
         # Create semi-transparent gray pen and brush
         roi_pen = pg.mkPen(color=QColor(128, 128, 128, 100), width=2)  # Semi-transparent gray border
-        roi_hover_pen = pg.mkPen(color=QColor(255, 255, 255, 150), width=2)  # Semi-transparent white hover
+        roi_hover_pen = pg.mkPen(color=QColor(255, 255, 255, 200), width=2)  # Semi-transparent white hover
 
         self.zoom_roi = pg.RectROI(
             pos=[0, 0],  # Will be set when shown
@@ -209,6 +209,9 @@ class PlotManager(pg.QtCore.QObject):
             movable=True,
             removable=False  # Don't allow removing the ROI
         )
+
+        # Set the hover pen for the ROI border
+        self.zoom_roi.setPen(roi_pen, hoverable=True, hoverPen=roi_hover_pen)
 
         # Add corner handles for resizing - this gives 4 corner handles
         # The RectROI by default has corner handles when created

@@ -697,6 +697,10 @@ class MainWindow(TemplateBaseClass):
         if self.zoom_window is not None and self.zoom_window.isVisible():
             self.zoom_window.update_zoom_plot(self.plot_manager.stabilized_data, math_results)
             self.zoom_window.update_trigger_and_cursor_lines(self.plot_manager)
+            self.zoom_window.update_reference_waveforms(
+                self.reference_data, self.reference_visible,
+                self.math_reference_data, self.math_reference_visible
+            )
 
         # Store event in history buffer (only if not displaying historical data)
         if not self.displaying_history:
@@ -1924,6 +1928,10 @@ class MainWindow(TemplateBaseClass):
             if self.zoom_window is not None and self.zoom_window.isVisible():
                 self.zoom_window.update_zoom_plot(self.plot_manager.stabilized_data, math_results)
                 self.zoom_window.update_trigger_and_cursor_lines(self.plot_manager)
+                self.zoom_window.update_reference_waveforms(
+                    self.reference_data, self.reference_visible,
+                    self.math_reference_data, self.math_reference_visible
+                )
 
     def resume_live_acquisition(self):
         """Resume live data acquisition after viewing history."""

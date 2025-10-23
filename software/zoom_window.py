@@ -103,6 +103,8 @@ class ZoomWindow(QtWidgets.QWidget):
         # Create plot lines for each channel (will be created dynamically)
         self.channel_lines = {}  # {channel_index: plot_line}
         self.math_channel_lines = {}  # {math_name: plot_line}
+        self.reference_lines = {}  # {channel_index: plot_line} for physical channel references
+        self.math_reference_lines = {}  # {math_name: plot_line} for math channel references
 
         layout.addWidget(self.plot_widget)
         self.setLayout(layout)
@@ -202,7 +204,8 @@ class ZoomWindow(QtWidgets.QWidget):
                 if math_name not in self.math_channel_lines:
                     # Get color from math channel definition
                     color = self._get_math_channel_color(math_name)
-                    pen = pg.mkPen(color=color, width=2)
+                    # Use dashed pen for math channels, like in main window
+                    pen = pg.mkPen(color=color, width=2, style=QtCore.Qt.DashLine)
 
                     self.math_channel_lines[math_name] = self.plot.plot(
                         pen=pen,
@@ -222,6 +225,81 @@ class ZoomWindow(QtWidgets.QWidget):
 
         # Update the right axis to reflect the active channel
         self.update_right_axis()
+
+    def update_reference_waveforms(self, reference_data, reference_visible, math_reference_data, math_reference_visible):
+        """Update the reference waveforms in the zoom window.
+
+        Args:
+            reference_data: Dictionary {channel_index: {'x_ns': array, 'y': array}}
+            reference_visible: Dictionary {channel_index: bool}
+            math_reference_data: Dictionary {math_name: {'x_ns': array, 'y': array}}
+            math_reference_visible: Dictionary {math_name: bool}
+        """
+        # Update physical channel references
+        for ch_idx, ref_data in reference_data.items():
+            is_visible = reference_visible.get(ch_idx, False)
+
+            if ch_idx not in self.reference_lines:
+                # Create reference line with semi-transparent pen matching channel color
+                if ch_idx < len(self.plot_manager.linepens):
+                    color = QColor(self.plot_manager.linepens[ch_idx].color())
+                    color.setAlphaF(0.5)
+                    pen = pg.mkPen(color=color, width=1)
+                else:
+                    color = QColor('white')
+                    color.setAlphaF(0.5)
+                    pen = pg.mkPen(color=color, width=1)
+
+                self.reference_lines[ch_idx] = self.plot.plot(
+                    pen=pen,
+                    skipFiniteCheck=True,
+                    connect="finite"
+                )
+
+            # Update data - need to convert from ns to current time units
+            x_data_ns = ref_data['x_ns']
+            y_data = ref_data['y']
+            x_data = x_data_ns / self.state.nsunits  # Convert to current time units
+
+            self.reference_lines[ch_idx].setData(x=x_data, y=y_data, skipFiniteCheck=True)
+            self.reference_lines[ch_idx].setVisible(is_visible)
+
+        # Remove reference lines that no longer exist
+        for ch_idx in list(self.reference_lines.keys()):
+            if ch_idx not in reference_data:
+                self.plot.removeItem(self.reference_lines[ch_idx])
+                del self.reference_lines[ch_idx]
+
+        # Update math channel references
+        for math_name, ref_data in math_reference_data.items():
+            is_visible = math_reference_visible.get(math_name, False)
+
+            if math_name not in self.math_reference_lines:
+                # Create reference line with semi-transparent pen matching math channel color
+                color = self._get_math_channel_color(math_name)
+                ref_color = QColor(color)
+                ref_color.setAlphaF(0.5)
+                pen = pg.mkPen(color=ref_color, width=2, style=QtCore.Qt.DashLine)
+
+                self.math_reference_lines[math_name] = self.plot.plot(
+                    pen=pen,
+                    skipFiniteCheck=True,
+                    connect="finite"
+                )
+
+            # Update data - need to convert from ns to current time units
+            x_data_ns = ref_data['x_ns']
+            y_data = ref_data['y']
+            x_data = x_data_ns / self.state.nsunits  # Convert to current time units
+
+            self.math_reference_lines[math_name].setData(x=x_data, y=y_data, skipFiniteCheck=True)
+            self.math_reference_lines[math_name].setVisible(is_visible)
+
+        # Remove math reference lines that no longer exist
+        for math_name in list(self.math_reference_lines.keys()):
+            if math_name not in math_reference_data:
+                self.plot.removeItem(self.math_reference_lines[math_name])
+                del self.math_reference_lines[math_name]
 
     def update_trigger_and_cursor_lines(self, main_plot_manager):
         """Update the zoom window's trigger and cursor lines to match the main plot.
@@ -324,6 +402,16 @@ class ZoomWindow(QtWidgets.QWidget):
         for line in self.math_channel_lines.values():
             self.plot.removeItem(line)
         self.math_channel_lines.clear()
+
+        # Remove reference lines
+        for line in self.reference_lines.values():
+            self.plot.removeItem(line)
+        self.reference_lines.clear()
+
+        # Remove math reference lines
+        for line in self.math_reference_lines.values():
+            self.plot.removeItem(line)
+        self.math_reference_lines.clear()
 
     def closeEvent(self, event):
         """Called when window is closed - emit signal and update state."""
