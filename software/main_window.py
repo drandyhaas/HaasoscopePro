@@ -1529,6 +1529,8 @@ class MainWindow(TemplateBaseClass):
         self.state.expect_samples = self.ui.depthBox.value()
         self.allocate_xy_data()
         self.trigger_pos_reset()  # Reset trigger position to center after depth change
+        self.plot_manager.reset_cumulative_correction()  # Reset trigger stabilization correction
+        self.controller.send_trigger_info_all()  # Update hardware with new trigger position
 
     def change_channel_color(self):
         options = QColorDialog.ColorDialogOptions()

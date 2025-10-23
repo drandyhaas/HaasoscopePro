@@ -860,6 +860,10 @@ class PlotManager(pg.QtCore.QObject):
         # Skip the next event to avoid glitches after timebase changes
         self.peak_skip_events = 1
 
+    def reset_cumulative_correction(self):
+        """Reset cumulative trigger correction when depth or other settings change."""
+        self.cumulative_correction = [0.0] * self.nlines
+
     def _update_peak_data(self, channel_index, x_data, y_data):
         """Update peak max/min data for a channel.
 
