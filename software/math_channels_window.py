@@ -887,6 +887,59 @@ class MathChannelsWindow(QWidget):
             chan = ch_data % self.state.num_chan_per_board
             return f"Board {board} Channel {chan}"
 
+    def create_math_channel_display_text(self, math_def):
+        """Create formatted display text for a math channel.
+
+        Args:
+            math_def: Dictionary containing math channel definition
+
+        Returns:
+            Formatted display text string
+        """
+        math_name = math_def['name']
+        op = math_def['operation']
+        ch_a = math_def['ch1']
+        ch_b = math_def.get('ch2')
+        operation_config = math_def.get('operation_config')
+
+        ch_a_text = self.get_channel_display_name(ch_a)
+
+        if self.is_two_channel_operation(op):
+            ch_b_text = self.get_channel_display_name(ch_b)
+            op_display = op.replace('B', " "+ch_b_text).replace('A', ch_a_text+" ")
+            return f"{math_name}: {op_display}"
+        elif self.is_filter_operation(op) and operation_config:
+            # For filters, show the cutoff frequency with units
+            freq_unit = operation_config.get('freq_unit', 'MHz')
+            unit_multipliers = {'Hz': 1, 'kHz': 1e3, 'MHz': 1e6, 'GHz': 1e9}
+            multiplier = unit_multipliers.get(freq_unit, 1e6)
+
+            # Handle both new (cutoff_freq_hz) and legacy (cutoff_freq) formats
+            if 'cutoff_freq_hz' in operation_config:
+                cutoff_hz = operation_config['cutoff_freq_hz']
+                if isinstance(cutoff_hz, (list, tuple)):
+                    cutoff_display = [f / multiplier for f in cutoff_hz]
+                    return f"{math_name}: {op}({ch_a_text}, {cutoff_display[0]:.3g}-{cutoff_display[1]:.3g} {freq_unit})"
+                else:
+                    cutoff_display = cutoff_hz / multiplier
+                    return f"{math_name}: {op}({ch_a_text}, {cutoff_display:.3g} {freq_unit})"
+            else:
+                # Legacy format
+                cutoff = operation_config.get('cutoff_freq', 0)
+                if isinstance(cutoff, (list, tuple)):
+                    return f"{math_name}: {op}({ch_a_text}, {cutoff[0]}-{cutoff[1]} MHz)"
+                else:
+                    return f"{math_name}: {op}({ch_a_text}, {cutoff} MHz)"
+        elif op == 'Time Shift' and operation_config:
+            # For time shift, show the shift amount and unit
+            shift_amount = operation_config['shift_amount']
+            shift_unit = operation_config['shift_unit']
+            unit_abbr = 'smp' if shift_unit == 'Samples' else 'ns'
+            interp_str = " (interp)" if operation_config.get('interpolate', False) else ""
+            return f"{math_name}: {op}({ch_a_text}, {shift_amount:+.3g} {unit_abbr}{interp_str})"
+        else:
+            return f"{math_name}: {op}({ch_a_text})"
+
     def update_preview(self):
         """Update the preview label showing what the math channel will be."""
         ch_a = self.channel_a_combo.currentData()

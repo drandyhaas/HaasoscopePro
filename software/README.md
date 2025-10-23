@@ -193,7 +193,10 @@ graph TD
 
 **`math_channels_window.py`** - Math channel operations
 - Channel arithmetic (add, subtract, multiply, divide)
-- Mathematical functions (differentiate, integrate, smooth, envelope)
+- Mathematical functions (differentiate, integrate, smooth, envelope, abs, square, sqrt, log, exp)
+- Digital filters (low-pass, high-pass, band-pass, band-stop) with Butterworth and Chebyshev designs
+- Time shift with sub-sample interpolation (0.001 Hz to 10 GHz range)
+- AC coupling and min/max tracking
 - Custom expression evaluation
 
 **`measurements_manager.py`** - Measurements display

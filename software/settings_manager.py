@@ -644,13 +644,8 @@ def load_setup(main_window):
 
         # Rebuild the list display
         for math_def in main_window.math_window.math_channels:
-            ch_a_text = f"Board {math_def['ch1'] // s.num_chan_per_board} Channel {math_def['ch1'] % s.num_chan_per_board}"
-
-            if main_window.math_window.is_two_channel_operation(math_def['operation']):
-                ch_b_text = f"Board {math_def['ch2'] // s.num_chan_per_board} Channel {math_def['ch2'] % s.num_chan_per_board}"
-                display_text = f"{math_def['name']}: {ch_a_text} {math_def['operation']} {ch_b_text}"
-            else:
-                display_text = f"{math_def['name']}: {math_def['operation']}({ch_a_text})"
+            # Use the helper method to create properly formatted display text
+            display_text = main_window.math_window.create_math_channel_display_text(math_def)
 
             item = QListWidgetItem(main_window.math_window.create_color_icon(math_def['color']), display_text)
             main_window.math_window.math_list.addItem(item)
