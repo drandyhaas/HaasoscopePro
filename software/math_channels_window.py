@@ -64,11 +64,22 @@ class FilterConfigDialog(QDialog):
         order_layout.addWidget(self.order_spinbox)
         layout.addLayout(order_layout)
 
+        # Frequency units selection
+        units_layout = QHBoxLayout()
+        units_layout.addWidget(QLabel("Frequency Units:"))
+        self.units_combo = QComboBox()
+        self.units_combo.addItems(['Hz', 'kHz', 'MHz', 'GHz'])
+        self.units_combo.setCurrentText('MHz')  # Default to MHz
+        self.units_combo.currentTextChanged.connect(self._update_frequency_labels)
+        units_layout.addWidget(self.units_combo)
+        layout.addLayout(units_layout)
+
         # Cutoff frequency (or frequencies for band-pass/stop)
         if self.filter_type in ['Band-pass', 'Band-stop']:
             # Two cutoff frequencies needed
             freq_layout1 = QHBoxLayout()
-            freq_layout1.addWidget(QLabel("Lower Cutoff (MHz):"))
+            self.freq_label1 = QLabel("Lower Cutoff (MHz):")
+            freq_layout1.addWidget(self.freq_label1)
             self.cutoff_spinbox1 = QDoubleSpinBox()
             self.cutoff_spinbox1.setRange(0.001, 10000)
             self.cutoff_spinbox1.setValue(10.0)
@@ -78,7 +89,8 @@ class FilterConfigDialog(QDialog):
             layout.addLayout(freq_layout1)
 
             freq_layout2 = QHBoxLayout()
-            freq_layout2.addWidget(QLabel("Upper Cutoff (MHz):"))
+            self.freq_label2 = QLabel("Upper Cutoff (MHz):")
+            freq_layout2.addWidget(self.freq_label2)
             self.cutoff_spinbox2 = QDoubleSpinBox()
             self.cutoff_spinbox2.setRange(0.001, 10000)
             self.cutoff_spinbox2.setValue(100.0)
@@ -89,7 +101,8 @@ class FilterConfigDialog(QDialog):
         else:
             # Single cutoff frequency
             freq_layout = QHBoxLayout()
-            freq_layout.addWidget(QLabel("Cutoff Frequency (MHz):"))
+            self.freq_label1 = QLabel("Cutoff Frequency (MHz):")
+            freq_layout.addWidget(self.freq_label1)
             self.cutoff_spinbox1 = QDoubleSpinBox()
             self.cutoff_spinbox1.setRange(0.001, 10000)
             self.cutoff_spinbox1.setValue(50.0)
@@ -142,6 +155,15 @@ class FilterConfigDialog(QDialog):
         self.ripple_label.setVisible(is_chebyshev)
         self.ripple_spinbox.setVisible(is_chebyshev)
 
+    def _update_frequency_labels(self):
+        """Update frequency labels when unit changes."""
+        unit = self.units_combo.currentText()
+        if self.filter_type in ['Band-pass', 'Band-stop']:
+            self.freq_label1.setText(f"Lower Cutoff ({unit}):")
+            self.freq_label2.setText(f"Upper Cutoff ({unit}):")
+        else:
+            self.freq_label1.setText(f"Cutoff Frequency ({unit}):")
+
     def _load_existing_config(self):
         """Load existing filter configuration into dialog."""
         if 'filter_design' in self.existing_config:
@@ -152,7 +174,26 @@ class FilterConfigDialog(QDialog):
         if 'filter_order' in self.existing_config:
             self.order_spinbox.setValue(self.existing_config['filter_order'])
 
-        if 'cutoff_freq' in self.existing_config:
+        # Load frequency unit if stored, otherwise default to MHz
+        freq_unit = self.existing_config.get('freq_unit', 'MHz')
+        unit_index = self.units_combo.findText(freq_unit)
+        if unit_index >= 0:
+            self.units_combo.setCurrentIndex(unit_index)
+
+        # Load cutoff frequencies (stored in Hz, need to convert to display units)
+        if 'cutoff_freq_hz' in self.existing_config:
+            # Convert from Hz to display units
+            unit_multipliers = {'Hz': 1, 'kHz': 1e3, 'MHz': 1e6, 'GHz': 1e9}
+            multiplier = unit_multipliers.get(freq_unit, 1e6)
+
+            if isinstance(self.existing_config['cutoff_freq_hz'], (list, tuple)):
+                self.cutoff_spinbox1.setValue(self.existing_config['cutoff_freq_hz'][0] / multiplier)
+                if hasattr(self, 'cutoff_spinbox2'):
+                    self.cutoff_spinbox2.setValue(self.existing_config['cutoff_freq_hz'][1] / multiplier)
+            else:
+                self.cutoff_spinbox1.setValue(self.existing_config['cutoff_freq_hz'] / multiplier)
+        elif 'cutoff_freq' in self.existing_config:
+            # Legacy: cutoff_freq was in MHz
             if isinstance(self.existing_config['cutoff_freq'], (list, tuple)):
                 self.cutoff_spinbox1.setValue(self.existing_config['cutoff_freq'][0])
                 if hasattr(self, 'cutoff_spinbox2'):
@@ -177,17 +218,29 @@ class FilterConfigDialog(QDialog):
         self.accept()
 
     def get_filter_config(self):
-        """Get the filter configuration entered by the user."""
+        """Get the filter configuration entered by the user.
+        Frequencies are converted to Hz for internal use."""
         config = {
             'filter_design': self.design_combo.currentText(),
             'filter_order': self.order_spinbox.value(),
         }
 
-        # Get cutoff frequency(s)
+        # Get frequency unit and convert to Hz
+        freq_unit = self.units_combo.currentText()
+        unit_multipliers = {'Hz': 1, 'kHz': 1e3, 'MHz': 1e6, 'GHz': 1e9}
+        multiplier = unit_multipliers.get(freq_unit, 1e6)
+
+        # Store the display unit for future editing
+        config['freq_unit'] = freq_unit
+
+        # Get cutoff frequency(s) and convert to Hz
         if self.filter_type in ['Band-pass', 'Band-stop']:
-            config['cutoff_freq'] = [self.cutoff_spinbox1.value(), self.cutoff_spinbox2.value()]
+            freq1_hz = self.cutoff_spinbox1.value() * multiplier
+            freq2_hz = self.cutoff_spinbox2.value() * multiplier
+            config['cutoff_freq_hz'] = [freq1_hz, freq2_hz]
         else:
-            config['cutoff_freq'] = self.cutoff_spinbox1.value()
+            freq_hz = self.cutoff_spinbox1.value() * multiplier
+            config['cutoff_freq_hz'] = freq_hz
 
         # Get ripple for Chebyshev
         if 'Chebyshev' in self.design_combo.currentText():
@@ -1023,15 +1076,23 @@ class MathChannelsWindow(QWidget):
             sample_rate_hz = 1.0 / dt_seconds
 
             # Get filter parameters
-            cutoff_freq_mhz = filter_config['cutoff_freq']  # MHz
             filter_order = filter_config['filter_order']
             filter_design = filter_config['filter_design']
 
-            # Convert cutoff frequency from MHz to Hz
-            if isinstance(cutoff_freq_mhz, (list, tuple)):
-                cutoff_freq_hz = [f * 1e6 for f in cutoff_freq_mhz]
+            # Get cutoff frequency in Hz (handle both new and legacy formats)
+            if 'cutoff_freq_hz' in filter_config:
+                # New format: frequencies stored in Hz
+                cutoff_freq_hz = filter_config['cutoff_freq_hz']
+            elif 'cutoff_freq' in filter_config:
+                # Legacy format: frequencies were in MHz
+                cutoff_freq_mhz = filter_config['cutoff_freq']
+                if isinstance(cutoff_freq_mhz, (list, tuple)):
+                    cutoff_freq_hz = [f * 1e6 for f in cutoff_freq_mhz]
+                else:
+                    cutoff_freq_hz = cutoff_freq_mhz * 1e6
             else:
-                cutoff_freq_hz = cutoff_freq_mhz * 1e6
+                print("Error: No cutoff frequency specified in filter config")
+                return y_data.copy()
 
             # Normalize cutoff frequency to Nyquist frequency
             nyquist_freq = sample_rate_hz / 2.0
@@ -1039,13 +1100,13 @@ class MathChannelsWindow(QWidget):
                 wn = [f / nyquist_freq for f in cutoff_freq_hz]
                 # Check if frequencies are valid
                 if any(w <= 0 or w >= 1 for w in wn):
-                    print(f"Warning: Filter cutoff frequencies {cutoff_freq_mhz} MHz are outside valid range (0 to {nyquist_freq/1e6:.3f} MHz)")
+                    print(f"Warning: Filter cutoff frequencies {[f/1e6 for f in cutoff_freq_hz]} MHz are outside valid range (0 to {nyquist_freq/1e6:.3f} MHz)")
                     return y_data.copy()
             else:
                 wn = cutoff_freq_hz / nyquist_freq
                 # Check if frequency is valid
                 if wn <= 0 or wn >= 1:
-                    print(f"Warning: Filter cutoff frequency {cutoff_freq_mhz} MHz is outside valid range (0 to {nyquist_freq/1e6:.3f} MHz)")
+                    print(f"Warning: Filter cutoff frequency {cutoff_freq_hz/1e6:.3f} MHz is outside valid range (0 to {nyquist_freq/1e6:.3f} MHz)")
                     return y_data.copy()
 
             # Map filter type to scipy btype
@@ -1216,12 +1277,27 @@ class MathChannelsWindow(QWidget):
             op_display = op.replace('B', " "+ch_b_text).replace('A', ch_a_text+" ")
             display_text = f"{math_name}: {op_display}"
         elif self.is_filter_operation(op) and operation_config:
-            # For filters, show the cutoff frequency
-            cutoff = operation_config['cutoff_freq']
-            if isinstance(cutoff, (list, tuple)):
-                display_text = f"{math_name}: {op}({ch_a_text}, {cutoff[0]}-{cutoff[1]} MHz)"
+            # For filters, show the cutoff frequency with units
+            freq_unit = operation_config.get('freq_unit', 'MHz')
+            unit_multipliers = {'Hz': 1, 'kHz': 1e3, 'MHz': 1e6, 'GHz': 1e9}
+            multiplier = unit_multipliers.get(freq_unit, 1e6)
+
+            # Handle both new (cutoff_freq_hz) and legacy (cutoff_freq) formats
+            if 'cutoff_freq_hz' in operation_config:
+                cutoff_hz = operation_config['cutoff_freq_hz']
+                if isinstance(cutoff_hz, (list, tuple)):
+                    cutoff_display = [f / multiplier for f in cutoff_hz]
+                    display_text = f"{math_name}: {op}({ch_a_text}, {cutoff_display[0]:.3g}-{cutoff_display[1]:.3g} {freq_unit})"
+                else:
+                    cutoff_display = cutoff_hz / multiplier
+                    display_text = f"{math_name}: {op}({ch_a_text}, {cutoff_display:.3g} {freq_unit})"
             else:
-                display_text = f"{math_name}: {op}({ch_a_text}, {cutoff} MHz)"
+                # Legacy format
+                cutoff = operation_config.get('cutoff_freq', 0)
+                if isinstance(cutoff, (list, tuple)):
+                    display_text = f"{math_name}: {op}({ch_a_text}, {cutoff[0]}-{cutoff[1]} MHz)"
+                else:
+                    display_text = f"{math_name}: {op}({ch_a_text}, {cutoff} MHz)"
         elif op == 'Time Shift' and operation_config:
             # For time shift, show the shift amount and unit
             shift_amount = operation_config['shift_amount']
@@ -1311,12 +1387,27 @@ class MathChannelsWindow(QWidget):
             op_display = op.replace('B', " "+ch_b_text).replace('A', ch_a_text+" ")
             display_text = f"{math_name}: {op_display}"
         elif self.is_filter_operation(op) and operation_config:
-            # For filters, show the cutoff frequency
-            cutoff = operation_config['cutoff_freq']
-            if isinstance(cutoff, (list, tuple)):
-                display_text = f"{math_name}: {op}({ch_a_text}, {cutoff[0]}-{cutoff[1]} MHz)"
+            # For filters, show the cutoff frequency with units
+            freq_unit = operation_config.get('freq_unit', 'MHz')
+            unit_multipliers = {'Hz': 1, 'kHz': 1e3, 'MHz': 1e6, 'GHz': 1e9}
+            multiplier = unit_multipliers.get(freq_unit, 1e6)
+
+            # Handle both new (cutoff_freq_hz) and legacy (cutoff_freq) formats
+            if 'cutoff_freq_hz' in operation_config:
+                cutoff_hz = operation_config['cutoff_freq_hz']
+                if isinstance(cutoff_hz, (list, tuple)):
+                    cutoff_display = [f / multiplier for f in cutoff_hz]
+                    display_text = f"{math_name}: {op}({ch_a_text}, {cutoff_display[0]:.3g}-{cutoff_display[1]:.3g} {freq_unit})"
+                else:
+                    cutoff_display = cutoff_hz / multiplier
+                    display_text = f"{math_name}: {op}({ch_a_text}, {cutoff_display:.3g} {freq_unit})"
             else:
-                display_text = f"{math_name}: {op}({ch_a_text}, {cutoff} MHz)"
+                # Legacy format
+                cutoff = operation_config.get('cutoff_freq', 0)
+                if isinstance(cutoff, (list, tuple)):
+                    display_text = f"{math_name}: {op}({ch_a_text}, {cutoff[0]}-{cutoff[1]} MHz)"
+                else:
+                    display_text = f"{math_name}: {op}({ch_a_text}, {cutoff} MHz)"
         elif op == 'Time Shift' and operation_config:
             # For time shift, show the shift amount and unit
             shift_amount = operation_config['shift_amount']
