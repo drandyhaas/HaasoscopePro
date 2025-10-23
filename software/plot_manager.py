@@ -2,7 +2,8 @@
 
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore
-from PyQt5.QtGui import QColor, QPen
+from PyQt5.QtGui import QColor, QPen, QBrush
+from PyQt5.QtWidgets import QGraphicsRectItem
 import numpy as np
 import time
 from collections import deque
@@ -197,24 +198,33 @@ class PlotManager(pg.QtCore.QObject):
 
         # Zoom window ROI (initially invisible)
         # Create a rectangular ROI with semi-transparent gray fill
+        # Create semi-transparent gray pen and brush
+        roi_pen = pg.mkPen(color=QColor(128, 128, 128, 100), width=2)  # Semi-transparent gray border
+        roi_hover_pen = pg.mkPen(color=QColor(255, 255, 255, 150), width=2)  # Semi-transparent white hover
+
         self.zoom_roi = pg.RectROI(
             pos=[0, 0],  # Will be set when shown
             size=[1, 1],  # Will be set when shown
-            pen=pg.mkPen(color='gray', width=1),
+            pen=roi_pen,
             movable=True,
             resizable=True
         )
-        # Set the ROI to be semi-transparent
-        self.zoom_roi.handlePen = pg.mkPen(color='gray', width=1)
-        self.zoom_roi.handleHoverPen = pg.mkPen(color='white', width=2)
-        # Add semi-transparent fill
-        from PyQt5.QtGui import QBrush, QColor
-        brush = QBrush(QColor(128, 128, 128, 26))  # Gray with alpha ~0.1 (26/255)
-        self.zoom_roi.setBrush(brush)
+
+        # Set the handle colors to be semi-transparent
+        self.zoom_roi.handlePen = pg.mkPen(color=QColor(128, 128, 128, 100), width=1)
+        self.zoom_roi.handleHoverPen = pg.mkPen(color=QColor(255, 255, 255, 200), width=2)
+
+        # Create a semi-transparent fill by adding a rectangle inside the ROI
+        self.zoom_roi_fill = QGraphicsRectItem(0, 0, 1, 1, self.zoom_roi)
+        fill_brush = QBrush(QColor(128, 128, 128, 26))  # Gray with alpha ~0.1 (26/255)
+        self.zoom_roi_fill.setBrush(fill_brush)
+        self.zoom_roi_fill.setPen(pg.mkPen(None))  # No border for the fill
+
         self.plot.addItem(self.zoom_roi)
         self.zoom_roi.setVisible(False)
         # Connect signal to notify when ROI changes
         self.zoom_roi.sigRegionChanged.connect(self.on_zoom_roi_changed)
+        self.zoom_roi.sigRegionChanged.connect(self._update_zoom_roi_fill)
 
         # Persistence average lines (created per-channel on demand)
         # self.average_lines = {} already initialized in __init__
@@ -1018,6 +1028,9 @@ class PlotManager(pg.QtCore.QObject):
         # Show the ROI
         self.zoom_roi.setVisible(True)
 
+        # Update the fill to match the ROI size
+        self._update_zoom_roi_fill()
+
         # Emit initial position
         self.on_zoom_roi_changed()
 
@@ -1025,6 +1038,12 @@ class PlotManager(pg.QtCore.QObject):
         """Hide the zoom ROI."""
         if self.zoom_roi:
             self.zoom_roi.setVisible(False)
+
+    def _update_zoom_roi_fill(self):
+        """Update the fill rectangle to match the ROI size."""
+        if hasattr(self, 'zoom_roi_fill') and self.zoom_roi_fill is not None:
+            size = self.zoom_roi.size()
+            self.zoom_roi_fill.setRect(0, 0, size[0], size[1])
 
     def _create_trigger_arrows(self):
         """Create triangular arrow markers at the ends of trigger lines."""
