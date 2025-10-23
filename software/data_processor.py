@@ -332,7 +332,7 @@ class DataProcessor:
 
         return freq, abs(Y)
 
-    def calculate_measurements(self, x_data, y_data, vline, do_risetime_calc=False, use_edge_fit=True):
+    def calculate_measurements(self, x_data, y_data, vline, do_risetime_calc=False, use_edge_fit=True, channel_index=None):
         """Calculates all requested measurements and returns fit results if requested.
 
         Args:
@@ -342,10 +342,17 @@ class DataProcessor:
             do_risetime_calc: Whether to calculate rise time
             use_edge_fit: If True, use edge-based fitting (works for any signal).
                          If False, use piecewise fitting (works for square waves).
+            channel_index: Index of the channel being measured (if None, uses activexychannel)
         """
         if len(y_data) < 2: return {}, None
         state = self.state
-        VperD = state.VperD[state.activexychannel]
+
+        # Use the specified channel_index, or fall back to activexychannel if not provided
+        if channel_index is None:
+            channel_index = state.activexychannel
+
+        VperD = state.VperD[channel_index]
+        board_index = channel_index // state.num_chan_per_board
 
         measurements = {
             "Mean": 1000 * VperD * np.mean(y_data),
@@ -356,9 +363,9 @@ class DataProcessor:
         }
 
         sampling_rate = (state.samplerate * 1e9) / state.downsamplefactor
-        if state.dotwochannel[state.activeboard]: sampling_rate /= 2
+        if state.dotwochannel[board_index]: sampling_rate /= 2
         # Account for resampling - if resampling is applied, it increases sample density and effective sampling rate
-        if state.doresamp[state.activexychannel] > 1: sampling_rate *= state.doresamp[state.activexychannel]
+        if state.doresamp[channel_index] > 1: sampling_rate *= state.doresamp[channel_index]
         found_freq = find_fundamental_frequency_scipy(y_data, sampling_rate)
         measurements["Freq"] = found_freq
 

@@ -674,10 +674,14 @@ class MeasurementsManager:
             # Determine if we need risetime calculation for this measurement
             needs_risetime = measurement_name in ["Risetime", "Falltime", "Risetime error", "Falltime error"]
 
+            # For regular channels, pass channel_index; for math channels, use None (defaults to activexychannel)
+            measurement_channel_index = channel_index if not channel_key.startswith("Math") else None
+
             measurements, fit_results = self.processor.calculate_measurements(
                 x_data, y_data, vline_val,
                 do_risetime_calc=needs_risetime,
-                use_edge_fit=self.ui.actionEdge_fit_method.isChecked()
+                use_edge_fit=self.ui.actionEdge_fit_method.isChecked(),
+                channel_index=measurement_channel_index
             )
 
             # Set the measurement value based on type
@@ -728,7 +732,8 @@ class MeasurementsManager:
                     _, fit_results = self.processor.calculate_measurements(
                         x_data, y_data, vline_val,
                         do_risetime_calc=True,
-                        use_edge_fit=self.ui.actionEdge_fit_method.isChecked()
+                        use_edge_fit=self.ui.actionEdge_fit_method.isChecked(),
+                        channel_index=self.state.activexychannel
                     )
                     self.plot_manager.update_risetime_fit_lines(fit_results)
             else:
