@@ -1062,6 +1062,41 @@ class PlotManager(pg.QtCore.QObject):
         if self.zoom_roi:
             self.zoom_roi.setVisible(False)
 
+    def reset_zoom_roi_position(self):
+        """Reset the zoom ROI to its default position centered on trigger lines."""
+        if not self.zoom_roi or not self.zoom_roi.isVisible():
+            return
+
+        # Get current trigger positions
+        vline_pos = self.otherlines['vline'].value()
+        hline_pos = self.otherlines['hline'].value()
+
+        # Get current plot range for calculating defaults
+        view_range = self.plot.getViewBox().viewRange()
+        x_range = view_range[0]
+        y_range = view_range[1]
+
+        # Calculate default region: ±10% around vline (time), ±25% around hline (voltage)
+        x_span = x_range[1] - x_range[0]
+        y_span = y_range[1] - y_range[0]
+
+        roi_width = x_span * 0.2  # ±10% = 20% total width
+        roi_height = y_span * 0.5  # ±25% = 50% total height
+
+        # Center ROI on trigger lines
+        roi_x = vline_pos - roi_width / 2
+        roi_y = hline_pos - roi_height / 2
+
+        # Set ROI position and size
+        self.zoom_roi.setPos([roi_x, roi_y])
+        self.zoom_roi.setSize([roi_width, roi_height])
+
+        # Update the fill to match the ROI size
+        self._update_zoom_roi_fill()
+
+        # Emit new position
+        self.on_zoom_roi_changed()
+
     def _update_zoom_roi_fill(self):
         """Update the fill rectangle to match the ROI size."""
         if hasattr(self, 'zoom_roi_fill') and self.zoom_roi_fill is not None:
