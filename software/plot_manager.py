@@ -71,6 +71,7 @@ class PlotManager(pg.QtCore.QObject):
     hline_dragged_signal = pg.QtCore.Signal(float)
     curve_clicked_signal = pg.QtCore.Signal(int)
     math_curve_clicked_signal = pg.QtCore.Signal(str)  # Emits math channel name
+    zoom_region_changed_signal = pg.QtCore.Signal(tuple, tuple)  # Emits (x_range, y_range)
 
     def __init__(self, ui, state):
         super().__init__()
@@ -97,6 +98,9 @@ class PlotManager(pg.QtCore.QObject):
 
         # Cursor manager (will be initialized after linepens are created)
         self.cursor_manager = None
+
+        # Zoom window ROI
+        self.zoom_roi = None
 
         # Persistence attributes (per-channel)
         self.max_persist_lines = 16
@@ -190,6 +194,27 @@ class PlotManager(pg.QtCore.QObject):
             line = self.plot.plot([0], [0], pen=fit_pen, name=f"fitline_{i}")
             line.setVisible(False)
             self.otherlines[f'fit_{i}'] = line
+
+        # Zoom window ROI (initially invisible)
+        # Create a rectangular ROI with semi-transparent gray fill
+        self.zoom_roi = pg.RectROI(
+            pos=[0, 0],  # Will be set when shown
+            size=[1, 1],  # Will be set when shown
+            pen=pg.mkPen(color='gray', width=1),
+            movable=True,
+            resizable=True
+        )
+        # Set the ROI to be semi-transparent
+        self.zoom_roi.handlePen = pg.mkPen(color='gray', width=1)
+        self.zoom_roi.handleHoverPen = pg.mkPen(color='white', width=2)
+        # Add semi-transparent fill
+        from PyQt5.QtGui import QBrush, QColor
+        brush = QBrush(QColor(128, 128, 128, 26))  # Gray with alpha ~0.1 (26/255)
+        self.zoom_roi.setBrush(brush)
+        self.plot.addItem(self.zoom_roi)
+        self.zoom_roi.setVisible(False)
+        # Connect signal to notify when ROI changes
+        self.zoom_roi.sigRegionChanged.connect(self.on_zoom_roi_changed)
 
         # Persistence average lines (created per-channel on demand)
         # self.average_lines = {} already initialized in __init__
@@ -949,6 +974,57 @@ class PlotManager(pg.QtCore.QObject):
         # Update trigger threshold text if it's enabled
         if self.cursor_manager:
             self.cursor_manager.update_trigger_threshold_text()
+
+    def on_zoom_roi_changed(self):
+        """Called when zoom ROI is moved or resized."""
+        if self.zoom_roi and self.zoom_roi.isVisible():
+            # Get the ROI bounds
+            pos = self.zoom_roi.pos()
+            size = self.zoom_roi.size()
+            x_range = (pos[0], pos[0] + size[0])
+            y_range = (pos[1], pos[1] + size[1])
+            # Emit signal with the new range
+            self.zoom_region_changed_signal.emit(x_range, y_range)
+
+    def show_zoom_roi(self):
+        """Show the zoom ROI and set its default position based on trigger lines."""
+        if self.zoom_roi is None:
+            return
+
+        # Get current trigger positions
+        vline_pos = self.otherlines['vline'].value()
+        hline_pos = self.otherlines['hline'].value()
+
+        # Get current plot range for calculating defaults
+        view_range = self.plot.getViewBox().viewRange()
+        x_range = view_range[0]
+        y_range = view_range[1]
+
+        # Calculate default region: ±10% around vline (time), ±50% around hline (voltage)
+        x_span = x_range[1] - x_range[0]
+        y_span = y_range[1] - y_range[0]
+
+        roi_width = x_span * 0.2  # ±10% = 20% total width
+        roi_height = y_span * 1.0  # ±50% = 100% total height
+
+        # Center ROI on trigger lines
+        roi_x = vline_pos - roi_width / 2
+        roi_y = hline_pos - roi_height / 2
+
+        # Set ROI position and size
+        self.zoom_roi.setPos([roi_x, roi_y])
+        self.zoom_roi.setSize([roi_width, roi_height])
+
+        # Show the ROI
+        self.zoom_roi.setVisible(True)
+
+        # Emit initial position
+        self.on_zoom_roi_changed()
+
+    def hide_zoom_roi(self):
+        """Hide the zoom ROI."""
+        if self.zoom_roi:
+            self.zoom_roi.setVisible(False)
 
     def _create_trigger_arrows(self):
         """Create triangular arrow markers at the ends of trigger lines."""

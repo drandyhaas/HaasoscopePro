@@ -2406,9 +2406,9 @@ Outlined if triggering on this channel</string>
     <addaction name="actionTrigger_info"/>
     <addaction name="actionPeak_detect"/>
     <addaction name="separator"/>
-    <addaction name="actionXY_Plot"/>
     <addaction name="actionMath_channels"/>
     <addaction name="actionHistory_window"/>
+    <addaction name="actionXY_Plot"/>
     <addaction name="actionZoom_window"/>
     <addaction name="separator"/>
    </widget>
@@ -2952,6 +2952,9 @@ Outlined if triggering on this channel</string>
    </property>
   </action>
   <action name="actionZoom_window">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
    <property name="text">
     <string>Zoom window</string>
    </property>

@@ -18,6 +18,7 @@ from plot_manager import PlotManager
 from data_recorder import DataRecorder
 from histogram_window import HistogramWindow
 from xy_window import XYWindow
+from zoom_window import ZoomWindow
 from history_window import HistoryWindow
 from measurements_manager import MeasurementsManager
 from calibration import autocalibration, do_meanrms_calibration
@@ -79,6 +80,7 @@ class MainWindow(TemplateBaseClass):
         self.fftui = None
         self.math_window = None
         self.xy_window = None
+        self.zoom_window = None
         self.dummy_server_config_dialog = None
         # Initialize boardBox ComboBox with board numbers
         self.ui.boardBox.blockSignals(True)
@@ -369,11 +371,13 @@ class MainWindow(TemplateBaseClass):
 
         # View menu actions
         self.ui.actionXY_Plot.triggered.connect(self.toggle_xy_view_slot)
+        self.ui.actionZoom_window.triggered.connect(self.toggle_zoom_window_slot)
         self.ui.actionMath_channels.triggered.connect(self.open_math_channels)
         self.ui.actionHistory_window.triggered.connect(self.open_history_window)
 
         # Plot manager signals
         self.plot_manager.curve_clicked_signal.connect(self.on_curve_clicked)
+        self.plot_manager.zoom_region_changed_signal.connect(self.on_zoom_region_changed)
 
         # Connect the controller's error signal to our handler slot
         self.controller.signals.critical_error_occurred.connect(self.handle_critical_error)
@@ -688,6 +692,10 @@ class MainWindow(TemplateBaseClass):
         # --- Update XY window if visible (after math channels calculated) ---
         if s.xy_mode and self.xy_window is not None and self.xy_window.isVisible():
             self.xy_window.update_xy_plot(self.xydata, math_results)
+
+        # --- Update Zoom window if visible ---
+        if self.zoom_window is not None and self.zoom_window.isVisible():
+            self.zoom_window.update_zoom_plot(self.xydata, math_results)
 
         # Store event in history buffer (only if not displaying historical data)
         if not self.displaying_history:
@@ -1744,6 +1752,42 @@ class MainWindow(TemplateBaseClass):
         # Update state
         self.state.xy_mode = False
 
+    def toggle_zoom_window_slot(self, checked):
+        """Slot for the 'Zoom Window' menu action."""
+        if checked:
+            # Create and show zoom window
+            if self.zoom_window is None:
+                self.zoom_window = ZoomWindow(self, self.state, self.plot_manager)
+                # Connect signal to handle window closing
+                self.zoom_window.window_closed.connect(self.on_zoom_window_closed)
+                # Position to the right of main window with tops aligned
+                self.zoom_window.position_relative_to_main(self)
+
+            self.zoom_window.show()
+            self.zoom_window.raise_()
+            self.zoom_window.activateWindow()
+
+            # Show the zoom ROI on the main plot
+            self.plot_manager.show_zoom_roi()
+        else:
+            # Hide zoom window and ROI
+            if self.zoom_window is not None:
+                self.zoom_window.hide()
+            self.plot_manager.hide_zoom_roi()
+
+    def on_zoom_window_closed(self):
+        """Slot called when the zoom window is closed by the user."""
+        # Uncheck the menu item
+        self.ui.actionZoom_window.setChecked(False)
+        # Hide the ROI
+        self.plot_manager.hide_zoom_roi()
+
+    def on_zoom_region_changed(self, x_range, y_range):
+        """Slot called when the zoom ROI is moved or resized."""
+        if self.zoom_window and self.zoom_window.isVisible():
+            # Update the zoom window's view range
+            self.zoom_window.set_zoom_region(x_range, y_range)
+
     def open_math_channels(self):
         """Slot for the 'Math Channels' menu action."""
         if self.math_window is None:
@@ -1833,6 +1877,10 @@ class MainWindow(TemplateBaseClass):
             # Update XY window if visible (after math channels calculated)
             if self.state.xy_mode and self.xy_window is not None and self.xy_window.isVisible():
                 self.xy_window.update_xy_plot(self.xydata, math_results)
+
+            # Update Zoom window if visible
+            if self.zoom_window is not None and self.zoom_window.isVisible():
+                self.zoom_window.update_zoom_plot(self.xydata, math_results)
 
     def resume_live_acquisition(self):
         """Resume live data acquisition after viewing history."""

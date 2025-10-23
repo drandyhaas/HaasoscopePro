@@ -96,6 +96,28 @@ def save_setup(main_window):
         setup['xy_window_y_channel'] = main_window.xy_window.y_channel
         setup['xy_window_x_channel'] = main_window.xy_window.x_channel
 
+    # Save Zoom window state
+    setup['zoom_window_visible'] = main_window.zoom_window is not None and main_window.zoom_window.isVisible() if main_window.zoom_window else False
+
+    # Save Zoom window geometry if window exists
+    if main_window.zoom_window is not None:
+        setup['zoom_window_geometry'] = {
+            'x': main_window.zoom_window.x(),
+            'y': main_window.zoom_window.y(),
+            'width': main_window.zoom_window.width(),
+            'height': main_window.zoom_window.height(),
+        }
+        # Save zoom ROI position and size
+        if main_window.plot_manager.zoom_roi is not None:
+            roi_pos = main_window.plot_manager.zoom_roi.pos()
+            roi_size = main_window.plot_manager.zoom_roi.size()
+            setup['zoom_roi_geometry'] = {
+                'x': roi_pos[0],
+                'y': roi_pos[1],
+                'width': roi_size[0],
+                'height': roi_size[1],
+            }
+
     # Continue with other settings
     setup.update({
         # Processing settings
@@ -147,6 +169,7 @@ def save_setup(main_window):
         'measure_freq': main_window.ui.actionFreq.isChecked(),
         'measure_period': main_window.ui.actionPeriod.isChecked(),
         'measure_duty_cycle': main_window.ui.actionDuty_cycle.isChecked(),
+        'measure_pulse_width': main_window.ui.actionPulse_width.isChecked(),
         'measure_risetime': main_window.ui.actionRisetime.isChecked(),
         'measure_risetime_error': main_window.ui.actionRisetime_error.isChecked(),
         'measure_edge_fit': main_window.ui.actionEdge_fit_method.isChecked(),
@@ -503,6 +526,8 @@ def load_setup(main_window):
         main_window.ui.actionPeriod.setChecked(setup['measure_period'])
     if 'measure_duty_cycle' in setup:
         main_window.ui.actionDuty_cycle.setChecked(setup['measure_duty_cycle'])
+    if 'measure_pulse_width' in setup:
+        main_window.ui.actionPulse_width.setChecked(setup['measure_pulse_width'])
     if 'measure_risetime' in setup:
         main_window.ui.actionRisetime.setChecked(setup['measure_risetime'])
     if 'measure_risetime_error' in setup:
@@ -702,6 +727,32 @@ def load_setup(main_window):
         main_window.xy_window.show()
         s.xy_mode = True
         main_window.ui.actionXY_Plot.setChecked(True)
+
+    # Restore Zoom window visibility, geometry, and ROI
+    if 'zoom_window_visible' in setup and setup['zoom_window_visible']:
+        # Show the Zoom window if it was visible when saved
+        if main_window.zoom_window is None:
+            from zoom_window import ZoomWindow
+            main_window.zoom_window = ZoomWindow(main_window, main_window.state, main_window.plot_manager)
+            main_window.zoom_window.window_closed.connect(main_window.on_zoom_window_closed)
+
+        # Restore geometry if available
+        if 'zoom_window_geometry' in setup:
+            geo = setup['zoom_window_geometry']
+            main_window.zoom_window.setGeometry(geo['x'], geo['y'], geo['width'], geo['height'])
+
+        # Restore zoom ROI position and size if available
+        if 'zoom_roi_geometry' in setup and main_window.plot_manager.zoom_roi is not None:
+            roi_geo = setup['zoom_roi_geometry']
+            main_window.plot_manager.zoom_roi.setPos([roi_geo['x'], roi_geo['y']])
+            main_window.plot_manager.zoom_roi.setSize([roi_geo['width'], roi_geo['height']])
+
+        # Show the zoom window, ROI, and update menu checkbox
+        main_window.zoom_window.show()
+        main_window.plot_manager.zoom_roi.setVisible(True)
+        main_window.ui.actionZoom_window.setChecked(True)
+        # Emit initial zoom region to update the zoom window's view range
+        main_window.plot_manager.on_zoom_roi_changed()
 
     # Resume acquisition if it was running
     if not was_paused:
