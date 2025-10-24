@@ -209,10 +209,23 @@ class ZoomWindow(QtWidgets.QWidget):
                 if math_def:
                     ch1_idx = math_def.get('ch1')
                     if not isinstance(ch1_idx, str) and ch1_idx < len(self.plot_manager.linepens):
-                        # Source is a regular channel - use its width
+                        # Source is a regular channel - use its current width
                         width = self.plot_manager.linepens[ch1_idx].width()
+                    elif isinstance(ch1_idx, str) and ch1_idx.startswith("Ref"):
+                        # Source is a reference - look up the original channel and use its current width
+                        try:
+                            ref_num = int(ch1_idx[3:])  # Extract number from "Ref0", "Ref1", etc.
+                            if (self.parent_window and hasattr(self.parent_window, 'reference_data') and
+                                ref_num in self.parent_window.reference_data and
+                                ref_num < len(self.plot_manager.linepens)):
+                                # Use the current width of the channel this reference came from
+                                width = self.plot_manager.linepens[ref_num].width()
+                            else:
+                                width = math_def.get('width', 2)
+                        except (ValueError, IndexError):
+                            width = math_def.get('width', 2)
                     else:
-                        # Source is a reference or another math channel - use default width
+                        # Source is another math channel or unknown - use default width
                         width = math_def.get('width', 2)
 
                 # Create line if it doesn't exist

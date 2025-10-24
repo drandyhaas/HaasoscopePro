@@ -1457,7 +1457,7 @@ class MainWindow(TemplateBaseClass):
 
         # Update math channel widths to follow source channel widths
         if self.math_window is not None:
-            self.plot_manager.update_math_channel_lines(self.math_window)
+            self.plot_manager.update_math_channel_lines(self.math_window, self.reference_data)
 
     def trigger_level_changed(self, value):
         self.state.triggerlevel = value

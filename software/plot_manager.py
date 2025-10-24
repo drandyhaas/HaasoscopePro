@@ -545,11 +545,12 @@ class PlotManager(pg.QtCore.QObject):
         else:
             self.legend_text.setVisible(False)
 
-    def update_math_channel_lines(self, math_window=None):
+    def update_math_channel_lines(self, math_window=None, reference_data=None):
         """Updates the set of math channel plot lines based on current math channel definitions.
 
         Args:
             math_window: The MathChannelsWindow instance (optional, will try to find it if not provided)
+            reference_data: Dictionary mapping channel indices to reference data (for looking up source channels)
         """
         # Get the math window if not provided
         if math_window is None:
@@ -573,10 +574,21 @@ class PlotManager(pg.QtCore.QObject):
             # Get width from source channel (ch1)
             ch1_idx = math_def.get('ch1')
             if not isinstance(ch1_idx, str) and ch1_idx < len(self.linepens):
-                # Source is a regular channel - use its width
+                # Source is a regular channel - use its current width
                 width = self.linepens[ch1_idx].width()
+            elif isinstance(ch1_idx, str) and ch1_idx.startswith("Ref") and reference_data is not None:
+                # Source is a reference - look up the original channel and use its current width
+                try:
+                    ref_num = int(ch1_idx[3:])  # Extract number from "Ref0", "Ref1", etc.
+                    if ref_num in reference_data and ref_num < len(self.linepens):
+                        # Use the current width of the channel this reference came from
+                        width = self.linepens[ref_num].width()
+                    else:
+                        width = math_def.get('width', 2)
+                except (ValueError, IndexError):
+                    width = math_def.get('width', 2)
             else:
-                # Source is a reference or another math channel - use default width
+                # Source is another math channel or unknown - use default width
                 width = math_def.get('width', 2)
 
             if math_name not in self.math_channel_lines:
