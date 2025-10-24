@@ -2025,7 +2025,8 @@ class MathChannelsWindow(QWidget):
         return results
 
     def take_reference_waveform(self):
-        """Take a reference waveform of the currently selected math channel."""
+        """Take a reference waveform of the currently selected math channel.
+        Uses non-resampled data to ensure correct FFT and math operations."""
         current_row = self.math_list.currentRow()
         if current_row < 0 or current_row >= len(self.math_channels):
             return
@@ -2033,29 +2034,58 @@ class MathChannelsWindow(QWidget):
         math_def = self.math_channels[current_row]
         math_name = math_def['name']
 
-        # Get the math channel line data
-        if math_name in self.main_window.plot_manager.math_channel_lines:
-            line = self.main_window.plot_manager.math_channel_lines[math_name]
+        # Get the non-resampled math channel data (important for math channels and FFT)
+        # Check if we have the non-resampled version in main_window
+        if hasattr(self.main_window, 'math_results_noresamp') and math_name in self.main_window.math_results_noresamp:
+            x_data, y_data = self.main_window.math_results_noresamp[math_name]
 
-            if line.xData is not None and line.yData is not None:
-                # Convert the current x-axis data back to nanoseconds for storage
-                x_data_in_ns = line.xData * self.state.nsunits
-                y_data = np.copy(line.yData)  # Make a copy
+            # Convert the x-axis data to nanoseconds for storage
+            x_data_in_ns = x_data * self.state.nsunits
+            y_data = np.copy(y_data)  # Make a copy
 
-                # Store the reference data
-                self.main_window.math_reference_data[math_name] = {'x_ns': x_data_in_ns, 'y': y_data}
+            # Determine doresamp for this math channel based on its source
+            ch1_idx = math_def['ch1']
+            if isinstance(ch1_idx, str):
+                # Source is a reference or another math channel
+                if ch1_idx.startswith("Ref"):
+                    # Get doresamp from the reference
+                    ref_idx = int(ch1_idx[3:])
+                    if ref_idx in self.main_window.reference_data:
+                        doresamp_for_ref = self.main_window.reference_data[ref_idx].get('doresamp', 1)
+                    else:
+                        doresamp_for_ref = 1
+                else:
+                    # Source is another math channel - get its doresamp from its reference
+                    if ch1_idx in self.main_window.math_reference_data:
+                        doresamp_for_ref = self.main_window.math_reference_data[ch1_idx].get('doresamp', 1)
+                    else:
+                        doresamp_for_ref = 1
+            else:
+                # Source is a regular channel
+                doresamp_for_ref = self.state.doresamp[ch1_idx]
 
-                # Set the reference visibility to True for this math channel
-                self.main_window.math_reference_visible[math_name] = True
+            # Get current line width for this math channel
+            line_width = math_def.get('width', 2)
 
-                # Update the checkbox to reflect the new visibility state
-                self.update_button_states()
+            # Store the reference data with doresamp and width info
+            self.main_window.math_reference_data[math_name] = {
+                'x_ns': x_data_in_ns,
+                'y': y_data,
+                'doresamp': doresamp_for_ref,
+                'width': line_width
+            }
 
-                # Update the Clear all menu state in main window
-                self.main_window.update_clear_all_reference_state()
+            # Set the reference visibility to True for this math channel
+            self.main_window.math_reference_visible[math_name] = True
 
-                # Trigger a redraw to show the new reference immediately
-                self.main_window.time_changed()
+            # Update the checkbox to reflect the new visibility state
+            self.update_button_states()
+
+            # Update the Clear all menu state in main window
+            self.main_window.update_clear_all_reference_state()
+
+            # Trigger a redraw to show the new reference immediately
+            self.main_window.time_changed()
 
     def toggle_reference_visibility(self):
         """Toggle visibility of the reference waveform for the currently selected math channel."""

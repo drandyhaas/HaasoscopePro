@@ -200,21 +200,55 @@ class ZoomWindow(QtWidgets.QWidget):
                 if x_data is None or y_data is None or len(x_data) == 0:
                     continue
 
+                # Check if this math channel should be displayed
+                math_def = self._get_math_channel_definition(math_name)
+                is_displayed = math_def.get('displayed', True) if math_def else True
+
+                # Get width from source channel (ch1)
+                width = 2  # Default
+                if math_def:
+                    ch1_idx = math_def.get('ch1')
+                    if not isinstance(ch1_idx, str) and ch1_idx < len(self.plot_manager.linepens):
+                        # Source is a regular channel - use its current width
+                        width = self.plot_manager.linepens[ch1_idx].width()
+                    elif isinstance(ch1_idx, str) and ch1_idx.startswith("Ref"):
+                        # Source is a reference - look up the original channel and use its current width
+                        try:
+                            ref_num = int(ch1_idx[3:])  # Extract number from "Ref0", "Ref1", etc.
+                            if (self.parent_window and hasattr(self.parent_window, 'reference_data') and
+                                ref_num in self.parent_window.reference_data and
+                                ref_num < len(self.plot_manager.linepens)):
+                                # Use the current width of the channel this reference came from
+                                width = self.plot_manager.linepens[ref_num].width()
+                            else:
+                                width = math_def.get('width', 2)
+                        except (ValueError, IndexError):
+                            width = math_def.get('width', 2)
+                    else:
+                        # Source is another math channel or unknown - use default width
+                        width = math_def.get('width', 2)
+
                 # Create line if it doesn't exist
                 if math_name not in self.math_channel_lines:
                     # Get color from math channel definition
                     color = self._get_math_channel_color(math_name)
                     # Use dashed pen for math channels, like in main window
-                    pen = pg.mkPen(color=color, width=2, style=QtCore.Qt.DashLine)
+                    pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DashLine)
 
                     self.math_channel_lines[math_name] = self.plot.plot(
                         pen=pen,
                         skipFiniteCheck=True,
                         connect="finite"
                     )
+                else:
+                    # Update pen to match current color and source channel width
+                    color = self._get_math_channel_color(math_name)
+                    pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DashLine)
+                    self.math_channel_lines[math_name].setPen(pen)
 
-                # Update line data
+                # Update line data and visibility
                 self.math_channel_lines[math_name].setData(x=x_data, y=y_data, skipFiniteCheck=True)
+                self.math_channel_lines[math_name].setVisible(is_displayed)
 
         # Remove math channel lines that no longer exist
         existing_math_names = set(math_results.keys()) if math_results else set()
@@ -239,29 +273,52 @@ class ZoomWindow(QtWidgets.QWidget):
         for ch_idx, ref_data in reference_data.items():
             is_visible = reference_visible.get(ch_idx, False)
 
+            # Get stored width from reference (or use current channel width if not stored)
+            stored_width = ref_data.get('width', None)
+
             if ch_idx not in self.reference_lines:
                 # Create reference line with semi-transparent pen matching channel color
                 if ch_idx < len(self.plot_manager.linepens):
                     color = QColor(self.plot_manager.linepens[ch_idx].color())
                     color.setAlphaF(0.5)
-                    pen = pg.mkPen(color=color, width=1)
+                    # Use stored width or current channel width
+                    width = stored_width if stored_width is not None else self.plot_manager.linepens[ch_idx].width()
+                    pen = pg.mkPen(color=color, width=width)
                 else:
                     color = QColor('white')
                     color.setAlphaF(0.5)
-                    pen = pg.mkPen(color=color, width=1)
+                    width = stored_width if stored_width is not None else 1
+                    pen = pg.mkPen(color=color, width=width)
 
                 self.reference_lines[ch_idx] = self.plot.plot(
                     pen=pen,
                     skipFiniteCheck=True,
                     connect="finite"
                 )
+            else:
+                # Update the pen to match current channel color (but use stored width)
+                if ch_idx < len(self.plot_manager.linepens):
+                    color = QColor(self.plot_manager.linepens[ch_idx].color())
+                    color.setAlphaF(0.5)
+                    # Use stored width or current channel width
+                    width = stored_width if stored_width is not None else self.plot_manager.linepens[ch_idx].width()
+                    pen = pg.mkPen(color=color, width=width)
+                    self.reference_lines[ch_idx].setPen(pen)
 
             # Update data - need to convert from ns to current time units
             x_data_ns = ref_data['x_ns']
             y_data = ref_data['y']
             x_data = x_data_ns / self.state.nsunits  # Convert to current time units
 
-            self.reference_lines[ch_idx].setData(x=x_data, y=y_data, skipFiniteCheck=True)
+            # Resample reference to match the stored doresamp setting for display
+            # Use stored doresamp if available (for backward compatibility)
+            doresamp_to_use = ref_data.get('doresamp', self.state.doresamp[ch_idx])
+            if doresamp_to_use > 1:
+                from scipy.signal import resample
+                y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
+                self.reference_lines[ch_idx].setData(x=x_resampled, y=y_resampled, skipFiniteCheck=True)
+            else:
+                self.reference_lines[ch_idx].setData(x=x_data, y=y_data, skipFiniteCheck=True)
             self.reference_lines[ch_idx].setVisible(is_visible)
 
         # Remove reference lines that no longer exist
@@ -274,25 +331,43 @@ class ZoomWindow(QtWidgets.QWidget):
         for math_name, ref_data in math_reference_data.items():
             is_visible = math_reference_visible.get(math_name, False)
 
+            # Get math channel definition once for all uses
+            math_def = self._get_math_channel_definition(math_name)
+            color = self._get_math_channel_color(math_name)
+            ref_color = QColor(color)
+            ref_color.setAlphaF(0.5)
+
+            # Use stored width from reference, or current math channel width if not stored
+            width = ref_data.get('width', math_def.get('width', 2) if math_def else 2)
+
             if math_name not in self.math_reference_lines:
                 # Create reference line with semi-transparent pen matching math channel color
-                color = self._get_math_channel_color(math_name)
-                ref_color = QColor(color)
-                ref_color.setAlphaF(0.5)
-                pen = pg.mkPen(color=ref_color, width=2, style=QtCore.Qt.DashLine)
+                pen = pg.mkPen(color=ref_color, width=width, style=QtCore.Qt.DashLine)
 
                 self.math_reference_lines[math_name] = self.plot.plot(
                     pen=pen,
                     skipFiniteCheck=True,
                     connect="finite"
                 )
+            else:
+                # Update the pen to match current math channel color (but use stored width)
+                pen = pg.mkPen(color=ref_color, width=width, style=QtCore.Qt.DashLine)
+                self.math_reference_lines[math_name].setPen(pen)
 
             # Update data - need to convert from ns to current time units
             x_data_ns = ref_data['x_ns']
             y_data = ref_data['y']
             x_data = x_data_ns / self.state.nsunits  # Convert to current time units
 
-            self.math_reference_lines[math_name].setData(x=x_data, y=y_data, skipFiniteCheck=True)
+            # Resample reference to match the stored doresamp setting for display
+            # Use stored doresamp if available (for backward compatibility and for references)
+            doresamp_to_use = ref_data.get('doresamp', 1)
+            if doresamp_to_use > 1:
+                from scipy.signal import resample
+                y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
+                self.math_reference_lines[math_name].setData(x=x_resampled, y=y_resampled, skipFiniteCheck=True)
+            else:
+                self.math_reference_lines[math_name].setData(x=x_data, y=y_data, skipFiniteCheck=True)
             self.math_reference_lines[math_name].setVisible(is_visible)
 
         # Remove math reference lines that no longer exist
@@ -368,6 +443,14 @@ class ZoomWindow(QtWidgets.QWidget):
                 if math_def['name'] == math_name:
                     return QColor(math_def['color'])
         return QColor('white')  # Default color if not found
+
+    def _get_math_channel_definition(self, math_name):
+        """Get the full definition for a math channel by name."""
+        if self.parent_window and hasattr(self.parent_window, 'math_window') and self.parent_window.math_window:
+            for math_def in self.parent_window.math_window.math_channels:
+                if math_def['name'] == math_name:
+                    return math_def
+        return None  # Not found
 
     def set_markers(self, is_checked):
         """Set marker visibility on all zoom window plot lines.

@@ -471,12 +471,35 @@ class PlotManager(pg.QtCore.QObject):
             ref_pen = pg.mkPen(color=ref_color, width=channel_pen.width())
             self.reference_lines[channel_index].setPen(ref_pen)
 
-    def update_reference_plot(self, channel_index, x_data, y_data):
-        """Sets the data for a channel's reference waveform."""
+    def update_reference_plot(self, channel_index, x_data, y_data, width=None):
+        """Sets the data for a channel's reference waveform.
+
+        Args:
+            channel_index: The channel index
+            x_data: X data for the reference
+            y_data: Y data for the reference
+            width: Optional line width (uses stored width from reference, or current channel width if None)
+        """
         if 0 <= channel_index < len(self.reference_lines):
             ref_line = self.reference_lines[channel_index]
-            # Update the reference line color to match current channel color
-            self.update_reference_line_color(channel_index)
+
+            # Update the reference line color and width
+            if channel_index < len(self.linepens):
+                # Get the current channel color
+                channel_pen = self.linepens[channel_index]
+                channel_color = QColor(channel_pen.color())
+
+                # Create reference color with transparency
+                ref_color = QColor(channel_color)
+                ref_color.setAlphaF(0.5)
+
+                # Use provided width or current channel width
+                ref_width = width if width is not None else channel_pen.width()
+
+                # Update reference line pen
+                ref_pen = pg.mkPen(color=ref_color, width=ref_width)
+                ref_line.setPen(ref_pen)
+
             # Optimization: Use skipFiniteCheck for faster setData
             ref_line.setData(x_data, y_data, skipFiniteCheck=True)
             ref_line.setVisible(True)
@@ -522,11 +545,12 @@ class PlotManager(pg.QtCore.QObject):
         else:
             self.legend_text.setVisible(False)
 
-    def update_math_channel_lines(self, math_window=None):
+    def update_math_channel_lines(self, math_window=None, reference_data=None):
         """Updates the set of math channel plot lines based on current math channel definitions.
 
         Args:
             math_window: The MathChannelsWindow instance (optional, will try to find it if not provided)
+            reference_data: Dictionary mapping channel indices to reference data (for looking up source channels)
         """
         # Get the math window if not provided
         if math_window is None:
@@ -546,7 +570,26 @@ class PlotManager(pg.QtCore.QObject):
             math_name = math_def['name']
             color = math_def.get('color', '#00FFFF')  # Default to cyan if no color specified
             displayed = math_def.get('displayed', True)  # Default to displayed if not specified
-            width = math_def.get('width', 2)  # Use stored width, default to 2 if not specified
+
+            # Get width from source channel (ch1)
+            ch1_idx = math_def.get('ch1')
+            if not isinstance(ch1_idx, str) and ch1_idx < len(self.linepens):
+                # Source is a regular channel - use its current width
+                width = self.linepens[ch1_idx].width()
+            elif isinstance(ch1_idx, str) and ch1_idx.startswith("Ref") and reference_data is not None:
+                # Source is a reference - look up the original channel and use its current width
+                try:
+                    ref_num = int(ch1_idx[3:])  # Extract number from "Ref0", "Ref1", etc.
+                    if ref_num in reference_data and ref_num < len(self.linepens):
+                        # Use the current width of the channel this reference came from
+                        width = self.linepens[ref_num].width()
+                    else:
+                        width = math_def.get('width', 2)
+                except (ValueError, IndexError):
+                    width = math_def.get('width', 2)
+            else:
+                # Source is another math channel or unknown - use default width
+                width = math_def.get('width', 2)
 
             if math_name not in self.math_channel_lines:
                 # Create a new dashed line with the specified color and width
@@ -559,7 +602,7 @@ class PlotManager(pg.QtCore.QObject):
                 # Set initial visibility
                 line.setVisible(displayed)
             else:
-                # Update the color and width of existing line
+                # Update the color and width (from source channel) of existing line
                 pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DashLine)
                 self.math_channel_lines[math_name].setPen(pen)
                 # Update visibility
@@ -604,7 +647,9 @@ class PlotManager(pg.QtCore.QObject):
                 continue  # Math channel no longer exists
 
             color = math_def.get('color', '#00FFFF')
-            width = math_def.get('width', 2)
+
+            # Use stored width from reference, or current math channel width if not stored
+            width = ref_data.get('width', math_def.get('width', 2))
 
             # Create reference color with transparency to match channel behavior
             ref_color = QColor(color)
@@ -616,14 +661,23 @@ class PlotManager(pg.QtCore.QObject):
                 line = self.plot.plot(pen=pen, name=f"{math_name}_ref", skipFiniteCheck=True, connect="finite")
                 self.math_reference_lines[math_name] = line
             else:
-                # Update the color and width of existing line
+                # Update the color (and width from stored reference data)
                 pen = pg.mkPen(color=ref_color, width=width, style=QtCore.Qt.DotLine)
                 self.math_reference_lines[math_name].setPen(pen)
 
             # Update data and visibility
-            x_data_in_current_units = ref_data['x_ns'] / self.state.nsunits
+            x_data = ref_data['x_ns'] / self.state.nsunits
             y_data = ref_data['y']
-            self.math_reference_lines[math_name].setData(x_data_in_current_units, y_data, skipFiniteCheck=True)
+
+            # Resample reference to match the stored doresamp setting for display
+            # Use stored doresamp if available (for backward compatibility and for references)
+            doresamp_to_use = ref_data.get('doresamp', 1)
+            if doresamp_to_use > 1:
+                from scipy.signal import resample
+                y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
+                self.math_reference_lines[math_name].setData(x_resampled, y_resampled, skipFiniteCheck=True)
+            else:
+                self.math_reference_lines[math_name].setData(x_data, y_data, skipFiniteCheck=True)
 
             # Set visibility
             is_visible = main_window.math_reference_visible.get(math_name, False)
