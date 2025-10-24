@@ -2064,11 +2064,15 @@ class MathChannelsWindow(QWidget):
                 # Source is a regular channel
                 doresamp_for_ref = self.state.doresamp[ch1_idx]
 
-            # Store the reference data with doresamp info
+            # Get current line width for this math channel
+            line_width = math_def.get('width', 2)
+
+            # Store the reference data with doresamp and width info
             self.main_window.math_reference_data[math_name] = {
                 'x_ns': x_data_in_ns,
                 'y': y_data,
-                'doresamp': doresamp_for_ref
+                'doresamp': doresamp_for_ref,
+                'width': line_width
             }
 
             # Set the reference visibility to True for this math channel

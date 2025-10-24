@@ -471,12 +471,35 @@ class PlotManager(pg.QtCore.QObject):
             ref_pen = pg.mkPen(color=ref_color, width=channel_pen.width())
             self.reference_lines[channel_index].setPen(ref_pen)
 
-    def update_reference_plot(self, channel_index, x_data, y_data):
-        """Sets the data for a channel's reference waveform."""
+    def update_reference_plot(self, channel_index, x_data, y_data, width=None):
+        """Sets the data for a channel's reference waveform.
+
+        Args:
+            channel_index: The channel index
+            x_data: X data for the reference
+            y_data: Y data for the reference
+            width: Optional line width (uses stored width from reference, or current channel width if None)
+        """
         if 0 <= channel_index < len(self.reference_lines):
             ref_line = self.reference_lines[channel_index]
-            # Update the reference line color to match current channel color
-            self.update_reference_line_color(channel_index)
+
+            # Update the reference line color and width
+            if channel_index < len(self.linepens):
+                # Get the current channel color
+                channel_pen = self.linepens[channel_index]
+                channel_color = QColor(channel_pen.color())
+
+                # Create reference color with transparency
+                ref_color = QColor(channel_color)
+                ref_color.setAlphaF(0.5)
+
+                # Use provided width or current channel width
+                ref_width = width if width is not None else channel_pen.width()
+
+                # Update reference line pen
+                ref_pen = pg.mkPen(color=ref_color, width=ref_width)
+                ref_line.setPen(ref_pen)
+
             # Optimization: Use skipFiniteCheck for faster setData
             ref_line.setData(x_data, y_data, skipFiniteCheck=True)
             ref_line.setVisible(True)
@@ -546,7 +569,15 @@ class PlotManager(pg.QtCore.QObject):
             math_name = math_def['name']
             color = math_def.get('color', '#00FFFF')  # Default to cyan if no color specified
             displayed = math_def.get('displayed', True)  # Default to displayed if not specified
-            width = math_def.get('width', 2)  # Use stored width, default to 2 if not specified
+
+            # Get width from source channel (ch1)
+            ch1_idx = math_def.get('ch1')
+            if not isinstance(ch1_idx, str) and ch1_idx < len(self.linepens):
+                # Source is a regular channel - use its width
+                width = self.linepens[ch1_idx].width()
+            else:
+                # Source is a reference or another math channel - use default width
+                width = math_def.get('width', 2)
 
             if math_name not in self.math_channel_lines:
                 # Create a new dashed line with the specified color and width
@@ -559,7 +590,7 @@ class PlotManager(pg.QtCore.QObject):
                 # Set initial visibility
                 line.setVisible(displayed)
             else:
-                # Update the color and width of existing line
+                # Update the color and width (from source channel) of existing line
                 pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DashLine)
                 self.math_channel_lines[math_name].setPen(pen)
                 # Update visibility
@@ -604,7 +635,9 @@ class PlotManager(pg.QtCore.QObject):
                 continue  # Math channel no longer exists
 
             color = math_def.get('color', '#00FFFF')
-            width = math_def.get('width', 2)
+
+            # Use stored width from reference, or current math channel width if not stored
+            width = ref_data.get('width', math_def.get('width', 2))
 
             # Create reference color with transparency to match channel behavior
             ref_color = QColor(color)
@@ -616,7 +649,7 @@ class PlotManager(pg.QtCore.QObject):
                 line = self.plot.plot(pen=pen, name=f"{math_name}_ref", skipFiniteCheck=True, connect="finite")
                 self.math_reference_lines[math_name] = line
             else:
-                # Update the color and width of existing line
+                # Update the color (and width from stored reference data)
                 pen = pg.mkPen(color=ref_color, width=width, style=QtCore.Qt.DotLine)
                 self.math_reference_lines[math_name].setPen(pen)
 

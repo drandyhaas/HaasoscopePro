@@ -960,15 +960,18 @@ class MainWindow(TemplateBaseClass):
                 x_data = data['x_ns'] / s.nsunits
                 y_data = data['y']
 
+                # Get stored width (for backward compatibility, default to current if not stored)
+                stored_width = data.get('width', None)
+
                 # Resample reference to match the stored doresamp setting for display
                 # Use stored doresamp if available (for backward compatibility)
                 doresamp_to_use = data.get('doresamp', s.doresamp[i])
                 if doresamp_to_use > 1:
                     from scipy.signal import resample
                     y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
-                    self.plot_manager.update_reference_plot(i, x_resampled, y_resampled)
+                    self.plot_manager.update_reference_plot(i, x_resampled, y_resampled, width=stored_width)
                 else:
-                    self.plot_manager.update_reference_plot(i, x_data, y_data)
+                    self.plot_manager.update_reference_plot(i, x_data, y_data, width=stored_width)
             else:
                 # This channel either has no reference or its reference is hidden
                 self.plot_manager.hide_reference_plot(i)
@@ -1451,6 +1454,10 @@ class MainWindow(TemplateBaseClass):
         """Handle line width changes from the UI."""
         self.state.line_width = value
         self.plot_manager.set_line_width(value)
+
+        # Update math channel widths to follow source channel widths
+        if self.math_window is not None:
+            self.plot_manager.update_math_channel_lines(self.math_window)
 
     def trigger_level_changed(self, value):
         self.state.triggerlevel = value
@@ -2033,11 +2040,15 @@ class MainWindow(TemplateBaseClass):
             x_data_in_ns = x_data * s.nsunits
             y_data = np.copy(y_data)  # Make a copy
 
-            # Store reference with doresamp info for later use in math channels
+            # Get current line width for this channel
+            line_width = self.plot_manager.linepens[active_channel].width()
+
+            # Store reference with doresamp and width info for later use
             self.reference_data[active_channel] = {
                 'x_ns': x_data_in_ns,
                 'y': y_data,
-                'doresamp': s.doresamp[active_channel]
+                'doresamp': s.doresamp[active_channel],
+                'width': line_width
             }
 
             # Set the reference visibility to True for this channel
