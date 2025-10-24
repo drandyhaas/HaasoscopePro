@@ -94,9 +94,6 @@ class PlotManager(pg.QtCore.QObject):
         # Stabilized data for math channel calculations (after trigger stabilizers)
         self.stabilized_data = [None] * self.nlines
 
-        # Cumulative correction tracking for extra trig stabilizer (in ns)
-        self.cumulative_correction = [0.0] * self.nlines
-
         # Cursor manager (will be initialized after linepens are created)
         self.cursor_manager = None
 
@@ -275,9 +272,13 @@ class PlotManager(pg.QtCore.QObject):
 
         # Create a copy to store stabilized data for math channels
         self.stabilized_data = [None] * self.nlines
+        # Store non-resampled data for math channel calculations (before doresamp)
+        self.stabilized_data_noresamp = [None] * self.nlines
 
         # Store processed data before applying extra trig stabilizer
         processed_data = [None] * self.nlines
+        # Store non-resampled processed data (for math channels)
+        processed_data_noresamp = [None] * self.nlines
 
         # First pass: process all data (interleaving, resampling)
         for li in range(self.nlines):
@@ -324,11 +325,14 @@ class PlotManager(pg.QtCore.QObject):
             if xdatanew is None:
                 continue  # Skip if no data for this line (e.g., secondary interleaved line)
 
+            # Store non-resampled data (before doresamp) for math channel calculations
+            processed_data_noresamp[li] = (xdatanew.copy(), ydatanew.copy())
+
             # --- Resampling (if enabled) ---
             if s.doresamp[li]:
                 ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * s.doresamp[li], t=xdatanew)
 
-            # Store the processed data
+            # Store the processed data (with resampling)
             processed_data[li] = (xdatanew, ydatanew)
 
         # Calculate extra trig stabilizer correction using noextboard
@@ -348,7 +352,7 @@ class PlotManager(pg.QtCore.QObject):
                 xc = xdatanew[(xdatanew > vline_time - fitwidth) & (xdatanew < vline_time + fitwidth)]
 
                 if xc.size > 2:
-                    numsamp = s.distcorrsamp
+                    numsamp = s.distcorrsamp*10
                     if s.doresamp[noext_li]: numsamp *= s.doresamp[noext_li]
                     fitwidth *= numsamp / xc.size
 
@@ -380,27 +384,21 @@ class PlotManager(pg.QtCore.QObject):
                         for i in range(trigger_idx, -1, -1):
                             if yc[i] < edge_min:
                                 edge_min = yc[i]
-                            elif yc[i] - edge_min > delta_threshold:
+                            elif yc[i] - edge_min > 0: # delta_threshold: # finding the min we just ask it to be about flat
                                 break
 
                         threshold_to_use = (edge_min + edge_max) / 2.0
+                        #print(edge_max, edge_min)
 
                     if xc.size > 1:
                         distcorrtemp = find_crossing_distance(yc, threshold_to_use, vline_time, xc[0], xc[1] - xc[0])
-                        max_correction = s.distcorrtol * 100 * s.downsamplefactor / s.nsunits
+                        #print("distcorrtemp", distcorrtemp)
+                        max_correction = s.distcorrtol * 10 * s.downsamplefactor / s.nsunits
+                        #print("max_correction", max_correction)
                         if distcorrtemp is not None and abs(distcorrtemp) < max_correction:
-
-                            # Clamp the correction to stay within the limit
-                            new_cumulative = self.cumulative_correction[noext_li] + distcorrtemp
-                            if abs(new_cumulative) > max_correction:
-                                if new_cumulative > 0:
-                                    distcorrtemp = max_correction - self.cumulative_correction[noext_li]
-                                else:
-                                    distcorrtemp = -max_correction - self.cumulative_correction[noext_li]
-
+                            # No need to clamp the correction to stay within the limit, since it is starting fresh every time
                             # Store the correction to apply to all boards
                             extra_trig_correction = distcorrtemp
-                            self.cumulative_correction[noext_li] += distcorrtemp
 
         # Second pass: apply correction and plot
         for li in range(self.nlines):
@@ -411,15 +409,25 @@ class PlotManager(pg.QtCore.QObject):
 
             xdatanew, ydatanew = processed_data[li]
 
+            # Also get non-resampled data
+            if processed_data_noresamp[li] is not None:
+                xdata_noresamp, ydata_noresamp = processed_data_noresamp[li]
+            else:
+                xdata_noresamp, ydata_noresamp = None, None
+
             # Apply extra trig stabilizer correction to non-secondary boards
             if extra_trig_correction is not None:
                 is_oversample_secondary = s.dooversample[board_idx] and board_idx % 2 == 1
                 if not is_oversample_secondary:
                     xdatanew = xdatanew - extra_trig_correction
+                    if xdata_noresamp is not None:
+                        xdata_noresamp = xdata_noresamp - extra_trig_correction
 
             # Apply per-channel time skew offset
             time_skew_offset = s.time_skew[li] / s.nsunits  # Convert ns to current time units
             xdatanew = xdatanew + time_skew_offset
+            if xdata_noresamp is not None:
+                xdata_noresamp = xdata_noresamp + time_skew_offset
 
             # --- Final plotting and persistence ---
             # Optimization: Use skipFiniteCheck for faster setData
@@ -427,6 +435,10 @@ class PlotManager(pg.QtCore.QObject):
 
             # Store stabilized data for math channel calculations
             self.stabilized_data[li] = (xdatanew, ydatanew)
+            if xdata_noresamp is not None:
+                self.stabilized_data_noresamp[li] = (xdata_noresamp, ydata_noresamp)
+            else:
+                self.stabilized_data_noresamp[li] = (xdatanew, ydatanew)  # Fallback to resampled
 
             # Add to persistence if channel is enabled and has persistence enabled
             # Accumulate if either persist lines OR persist average is enabled (average needs the data)
@@ -864,10 +876,6 @@ class PlotManager(pg.QtCore.QObject):
             self.peak_min_line[active_channel].clear()
         # Skip the next event to avoid glitches after timebase changes
         self.peak_skip_events = 1
-
-    def reset_cumulative_correction(self):
-        """Reset cumulative trigger correction when depth or other settings change."""
-        self.cumulative_correction = [0.0] * self.nlines
 
     def _update_peak_data(self, channel_index, x_data, y_data):
         """Update peak max/min data for a channel.

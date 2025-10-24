@@ -684,9 +684,30 @@ class MainWindow(TemplateBaseClass):
 
         # Calculate and display math channels if any are defined
         math_results = {}
+        math_results_noresamp = {}
         if self.math_window and len(self.math_window.math_channels) > 0:
-            # Use stabilized data (after trigger stabilizers are applied)
-            math_results = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data)
+            # Calculate math channels using non-resampled data (correct for FFT and filters)
+            math_results_noresamp = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data_noresamp)
+
+            # Resample math channel results for display based on source channel's doresamp
+            from scipy.signal import resample
+            math_results = {}
+            for math_name, (x_data, y_data) in math_results_noresamp.items():
+                # Find the math channel definition
+                math_def = next((m for m in self.math_window.math_channels if m['name'] == math_name), None)
+                if math_def:
+                    ch1_idx = math_def['ch1']
+                    # Check if source channel has resampling enabled
+                    if not isinstance(ch1_idx, str) and s.doresamp[ch1_idx] > 1:
+                        # Resample for display
+                        y_resampled, x_resampled = resample(y_data, len(x_data) * s.doresamp[ch1_idx], t=x_data)
+                        math_results[math_name] = (x_resampled, y_resampled)
+                    else:
+                        # No resampling needed
+                        math_results[math_name] = (x_data, y_data)
+                else:
+                    math_results[math_name] = (x_data, y_data)
+
             self.plot_manager.update_math_channel_data(math_results)
 
         # --- Update XY window if visible (after math channels calculated) ---
@@ -776,8 +797,18 @@ class MainWindow(TemplateBaseClass):
                             x_data, y_data = math_line.getData()
 
                             if y_data is not None and len(y_data) > 0:
-                                # Calculate FFT using the active board's sample rate
-                                freq, mag = self.processor.calculate_fft(y_data, s.activeboard)
+                                # For FFT, use the non-resampled math channel result (correct frequency range)
+                                ch1_idx = math_def['ch1']
+                                board_idx_for_fft = s.activeboard if isinstance(ch1_idx, str) else ch1_idx // s.num_chan_per_board
+
+                                # Use non-resampled result for FFT
+                                if math_name in math_results_noresamp:
+                                    _, y_data_for_fft = math_results_noresamp[math_name]
+                                else:
+                                    y_data_for_fft = y_data  # Fallback to displayed data
+
+                                # Calculate FFT using original sample rate
+                                freq, mag = self.processor.calculate_fft(y_data_for_fft, board_idx_for_fft)
 
                                 if freq is not None and len(freq) > 0:
                                     max_freq_mhz = np.max(freq)
@@ -1533,7 +1564,6 @@ class MainWindow(TemplateBaseClass):
         self.state.expect_samples = self.ui.depthBox.value()
         self.allocate_xy_data()
         self.trigger_pos_reset()  # Reset trigger position to center after depth change
-        self.plot_manager.reset_cumulative_correction()  # Reset trigger stabilization correction
         self.controller.send_trigger_info_all()  # Update hardware with new trigger position
         self.plot_manager.reset_zoom_roi_position()  # Reset zoom ROI to default position
 
