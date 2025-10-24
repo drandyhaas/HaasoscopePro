@@ -6,6 +6,8 @@ import json
 from PyQt5.QtWidgets import QMessageBox, QFileDialog, QListWidgetItem
 from PyQt5.QtGui import QColor
 from math_channels_window import MathChannelsWindow
+import pyqtgraph as pg
+from pyqtgraph.Qt import QtCore
 
 
 def save_setup(main_window):
@@ -442,6 +444,14 @@ def load_setup(main_window):
     if any_persist_active:
         if not main_window.plot_manager.persist_timer.isActive():
             main_window.plot_manager.persist_timer.start(50)
+    else:
+        # Stop timer and clear persist lines if no persistence is active
+        if main_window.plot_manager.persist_timer.isActive():
+            main_window.plot_manager.persist_timer.stop()
+        main_window.plot_manager.clear_persist()
+        # Update zoom window to clear persist lines
+        if main_window.zoom_window and main_window.zoom_window.isVisible():
+            main_window.zoom_window.update_persist_lines(main_window.plot_manager)
 
     # Channel enabled state (per-channel)
     if 'channel_enabled' in setup:
@@ -455,6 +465,20 @@ def load_setup(main_window):
         for idx, color_name in enumerate(setup['channel_colors']):
             if idx < len(main_window.plot_manager.linepens):
                 main_window.plot_manager.linepens[idx].setColor(QColor(color_name))
+                # Apply the updated pen to the plot line
+                if idx < len(main_window.plot_manager.lines):
+                    main_window.plot_manager.lines[idx].setPen(main_window.plot_manager.linepens[idx])
+                # Update reference line color if a reference exists for this channel
+                if idx in main_window.reference_data:
+                    main_window.plot_manager.update_reference_line_color(idx)
+                # Update peak detect line color if peak detect is enabled for this channel
+                if idx in main_window.plot_manager.peak_max_line:
+                    base_pen = main_window.plot_manager.linepens[idx]
+                    peak_color = base_pen.color()
+                    width = base_pen.width()
+                    peak_pen = pg.mkPen(color=peak_color, width=width, style=QtCore.Qt.DotLine)
+                    main_window.plot_manager.peak_max_line[idx].setPen(peak_pen)
+                    main_window.plot_manager.peak_min_line[idx].setPen(peak_pen)
 
     # View menu states
     if 'grid_visible' in setup:
