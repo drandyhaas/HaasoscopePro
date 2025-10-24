@@ -621,9 +621,18 @@ class PlotManager(pg.QtCore.QObject):
                 self.math_reference_lines[math_name].setPen(pen)
 
             # Update data and visibility
-            x_data_in_current_units = ref_data['x_ns'] / self.state.nsunits
+            x_data = ref_data['x_ns'] / self.state.nsunits
             y_data = ref_data['y']
-            self.math_reference_lines[math_name].setData(x_data_in_current_units, y_data, skipFiniteCheck=True)
+
+            # Resample reference to match the stored doresamp setting for display
+            # Use stored doresamp if available (for backward compatibility and for references)
+            doresamp_to_use = ref_data.get('doresamp', 1)
+            if doresamp_to_use > 1:
+                from scipy.signal import resample
+                y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
+                self.math_reference_lines[math_name].setData(x_resampled, y_resampled, skipFiniteCheck=True)
+            else:
+                self.math_reference_lines[math_name].setData(x_data, y_data, skipFiniteCheck=True)
 
             # Set visibility
             is_visible = main_window.math_reference_visible.get(math_name, False)

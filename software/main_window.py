@@ -96,6 +96,7 @@ class MainWindow(TemplateBaseClass):
         self.setup_successful = False
         self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
         self.math_reference_data = {}  # Stores {math_channel_name: {'x_ns': array, 'y': array}}
+        self.math_results_noresamp = {}  # Stores non-resampled math channel results for FFT and references
 
         # Initialize reference visibility to True for all channels by default
         num_channels = self.state.num_board * self.state.num_chan_per_board
@@ -684,26 +685,42 @@ class MainWindow(TemplateBaseClass):
 
         # Calculate and display math channels if any are defined
         math_results = {}
-        math_results_noresamp = {}
+        self.math_results_noresamp = {}  # Store as instance variable for reference taking
         if self.math_window and len(self.math_window.math_channels) > 0:
             # Calculate math channels using non-resampled data (correct for FFT and filters)
-            math_results_noresamp = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data_noresamp)
+            self.math_results_noresamp = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data_noresamp)
 
             # Resample math channel results for display based on source channel's doresamp
             from scipy.signal import resample
             math_results = {}
-            for math_name, (x_data, y_data) in math_results_noresamp.items():
+            for math_name, (x_data, y_data) in self.math_results_noresamp.items():
                 # Find the math channel definition
                 math_def = next((m for m in self.math_window.math_channels if m['name'] == math_name), None)
                 if math_def:
                     ch1_idx = math_def['ch1']
-                    # Check if source channel has resampling enabled
-                    if not isinstance(ch1_idx, str) and s.doresamp[ch1_idx] > 1:
-                        # Resample for display
-                        y_resampled, x_resampled = resample(y_data, len(x_data) * s.doresamp[ch1_idx], t=x_data)
+
+                    # Determine doresamp factor based on source type
+                    doresamp_factor = 1
+                    if isinstance(ch1_idx, str):
+                        # Source is a reference or another math channel
+                        if ch1_idx.startswith("Ref"):
+                            # Get doresamp from reference
+                            ref_idx = int(ch1_idx[3:])
+                            if ref_idx in self.reference_data:
+                                doresamp_factor = self.reference_data[ref_idx].get('doresamp', 1)
+                        else:
+                            # Source is another math channel - get from its reference data
+                            if ch1_idx in self.math_reference_data:
+                                doresamp_factor = self.math_reference_data[ch1_idx].get('doresamp', 1)
+                    else:
+                        # Source is a regular channel
+                        doresamp_factor = s.doresamp[ch1_idx]
+
+                    # Apply resampling if needed
+                    if doresamp_factor > 1:
+                        y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_factor, t=x_data)
                         math_results[math_name] = (x_resampled, y_resampled)
                     else:
-                        # No resampling needed
                         math_results[math_name] = (x_data, y_data)
                 else:
                     math_results[math_name] = (x_data, y_data)
@@ -802,8 +819,8 @@ class MainWindow(TemplateBaseClass):
                                 board_idx_for_fft = s.activeboard if isinstance(ch1_idx, str) else ch1_idx // s.num_chan_per_board
 
                                 # Use non-resampled result for FFT
-                                if math_name in math_results_noresamp:
-                                    _, y_data_for_fft = math_results_noresamp[math_name]
+                                if hasattr(self, 'math_results_noresamp') and math_name in self.math_results_noresamp:
+                                    _, y_data_for_fft = self.math_results_noresamp[math_name]
                                 else:
                                     y_data_for_fft = y_data  # Fallback to displayed data
 
@@ -940,8 +957,18 @@ class MainWindow(TemplateBaseClass):
             if has_reference and is_visible:
                 # This channel has a reference and it should be visible
                 data = self.reference_data[i]
-                x_display = data['x_ns'] / s.nsunits
-                self.plot_manager.update_reference_plot(i, x_display, data['y'])
+                x_data = data['x_ns'] / s.nsunits
+                y_data = data['y']
+
+                # Resample reference to match the stored doresamp setting for display
+                # Use stored doresamp if available (for backward compatibility)
+                doresamp_to_use = data.get('doresamp', s.doresamp[i])
+                if doresamp_to_use > 1:
+                    from scipy.signal import resample
+                    y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
+                    self.plot_manager.update_reference_plot(i, x_resampled, y_resampled)
+                else:
+                    self.plot_manager.update_reference_plot(i, x_data, y_data)
             else:
                 # This channel either has no reference or its reference is hidden
                 self.plot_manager.hide_reference_plot(i)
@@ -1993,18 +2020,25 @@ class MainWindow(TemplateBaseClass):
         """
         Slot for 'Take Reference'. Captures the active waveform's data,
         converts its time axis to absolute nanoseconds, and stores it.
+        Uses non-resampled data to ensure correct FFT and math operations.
         """
         s = self.state
         active_channel = s.activexychannel
-        line = self.plot_manager.lines[active_channel]
 
-        if line.xData is not None and line.yData is not None:
-            # Convert the current x-axis data (which is in units of s.units)
-            # back to a canonical form (nanoseconds) for storage.
-            x_data_in_ns = line.xData * s.nsunits
-            y_data = np.copy(line.yData)  # Make a copy
+        # Get non-resampled data for the reference (important for math channels and FFT)
+        if self.plot_manager.stabilized_data_noresamp[active_channel] is not None:
+            x_data, y_data = self.plot_manager.stabilized_data_noresamp[active_channel]
 
-            self.reference_data[active_channel] = {'x_ns': x_data_in_ns, 'y': y_data}
+            # Convert the x-axis data to nanoseconds for storage
+            x_data_in_ns = x_data * s.nsunits
+            y_data = np.copy(y_data)  # Make a copy
+
+            # Store reference with doresamp info for later use in math channels
+            self.reference_data[active_channel] = {
+                'x_ns': x_data_in_ns,
+                'y': y_data,
+                'doresamp': s.doresamp[active_channel]
+            }
 
             # Set the reference visibility to True for this channel
             self.reference_visible[active_channel] = True
