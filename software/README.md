@@ -199,6 +199,11 @@ graph TD
 - AC coupling and min/max tracking
 - Custom expression evaluation
 
+**Implementation Note**: Math channels are calculated from non-resampled source data (before `doresamp` is applied) to ensure correct FFT frequency ranges and optimal filter performance. Results are then resampled for display to match the source channel's resampling setting. This ensures that:
+- FFT analysis shows the true Nyquist frequency of the source data
+- Digital filters operate at the actual hardware sample rate
+- Min/Max tracking automatically handles array size changes when `doresamp` is modified
+
 **`measurements_manager.py`** - Measurements display
 - Automated measurement calculations
 - Statistics table display
