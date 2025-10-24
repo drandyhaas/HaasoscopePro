@@ -183,6 +183,9 @@ class FFTWindow(FFTTemplateBaseClass):
         # --- Multi-channel Trace Update ---
         if channel_name not in self.fft_lines:
             self.fft_lines[channel_name] = self.plot.plot(pen=pen)
+        else:
+            # Update pen to reflect any color changes
+            self.fft_lines[channel_name].setPen(pen)
 
         # Optimization: Use skipFiniteCheck for faster setData
         self.fft_lines[channel_name].setData(x_data, y_data, skipFiniteCheck=True)
