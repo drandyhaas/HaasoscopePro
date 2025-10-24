@@ -1957,8 +1957,10 @@ class MathChannelsWindow(QWidget):
                     elif operation == 'Minimum':
                         # Running minimum - track minimum value seen at each time point
                         math_name = math_def['name']
-                        if self.running_minmax[math_name] is None:
-                            # First time - initialize with current data
+                        # Check if we need to reset (first time, or array size changed due to doresamp)
+                        if (self.running_minmax[math_name] is None or
+                            len(self.running_minmax[math_name]['min']) != len(y1)):
+                            # Initialize/reinitialize with current data
                             self.running_minmax[math_name] = {'min': y1.copy(), 'max': y1.copy()}
                             y_result = y1.copy()
                         else:
@@ -1970,8 +1972,10 @@ class MathChannelsWindow(QWidget):
                     elif operation == 'Maximum':
                         # Running maximum - track maximum value seen at each time point
                         math_name = math_def['name']
-                        if self.running_minmax[math_name] is None:
-                            # First time - initialize with current data
+                        # Check if we need to reset (first time, or array size changed due to doresamp)
+                        if (self.running_minmax[math_name] is None or
+                            len(self.running_minmax[math_name]['max']) != len(y1)):
+                            # Initialize/reinitialize with current data
                             self.running_minmax[math_name] = {'min': y1.copy(), 'max': y1.copy()}
                             y_result = y1.copy()
                         else:

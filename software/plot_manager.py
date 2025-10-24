@@ -272,9 +272,13 @@ class PlotManager(pg.QtCore.QObject):
 
         # Create a copy to store stabilized data for math channels
         self.stabilized_data = [None] * self.nlines
+        # Store non-resampled data for math channel calculations (before doresamp)
+        self.stabilized_data_noresamp = [None] * self.nlines
 
         # Store processed data before applying extra trig stabilizer
         processed_data = [None] * self.nlines
+        # Store non-resampled processed data (for math channels)
+        processed_data_noresamp = [None] * self.nlines
 
         # First pass: process all data (interleaving, resampling)
         for li in range(self.nlines):
@@ -321,11 +325,14 @@ class PlotManager(pg.QtCore.QObject):
             if xdatanew is None:
                 continue  # Skip if no data for this line (e.g., secondary interleaved line)
 
+            # Store non-resampled data (before doresamp) for math channel calculations
+            processed_data_noresamp[li] = (xdatanew.copy(), ydatanew.copy())
+
             # --- Resampling (if enabled) ---
             if s.doresamp[li]:
                 ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * s.doresamp[li], t=xdatanew)
 
-            # Store the processed data
+            # Store the processed data (with resampling)
             processed_data[li] = (xdatanew, ydatanew)
 
         # Calculate extra trig stabilizer correction using noextboard
@@ -402,15 +409,25 @@ class PlotManager(pg.QtCore.QObject):
 
             xdatanew, ydatanew = processed_data[li]
 
+            # Also get non-resampled data
+            if processed_data_noresamp[li] is not None:
+                xdata_noresamp, ydata_noresamp = processed_data_noresamp[li]
+            else:
+                xdata_noresamp, ydata_noresamp = None, None
+
             # Apply extra trig stabilizer correction to non-secondary boards
             if extra_trig_correction is not None:
                 is_oversample_secondary = s.dooversample[board_idx] and board_idx % 2 == 1
                 if not is_oversample_secondary:
                     xdatanew = xdatanew - extra_trig_correction
+                    if xdata_noresamp is not None:
+                        xdata_noresamp = xdata_noresamp - extra_trig_correction
 
             # Apply per-channel time skew offset
             time_skew_offset = s.time_skew[li] / s.nsunits  # Convert ns to current time units
             xdatanew = xdatanew + time_skew_offset
+            if xdata_noresamp is not None:
+                xdata_noresamp = xdata_noresamp + time_skew_offset
 
             # --- Final plotting and persistence ---
             # Optimization: Use skipFiniteCheck for faster setData
@@ -418,6 +435,10 @@ class PlotManager(pg.QtCore.QObject):
 
             # Store stabilized data for math channel calculations
             self.stabilized_data[li] = (xdatanew, ydatanew)
+            if xdata_noresamp is not None:
+                self.stabilized_data_noresamp[li] = (xdata_noresamp, ydata_noresamp)
+            else:
+                self.stabilized_data_noresamp[li] = (xdatanew, ydatanew)  # Fallback to resampled
 
             # Add to persistence if channel is enabled and has persistence enabled
             # Accumulate if either persist lines OR persist average is enabled (average needs the data)
