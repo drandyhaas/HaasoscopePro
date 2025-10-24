@@ -105,6 +105,10 @@ class ZoomWindow(QtWidgets.QWidget):
         self.math_channel_lines = {}  # {math_name: plot_line}
         self.reference_lines = {}  # {channel_index: plot_line} for physical channel references
         self.math_reference_lines = {}  # {math_name: plot_line} for math channel references
+        self.peak_max_lines = {}  # {channel_index: plot_line} for peak max lines
+        self.peak_min_lines = {}  # {channel_index: plot_line} for peak min lines
+        self.persist_lines = {}  # {channel_index: [plot_line, ...]} for persist lines
+        self.average_persist_lines = {}  # {channel_index: plot_line} for average persist lines
 
         layout.addWidget(self.plot_widget)
         self.setLayout(layout)
@@ -407,6 +411,122 @@ class ZoomWindow(QtWidgets.QWidget):
                         self.cursor_lines[cursor_name].setPos(main_cursor.value())
                         self.cursor_lines[cursor_name].setVisible(main_cursor.isVisible())
 
+    def update_peak_detect_lines(self, main_plot_manager):
+        """Update the zoom window's peak detect lines to match the main plot.
+
+        Args:
+            main_plot_manager: The main window's plot manager to get peak detect data from
+        """
+        if not main_plot_manager:
+            return
+
+        # Iterate through all channels that have peak detect enabled
+        for ch_idx, enabled in main_plot_manager.peak_detect_enabled.items():
+            if enabled and ch_idx in main_plot_manager.peak_max_line:
+                # Get pen from main plot manager
+                if ch_idx < len(main_plot_manager.linepens):
+                    base_pen = main_plot_manager.linepens[ch_idx]
+                    color = base_pen.color()
+                    width = base_pen.width()
+                    peak_pen = pg.mkPen(color=color, width=width, style=QtCore.Qt.DotLine)
+                else:
+                    peak_pen = pg.mkPen(color='w', width=1, style=QtCore.Qt.DotLine)
+
+                # Create peak lines if they don't exist
+                if ch_idx not in self.peak_max_lines:
+                    self.peak_max_lines[ch_idx] = self.plot.plot(pen=peak_pen, skipFiniteCheck=True, connect="finite")
+                    self.peak_min_lines[ch_idx] = self.plot.plot(pen=peak_pen, skipFiniteCheck=True, connect="finite")
+                else:
+                    # Update pen color for existing peak lines
+                    self.peak_max_lines[ch_idx].setPen(peak_pen)
+                    self.peak_min_lines[ch_idx].setPen(peak_pen)
+
+                # Update peak line data if available
+                if (ch_idx in main_plot_manager.peak_x_data and
+                    ch_idx in main_plot_manager.peak_max_data and
+                    ch_idx in main_plot_manager.peak_min_data):
+                    x_data = main_plot_manager.peak_x_data[ch_idx]
+                    max_data = main_plot_manager.peak_max_data[ch_idx]
+                    min_data = main_plot_manager.peak_min_data[ch_idx]
+
+                    if x_data is not None and max_data is not None and min_data is not None:
+                        self.peak_max_lines[ch_idx].setData(x=x_data, y=max_data, skipFiniteCheck=True)
+                        self.peak_min_lines[ch_idx].setData(x=x_data, y=min_data, skipFiniteCheck=True)
+                        self.peak_max_lines[ch_idx].setVisible(True)
+                        self.peak_min_lines[ch_idx].setVisible(True)
+            else:
+                # Hide peak lines if peak detect is disabled
+                if ch_idx in self.peak_max_lines:
+                    self.peak_max_lines[ch_idx].setVisible(False)
+                    self.peak_min_lines[ch_idx].setVisible(False)
+
+    def update_persist_lines(self, main_plot_manager):
+        """Update the zoom window's persist lines and average persist lines to match the main plot.
+
+        Args:
+            main_plot_manager: The main window's plot manager to get persist data from
+        """
+        if not main_plot_manager:
+            return
+
+        # Clear all existing persist lines
+        for ch_idx in list(self.persist_lines.keys()):
+            for persist_line in self.persist_lines[ch_idx]:
+                self.plot.removeItem(persist_line)
+            self.persist_lines[ch_idx] = []
+
+        # Add persist lines from main plot manager
+        if hasattr(main_plot_manager, 'persist_lines_per_channel'):
+            for ch_idx, persist_deque in main_plot_manager.persist_lines_per_channel.items():
+                if ch_idx not in self.persist_lines:
+                    self.persist_lines[ch_idx] = []
+
+                # Iterate through persist items in the deque
+                for persist_item, creation_time, line_idx in persist_deque:
+                    # Get the data from the persist item
+                    x_data, y_data = persist_item.getData()
+                    if x_data is not None and y_data is not None:
+                        # Get the pen from the persist item to maintain the same alpha
+                        pen = persist_item.opts['pen']
+
+                        # Create a new persist line in the zoom window with the same pen
+                        zoom_persist_line = self.plot.plot(x=x_data, y=y_data, pen=pen,
+                                                          skipFiniteCheck=True, connect="finite")
+                        zoom_persist_line.setVisible(persist_item.isVisible())
+                        self.persist_lines[ch_idx].append(zoom_persist_line)
+
+        # Update average persist lines
+        if hasattr(main_plot_manager, 'average_lines'):
+            # Remove average persist lines that no longer exist in main plot
+            for ch_idx in list(self.average_persist_lines.keys()):
+                if ch_idx not in main_plot_manager.average_lines:
+                    self.plot.removeItem(self.average_persist_lines[ch_idx])
+                    del self.average_persist_lines[ch_idx]
+
+            # Update or create average persist lines
+            for ch_idx, avg_line in main_plot_manager.average_lines.items():
+                x_data, y_data = avg_line.getData()
+                if x_data is not None and y_data is not None and len(x_data) > 0:
+                    # Get the pen from the main average line
+                    pen = avg_line.opts['pen']
+
+                    # Create or update the average persist line
+                    if ch_idx not in self.average_persist_lines:
+                        self.average_persist_lines[ch_idx] = self.plot.plot(
+                            x=x_data, y=y_data, pen=pen,
+                            skipFiniteCheck=True, connect="finite"
+                        )
+                    else:
+                        self.average_persist_lines[ch_idx].setData(x=x_data, y=y_data, skipFiniteCheck=True)
+                        self.average_persist_lines[ch_idx].setPen(pen)
+
+                    # Match visibility to main plot
+                    self.average_persist_lines[ch_idx].setVisible(avg_line.isVisible())
+                else:
+                    # Main plot's average line has no data - clear the zoom window's line
+                    if ch_idx in self.average_persist_lines:
+                        self.average_persist_lines[ch_idx].clear()
+
     def update_right_axis(self):
         """Update the secondary Y-axis to show voltage for the active channel."""
         if not self.right_axis or not self.state:
@@ -495,6 +615,17 @@ class ZoomWindow(QtWidgets.QWidget):
         for line in self.math_reference_lines.values():
             self.plot.removeItem(line)
         self.math_reference_lines.clear()
+
+        # Remove persist lines
+        for persist_list in self.persist_lines.values():
+            for line in persist_list:
+                self.plot.removeItem(line)
+        self.persist_lines.clear()
+
+        # Remove average persist lines
+        for line in self.average_persist_lines.values():
+            self.plot.removeItem(line)
+        self.average_persist_lines.clear()
 
     def closeEvent(self, event):
         """Called when window is closed - emit signal and update state."""

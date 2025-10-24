@@ -735,6 +735,8 @@ class MainWindow(TemplateBaseClass):
         if self.zoom_window is not None and self.zoom_window.isVisible():
             self.zoom_window.update_zoom_plot(self.plot_manager.stabilized_data, math_results)
             self.zoom_window.update_trigger_and_cursor_lines(self.plot_manager)
+            self.zoom_window.update_peak_detect_lines(self.plot_manager)
+            self.zoom_window.update_persist_lines(self.plot_manager)
             self.zoom_window.update_reference_waveforms(
                 self.reference_data, self.reference_visible,
                 self.math_reference_data, self.math_reference_visible
@@ -1616,6 +1618,17 @@ class MainWindow(TemplateBaseClass):
             # Update reference line color if a reference exists for this channel
             if channel_idx in self.reference_data:
                 self.plot_manager.update_reference_line_color(channel_idx)
+            # Update peak detect line color if peak detect is enabled for this channel
+            if channel_idx in self.plot_manager.peak_max_line:
+                base_pen = self.plot_manager.linepens[channel_idx]
+                peak_color = base_pen.color()
+                width = base_pen.width()
+                peak_pen = pg.mkPen(color=peak_color, width=width, style=QtCore.Qt.DotLine)
+                self.plot_manager.peak_max_line[channel_idx].setPen(peak_pen)
+                self.plot_manager.peak_min_line[channel_idx].setPen(peak_pen)
+                # Update zoom window peak detect line color if zoom window is open
+                if self.zoom_window and self.zoom_window.isVisible():
+                    self.zoom_window.update_peak_detect_lines(self.plot_manager)
             self.select_channel()  # Re-call to update color box and LEDs
 
     def about_dialog(self):
@@ -1756,6 +1769,10 @@ class MainWindow(TemplateBaseClass):
         self.plot_manager.set_persistence(value, active_channel)
         self.set_average_line_pen()
 
+        # Update zoom window persist lines (including when turned off)
+        if self.zoom_window and self.zoom_window.isVisible():
+            self.zoom_window.update_persist_lines(self.plot_manager)
+
     def update_channel_visibility(self, channel_index):
         """Update visibility for a specific channel based on its state."""
         s = self.state
@@ -1815,6 +1832,10 @@ class MainWindow(TemplateBaseClass):
 
         # Update visibility for the active channel
         self.update_channel_visibility(active_channel)
+
+        # Update zoom window persist lines visibility
+        if self.zoom_window and self.zoom_window.isVisible():
+            self.zoom_window.update_persist_lines(self.plot_manager)
 
     # #########################################################################
     # ## Slot Implementations (Callbacks for UI events)

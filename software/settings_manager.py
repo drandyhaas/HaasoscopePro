@@ -442,6 +442,14 @@ def load_setup(main_window):
     if any_persist_active:
         if not main_window.plot_manager.persist_timer.isActive():
             main_window.plot_manager.persist_timer.start(50)
+    else:
+        # Stop timer and clear persist lines if no persistence is active
+        if main_window.plot_manager.persist_timer.isActive():
+            main_window.plot_manager.persist_timer.stop()
+        main_window.plot_manager.clear_persist()
+        # Update zoom window to clear persist lines
+        if main_window.zoom_window and main_window.zoom_window.isVisible():
+            main_window.zoom_window.update_persist_lines(main_window.plot_manager)
 
     # Channel enabled state (per-channel)
     if 'channel_enabled' in setup:
