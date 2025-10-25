@@ -47,7 +47,7 @@ Then run the new software, update the firmware (if needed) on your board from th
 2) Get code: <code>git clone https://github.com/drandyhaas/HaasoscopePro.git</code>
 3) <code>cd HaasoscopePro/software</code>
 4) Install dependencies: <code>pip install -r requirements.txt</code><br>
-   (or manually: <code>pip install numpy scipy pyqtgraph PyQt5 pyftdi ftd2xx requests packaging</code><br>
+   or manually: <code>pip install numpy scipy pyqtgraph PyQt5 pyftdi ftd2xx requests packaging</code><br>
 5) Install FTDI driver (see Quick start above)
 6) Plug Haasoscope Pro into your computer via USB (5V 2A at least!)
 7) Run: <code>python3 HaasoscopeProQt.py</code>
