@@ -282,7 +282,63 @@ class GUIController:
             except Exception as e:
                 print(f"[GUI]     Note: Could not toggle persist ({e})")
 
-            # Change 8: Toggle run/stop with 'r' key
+            # Change 8: Click Peak detect menu item via View menu
+            try:
+                print("[GUI]   - Clicking Peak detect menu item via View menu...")
+                self.main_window.set_focus()
+                time.sleep(0.3)
+
+                # Use pyautogui to find "Peak waveforrm" text on screen and click it
+                # First, open the View menu by finding and clicking it
+                view_menu = self.main_window.child_window(title="View", control_type="MenuItem")
+                if view_menu.exists():
+                    # Get the menu position and click it with pyautogui
+                    rect = view_menu.rectangle()
+                    center_x = (rect.left + rect.right) // 2
+                    center_y = (rect.top + rect.bottom) // 2
+
+                    print(f"[GUI]     Clicking View menu at ({center_x}, {center_y})...")
+                    pyautogui.click(center_x, center_y)
+                    time.sleep(0.5)  # Wait for menu to open
+
+                    # Now try to locate "Peak waveforrm" text on screen
+                    try:
+                        # Get only MenuItem descendants for faster search
+                        menu_items = self.main_window.descendants(control_type="MenuItem")
+                        print(f"[GUI]     Searching through {len(menu_items)} menu items...")
+
+                        peak_found = False
+                        for item in menu_items:
+                            try:
+                                item_text = item.window_text()
+                                # Look for "Peak" or the typo "waveforrm"
+                                if item_text and ("Peak" in item_text or "waveforrm" in item_text):
+                                    rect = item.rectangle()
+                                    center_x = (rect.left + rect.right) // 2
+                                    center_y = (rect.top + rect.bottom) // 2
+                                    print(f"[GUI]     Clicking '{item_text}' at ({center_x}, {center_y})...")
+                                    pyautogui.click(center_x, center_y)
+                                    time.sleep(self.action_wait)
+                                    print(f"[GUI]     Clicked Peak detect menu item")
+                                    peak_found = True
+                                    break
+                            except:
+                                continue
+
+                        if not peak_found:
+                            print(f"[GUI]     Could not find Peak detect menu item, pressing Escape")
+                            pyautogui.press('escape')
+                    except Exception as e2:
+                        print(f"[GUI]     Note: Error finding Peak item ({e2}), pressing Escape")
+                        import traceback
+                        traceback.print_exc()
+                        pyautogui.press('escape')
+                else:
+                    print("[GUI]     Could not find View menu")
+            except Exception as e:
+                print(f"[GUI]     Note: Could not click Peak detect menu ({e})")
+
+            # Change 9: Toggle run/stop with 'r' key
             print("[GUI]   - Pressing 'r' to toggle run/stop...")
             pyautogui.press('r')
             time.sleep(self.action_wait)
