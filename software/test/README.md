@@ -9,10 +9,14 @@ Automated GUI testing for HaasoscopeProQt using the dummy oscilloscope server.
 ```bash
 cd software/test
 pip install pyautogui pillow pygetwindow numpy
+
+# For settings test (Windows only):
+pip install pywinauto
 ```
 
 ### 2. Run a Test
 
+**Basic GUI Test:**
 ```bash
 # Basic test (runs GUI for 10 seconds, takes screenshots)
 python test_gui.py
@@ -24,15 +28,41 @@ python test_gui.py --baseline
 python test_gui.py --compare
 ```
 
-## What It Does
+**Settings Save/Load Test (Comprehensive):**
+```bash
+# Full functional test - changes settings, saves, reloads, verifies
+python test_settings.py
+```
 
-The test script automatically:
+## Test Scripts
+
+### test_gui.py - Basic GUI Test
+
+Simple screenshot-based test for quick verification:
 
 1. **Starts dummy server** - Launches the dummy oscilloscope server with `--no-noise` for deterministic waveforms
 2. **Launches GUI** - Starts HaasoscopeProQt with `--testing` flag for stable status bar
 3. **Waits** - Allows time for initialization
 4. **Captures screenshots** - Takes window-specific screenshots (not full screen)
 5. **Cleans up** - Stops all processes
+
+### test_settings.py - Settings Save/Load Test
+
+Comprehensive functional test that exercises the complete save/load workflow:
+
+1. **Starts HaasoscopeProQt** - Launches GUI with dummy server
+2. **Changes settings** - Simulates user interaction to modify various settings
+   - Downsample factor
+   - Trigger level
+   - Persist mode
+   - Other GUI controls
+3. **Saves settings** - Uses Ctrl+S to save configuration to file
+4. **Takes baseline screenshot** - Captures state with modified settings
+5. **Restarts program** - Closes and relaunches HaasoscopeProQt
+6. **Loads settings** - Uses Ctrl+O to load saved configuration
+7. **Compares screenshots** - Verifies settings were restored correctly
+
+**This is the recommended comprehensive test** as it validates actual functionality, not just appearance.
 
 ## Test Modes
 
