@@ -26,6 +26,8 @@ if __name__ == '__main__':
                              'Example: --socket localhost:9999 --socket localhost:10000')
     parser.add_argument('--max-devices', type=int, default=100, metavar='N',
                         help='Maximum number of devices to connect (default: 100)')
+    parser.add_argument('--testing', action='store_true',
+                        help='Enable testing mode (disables dynamic status bar updates for stable screenshots)')
     args = parser.parse_args()
 
     print("Python version", sys.version)
@@ -104,8 +106,10 @@ if __name__ == '__main__':
     try:
         # MainWindow.__init__ now handles all setup. If it fails, it will
         # set the `setup_successful` flag to False.
-        win = MainWindow(usbs)
+        win = MainWindow(usbs, testing_mode=args.testing)
         win.setWindowTitle('Haasoscope Pro Qt')
+        if args.testing:
+            print("Testing mode enabled: Status bar dynamic updates disabled")
 
         if not win.setup_successful:
             print("ERROR: Initialization failed. Please check hardware and power.")

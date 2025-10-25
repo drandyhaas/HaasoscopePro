@@ -238,7 +238,7 @@ class GUIAutomatedTest:
         socket_addr = f"{self.dummy_server.host}:{self.dummy_server.port}"
 
         self.gui_process = subprocess.Popen(
-            [sys.executable, str(gui_script), "--socket", socket_addr, "--max-devices", "0"],
+            [sys.executable, str(gui_script), "--socket", socket_addr, "--max-devices", "0", "--testing"],
             creationflags=subprocess.CREATE_NEW_CONSOLE if sys.platform == "win32" else 0
         )
 

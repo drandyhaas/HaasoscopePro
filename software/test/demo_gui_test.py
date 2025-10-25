@@ -72,6 +72,7 @@ print()
 
 # Step 2: Launch GUI
 print("[2/5] Launching HaasoscopeProQt GUI...")
+print("  Using --testing flag for stable status bar (no fps/events/Hz/MB/s)")
 gui_script = Path(__file__).parent.parent / "HaasoscopeProQt.py"
 
 if not gui_script.exists():
@@ -84,7 +85,8 @@ gui_process = subprocess.Popen(
         sys.executable,
         str(gui_script),
         "--socket", f"localhost:{DUMMY_SERVER_PORT}",
-        "--max-devices", "0"
+        "--max-devices", "0",
+        "--testing"  # Disable dynamic status bar updates for stable screenshots
     ],
     creationflags=subprocess.CREATE_NEW_CONSOLE if sys.platform == "win32" else 0
 )

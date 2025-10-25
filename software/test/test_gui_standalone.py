@@ -174,7 +174,8 @@ class GUITestRunner:
                 sys.executable,
                 str(gui_script),
                 "--socket", socket_addr,
-                "--max-devices", "0"
+                "--max-devices", "0",
+                "--testing"  # Disable dynamic status bar updates for stable screenshots
             ],
             creationflags=subprocess.CREATE_NEW_CONSOLE if sys.platform == "win32" else 0
         )

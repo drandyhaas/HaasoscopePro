@@ -18,7 +18,11 @@ Three test scripts are provided, each with different capabilities and complexity
 cd software/test
 ```
 
-**Note:** All test scripts automatically start the dummy server in **deterministic mode** (`--no-noise` flag) to ensure reproducible, consistent test results. This eliminates randomness in waveforms for reliable screenshot comparison and automated testing.
+**Note:** All test scripts automatically enable **deterministic testing mode**:
+- Dummy server: `--no-noise` flag (eliminates waveform randomness)
+- GUI application: `--testing` flag (disables dynamic status bar updates)
+
+This ensures reproducible, pixel-perfect screenshots for reliable automated testing and comparison.
 
 ### 1. Install Test Dependencies
 
@@ -237,7 +241,27 @@ With `--no-noise`, the dummy server provides:
 - ✓ Fixed pulse positions (no timing jitter)
 - ✓ Identical output for identical settings
 
-This eliminates all sources of randomness, making screenshot comparison tests reliable and deterministic. **All test scripts should use this flag** to ensure consistent test results.
+This eliminates all sources of randomness, making screenshot comparison tests reliable and deterministic. **All test scripts automatically use this flag** to ensure consistent test results.
+
+#### Testing Mode for GUI
+
+All test scripts automatically launch HaasoscopeProQt with the `--testing` flag:
+
+```bash
+python HaasoscopeProQt.py --socket localhost:9999 --testing
+```
+
+With `--testing`, the GUI provides:
+- ✓ Stable status bar (no dynamic fps, events, Hz, MB/s counters)
+- ✓ Only shows sample rate and static information
+- ✓ Eliminates constantly changing text that causes screenshot mismatches
+- ✓ Perfect for pixel-perfect screenshot comparison
+
+**Status bar comparison:**
+- Normal mode: `"3.2 GS/s, 45.23 fps, 1234 events, 56.78 Hz, 12.34 MB/s"`
+- Testing mode: `"3.2 GS/s"` (plus dummy scope connection info if applicable)
+
+This combination of `--no-noise` and `--testing` ensures fully deterministic, reproducible test results across all runs.
 
 ### Screenshot Management
 

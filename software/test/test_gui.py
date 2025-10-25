@@ -223,7 +223,8 @@ def haasoscope_app(qtbot, dummy_server):
     sys.argv = [
         "HaasoscopeProQt.py",
         "--socket", f"{dummy_server.host}:{dummy_server.port}",
-        "--max-devices", "0"
+        "--max-devices", "0",
+        "--testing"  # Disable dynamic status bar updates for stable screenshots
     ]
 
     # Initialize the application (mimicking HaasoscopeProQt.py main logic)

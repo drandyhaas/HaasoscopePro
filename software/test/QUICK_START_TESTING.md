@@ -48,7 +48,9 @@ chmod +x run_gui_tests.sh
 
 ### Step 3: Try the Full Tests
 
-**Important:** For deterministic, reproducible test results (recommended for automated testing and screenshot comparison), use the `--no-noise` flag when starting the dummy server.
+**Important:** For deterministic, reproducible test results, the test scripts automatically:
+- Use `--no-noise` flag when starting the dummy server (eliminates waveform randomness)
+- Use `--testing` flag when launching the GUI (disables dynamic status bar updates)
 
 **Create baseline screenshots:**
 ```bash
@@ -60,10 +62,12 @@ python test_gui_automated.py --baseline --verbose
 python test_gui_automated.py --verbose
 ```
 
-**For deterministic testing (recommended):**
+**What makes tests deterministic:**
 ```bash
-# The test scripts automatically use --no-noise for the dummy server
-# This ensures identical waveforms across test runs for reliable screenshot comparison
+# Test scripts automatically configure:
+# 1. Dummy server: --no-noise (fixed phase, no noise, fixed amplitudes)
+# 2. GUI: --testing (stable status bar, no fps/events/Hz/MB per sec counters)
+# This ensures identical screenshots across test runs for reliable comparison
 python test_gui_automated.py --baseline --verbose
 python test_gui_automated.py --verbose
 ```
