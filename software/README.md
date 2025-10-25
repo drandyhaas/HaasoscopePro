@@ -4,12 +4,21 @@ Python-based oscilloscope software for the HaasoscopePro hardware.
 
 ## Quick Start
 
+### Installation
+
+```bash
+# Install dependencies from requirements file
+pip install -r requirements.txt
+
+# Or install manually
+pip install numpy scipy pyqtgraph PyQt5 ftd2xx requests packaging
+```
+
+**Note:** `requests` and `packaging` are optional but recommended for automatic update checking.
+
 ### Running with Hardware
 
 ```bash
-# Install dependencies
-pip3 install numpy scipy pyqtgraph PyQt5 pyftdi ftd2xx requests packaging
-
 # Run the application
 python HaasoscopeProQt.py
 ```
@@ -387,13 +396,28 @@ pip3 install PyQt5 pyqtgraph
 
 ## Dependencies
 
+All dependencies are listed in `requirements.txt` and can be installed with:
+
+```bash
+pip install -r requirements.txt
+```
+
+### Core Dependencies
 - **Python 3.7+** (3.8+ recommended)
 - **PyQt5** - GUI framework
 - **pyqtgraph** - Fast plotting library
 - **numpy** - Numerical computing
 - **scipy** - Signal processing (FFT, filtering, interpolation)
-- **ftd2xx** - FTDI driver wrapper
-- **pyftdi** - Alternative FTDI library
+- **ftd2xx** - FTDI driver wrapper for hardware communication
+
+### Optional Dependencies
+- **requests** - For automatic update checking (gracefully degrades if not installed)
+- **packaging** - For version comparison in update checker
+
+### Testing Dependencies (optional)
+- **pytest** - Testing framework
+- **pyautogui** - GUI automation for testing
+- **Pillow** - Image processing for screenshot comparison
 
 ## License
 
