@@ -39,7 +39,7 @@ import numpy as np
 TEST_CONFIG = {
     "dummy_server_port": 9999,
     "dummy_server_host": "localhost",
-    "init_wait_time": 3.0,  # seconds to wait for initialization
+    "init_wait_time": 8.0,  # seconds to wait for initialization
     "screenshot_dir": "test_screenshots",
     "baseline_dir": "test_screenshots/baseline",
     "comparison_threshold": 0.05,  # 5% difference allowed

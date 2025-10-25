@@ -45,7 +45,7 @@ class TestConfig:
     """Configuration for automated GUI testing."""
     DUMMY_SERVER_PORT = 9999
     DUMMY_SERVER_HOST = "localhost"
-    INIT_WAIT_TIME = 5.0  # seconds
+    INIT_WAIT_TIME = 8.0  # seconds
     SCREENSHOT_DIR = "test_screenshots"
     BASELINE_DIR = "test_screenshots/baseline"
     WINDOW_TITLE_PATTERN = "Haasoscope*"  # Pattern to find main window

@@ -30,10 +30,10 @@ class TestConfig:
     """Configuration for GUI testing."""
     DUMMY_SERVER_PORT = 9999
     DUMMY_SERVER_HOST = "localhost"
-    INIT_WAIT_TIME = 3.0  # seconds
+    INIT_WAIT_TIME = 8.0  # seconds
     SCREENSHOT_DIR = "test_screenshots"
     BASELINE_DIR = "test_screenshots/baseline"
-    TEST_DURATION = 5.0  # seconds to run tests
+    TEST_DURATION = 10.0  # seconds to run tests
 
 
 class DummyServerManager:

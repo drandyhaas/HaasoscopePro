@@ -28,7 +28,7 @@ print("="*80 + "\n")
 
 # Configuration
 DUMMY_SERVER_PORT = 9999
-TEST_DURATION = 8  # seconds
+TEST_DURATION = 10  # seconds
 SCREENSHOT_DIR = Path("demo_screenshots")
 
 # Create screenshot directory
