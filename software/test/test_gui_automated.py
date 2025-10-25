@@ -68,10 +68,10 @@ class DummyServerManager:
             raise FileNotFoundError(f"Dummy server not found at {dummy_server_path}")
 
         if self.verbose:
-            print(f"[SERVER] Starting on {self.host}:{self.port}")
+            print(f"[SERVER] Starting on {self.host}:{self.port} (deterministic mode)")
 
         self.process = subprocess.Popen(
-            [sys.executable, str(dummy_server_path), "--port", str(self.port)],
+            [sys.executable, str(dummy_server_path), "--port", str(self.port), "--no-noise"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             creationflags=subprocess.CREATE_NEW_CONSOLE if sys.platform == "win32" else 0
