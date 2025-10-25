@@ -1,0 +1,14 @@
+# GUI Testing Requirements for HaasoscopeProQt
+# Install with: pip install -r test_requirements.txt
+
+# Required: Screenshot and image comparison
+pyautogui>=0.9.53
+Pillow>=9.0.0
+numpy>=1.20.0
+pygetwindow>=0.0.9
+
+# Platform-specific
+python-xlib>=0.31; sys_platform == 'linux'
+
+# Optional: Advanced GUI automation (Windows only)
+pywinauto>=0.6.8; sys_platform == 'win32'

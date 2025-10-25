@@ -1,0 +1,27 @@
+# HaasoscopePro Software Dependencies
+# Python 3.7+ required (3.8+ recommended)
+
+# Core GUI and plotting
+PyQt5>=5.12.0
+pyqtgraph>=0.12.0
+
+# Scientific computing and signal processing
+numpy>=1.19.0
+scipy>=1.5.0
+
+# FTDI USB communication (for hardware boards)
+ftd2xx>=1.1.0
+
+# Optional: Update checker functionality
+# Gracefully degrades if not installed
+requests>=2.25.0
+packaging>=20.0
+
+# Optional: Alternative FTDI library (not currently used)
+# pyftdi>=0.50.0
+
+# Development and testing dependencies (optional)
+# Uncomment if running tests
+# pytest>=6.0.0
+# pyautogui>=0.9.0
+# Pillow>=8.0.0

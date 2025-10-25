@@ -42,8 +42,11 @@ print(f"Current dir is {pwd}")
 
 WindowTemplate, TemplateBaseClass = loadUiType(pwd + "/HaasoscopePro.ui")
 class MainWindow(TemplateBaseClass):
-    def __init__(self, usbs):
+    def __init__(self, usbs, testing_mode=False):
         super().__init__()
+
+        # Testing mode flag (disables dynamic status bar updates)
+        self.testing_mode = testing_mode
 
         # Check for dummy scope
         self.usbs = usbs
@@ -863,9 +866,15 @@ class MainWindow(TemplateBaseClass):
         elif s.dotwochannel[s.activeboard]: sradjust = 0.5e9
         highres = self.ui.actionHigh_resolution.isChecked()
         effective_sr = s.samplerate * sradjust / (s.downsamplefactor if not highres else 1)
-        status_text = (f"{format_freq(effective_sr, 'S/s')}, {self.fps:.2f} fps, "
-                       f"{s.nevents} events, {s.lastrate:.2f} Hz, "
-                       f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s")
+
+        # In testing mode, show only sample rate (skip dynamic fps, events, Hz, MB/s)
+        if self.testing_mode:
+            status_text = f"{format_freq(effective_sr, 'S/s')}"
+        else:
+            status_text = (f"{format_freq(effective_sr, 'S/s')}, {self.fps:.2f} fps, "
+                           f"{s.nevents} events, {s.lastrate:.2f} Hz, "
+                           f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s")
+
         if self.dummy_scope is not None: status_text += ", connected to a dummy scope at " + str(self.dummy_scope)
         if self.recorder.is_recording: status_text += ", Recording to "+str(self.recorder.file_handle.name)
         self.ui.statusBar.showMessage(status_text)
@@ -1060,15 +1069,38 @@ class MainWindow(TemplateBaseClass):
         if event.key() == QtCore.Qt.Key_Up:
             if modifiers & QtCore.Qt.ShiftModifier:
                 self.ui.gainBox.setValue(self.ui.gainBox.value() + 1)
+            elif modifiers & QtCore.Qt.ControlModifier:
+                # Ctrl+Up: Increase trigger threshold
+                self.ui.threshold.setValue(self.ui.threshold.value() + 5)
+            elif modifiers & QtCore.Qt.AltModifier:
+                # Alt+Up: Increase trigger delta
+                self.ui.thresholdDelta.setValue(self.ui.thresholdDelta.value() + 1)
             else:
                 self.ui.offsetBox.stepUp()
         if event.key() == QtCore.Qt.Key_Down:
             if modifiers & QtCore.Qt.ShiftModifier:
                 self.ui.gainBox.setValue(self.ui.gainBox.value() - 1)
+            elif modifiers & QtCore.Qt.ControlModifier:
+                # Ctrl+Down: Decrease trigger threshold
+                self.ui.threshold.setValue(self.ui.threshold.value() - 5)
+            elif modifiers & QtCore.Qt.AltModifier:
+                # Alt+Down: Decrease trigger delta
+                self.ui.thresholdDelta.setValue(self.ui.thresholdDelta.value() - 1)
             else:
                 self.ui.offsetBox.stepDown()
-        if event.key() == QtCore.Qt.Key_Left: self.time_slow()
-        if event.key() == QtCore.Qt.Key_Right: self.time_fast()
+        if event.key() == QtCore.Qt.Key_Left:
+            if modifiers & QtCore.Qt.ControlModifier:
+                # Ctrl+Left: Decrease trigger position
+                self.ui.thresholdPos.setValue(self.ui.thresholdPos.value() - 100)
+            else:
+                self.time_slow()
+        if event.key() == QtCore.Qt.Key_Right:
+            if modifiers & QtCore.Qt.ControlModifier:
+                # Ctrl+Right: Increase trigger position
+                self.ui.thresholdPos.setValue(self.ui.thresholdPos.value() + 100)
+            else:
+                self.time_fast()
+        if event.key() == QtCore.Qt.Key_R: self.dostartstop()
 
     def eventFilter(self, obj, event):
         """Event filter to make chanColor clickable."""

@@ -2506,7 +2506,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="checked">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="text">
     <string>Mean</string>
@@ -2517,7 +2517,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="checked">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="text">
     <string>RMS</string>
@@ -2547,7 +2547,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="checked">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="text">
     <string>ADC temperature</string>
@@ -2792,10 +2792,16 @@ Outlined if triggering on this channel</string>
    <property name="text">
     <string>Save setup</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+S</string>
+   </property>
   </action>
   <action name="actionLoad_setup">
    <property name="text">
     <string>Load setup</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+O</string>
    </property>
   </action>
   <action name="actionMath_channels">

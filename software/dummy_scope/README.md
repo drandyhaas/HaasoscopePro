@@ -60,6 +60,7 @@ python dummy_server.py [OPTIONS]
 - `--host HOST` - Bind address (default: `localhost`)
 - `--port PORT` - TCP port number (default: `9998`)
 - `--firmware VERSION` - Firmware version to report (default: `0`)
+- `--no-noise` - Disable noise for deterministic outputs (useful for automated testing)
 
 **Examples:**
 ```bash
@@ -74,6 +75,9 @@ python dummy_server.py --host 0.0.0.0 --port 9999
 
 # Simulate firmware version 31
 python dummy_server.py --firmware 31
+
+# Run in deterministic mode (no noise, fixed phase) for testing
+python dummy_server.py --no-noise --port 9999
 ```
 
 ## Waveform Configuration
@@ -158,13 +162,45 @@ The dummy server accurately simulates:
 - ✓ Downsampling (decimation and averaging modes)
 - ✓ Sample merging
 - ✓ Continuous waveform generation
-- ✓ Noise simulation (optional)
+- ✓ Noise simulation (1% RMS by default, disable with `--no-noise` for deterministic testing)
 
 ### Advanced Features
 - ✓ SPI mode switching
 - ✓ Aux output control
 - ✓ Clock splitter for oversampling mode
 - ✓ Status register bits
+
+## Deterministic Mode for Testing
+
+When running automated tests, you can use the `--no-noise` flag to ensure completely reproducible outputs:
+
+```bash
+python dummy_server.py --no-noise --port 9999
+```
+
+**In deterministic mode:**
+- ✓ No random noise added to waveforms (clean signals)
+- ✓ Fixed starting phase (always 0.0 radians)
+- ✓ Pulse amplitudes use average of min/max range (no randomization)
+- ✓ Pulse positions are fixed (no jitter)
+- ✓ Identical waveforms generated for identical settings
+
+**Use cases:**
+- **Screenshot comparison tests** - Pixel-perfect comparison of UI output
+- **Data validation tests** - Verify processing algorithms with known inputs
+- **Regression testing** - Detect changes in signal processing behavior
+- **CI/CD pipelines** - Reproducible test results across different runs
+
+**Example test workflow:**
+```bash
+# Start deterministic dummy server
+python dummy_server.py --no-noise --port 9999 &
+
+# Run automated tests
+python test/test_gui_automated.py --socket localhost:9999
+
+# All screenshots and data will be identical across runs
+```
 
 ## Technical Details
 

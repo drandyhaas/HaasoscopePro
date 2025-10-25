@@ -4,12 +4,21 @@ Python-based oscilloscope software for the HaasoscopePro hardware.
 
 ## Quick Start
 
+### Installation
+
+```bash
+# Install dependencies from requirements file
+pip install -r requirements.txt
+
+# Or install manually
+pip install numpy scipy pyqtgraph PyQt5 ftd2xx requests packaging
+```
+
+**Note:** `requests` and `packaging` are optional but recommended for automatic update checking.
+
 ### Running with Hardware
 
 ```bash
-# Install dependencies
-pip3 install numpy scipy pyqtgraph PyQt5 pyftdi ftd2xx requests packaging
-
 # Run the application
 python HaasoscopeProQt.py
 ```
@@ -47,8 +56,11 @@ python HaasoscopeProQt.py --socket localhost:9999
 # Limit maximum number of devices to connect (default: 100)
 python HaasoscopeProQt.py --max-devices 4
 
+# Testing mode (disables dynamic status bar updates for stable screenshots)
+python HaasoscopeProQt.py --socket localhost:9999 --testing
+
 # Combine options
-python HaasoscopeProQt.py --max-devices 5 --socket localhost:9999
+python HaasoscopeProQt.py --max-devices 5 --socket localhost:9999 --testing
 
 # Show help
 python HaasoscopeProQt.py --help
@@ -57,6 +69,30 @@ python HaasoscopeProQt.py --help
 **Automatic Fallback:** If no `--socket` is specified and no hardware is detected, the application automatically tries to connect to `localhost:9998`.
 
 See [dummy_scope/README.md](dummy_scope/README.md) for detailed dummy server documentation.
+
+## Keyboard Shortcuts
+
+The GUI supports keyboard shortcuts for quick control adjustments:
+
+| Shortcut | Function |
+|----------|----------|
+| **Arrow Keys** | |
+| `Left` / `Right` | Decrease / Increase time scale (downsample) |
+| `Up` / `Down` | Increase / Decrease offset |
+| **Shift + Arrow Keys** | |
+| `Shift+Up` / `Shift+Down` | Increase / Decrease gain |
+| **Ctrl + Arrow Keys** | |
+| `Ctrl+Up` / `Ctrl+Down` | Increase / Decrease trigger threshold |
+| `Ctrl+Left` / `Ctrl+Right` | Decrease / Increase trigger position |
+| **Alt + Arrow Keys** | |
+| `Alt+Up` / `Alt+Down` | Increase / Decrease trigger delta |
+| **Other Keys** | |
+| `R` | Toggle run/stop |
+
+**Tips:**
+- Arrow keys provide quick navigation without reaching for the mouse
+- Modifier keys (Shift/Ctrl/Alt) access additional functions on the same arrow keys
+- All shortcuts work when the main window has focus
 
 ## Code Architecture
 
@@ -337,29 +373,38 @@ Same pattern as per-channel, but use `s.activeboard` instead of `s.activexychann
 
 ## Testing
 
-### Unit Tests
-Currently testing is primarily manual. The dummy server enables automated testing scenarios.
+### Automated GUI Testing
 
-### Integration Testing with Dummy Server
-```python
-# Start dummy server programmatically
-from dummy_scope.dummy_server import DummyOscilloscopeServer
-server = DummyOscilloscopeServer(port=9999)
-server.start()
+The `test/` directory contains automated GUI testing tools:
 
-# Connect and test
-# ... your test code ...
+```bash
+cd test
 
-server.stop()
+# Install test dependencies
+pip install -r test_requirements.txt
+
+# Run basic test
+python test_gui.py
+
+# Create baseline screenshots
+python test_gui.py --baseline
+
+# Run regression test (compare to baseline)
+python test_gui.py --compare
 ```
 
-### Multi-Board Testing
-Run multiple dummy servers on different ports to test multi-board synchronization:
+See [test/README.md](test/README.md) for complete testing documentation.
+
+### Manual Testing with Dummy Server
+
+For manual testing, start the dummy server and connect HaasoscopeProQt:
+
 ```bash
-python dummy_scope/dummy_server.py --port 9998 &
-python dummy_scope/dummy_server.py --port 9999 &
-python dummy_scope/dummy_server.py --port 10000 &
-python HaasoscopeProQt.py --socket localhost:9998 localhost:9999 localhost:10000
+# Terminal 1: Start dummy server
+python dummy_scope/dummy_server.py --port 9999 --no-noise
+
+# Terminal 2: Connect HaasoscopeProQt
+python HaasoscopeProQt.py --socket localhost:9999 --testing
 ```
 
 ## Troubleshooting
@@ -387,13 +432,30 @@ pip3 install PyQt5 pyqtgraph
 
 ## Dependencies
 
+All dependencies are listed in `requirements.txt` and can be installed with:
+
+```bash
+pip install -r requirements.txt
+```
+
+### Core Dependencies
 - **Python 3.7+** (3.8+ recommended)
 - **PyQt5** - GUI framework
 - **pyqtgraph** - Fast plotting library
 - **numpy** - Numerical computing
 - **scipy** - Signal processing (FFT, filtering, interpolation)
-- **ftd2xx** - FTDI driver wrapper
-- **pyftdi** - Alternative FTDI library
+- **ftd2xx** - FTDI driver wrapper for hardware communication
+
+### Optional Dependencies
+- **requests** - For automatic update checking (gracefully degrades if not installed)
+- **packaging** - For version comparison in update checker
+
+### Testing Dependencies (optional)
+See [test/test_requirements.txt](test/test_requirements.txt) for complete list:
+- **pyautogui** - Screen capture and GUI automation
+- **Pillow** - Image processing for screenshot comparison
+- **pygetwindow** - Window-specific screenshot capture
+- **numpy** - Image comparison calculations
 
 ## License
 
