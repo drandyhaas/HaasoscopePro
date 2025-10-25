@@ -1,66 +1,77 @@
 #!/usr/bin/env python3
 """
-GUI Test Script for HaasoscopeProQt
+HaasoscopeProQt GUI Test Script
 
-This script performs automated GUI testing of the HaasoscopeProQt application:
-1. Starts a dummy server
-2. Launches the GUI with maxdevices 0 (connects to dummy server only)
-3. Waits for initialization
-4. Simulates GUI interactions (menu actions, button presses, settings changes)
-5. Takes screenshots of all windows
-6. Compares to expected behavior
-7. Summarizes test results
-
-Requirements:
-    pip install pytest pytest-qt pillow
+Automated testing for HaasoscopeProQt using the dummy oscilloscope server.
+Tests the GUI with deterministic, reproducible waveforms for reliable screenshot comparison.
 
 Usage:
     cd test
-    pytest test_gui.py -v
-    pytest test_gui.py -v --screenshots  # Save screenshots even on success
-    pytest test_gui.py -v -k test_basic_startup  # Run specific test
+
+    # Run basic test (launches GUI for 10 seconds, takes screenshots)
+    python test_gui.py
+
+    # Create baseline screenshots for comparison
+    python test_gui.py --baseline
+
+    # Run comparison test (compare to baseline)
+    python test_gui.py --compare
+
+    # Customize options
+    python test_gui.py --duration 20 --port 9999 --border 10
+
+Requirements:
+    pip install pyautogui pillow pygetwindow
+
+Optional:
+    pip install pywinauto  # For advanced GUI automation (Windows only)
 """
 
 import sys
 import time
 import subprocess
-import os
+import argparse
 from pathlib import Path
-from typing import Optional, List
-import json
+from typing import Optional, List, Dict
+from datetime import datetime
 
-import pytest
-from PyQt5 import QtCore, QtWidgets, QtTest, QtGui
+# For screenshots
+import pyautogui
 from PIL import Image, ImageChops
 import numpy as np
 
 
-# Test configuration
-TEST_CONFIG = {
-    "dummy_server_port": 9999,
-    "dummy_server_host": "localhost",
-    "init_wait_time": 8.0,  # seconds to wait for initialization
-    "screenshot_dir": "test_screenshots",
-    "baseline_dir": "test_screenshots/baseline",
+# === Configuration ===
+DEFAULT_CONFIG = {
+    "port": 9999,
+    "host": "localhost",
+    "init_wait": 3.0,  # seconds to wait for GUI initialization
+    "duration": 10.0,  # seconds to run test
+    "screenshot_dir": "screenshots",
+    "baseline_dir": "screenshots/baseline",
+    "border_adjustment": 8,  # pixels to remove from window edges (Windows shadow)
     "comparison_threshold": 0.05,  # 5% difference allowed
 }
 
 
-class DummyServerManager:
-    """Manages the dummy oscilloscope server for testing."""
+# === Helper Classes ===
 
-    def __init__(self, port: int = 9999, host: str = "localhost"):
+class DummyServerManager:
+    """Manages the dummy oscilloscope server."""
+
+    def __init__(self, port: int, host: str = "localhost"):
         self.port = port
         self.host = host
         self.process: Optional[subprocess.Popen] = None
 
     def start(self):
-        """Start the dummy server in a subprocess."""
+        """Start the dummy server."""
         dummy_server_path = Path(__file__).parent.parent / "dummy_scope" / "dummy_server.py"
         if not dummy_server_path.exists():
             raise FileNotFoundError(f"Dummy server not found at {dummy_server_path}")
 
-        print(f"Starting dummy server on {self.host}:{self.port} (deterministic mode)")
+        print(f"[SERVER] Starting on {self.host}:{self.port} (deterministic mode)")
+
         self.process = subprocess.Popen(
             [sys.executable, str(dummy_server_path), "--port", str(self.port), "--no-noise"],
             stdout=subprocess.PIPE,
@@ -68,399 +79,327 @@ class DummyServerManager:
             creationflags=subprocess.CREATE_NEW_CONSOLE if sys.platform == "win32" else 0
         )
 
-        # Wait for server to start
         time.sleep(2.0)
 
         if self.process.poll() is not None:
             stdout, stderr = self.process.communicate()
-            raise RuntimeError(f"Dummy server failed to start:\n{stderr.decode()}")
+            raise RuntimeError(f"Dummy server failed:\n{stderr.decode()}")
 
-        print(f"Dummy server started with PID {self.process.pid}")
-        return self
+        print(f"[SERVER] Running (PID {self.process.pid})")
 
     def stop(self):
         """Stop the dummy server."""
         if self.process:
-            print(f"Stopping dummy server (PID {self.process.pid})")
+            print(f"[SERVER] Stopping (PID {self.process.pid})")
             self.process.terminate()
             try:
                 self.process.wait(timeout=5)
             except subprocess.TimeoutExpired:
-                print("Dummy server didn't terminate, killing...")
                 self.process.kill()
                 self.process.wait()
             self.process = None
 
-    def __enter__(self):
-        self.start()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        self.stop()
-
 
 class ScreenshotManager:
-    """Manages screenshots and comparisons for GUI testing."""
+    """Manages screenshots and comparisons."""
 
-    def __init__(self, screenshot_dir: str, baseline_dir: str):
+    def __init__(self, screenshot_dir: str, baseline_dir: str, border_adjustment: int = 8):
         self.screenshot_dir = Path(screenshot_dir)
         self.baseline_dir = Path(baseline_dir)
-        self.screenshot_dir.mkdir(exist_ok=True)
-        self.baseline_dir.mkdir(exist_ok=True)
+        self.border_adjustment = border_adjustment
+        self.screenshot_dir.mkdir(exist_ok=True, parents=True)
+        self.baseline_dir.mkdir(exist_ok=True, parents=True)
         self.screenshots = {}
 
-    def capture_widget(self, widget: QtWidgets.QWidget, name: str) -> Path:
-        """Capture a screenshot of a widget."""
-        if not widget.isVisible():
-            print(f"Warning: Widget {name} is not visible, skipping screenshot")
+    def capture_windows(self, name: str = "test") -> List[Path]:
+        """Capture all HaasoscopeProQt windows."""
+        try:
+            from window_capture import capture_haasoscope_windows
+
+            screenshots = capture_haasoscope_windows(
+                self.screenshot_dir, prefix=name, border_adjustment=self.border_adjustment
+            )
+
+            # Store first screenshot for baseline comparison
+            if screenshots:
+                self.screenshots[name] = screenshots[0]
+
+            return screenshots
+
+        except Exception as e:
+            print(f"[SCREENSHOT] Warning: Window capture failed: {e}")
+            # Fallback to full screen
+            return self._capture_fullscreen(name)
+
+    def _capture_fullscreen(self, name: str) -> List[Path]:
+        """Fallback: Capture full screen."""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"{timestamp}_{name}.png"
+        filepath = self.screenshot_dir / filename
+
+        screenshot = pyautogui.screenshot()
+        screenshot.save(str(filepath))
+
+        self.screenshots[name] = filepath
+        return [filepath]
+
+    def save_as_baseline(self, screenshot_name: str):
+        """Save a screenshot as the baseline."""
+        if screenshot_name not in self.screenshots:
+            raise ValueError(f"Screenshot {screenshot_name} not found")
+
+        src = self.screenshots[screenshot_name]
+        dst = self.baseline_dir / f"{screenshot_name}.png"
+
+        Image.open(src).save(str(dst))
+        print(f"[BASELINE] Saved: {screenshot_name}.png")
+
+    def compare_to_baseline(self, screenshot_name: str, threshold: float = 0.05) -> Optional[Dict]:
+        """Compare a screenshot to its baseline."""
+        if screenshot_name not in self.screenshots:
+            raise ValueError(f"Screenshot {screenshot_name} not found")
+
+        baseline_path = self.baseline_dir / f"{screenshot_name}.png"
+        if not baseline_path.exists():
+            print(f"[COMPARE] No baseline found for {screenshot_name}")
             return None
 
-        # Ensure widget is rendered
-        QtWidgets.QApplication.processEvents()
-        time.sleep(0.1)
+        current_path = self.screenshots[screenshot_name]
 
-        # Capture the widget
-        pixmap = widget.grab()
+        # Load images
+        img1 = Image.open(baseline_path).convert('RGB')
+        img2 = Image.open(current_path).convert('RGB')
 
-        # Save screenshot
-        filepath = self.screenshot_dir / f"{name}.png"
-        pixmap.save(str(filepath))
-        self.screenshots[name] = filepath
-        print(f"Screenshot saved: {filepath}")
-        return filepath
-
-    def capture_all_windows(self, app: QtWidgets.QApplication, prefix: str = "") -> List[Path]:
-        """Capture screenshots of all visible windows."""
-        screenshots = []
-        for i, widget in enumerate(app.topLevelWidgets()):
-            if widget.isVisible():
-                name = f"{prefix}window_{i}_{widget.windowTitle().replace(' ', '_')}"
-                filepath = self.capture_widget(widget, name)
-                if filepath:
-                    screenshots.append(filepath)
-        return screenshots
-
-    def compare_images(self, img1_path: Path, img2_path: Path) -> dict:
-        """
-        Compare two images and return similarity metrics.
-
-        Returns:
-            dict with keys: 'identical', 'difference_percent', 'diff_image_path'
-        """
-        img1 = Image.open(img1_path)
-        img2 = Image.open(img2_path)
-
-        # Ensure same size
         if img1.size != img2.size:
             return {
-                'identical': False,
+                'match': False,
                 'difference_percent': 100.0,
+                'within_threshold': False,
                 'error': f"Size mismatch: {img1.size} vs {img2.size}"
             }
 
-        # Calculate difference
+        # Calculate pixel difference
         diff = ImageChops.difference(img1, img2)
         diff_array = np.array(diff)
 
-        # Calculate percentage of different pixels
         total_pixels = diff_array.size
         different_pixels = np.count_nonzero(diff_array)
         difference_percent = (different_pixels / total_pixels) * 100
 
         # Save diff image
-        diff_path = self.screenshot_dir / f"diff_{img1_path.stem}.png"
+        diff_path = self.screenshot_dir / f"diff_{screenshot_name}.png"
         diff.save(str(diff_path))
 
+        within_threshold = difference_percent < (threshold * 100)
+
         return {
-            'identical': difference_percent == 0,
+            'match': difference_percent == 0,
             'difference_percent': difference_percent,
-            'diff_image_path': diff_path
+            'within_threshold': within_threshold,
+            'diff_image': diff_path
         }
 
-    def compare_to_baseline(self, screenshot_name: str) -> Optional[dict]:
-        """Compare a screenshot to its baseline."""
-        current = self.screenshot_dir / f"{screenshot_name}.png"
-        baseline = self.baseline_dir / f"{screenshot_name}.png"
 
-        if not baseline.exists():
-            print(f"No baseline found for {screenshot_name}, creating one...")
-            baseline.parent.mkdir(parents=True, exist_ok=True)
-            Image.open(current).save(str(baseline))
-            return None
+# === Main Test Class ===
 
-        return self.compare_images(current, baseline)
+class GUITest:
+    """Main GUI test runner."""
+
+    def __init__(self, config: Dict):
+        self.config = config
+        self.dummy_server: Optional[DummyServerManager] = None
+        self.gui_process: Optional[subprocess.Popen] = None
+        self.screenshot_manager = ScreenshotManager(
+            config["screenshot_dir"],
+            config["baseline_dir"],
+            border_adjustment=config["border_adjustment"]
+        )
+
+    def run(self, mode: str = "test"):
+        """
+        Run the test.
+
+        Args:
+            mode: "test" (basic test), "baseline" (create baselines), or "compare" (compare to baseline)
+        """
+        print("\n" + "=" * 80)
+        print(f" HaasoscopeProQt GUI Test - Mode: {mode.upper()}")
+        print("=" * 80 + "\n")
+
+        try:
+            # Start dummy server
+            self._start_server()
+
+            # Launch GUI
+            self._launch_gui()
+
+            # Wait for initialization
+            print(f"[TEST] Waiting {self.config['init_wait']}s for initialization...")
+            time.sleep(self.config['init_wait'])
+
+            # Check GUI is running
+            if self.gui_process.poll() is not None:
+                print("[TEST] ERROR: GUI process terminated unexpectedly")
+                return False
+
+            # Run test
+            print(f"[TEST] Running for {self.config['duration']}s...")
+            time.sleep(self.config['duration'])
+
+            # Take screenshots
+            print("[TEST] Capturing screenshots...")
+            screenshots = self.screenshot_manager.capture_windows(name="gui_test")
+
+            if screenshots:
+                print(f"[TEST] Captured {len(screenshots)} screenshot(s)")
+                for screenshot in screenshots:
+                    print(f"  - {screenshot.name}")
+            else:
+                print("[TEST] No screenshots captured")
+                return False
+
+            # Handle different modes
+            if mode == "baseline":
+                self.screenshot_manager.save_as_baseline("gui_test")
+                print("[TEST] Baseline created successfully")
+                return True
+
+            elif mode == "compare":
+                print("[TEST] Comparing to baseline...")
+                result = self.screenshot_manager.compare_to_baseline(
+                    "gui_test", threshold=self.config["comparison_threshold"]
+                )
+
+                if result is None:
+                    print("[TEST] No baseline available for comparison")
+                    return False
+
+                print(f"[TEST] Difference: {result['difference_percent']:.2f}%")
+                print(f"[TEST] Threshold: {self.config['comparison_threshold'] * 100:.2f}%")
+
+                if result['within_threshold']:
+                    print("[TEST] ✓ PASS - Within threshold")
+                    return True
+                else:
+                    print("[TEST] ✗ FAIL - Exceeds threshold")
+                    print(f"[TEST] Diff image saved: {result['diff_image']}")
+                    return False
+
+            else:  # mode == "test"
+                print("[TEST] Test completed successfully")
+                return True
+
+        except Exception as e:
+            print(f"[TEST] ERROR: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+        finally:
+            self._cleanup()
+
+    def _start_server(self):
+        """Start the dummy server."""
+        self.dummy_server = DummyServerManager(
+            port=self.config["port"],
+            host=self.config["host"]
+        )
+        self.dummy_server.start()
+
+    def _launch_gui(self):
+        """Launch the GUI application."""
+        print("[GUI] Launching HaasoscopeProQt...")
+
+        gui_script = Path(__file__).parent.parent / "HaasoscopeProQt.py"
+        if not gui_script.exists():
+            raise FileNotFoundError(f"GUI script not found at {gui_script}")
+
+        socket_addr = f"{self.config['host']}:{self.config['port']}"
+
+        self.gui_process = subprocess.Popen(
+            [sys.executable, str(gui_script), "--socket", socket_addr, "--max-devices", "0", "--testing"],
+            creationflags=subprocess.CREATE_NEW_CONSOLE if sys.platform == "win32" else 0
+        )
+
+        print(f"[GUI] Launched (PID {self.gui_process.pid})")
+
+    def _cleanup(self):
+        """Clean up processes."""
+        print("\n[CLEANUP] Stopping processes...")
+
+        # Stop GUI
+        if self.gui_process and self.gui_process.poll() is None:
+            print("[CLEANUP] Stopping GUI...")
+            self.gui_process.terminate()
+            try:
+                self.gui_process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                print("[CLEANUP] GUI didn't stop, killing...")
+                self.gui_process.kill()
+                self.gui_process.wait()
+
+        # Stop server
+        if self.dummy_server:
+            self.dummy_server.stop()
+
+        print("[CLEANUP] Done\n")
 
 
-@pytest.fixture(scope="session")
-def dummy_server():
-    """Fixture to start and stop the dummy server."""
-    server = DummyServerManager(
-        port=TEST_CONFIG["dummy_server_port"],
-        host=TEST_CONFIG["dummy_server_host"]
+# === Main ===
+
+def main():
+    parser = argparse.ArgumentParser(
+        description='Automated GUI testing for HaasoscopeProQt',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python test_gui.py                    # Run basic test
+  python test_gui.py --baseline         # Create baseline screenshots
+  python test_gui.py --compare          # Compare to baseline
+  python test_gui.py --duration 20      # Run for 20 seconds
+  python test_gui.py --border 10        # Adjust window border (if seeing extra pixels)
+        """
     )
-    server.start()
-    yield server
-    server.stop()
 
-
-@pytest.fixture
-def haasoscope_app(qtbot, dummy_server):
-    """
-    Fixture to launch the HaasoscopeProQt application.
-
-    This imports and initializes the application with the dummy server.
-    """
-    # Import the main application module
-    import HaasoscopeProQt
-    import main_window
-
-    # Create application if it doesn't exist
-    app = QtWidgets.QApplication.instance()
-    if app is None:
-        app = QtWidgets.QApplication(sys.argv)
-
-    # Mock command-line arguments to connect to dummy server
-    sys.argv = [
-        "HaasoscopeProQt.py",
-        "--socket", f"{dummy_server.host}:{dummy_server.port}",
-        "--max-devices", "0",
-        "--testing"  # Disable dynamic status bar updates for stable screenshots
-    ]
-
-    # Initialize the application (mimicking HaasoscopeProQt.py main logic)
-    # We need to actually run the initialization code
-    # For now, we'll import and manually initialize
-
-    # This is a simplified version - in reality we'd need to follow the exact
-    # initialization sequence from HaasoscopeProQt.py
-    print("Initializing HaasoscopePro application...")
-
-    # Wait for initialization
-    time.sleep(TEST_CONFIG["init_wait_time"])
-
-    # Get the main window
-    main_win = None
-    for widget in app.topLevelWidgets():
-        if isinstance(widget, QtWidgets.QMainWindow):
-            main_win = widget
-            break
-
-    if main_win:
-        qtbot.addWidget(main_win)
-        main_win.show()
-        qtbot.waitExposed(main_win)
-
-    yield {"app": app, "main_window": main_win}
-
-    # Cleanup
-    if main_win:
-        main_win.close()
-    app.quit()
-
-
-@pytest.fixture
-def screenshot_manager():
-    """Fixture to create a screenshot manager."""
-    return ScreenshotManager(
-        screenshot_dir=TEST_CONFIG["screenshot_dir"],
-        baseline_dir=TEST_CONFIG["baseline_dir"]
-    )
-
-
-# ============================================================================
-# Test Cases
-# ============================================================================
-
-def test_dummy_server_starts(dummy_server):
-    """Test that the dummy server starts successfully."""
-    assert dummy_server.process is not None
-    assert dummy_server.process.poll() is None, "Dummy server process has terminated"
-
-
-def test_basic_startup(haasoscope_app, screenshot_manager, qtbot):
-    """
-    Test basic application startup.
-
-    Verifies:
-    - Application launches successfully
-    - Main window is visible
-    - Initial UI state is correct
-    """
-    app = haasoscope_app["app"]
-    main_window = haasoscope_app["main_window"]
-
-    assert app is not None, "Application failed to initialize"
-    assert main_window is not None, "Main window not found"
-    assert main_window.isVisible(), "Main window is not visible"
-
-    # Take screenshot
-    screenshot_manager.capture_widget(main_window, "test_basic_startup_main")
-
-    # Capture all windows
-    screenshots = screenshot_manager.capture_all_windows(app, "startup_")
-    assert len(screenshots) > 0, "No windows captured"
-
-
-def test_menu_interactions(haasoscope_app, screenshot_manager, qtbot):
-    """
-    Test menu interactions.
-
-    Tests:
-    - Opening File menu
-    - Opening View menu
-    - Opening Tools menu
-    """
-    app = haasoscope_app["app"]
-    main_window = haasoscope_app["main_window"]
-
-    if main_window is None:
-        pytest.skip("Main window not available")
-
-    # Find the menu bar
-    menu_bar = main_window.menuBar()
-    assert menu_bar is not None, "Menu bar not found"
-
-    # Test File menu
-    file_menu = None
-    for action in menu_bar.actions():
-        if "file" in action.text().lower():
-            file_menu = action.menu()
-            break
-
-    if file_menu:
-        # Click the File menu
-        qtbot.mouseClick(menu_bar, QtCore.Qt.LeftButton)
-        QtWidgets.QApplication.processEvents()
-        time.sleep(0.5)
-
-        screenshot_manager.capture_widget(main_window, "test_menu_file_open")
-
-
-def test_trigger_settings(haasoscope_app, screenshot_manager, qtbot):
-    """
-    Test changing trigger settings.
-
-    Tests:
-    - Accessing trigger controls
-    - Changing trigger level
-    - Changing trigger mode
-    """
-    app = haasoscope_app["app"]
-    main_window = haasoscope_app["main_window"]
-
-    if main_window is None:
-        pytest.skip("Main window not available")
-
-    # Take initial screenshot
-    screenshot_manager.capture_widget(main_window, "test_trigger_before")
-
-    # Find trigger-related widgets (this depends on the UI structure)
-    # We would need to inspect the UI to find the correct widget names
-
-    # For now, just wait and capture state
-    time.sleep(1.0)
-    QtWidgets.QApplication.processEvents()
-
-    screenshot_manager.capture_widget(main_window, "test_trigger_after")
-
-
-def test_channel_controls(haasoscope_app, screenshot_manager, qtbot):
-    """
-    Test channel control interactions.
-
-    Tests:
-    - Toggling channel visibility
-    - Changing channel gain
-    - Changing channel offset
-    """
-    app = haasoscope_app["app"]
-    main_window = haasoscope_app["main_window"]
-
-    if main_window is None:
-        pytest.skip("Main window not available")
-
-    screenshot_manager.capture_widget(main_window, "test_channels_initial")
-
-    # Wait for data acquisition
-    time.sleep(2.0)
-    QtWidgets.QApplication.processEvents()
-
-    screenshot_manager.capture_widget(main_window, "test_channels_running")
-
-
-def test_fft_window(haasoscope_app, screenshot_manager, qtbot):
-    """
-    Test opening the FFT window.
-
-    Tests:
-    - Opening FFT window via menu or button
-    - FFT window displays correctly
-    """
-    app = haasoscope_app["app"]
-    main_window = haasoscope_app["main_window"]
-
-    if main_window is None:
-        pytest.skip("Main window not available")
-
-    # Try to find and click FFT button/menu
-    # This requires knowing the UI structure
-
-    # For now, capture all visible windows
-    time.sleep(1.0)
-    screenshots = screenshot_manager.capture_all_windows(app, "test_fft_")
-
-
-def test_screenshot_comparison(haasoscope_app, screenshot_manager, qtbot):
-    """
-    Test screenshot comparison against baseline.
-
-    This test will create baselines on first run, then compare on subsequent runs.
-    """
-    app = haasoscope_app["app"]
-    main_window = haasoscope_app["main_window"]
-
-    if main_window is None:
-        pytest.skip("Main window not available")
-
-    # Capture screenshot
-    screenshot_manager.capture_widget(main_window, "test_comparison_baseline")
-
-    # Compare to baseline
-    comparison = screenshot_manager.compare_to_baseline("test_comparison_baseline")
-
-    if comparison is not None:
-        print(f"Difference: {comparison['difference_percent']:.2f}%")
-        threshold = TEST_CONFIG["comparison_threshold"] * 100
-        assert comparison['difference_percent'] < threshold, \
-            f"Screenshot differs by {comparison['difference_percent']:.2f}% (threshold: {threshold}%)"
-
-
-# ============================================================================
-# Test Result Summary
-# ============================================================================
-
-@pytest.fixture(scope="session", autouse=True)
-def test_summary(request):
-    """Generate a test summary at the end of the test session."""
-    yield
-
-    # This runs after all tests complete
-    print("\n" + "="*80)
-    print("GUI TEST SUMMARY")
-    print("="*80)
-
-    # Get test results from pytest
-    session = request.session
-    if hasattr(session, 'testscollected'):
-        print(f"Total tests collected: {session.testscollected}")
-
-    # Summary will be printed by pytest
-    print("\nScreenshots saved to:", TEST_CONFIG["screenshot_dir"])
-    print("Baseline images at:", TEST_CONFIG["baseline_dir"])
-    print("\nTo update baselines: delete contents of", TEST_CONFIG["baseline_dir"])
-    print("="*80)
+    parser.add_argument('--baseline', action='store_true',
+                        help='Create baseline screenshots (for future comparisons)')
+    parser.add_argument('--compare', action='store_true',
+                        help='Compare screenshots to baseline')
+    parser.add_argument('--duration', type=float, default=DEFAULT_CONFIG["duration"],
+                        help=f'Test duration in seconds (default: {DEFAULT_CONFIG["duration"]})')
+    parser.add_argument('--port', type=int, default=DEFAULT_CONFIG["port"],
+                        help=f'Dummy server port (default: {DEFAULT_CONFIG["port"]})')
+    parser.add_argument('--border', type=int, default=DEFAULT_CONFIG["border_adjustment"],
+                        help=f'Border adjustment in pixels (default: {DEFAULT_CONFIG["border_adjustment"]})')
+    parser.add_argument('--threshold', type=float, default=DEFAULT_CONFIG["comparison_threshold"],
+                        help=f'Comparison threshold 0-1 (default: {DEFAULT_CONFIG["comparison_threshold"]})')
+
+    args = parser.parse_args()
+
+    # Determine mode
+    if args.baseline:
+        mode = "baseline"
+    elif args.compare:
+        mode = "compare"
+    else:
+        mode = "test"
+
+    # Build config
+    config = DEFAULT_CONFIG.copy()
+    config.update({
+        "duration": args.duration,
+        "port": args.port,
+        "border_adjustment": args.border,
+        "comparison_threshold": args.threshold,
+    })
+
+    # Run test
+    test = GUITest(config)
+    success = test.run(mode=mode)
+
+    # Exit with appropriate code
+    sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":
-    # Run tests when executed directly
-    pytest.main([__file__, "-v", "--tb=short"])
+    main()

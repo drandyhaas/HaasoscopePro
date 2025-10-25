@@ -349,29 +349,38 @@ Same pattern as per-channel, but use `s.activeboard` instead of `s.activexychann
 
 ## Testing
 
-### Unit Tests
-Currently testing is primarily manual. The dummy server enables automated testing scenarios.
+### Automated GUI Testing
 
-### Integration Testing with Dummy Server
-```python
-# Start dummy server programmatically
-from dummy_scope.dummy_server import DummyOscilloscopeServer
-server = DummyOscilloscopeServer(port=9999)
-server.start()
+The `test/` directory contains automated GUI testing tools:
 
-# Connect and test
-# ... your test code ...
+```bash
+cd test
 
-server.stop()
+# Install test dependencies
+pip install -r test_requirements.txt
+
+# Run basic test
+python test_gui.py
+
+# Create baseline screenshots
+python test_gui.py --baseline
+
+# Run regression test (compare to baseline)
+python test_gui.py --compare
 ```
 
-### Multi-Board Testing
-Run multiple dummy servers on different ports to test multi-board synchronization:
+See [test/README.md](test/README.md) for complete testing documentation.
+
+### Manual Testing with Dummy Server
+
+For manual testing, start the dummy server and connect HaasoscopeProQt:
+
 ```bash
-python dummy_scope/dummy_server.py --port 9998 &
-python dummy_scope/dummy_server.py --port 9999 &
-python dummy_scope/dummy_server.py --port 10000 &
-python HaasoscopeProQt.py --socket localhost:9998 localhost:9999 localhost:10000
+# Terminal 1: Start dummy server
+python dummy_scope/dummy_server.py --port 9999 --no-noise
+
+# Terminal 2: Connect HaasoscopeProQt
+python HaasoscopeProQt.py --socket localhost:9999 --testing
 ```
 
 ## Troubleshooting
@@ -418,9 +427,11 @@ pip install -r requirements.txt
 - **packaging** - For version comparison in update checker
 
 ### Testing Dependencies (optional)
-- **pytest** - Testing framework
-- **pyautogui** - GUI automation for testing
+See [test/test_requirements.txt](test/test_requirements.txt) for complete list:
+- **pyautogui** - Screen capture and GUI automation
 - **Pillow** - Image processing for screenshot comparison
+- **pygetwindow** - Window-specific screenshot capture
+- **numpy** - Image comparison calculations
 
 ## License
 
