@@ -222,46 +222,52 @@ class GUIController:
             self.main_window.set_focus()
             time.sleep(self.action_wait)
 
-            # Try to find and interact with various controls
-            # Note: Control names may vary - these are common examples
-
-            # Example 1: Try to change downsample factor via spinbox
+            # Change 1: Adjust time scale using timefast button (increases downsample)
             try:
-                print("[GUI]   - Setting downsample factor...")
-                # Look for downsample spinbox (may need to adjust name)
-                spinbox = self.main_window.child_window(auto_id="downsampleSpin", control_type="Spinner")
-                if spinbox.exists():
-                    spinbox.set_value(4)
+                print("[GUI]   - Clicking timefast button (3 times)...")
+                timefast_btn = self.main_window.child_window(auto_id="timefast", control_type="Button")
+                if timefast_btn.exists():
+                    for i in range(3):
+                        timefast_btn.click()
+                        time.sleep(self.action_wait * 0.5)
+            except Exception as e:
+                print(f"[GUI]     Note: Could not click timefast ({e})")
+
+            # Change 2: Adjust trigger threshold using threshold slider
+            try:
+                print("[GUI]   - Setting trigger threshold slider to 128...")
+                threshold_slider = self.main_window.child_window(auto_id="threshold", control_type="Slider")
+                if threshold_slider.exists():
+                    threshold_slider.set_value(128)
                     time.sleep(self.action_wait)
             except Exception as e:
-                print(f"[GUI]     Note: Could not set downsample ({e})")
+                print(f"[GUI]     Note: Could not set threshold slider ({e})")
 
-            # Example 2: Try to change trigger level via slider or spinbox
+            # Change 3: Adjust trigger position using thresholdPos slider
             try:
-                print("[GUI]   - Setting trigger level...")
-                # Look for trigger level control
-                trigger_spin = self.main_window.child_window(auto_id="triggerLevelSpin", control_type="Spinner")
-                if trigger_spin.exists():
-                    trigger_spin.set_value(50)
+                print("[GUI]   - Setting trigger position slider to 200...")
+                pos_slider = self.main_window.child_window(auto_id="thresholdPos", control_type="Slider")
+                if pos_slider.exists():
+                    pos_slider.set_value(200)
                     time.sleep(self.action_wait)
             except Exception as e:
-                print(f"[GUI]     Note: Could not set trigger level ({e})")
+                print(f"[GUI]     Note: Could not set thresholdPos slider ({e})")
 
-            # Example 3: Try to toggle some checkboxes
+            # Change 4: Toggle persist mode checkbox (use index to disambiguate)
             try:
                 print("[GUI]   - Toggling persist mode...")
-                persist_check = self.main_window.child_window(title_re=".*Persist.*", control_type="CheckBox")
-                if persist_check.exists():
-                    persist_check.click()
+                # Get all persist checkboxes and use the first one
+                persist_checks = self.main_window.children(title_re=".*Persist.*", control_type="CheckBox")
+                if persist_checks and len(persist_checks) > 0:
+                    persist_checks[0].click()
                     time.sleep(self.action_wait)
             except Exception as e:
                 print(f"[GUI]     Note: Could not toggle persist ({e})")
 
-            # Example 4: Use keyboard shortcuts to change settings
+            # Change 5: Use keyboard shortcuts
             print("[GUI]   - Using keyboard shortcuts...")
             self.main_window.set_focus()
 
-            # Try common shortcuts (these may or may not work depending on GUI)
             # Press 'r' for run/stop
             pyautogui.press('r')
             time.sleep(self.action_wait)
@@ -278,8 +284,11 @@ class GUIController:
             return False
 
     def save_settings(self, filename: str):
-        print("Removing old",filename)
-        os.remove(filename)
+        if os.path.exists(filename):
+            os.remove(filename)
+            print(f"File '{filename}' removed successfully.")
+        else:
+            print(f"File '{filename}' does not exist.")
 
         """Save settings via File menu."""
         print(f"[GUI] Saving settings to {filename}...")
