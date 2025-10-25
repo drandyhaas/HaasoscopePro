@@ -4,14 +4,23 @@ Window capture utilities for GUI testing.
 Provides functions to find and capture screenshots of specific application windows
 rather than full-screen captures, making tests more focused and reliable.
 
-**Border Adjustment:**
-On Windows, window coordinates include an invisible border/shadow (typically 7-10 pixels)
-added by the Aero window manager. This module automatically adjusts window coordinates
-to exclude this border, capturing only the visible window content.
+**Platform-Specific Handling:**
 
-Default adjustment: 8 pixels on each side
-To customize: Use border_adjustment parameter (try 10-12 if you still see extra pixels)
-To disable: Set border_adjustment=0
+macOS:
+- Uses PyObjC/Quartz framework for native window detection
+- Requires: pip install pyobjc-framework-Quartz
+- No border adjustment needed
+
+Windows:
+- Window coordinates include an invisible border/shadow (typically 7-10 pixels)
+  added by the Aero window manager
+- Default adjustment: 8 pixels on each side
+- To customize: Use border_adjustment parameter (try 10-12 if you still see extra pixels)
+- To disable: Set border_adjustment=0
+
+Linux:
+- Uses pygetwindow if available
+- No border adjustment needed
 """
 
 import sys
@@ -32,10 +41,15 @@ def find_haasoscope_windows(border_size: int = 8) -> List[Tuple[str, Tuple[int, 
     Returns:
         List of tuples: [(window_title, (left, top, width, height)), ...]
     """
-    windows = []
+    # Use platform-specific methods
+    if sys.platform == 'darwin':
+        return _find_windows_macos()
+    elif sys.platform == 'win32':
+        return _find_windows_win32(border_size=border_size)
 
+    # Try pygetwindow for other platforms
+    windows = []
     try:
-        # Try using pygetwindow (cross-platform, but optional dependency)
         import pygetwindow as gw
 
         # Find all windows with "Haasoscope" in the title
@@ -45,24 +59,163 @@ def find_haasoscope_windows(border_size: int = 8) -> List[Tuple[str, Tuple[int, 
                 if window.visible and window.width > 0 and window.height > 0:
                     # Get raw window coordinates
                     left, top, width, height = window.left, window.top, window.width, window.height
-
-                    # Adjust for Windows shadow/border (typically 7-10 pixels on each side)
-                    if sys.platform == 'win32' and border_size > 0:
-                        left, top, width, height = _adjust_for_windows_shadow(
-                            left, top, width, height, border_size=border_size
-                        )
-
                     windows.append((window.title, (left, top, width, height)))
 
         return windows
 
+    except (ImportError, AttributeError) as e:
+        print(f"Warning: pygetwindow not available or not supported: {e}")
+        return []
+
+
+def _find_windows_macos() -> List[Tuple[str, Tuple[int, int, int, int]]]:
+    """
+    macOS-specific window enumeration using Quartz/AppKit.
+
+    Returns window info including window ID for use with screencapture.
+    Window tuple format: (title, (x, y, width, height, window_id))
+    Note: For compatibility, we return (x, y, width, height) but also store window_id separately.
+    """
+    windows = []
+
+    try:
+        from Quartz import CGWindowListCopyWindowInfo, kCGWindowListOptionOnScreenOnly, kCGNullWindowID
+        from AppKit import NSWorkspace
+
+        # Get list of all windows
+        window_list = CGWindowListCopyWindowInfo(
+            kCGWindowListOptionOnScreenOnly,
+            kCGNullWindowID
+        )
+
+        # First pass: look for explicit Haasoscope windows
+        for window in window_list:
+            # Get window info
+            window_name = window.get('kCGWindowName', '')
+            owner_name = window.get('kCGWindowOwnerName', '')
+            window_layer = window.get('kCGWindowLayer', 0)
+            window_bounds = window.get('kCGWindowBounds', {})
+            window_id = window.get('kCGWindowNumber', 0)
+
+            # Look for Haasoscope windows (by window name or owner)
+            # PyQt apps often have "Python" as owner, so check both
+            is_haasoscope = (
+                'Haasoscope' in window_name or
+                ('Python' in owner_name and window_name)  # Python process with a title
+            )
+
+            if is_haasoscope and window_layer == 0:  # Layer 0 = normal windows
+                # Get bounds
+                x = int(window_bounds.get('X', 0))
+                y = int(window_bounds.get('Y', 0))
+                width = int(window_bounds.get('Width', 0))
+                height = int(window_bounds.get('Height', 0))
+
+                if width > 100 and height > 100:  # Ignore tiny windows
+                    title = window_name if window_name else f"{owner_name} Window"
+                    # Store window_id in a global dict for later use
+                    _macos_window_ids[(title, (x, y, width, height))] = window_id
+                    windows.append((title, (x, y, width, height)))
+                    print(f"  Found window: {title} ({width}x{height} at {x},{y}) [ID: {window_id}]")
+
+        # If no explicit Haasoscope windows found, check Python windows
+        if not windows:
+            print("  No explicit Haasoscope windows found, checking Python windows...")
+            for window in window_list:
+                owner_name = window.get('kCGWindowOwnerName', '')
+                window_name = window.get('kCGWindowName', '')
+                window_layer = window.get('kCGWindowLayer', 0)
+                window_bounds = window.get('kCGWindowBounds', {})
+                window_id = window.get('kCGWindowNumber', 0)
+
+                if 'Python' in owner_name and window_layer == 0:
+                    x = int(window_bounds.get('X', 0))
+                    y = int(window_bounds.get('Y', 0))
+                    width = int(window_bounds.get('Width', 0))
+                    height = int(window_bounds.get('Height', 0))
+
+                    # Main app window is typically large
+                    if width > 500 and height > 400:
+                        title = window_name if window_name else "HaasoscopeProQt"
+                        # Store window_id in a global dict for later use
+                        _macos_window_ids[(title, (x, y, width, height))] = window_id
+                        windows.append((title, (x, y, width, height)))
+                        print(f"  Found Python window: {title} ({width}x{height} at {x},{y}) [ID: {window_id}]")
+
     except ImportError:
-        # Fallback: Use platform-specific window enumeration
-        if sys.platform == 'win32':
-            return _find_windows_win32(border_size=border_size)
-        else:
-            print("Warning: pygetwindow not available, falling back to full screen capture")
-            return []
+        print("Warning: PyObjC not available. Install with: pip install pyobjc-framework-Quartz")
+    except Exception as e:
+        print(f"Warning: Error finding macOS windows: {e}")
+
+    return windows
+
+
+# Global dict to store macOS window IDs for screencapture
+_macos_window_ids = {}
+
+
+def _capture_window_macos(title: str, region: Tuple[int, int, int, int], filepath: Path) -> bool:
+    """
+    Capture a window on macOS using the native screencapture command.
+
+    Tries multiple methods:
+    1. Window ID capture (requires Screen Recording permission)
+    2. Region-based capture using window bounds (works without permission)
+    3. Interactive mode as last resort
+
+    Args:
+        title: Window title
+        region: Window region (x, y, width, height)
+        filepath: Path to save the screenshot
+
+    Returns:
+        True if successful, False otherwise
+    """
+    import subprocess
+
+    # Look up the window ID
+    window_key = (title, region)
+    window_id = _macos_window_ids.get(window_key)
+
+    if not window_id:
+        # If window ID not found, try finding it again
+        _find_windows_macos()
+        window_id = _macos_window_ids.get(window_key)
+
+    # Method 1: Try window ID capture (best quality, but requires permission)
+    if window_id:
+        try:
+            cmd = ['screencapture', '-l', str(window_id), '-o', '-x', str(filepath)]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+
+            if result.returncode == 0 and filepath.exists():
+                return True
+            # If failed, continue to fallback methods
+        except:
+            pass
+
+    # Method 2: Region-based capture using window bounds
+    # This works without Screen Recording permission
+    try:
+        x, y, width, height = region
+        # screencapture -R takes x,y,width,height
+        cmd = ['screencapture', '-R', f'{x},{y},{width},{height}', '-x', str(filepath)]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
+
+        if result.returncode == 0 and filepath.exists():
+            # Check if the image is not empty
+            img = Image.open(filepath)
+            if img.size[0] > 0 and img.size[1] > 0:
+                return True
+
+    except subprocess.TimeoutExpired:
+        print(f"  Error: screencapture timed out")
+        return False
+    except Exception as e:
+        print(f"  Error running screencapture: {e}")
+        return False
+
+    return False
 
 
 def _adjust_for_windows_shadow(left: int, top: int, width: int, height: int,
@@ -168,13 +321,23 @@ def capture_haasoscope_windows(save_dir: Path, prefix: str = "window",
         filename = f"{prefix}_{i:02d}_{clean_title}.png"
         filepath = save_dir / filename
 
-        # Capture the window region
-        left, top, width, height = region
+        # Capture the window
         try:
-            screenshot = pyautogui.screenshot(region=(left, top, width, height))
-            screenshot.save(str(filepath))
-            screenshots.append(filepath)
-            print(f"  Captured window: {title} -> {filename}")
+            if sys.platform == 'darwin':
+                # Use macOS native screencapture for better window capture
+                success = _capture_window_macos(title, region, filepath)
+                if success:
+                    screenshots.append(filepath)
+                    print(f"  Captured window: {title} -> {filename}")
+                else:
+                    print(f"  Warning: Failed to capture {title}")
+            else:
+                # Use pyautogui for other platforms
+                left, top, width, height = region
+                screenshot = pyautogui.screenshot(region=(left, top, width, height))
+                screenshot.save(str(filepath))
+                screenshots.append(filepath)
+                print(f"  Captured window: {title} -> {filename}")
         except Exception as e:
             print(f"  Warning: Failed to capture {title}: {e}")
 
@@ -214,12 +377,23 @@ def capture_main_window_only(save_dir: Path, filename: str = "main_window.png",
         title, region = main_window
         filepath = save_dir / filename
 
-        left, top, width, height = region
         try:
-            screenshot = pyautogui.screenshot(region=(left, top, width, height))
-            screenshot.save(str(filepath))
-            print(f"  Captured main window: {title}")
-            return filepath
+            if sys.platform == 'darwin':
+                # Use macOS native screencapture
+                success = _capture_window_macos(title, region, filepath)
+                if success:
+                    print(f"  Captured main window: {title}")
+                    return filepath
+                else:
+                    print(f"  Warning: Failed to capture main window")
+                    return None
+            else:
+                # Use pyautogui for other platforms
+                left, top, width, height = region
+                screenshot = pyautogui.screenshot(region=(left, top, width, height))
+                screenshot.save(str(filepath))
+                print(f"  Captured main window: {title}")
+                return filepath
         except Exception as e:
             print(f"  Warning: Failed to capture main window: {e}")
             return None
