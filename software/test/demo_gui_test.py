@@ -14,6 +14,10 @@ No special dependencies required beyond PIL/Pillow for screenshots.
 Usage:
     cd test
     python demo_gui_test.py
+
+Configuration:
+    - Border adjustment for screenshots: Default is 8 pixels (removes Windows shadow)
+    - If screenshots show extra pixels, change BORDER_ADJUSTMENT below to 10 or 12
 """
 
 import sys
@@ -30,6 +34,7 @@ print("="*80 + "\n")
 DUMMY_SERVER_PORT = 9999
 TEST_DURATION = 10  # seconds
 SCREENSHOT_DIR = Path("demo_screenshots")
+BORDER_ADJUSTMENT = 8  # Pixels to remove from window edges (Windows shadow). Try 10-12 if still seeing extra pixels.
 
 # Create screenshot directory
 SCREENSHOT_DIR.mkdir(exist_ok=True)
@@ -124,7 +129,8 @@ try:
     screenshot_dir.mkdir(exist_ok=True, parents=True)
 
     # Capture all HaasoscopeProQt windows (main window and any child windows)
-    screenshots = capture_haasoscope_windows(screenshot_dir, prefix="demo")
+    screenshots = capture_haasoscope_windows(screenshot_dir, prefix="demo",
+                                             border_adjustment=BORDER_ADJUSTMENT)
 
     if screenshots:
         print(f"  ✓ {len(screenshots)} screenshot(s) saved to: {screenshot_dir}")

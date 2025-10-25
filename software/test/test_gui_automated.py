@@ -50,6 +50,7 @@ class TestConfig:
     BASELINE_DIR = "test_screenshots/baseline"
     WINDOW_TITLE_PATTERN = "Haasoscope*"  # Pattern to find main window
     COMPARISON_THRESHOLD = 0.05  # 5% difference allowed
+    BORDER_ADJUSTMENT = 8  # Pixels to remove from window edges (Windows shadow). Try 10-12 if still seeing extra pixels.
 
 
 class DummyServerManager:
@@ -103,10 +104,12 @@ class DummyServerManager:
 class ScreenshotManager:
     """Manages screenshots and comparisons."""
 
-    def __init__(self, screenshot_dir: str, baseline_dir: str, verbose: bool = False):
+    def __init__(self, screenshot_dir: str, baseline_dir: str, verbose: bool = False,
+                 border_adjustment: int = 8):
         self.screenshot_dir = Path(screenshot_dir)
         self.baseline_dir = Path(baseline_dir)
         self.verbose = verbose
+        self.border_adjustment = border_adjustment
         self.screenshot_dir.mkdir(exist_ok=True)
         self.baseline_dir.mkdir(exist_ok=True)
         self.screenshots = {}
@@ -125,7 +128,8 @@ class ScreenshotManager:
             from window_capture import capture_haasoscope_windows as capture_windows
 
             # Capture all windows
-            screenshots = capture_windows(self.screenshot_dir, prefix=name)
+            screenshots = capture_windows(self.screenshot_dir, prefix=name,
+                                         border_adjustment=self.border_adjustment)
 
             # Store the first screenshot with the given name for baseline comparison
             if screenshots:
@@ -229,7 +233,8 @@ class GUIAutomatedTest:
         self.screenshot_manager = ScreenshotManager(
             config.SCREENSHOT_DIR,
             config.BASELINE_DIR,
-            verbose=verbose
+            verbose=verbose,
+            border_adjustment=config.BORDER_ADJUSTMENT
         )
         self.test_results = []
 

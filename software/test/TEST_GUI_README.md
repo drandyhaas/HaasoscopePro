@@ -283,8 +283,18 @@ The `window_capture.py` module provides:
 - `find_haasoscope_windows()` - Locate all HaasoscopeProQt windows
 - `capture_haasoscope_windows()` - Capture all windows as separate images
 - `capture_main_window_only()` - Capture just the main window
+- **Automatic border adjustment** - Excludes Windows Aero shadow (default: 8 pixels per side)
 - Cross-platform support (uses `pygetwindow` or platform-specific APIs)
 - Automatic fallback to full-screen if window detection fails
+
+**Border Adjustment (Windows):**
+
+Windows adds an invisible border/shadow around windows (7-10 pixels). The module automatically removes this:
+- Default: 8 pixels removed from each side
+- Customizable: `capture_haasoscope_windows(save_dir, border_adjustment=10)`
+- Disable: `capture_haasoscope_windows(save_dir, border_adjustment=0)`
+
+If you still see extra pixels in screenshots, try increasing to 10 or 12.
 
 Screenshot comparison:
 - Pixel-by-pixel difference calculation
@@ -547,13 +557,20 @@ for title, region in windows:
     print(f"{title}: {region}")
 ```
 
-**`capture_haasoscope_windows(save_dir, prefix="window")`**
+**`capture_haasoscope_windows(save_dir, prefix="window", border_adjustment=8)`**
 ```python
 from window_capture import capture_haasoscope_windows
 from pathlib import Path
 
-# Captures all HaasoscopeProQt windows
+# Captures all HaasoscopeProQt windows (default: 8-pixel border adjustment)
 screenshots = capture_haasoscope_windows(Path("screenshots"), prefix="test")
+
+# If you still see extra pixels, increase the border adjustment:
+screenshots = capture_haasoscope_windows(Path("screenshots"), prefix="test", border_adjustment=10)
+
+# To disable border adjustment (capture full window including shadow):
+screenshots = capture_haasoscope_windows(Path("screenshots"), prefix="test", border_adjustment=0)
+
 # Returns list of Path objects for saved screenshots
 ```
 

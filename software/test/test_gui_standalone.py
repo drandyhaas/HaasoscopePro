@@ -34,6 +34,7 @@ class TestConfig:
     SCREENSHOT_DIR = "test_screenshots"
     BASELINE_DIR = "test_screenshots/baseline"
     TEST_DURATION = 10.0  # seconds to run tests
+    BORDER_ADJUSTMENT = 8  # Pixels to remove from window edges (Windows shadow). Try 10-12 if still seeing extra pixels.
 
 
 class DummyServerManager:
@@ -237,7 +238,8 @@ class GUITestRunner:
             test_run_dir.mkdir(exist_ok=True)
 
             # Capture all HaasoscopeProQt windows (main window and any child windows)
-            screenshots = capture_haasoscope_windows(test_run_dir, prefix="test")
+            screenshots = capture_haasoscope_windows(test_run_dir, prefix="test",
+                                                    border_adjustment=self.config.BORDER_ADJUSTMENT)
 
             if screenshots:
                 print(f"[TEST] {len(screenshots)} screenshot(s) saved to: {test_run_dir}")

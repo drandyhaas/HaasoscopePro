@@ -204,6 +204,15 @@ pip install pyautogui pillow pygetwindow
 - On Linux, ensure X11 is available (pygetwindow requires X11)
 - Tests will automatically fall back to full-screen capture if window detection fails
 
+**Problem: Screenshots still show extra pixels around the window**
+- The default border adjustment is 8 pixels (removes Windows Aero shadow)
+- If you still see extra pixels, the shadow might be larger on your system
+- To test different values, run: `python -m window_capture` (with GUI open)
+- To increase adjustment in your test scripts, modify the capture call:
+  ```python
+  capture_haasoscope_windows(save_dir, border_adjustment=10)  # Try 10, 12, etc.
+  ```
+
 ## 📚 More Information
 
 - **Full documentation:** `TEST_GUI_README.md` (in this directory)
