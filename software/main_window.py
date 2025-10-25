@@ -1078,6 +1078,7 @@ class MainWindow(TemplateBaseClass):
                 self.ui.offsetBox.stepDown()
         if event.key() == QtCore.Qt.Key_Left: self.time_slow()
         if event.key() == QtCore.Qt.Key_Right: self.time_fast()
+        if event.key() == QtCore.Qt.Key_R: self.dostartstop()
 
     def eventFilter(self, obj, event):
         """Event filter to make chanColor clickable."""
