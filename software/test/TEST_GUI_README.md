@@ -18,6 +18,8 @@ Three test scripts are provided, each with different capabilities and complexity
 cd software/test
 ```
 
+**Note:** All test scripts automatically start the dummy server in **deterministic mode** (`--no-noise` flag) to ensure reproducible, consistent test results. This eliminates randomness in waveforms for reliable screenshot comparison and automated testing.
+
 ### 1. Install Test Dependencies
 
 ```bash
@@ -212,12 +214,30 @@ All tests use the dummy oscilloscope server located in `dummy_scope/dummy_server
 - Responds to all opcodes (0-12)
 - Supports trigger simulation
 - Runs on TCP socket (default port 9999)
+- **Supports deterministic mode with `--no-noise` flag** for reproducible testing
 
 The dummy server allows testing without hardware by providing:
 - Configurable waveform generation
 - Trigger position tracking
 - Multi-channel simulation
 - Realistic timing and data flow
+
+#### Deterministic Mode for Testing
+
+**Strongly recommended** for automated testing and screenshot comparison:
+
+```bash
+python ../dummy_scope/dummy_server.py --no-noise --port 9999
+```
+
+With `--no-noise`, the dummy server provides:
+- ✓ Zero random noise (clean, reproducible signals)
+- ✓ Fixed starting phase (always 0.0 radians)
+- ✓ Fixed pulse amplitudes (uses average of min/max)
+- ✓ Fixed pulse positions (no timing jitter)
+- ✓ Identical output for identical settings
+
+This eliminates all sources of randomness, making screenshot comparison tests reliable and deterministic. **All test scripts should use this flag** to ensure consistent test results.
 
 ### Screenshot Management
 
@@ -407,10 +427,12 @@ jobs:
 ### Issue: Screenshot comparison always fails
 
 **Solution:**
-- Waveforms change each frame, causing differences
-- Increase comparison threshold: `COMPARISON_THRESHOLD = 0.10` (10%)
+- **All test scripts now automatically use `--no-noise` for deterministic outputs**
+- This removes randomness in waveforms, making comparisons reliable
+- If still failing, increase comparison threshold: `COMPARISON_THRESHOLD = 0.10` (10%)
 - Take screenshots at stable UI states (not during active acquisition)
 - Use specific widget screenshots instead of full window
+- Verify the dummy server is running in deterministic mode (check console output)
 
 ### Issue: pywinauto can't find windows
 

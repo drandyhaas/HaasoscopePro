@@ -17,10 +17,11 @@ from typing import Dict, Tuple
 class DummyOscilloscopeServer:
     """Minimal simulated oscilloscope board responding to HaasoscopePro commands."""
 
-    def __init__(self, host: str = "localhost", port: int = 9998, firmware_version: int = 0):
+    def __init__(self, host: str = "localhost", port: int = 9998, firmware_version: int = 0, noise_enabled: bool = True):
         self.host = host
         self.port = port
         self.firmware_version = firmware_version
+        self.noise_enabled = noise_enabled
         self.running = False
         self.server_socket = None
         self.clients: Dict[socket.socket, str] = {}
@@ -100,6 +101,7 @@ class DummyOscilloscopeServer:
             self.server_socket.listen(5)
             print(f"[DUMMY SERVER] Listening on {self.host}:{self.port}")
             print(f"[DUMMY SERVER] Firmware version: {self.firmware_version}")
+            print(f"[DUMMY SERVER] Noise: {'enabled' if self.noise_enabled else 'DISABLED (deterministic mode)'}")
 
             while self.running:
                 try:
@@ -369,13 +371,18 @@ class DummyOscilloscopeServer:
         offset = self.board_state["channel_offset"][channel]
 
         # Noise parameters
-        noise_rms = 0.01 * amplitude  # 1% RMS noise
+        if self.noise_enabled:
+            noise_rms = 0.01 * amplitude  # 1% RMS noise
 
-        # Reduce noise for high-res mode (simulates averaging without actually averaging)
-        if highres == 1 and downsample_factor > 1:
-            noise_rms_effective = noise_rms / math.sqrt(downsample_factor)
+            # Reduce noise for high-res mode (simulates averaging without actually averaging)
+            if highres == 1 and downsample_factor > 1:
+                noise_rms_effective = noise_rms / math.sqrt(downsample_factor)
+            else:
+                noise_rms_effective = noise_rms
         else:
-            noise_rms_effective = noise_rms
+            # No noise in deterministic mode
+            noise_rms = 0.0
+            noise_rms_effective = 0.0
 
         # Calculate period in samples
         sample_rate_hz = sample_rate * 1e9  # Convert GS/s to Hz
@@ -385,14 +392,23 @@ class DummyOscilloscopeServer:
 
         # For pulse waveforms, generate random pulses
         if wave_type == "pulse":
-            # Random pulse amplitude for this event
-            pulse_amp = random.uniform(config["pulse_amplitude_min"], config["pulse_amplitude_max"])
+            # Random pulse amplitude for this event (or fixed in deterministic mode)
+            if self.noise_enabled:
+                pulse_amp = random.uniform(config["pulse_amplitude_min"], config["pulse_amplitude_max"])
+            else:
+                # Use average amplitude for deterministic mode
+                pulse_amp = (config["pulse_amplitude_min"] + config["pulse_amplitude_max"]) / 2.0
+
             tau_rise = config["pulse_tau_rise"]
             tau_decay = config["pulse_tau_decay"]
 
             # Place pulse at a random position in the waveform, but ensure it's visible
             # For triggered events, center it roughly in the middle
-            pulse_t0 = num_samples * 0.4 + random.uniform(-num_samples * 0.1, num_samples * 0.1)
+            if self.noise_enabled:
+                pulse_t0 = num_samples * 0.4 + random.uniform(-num_samples * 0.1, num_samples * 0.1)
+            else:
+                # Fixed position in deterministic mode
+                pulse_t0 = num_samples * 0.4
 
             for i in range(num_samples):
                 if downsample_factor == 1 or highres == 1:
@@ -660,7 +676,11 @@ class DummyOscilloscopeServer:
         buffer_size = max(basic_buffer_size, trigger_pos_samples + min_search_buffer)
 
         # Generate waveform buffer at full rate (3.2 GS/s) with random starting phase
-        start_phase = random.uniform(0, 2 * math.pi)
+        # In deterministic mode (no noise), use fixed phase for reproducible outputs
+        if self.noise_enabled:
+            start_phase = random.uniform(0, 2 * math.pi)
+        else:
+            start_phase = 0.0  # Fixed phase for deterministic mode
         wave_buffer = self._generate_wave_buffer(buffer_size, start_phase)
 
         # Find trigger point in the buffer, but only search after we have enough pre-trigger samples
@@ -675,10 +695,13 @@ class DummyOscilloscopeServer:
             if start_index < 0:
                 start_index = 0
         else:
-            # No trigger found - use random phase
+            # No trigger found - use random phase (or fixed in deterministic mode)
             max_start = buffer_size - total_adc_samples_needed
             if max_start > 0:
-                start_index = random.randint(0, max_start)
+                if self.noise_enabled:
+                    start_index = random.randint(0, max_start)
+                else:
+                    start_index = 0  # Fixed start for deterministic mode
             else:
                 start_index = 0
 
@@ -1015,13 +1038,19 @@ def main():
         default=1000031,
         help="Firmware version as decimal"
     )
+    parser.add_argument(
+        "--no-noise",
+        action="store_true",
+        help="Disable noise for deterministic outputs (useful for testing)"
+    )
 
     args = parser.parse_args()
 
     server = DummyOscilloscopeServer(
         host=args.host,
         port=args.port,
-        firmware_version=args.version
+        firmware_version=args.version,
+        noise_enabled=not args.no_noise
     )
 
     try:

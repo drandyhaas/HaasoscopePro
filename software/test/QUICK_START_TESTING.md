@@ -48,6 +48,8 @@ chmod +x run_gui_tests.sh
 
 ### Step 3: Try the Full Tests
 
+**Important:** For deterministic, reproducible test results (recommended for automated testing and screenshot comparison), use the `--no-noise` flag when starting the dummy server.
+
 **Create baseline screenshots:**
 ```bash
 python test_gui_automated.py --baseline --verbose
@@ -55,6 +57,14 @@ python test_gui_automated.py --baseline --verbose
 
 **Run tests and compare:**
 ```bash
+python test_gui_automated.py --verbose
+```
+
+**For deterministic testing (recommended):**
+```bash
+# The test scripts automatically use --no-noise for the dummy server
+# This ensures identical waveforms across test runs for reliable screenshot comparison
+python test_gui_automated.py --baseline --verbose
 python test_gui_automated.py --verbose
 ```
 
@@ -169,9 +179,11 @@ pytest test_gui.py -v --html=report.html
 - Run HaasoscopeProQt.py manually first to verify it works
 
 **Problem: "Screenshots always fail comparison"**
-- This is normal! Waveforms change constantly
-- Increase threshold in code or take screenshots at stable states
-- Compare UI elements, not waveform data
+- Solution: Use deterministic mode with `--no-noise` flag
+- The test scripts should automatically start the dummy server with `--no-noise`
+- This removes randomness: no noise, fixed phase, fixed pulse amplitudes
+- If still failing, increase threshold in code or verify dummy server is using --no-noise
+- For manual testing: `python ../dummy_scope/dummy_server.py --no-noise --port 9999`
 
 **Problem: "pyautogui not found"**
 ```bash

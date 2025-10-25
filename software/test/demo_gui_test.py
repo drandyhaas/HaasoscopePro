@@ -42,14 +42,17 @@ print()
 
 # Step 1: Start dummy server
 print("[1/5] Starting dummy server...")
+print("  Using --no-noise flag for deterministic, reproducible waveforms")
 dummy_server_path = Path(__file__).parent.parent / "dummy_scope" / "dummy_server.py"
 
 if not dummy_server_path.exists():
     print(f"ERROR: Dummy server not found at {dummy_server_path}")
     sys.exit(1)
 
+# Start dummy server with --no-noise for deterministic testing
+# This removes randomness: no noise, fixed phase, fixed pulse amplitudes
 server_process = subprocess.Popen(
-    [sys.executable, str(dummy_server_path), "--port", str(DUMMY_SERVER_PORT)],
+    [sys.executable, str(dummy_server_path), "--port", str(DUMMY_SERVER_PORT), "--no-noise"],
     stdout=subprocess.PIPE,
     stderr=subprocess.PIPE,
     creationflags=subprocess.CREATE_NEW_CONSOLE if sys.platform == "win32" else 0
