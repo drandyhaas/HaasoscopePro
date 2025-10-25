@@ -270,11 +270,28 @@ Screenshots are saved to:
 - **Baselines:** `test_screenshots/baseline/`
 - **Differences:** `test_screenshots/diff_*.png`
 
+**Window-Specific Capture:**
+
+All test scripts now capture **only HaasoscopeProQt windows** instead of the full screen:
+- ✓ Finds all windows with "Haasoscope" in the title
+- ✓ Captures main window separately
+- ✓ Captures child windows (FFT, XY, Histogram, etc.) individually
+- ✓ Avoids capturing unrelated desktop elements
+- ✓ More reliable comparisons (no background variations)
+
+The `window_capture.py` module provides:
+- `find_haasoscope_windows()` - Locate all HaasoscopeProQt windows
+- `capture_haasoscope_windows()` - Capture all windows as separate images
+- `capture_main_window_only()` - Capture just the main window
+- Cross-platform support (uses `pygetwindow` or platform-specific APIs)
+- Automatic fallback to full-screen if window detection fails
+
 Screenshot comparison:
 - Pixel-by-pixel difference calculation
 - Configurable threshold (default 5%)
 - Visual diff images for debugging
 - Automatic baseline creation on first run
+- Window-specific comparisons eliminate desktop noise
 
 ### Test Configuration
 
@@ -494,6 +511,7 @@ HaasoscopePro/software/
 │   ├── test_gui_standalone.py       # Simple standalone test
 │   ├── test_gui_automated.py        # Automated test with comparison
 │   ├── demo_gui_test.py             # Quick demo test
+│   ├── window_capture.py            # Window-specific screenshot utilities
 │   ├── test_requirements.txt        # Test dependencies
 │   ├── TEST_GUI_README.md           # This file
 │   ├── QUICK_START_TESTING.md       # Quick start guide
@@ -512,6 +530,61 @@ HaasoscopePro/software/
 │
 └── HaasoscopeProQt.py               # Main application
 ```
+
+## Window Capture Module
+
+The `window_capture.py` module provides utilities for capturing screenshots of specific application windows instead of the full screen.
+
+### Key Functions
+
+**`find_haasoscope_windows()`**
+```python
+from window_capture import find_haasoscope_windows
+
+# Returns list of (title, (left, top, width, height)) tuples
+windows = find_haasoscope_windows()
+for title, region in windows:
+    print(f"{title}: {region}")
+```
+
+**`capture_haasoscope_windows(save_dir, prefix="window")`**
+```python
+from window_capture import capture_haasoscope_windows
+from pathlib import Path
+
+# Captures all HaasoscopeProQt windows
+screenshots = capture_haasoscope_windows(Path("screenshots"), prefix="test")
+# Returns list of Path objects for saved screenshots
+```
+
+**`capture_main_window_only(save_dir, filename="main_window.png")`**
+```python
+from window_capture import capture_main_window_only
+from pathlib import Path
+
+# Captures only the main window
+screenshot_path = capture_main_window_only(Path("screenshots"))
+```
+
+### How It Works
+
+1. **Window Detection**: Uses `pygetwindow` (cross-platform) or `win32gui` (Windows) to find windows with "Haasoscope" in the title
+2. **Region Capture**: Gets window coordinates and uses `pyautogui.screenshot(region=...)` to capture each window
+3. **Fallback**: If no windows found or detection fails, automatically falls back to full-screen capture
+4. **Multiple Windows**: Captures main window and all child windows (FFT, XY, Histogram, etc.) separately
+
+### Benefits
+
+- **Focused Testing**: Only captures relevant windows, not desktop background
+- **Reliable Comparisons**: Eliminates variations from unrelated screen elements
+- **Better Organization**: Each window saved as separate file for easy inspection
+- **Reduced False Positives**: Desktop changes don't affect test results
+
+### Platform Support
+
+- **Windows**: Full support via `pygetwindow` or `win32gui`
+- **Linux**: Full support via `pygetwindow` with X11
+- **macOS**: Supported via `pygetwindow` (requires accessibility permissions)
 
 ## Next Steps
 

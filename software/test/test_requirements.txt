@@ -14,6 +14,7 @@ pywinauto>=0.6.8; sys_platform == 'win32'
 
 # Screen capture and automation
 pyautogui>=0.9.53
+pygetwindow>=0.0.9  # For window-specific screenshot capture
 python-xlib>=0.31; sys_platform == 'linux'
 
 # Optional: Advanced image comparison

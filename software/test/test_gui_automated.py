@@ -111,8 +111,38 @@ class ScreenshotManager:
         self.baseline_dir.mkdir(exist_ok=True)
         self.screenshots = {}
 
+    def capture_haasoscope_windows(self, name: str = "screen") -> List[Path]:
+        """
+        Capture all HaasoscopeProQt windows (main window and child windows).
+
+        Args:
+            name: Base name for the screenshot files
+
+        Returns:
+            List of paths to captured screenshots
+        """
+        try:
+            from window_capture import capture_haasoscope_windows as capture_windows
+
+            # Capture all windows
+            screenshots = capture_windows(self.screenshot_dir, prefix=name)
+
+            # Store the first screenshot with the given name for baseline comparison
+            if screenshots:
+                self.screenshots[name] = screenshots[0]
+                if self.verbose:
+                    print(f"[SCREENSHOT] Captured {len(screenshots)} window(s)")
+
+            return screenshots
+
+        except Exception as e:
+            if self.verbose:
+                print(f"[SCREENSHOT] Warning: Window capture failed, using full screen: {e}")
+            # Fallback to full screen
+            return [self.capture_screen_region(name=name)]
+
     def capture_screen_region(self, region=None, name: str = "screen") -> Path:
-        """Capture a screenshot of the screen or a region."""
+        """Capture a screenshot of the screen or a region (fallback method)."""
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{timestamp}_{name}.png"
         filepath = self.screenshot_dir / filename
@@ -125,12 +155,6 @@ class ScreenshotManager:
             print(f"[SCREENSHOT] Saved: {filename}")
 
         return filepath
-
-    def capture_window(self, window_handle, name: str) -> Path:
-        """Capture a specific window."""
-        # Use pyautogui to capture the window region
-        # Note: pywinauto can get window coordinates
-        return self.capture_screen_region(name=name)
 
     def compare_images(self, img1_path: Path, img2_path: Path) -> Dict:
         """Compare two images pixel by pixel."""
@@ -278,8 +302,8 @@ class GUIAutomatedTest:
         test_name = "initial_state"
         self.log(f"Running test: {test_name}")
 
-        # Take screenshot of initial state
-        self.screenshot_manager.capture_screen_region(name="01_initial_state")
+        # Take screenshot of initial state (captures all HaasoscopeProQt windows)
+        self.screenshot_manager.capture_haasoscope_windows(name="01_initial_state")
 
         # If baseline mode, save as baseline
         if self.create_baseline:
@@ -308,8 +332,8 @@ class GUIAutomatedTest:
         # Wait a bit for data to flow
         time.sleep(2.0)
 
-        # Take screenshot
-        self.screenshot_manager.capture_screen_region(name="02_gui_running")
+        # Take screenshot (captures all HaasoscopeProQt windows)
+        self.screenshot_manager.capture_haasoscope_windows(name="02_gui_running")
 
         if self.create_baseline:
             self.screenshot_manager.save_as_baseline("02_gui_running")
@@ -340,9 +364,9 @@ class GUIAutomatedTest:
             return result
 
         # This would require knowing the exact menu structure
-        # For now, just take a screenshot
+        # For now, just take a screenshot (captures all HaasoscopeProQt windows)
         time.sleep(1.0)
-        self.screenshot_manager.capture_screen_region(name="03_menus")
+        self.screenshot_manager.capture_haasoscope_windows(name="03_menus")
 
         result = {"test": test_name, "status": "manual_verification_required"}
         self.test_results.append(result)

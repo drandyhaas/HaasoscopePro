@@ -117,20 +117,26 @@ print()
 print("[4/5] Taking screenshot...")
 
 try:
-    import pyautogui
+    from window_capture import capture_haasoscope_windows
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    screenshot_path = SCREENSHOT_DIR / f"demo_{timestamp}.png"
+    screenshot_dir = SCREENSHOT_DIR / timestamp
+    screenshot_dir.mkdir(exist_ok=True, parents=True)
 
-    screenshot = pyautogui.screenshot()
-    screenshot.save(str(screenshot_path))
+    # Capture all HaasoscopeProQt windows (main window and any child windows)
+    screenshots = capture_haasoscope_windows(screenshot_dir, prefix="demo")
 
-    print(f"  ✓ Screenshot saved: {screenshot_path}")
+    if screenshots:
+        print(f"  ✓ {len(screenshots)} screenshot(s) saved to: {screenshot_dir}")
+        for screenshot_path in screenshots:
+            print(f"    - {screenshot_path.name}")
+    else:
+        print("  ⚠ No screenshots captured")
     print()
 
-except ImportError:
-    print("  ⚠ pyautogui not installed, skipping screenshot")
-    print("  Install with: pip install pyautogui")
+except ImportError as e:
+    print(f"  ⚠ Required module not installed: {e}")
+    print("  Install with: pip install pyautogui pygetwindow")
     print()
 
 # Step 5: Clean up
@@ -170,12 +176,13 @@ print(" TEST COMPLETE")
 print("="*80)
 print()
 print("Summary:")
-print(f"  • Dummy server ran successfully")
-print(f"  • GUI launched and ran for {TEST_DURATION} seconds")
-print(f"  • Screenshot saved to: {SCREENSHOT_DIR}")
+print(f"  • Dummy server ran successfully (deterministic mode)")
+print(f"  • GUI launched and ran for {TEST_DURATION} seconds (testing mode)")
+print(f"  • Screenshots saved to: {SCREENSHOT_DIR}")
+print(f"  • Captured HaasoscopeProQt windows only (not full screen)")
 print()
 print("Next steps:")
-print("  1. Review the screenshot to verify GUI appearance")
+print("  1. Review the screenshots to verify GUI appearance")
 print("  2. Try the full test scripts:")
 print("     - python test_gui_standalone.py")
 print("     - python test_gui_automated.py --baseline")

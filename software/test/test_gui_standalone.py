@@ -219,29 +219,36 @@ class GUITestRunner:
         print("[TEST] Interaction test period completed")
 
     def take_screenshots_external(self):
-        """Take screenshots using external tools."""
+        """Take screenshots of HaasoscopeProQt windows."""
         if not self.take_screenshots:
             return
 
         print("[TEST] Taking screenshots...")
 
-        # On Windows, we can use pyautogui or similar
-        # For now, just note that screenshots should be taken
-        print("[TEST] Note: For automated screenshots of subprocess windows, install:")
-        print("  pip install pyautogui pillow")
-        print("  Then use pyautogui.screenshot() to capture the screen")
-
         try:
-            import pyautogui
-            screenshot = pyautogui.screenshot()
+            from window_capture import capture_haasoscope_windows
+
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             screenshot_path = Path(self.config.SCREENSHOT_DIR)
             screenshot_path.mkdir(exist_ok=True)
-            filepath = screenshot_path / f"{timestamp}_full_screen.png"
-            screenshot.save(str(filepath))
-            print(f"[TEST] Full screen screenshot saved: {filepath}")
-        except ImportError:
-            print("[TEST] pyautogui not installed, skipping automated screenshots")
+
+            # Create subdirectory for this test run
+            test_run_dir = screenshot_path / timestamp
+            test_run_dir.mkdir(exist_ok=True)
+
+            # Capture all HaasoscopeProQt windows (main window and any child windows)
+            screenshots = capture_haasoscope_windows(test_run_dir, prefix="test")
+
+            if screenshots:
+                print(f"[TEST] {len(screenshots)} screenshot(s) saved to: {test_run_dir}")
+                for filepath in screenshots:
+                    print(f"  - {filepath.name}")
+            else:
+                print("[TEST] No screenshots captured")
+
+        except ImportError as e:
+            print(f"[TEST] Required module not installed: {e}")
+            print("[TEST] Install with: pip install pyautogui pygetwindow")
             print("[TEST] Please take manual screenshots for verification")
 
     def cleanup(self):

@@ -13,13 +13,15 @@ cd software/test
 ### Step 1: Install Dependencies
 
 ```bash
-pip install pillow pyautogui
+pip install pillow pyautogui pygetwindow
 ```
 
 For full testing capabilities:
 ```bash
 pip install -r test_requirements.txt
 ```
+
+**Note:** `pygetwindow` is used for window-specific screenshot capture (only captures HaasoscopeProQt windows, not the full screen).
 
 ### Step 2: Run the Demo
 
@@ -93,10 +95,10 @@ python test_gui_automated.py --verbose
 python demo_gui_test.py
 ```
 
-- Starts dummy server on port 9999
-- Launches HaasoscopeProQt GUI
+- Starts dummy server on port 9999 (with --no-noise for deterministic output)
+- Launches HaasoscopeProQt GUI (with --testing for stable status bar)
 - Runs for 8 seconds
-- Takes a screenshot
+- Takes screenshots of HaasoscopeProQt windows only (not full screen)
 - Cleans up automatically
 - **No pytest needed, minimal dependencies**
 
@@ -171,6 +173,8 @@ pytest test_gui.py -v --html=report.html
 - **Differences:** `test_screenshots/diff_*.png`
 - **Demo:** `demo_screenshots/`
 
+**Note:** All screenshots now capture **only HaasoscopeProQt windows** (main window and child windows like FFT, XY, Histogram, etc.), not the full screen. This makes tests more reliable by eliminating background variations.
+
 ## ❓ Troubleshooting
 
 **Problem: "Dummy server not found"**
@@ -189,10 +193,16 @@ pytest test_gui.py -v --html=report.html
 - If still failing, increase threshold in code or verify dummy server is using --no-noise
 - For manual testing: `python ../dummy_scope/dummy_server.py --no-noise --port 9999`
 
-**Problem: "pyautogui not found"**
+**Problem: "pyautogui not found" or "pygetwindow not found"**
 ```bash
-pip install pyautogui pillow
+pip install pyautogui pillow pygetwindow
 ```
+
+**Problem: "No windows found" in screenshots**
+- Ensure HaasoscopeProQt GUI is running before taking screenshots
+- Check that window title contains "Haasoscope"
+- On Linux, ensure X11 is available (pygetwindow requires X11)
+- Tests will automatically fall back to full-screen capture if window detection fails
 
 ## 📚 More Information
 
