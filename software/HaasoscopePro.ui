@@ -2506,7 +2506,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="checked">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="text">
     <string>Mean</string>
@@ -2517,7 +2517,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="checked">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="text">
     <string>RMS</string>
@@ -2547,7 +2547,7 @@ Outlined if triggering on this channel</string>
     <bool>true</bool>
    </property>
    <property name="checked">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="text">
     <string>ADC temperature</string>
