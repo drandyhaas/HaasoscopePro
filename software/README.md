@@ -70,6 +70,30 @@ python HaasoscopeProQt.py --help
 
 See [dummy_scope/README.md](dummy_scope/README.md) for detailed dummy server documentation.
 
+## Keyboard Shortcuts
+
+The GUI supports keyboard shortcuts for quick control adjustments:
+
+| Shortcut | Function |
+|----------|----------|
+| **Arrow Keys** | |
+| `Left` / `Right` | Decrease / Increase time scale (downsample) |
+| `Up` / `Down` | Increase / Decrease offset |
+| **Shift + Arrow Keys** | |
+| `Shift+Up` / `Shift+Down` | Increase / Decrease gain |
+| **Ctrl + Arrow Keys** | |
+| `Ctrl+Up` / `Ctrl+Down` | Increase / Decrease trigger threshold |
+| `Ctrl+Left` / `Ctrl+Right` | Decrease / Increase trigger position |
+| **Alt + Arrow Keys** | |
+| `Alt+Up` / `Alt+Down` | Increase / Decrease trigger delta |
+| **Other Keys** | |
+| `R` | Toggle run/stop |
+
+**Tips:**
+- Arrow keys provide quick navigation without reaching for the mouse
+- Modifier keys (Shift/Ctrl/Alt) access additional functions on the same arrow keys
+- All shortcuts work when the main window has focus
+
 ## Code Architecture
 
 This diagram shows the software architecture with all major components, data flows, and relationships.

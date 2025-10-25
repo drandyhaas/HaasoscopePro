@@ -213,70 +213,86 @@ class GUIController:
     def change_settings(self):
         """
         Change various GUI settings to create a different configuration.
-        This simulates user interaction.
+        Uses keyboard shortcuts that are handled by keyPressEvent in main_window.py:
+        - Left/Right arrow: time_slow()/time_fast() - changes downsample
+        - Up/Down arrow: offset up/down
+        - Shift+Up/Down: gain up/down
+        - Ctrl+Up/Down: trigger threshold up/down
+        - Ctrl+Left/Right: trigger position left/right
+        - Alt+Up/Down: trigger delta up/down
+        - R: start/stop
         """
-        print("[GUI] Changing settings...")
+        print("[GUI] Changing settings via keyboard shortcuts...")
 
         try:
             # Give window focus
             self.main_window.set_focus()
             time.sleep(self.action_wait)
 
-            # Change 1: Adjust time scale using timefast button (increases downsample)
-            try:
-                print("[GUI]   - Clicking timefast button (3 times)...")
-                timefast_btn = self.main_window.child_window(auto_id="timefast", control_type="Button")
-                if timefast_btn.exists():
-                    for i in range(3):
-                        timefast_btn.click()
-                        time.sleep(self.action_wait * 0.5)
-            except Exception as e:
-                print(f"[GUI]     Note: Could not click timefast ({e})")
+            # Change 1: Increase time scale (downsample) using Right arrow key
+            print("[GUI]   - Pressing Right arrow 5 times (time_fast - increase downsample)...")
+            for i in range(5):
+                pyautogui.press('right')
+                time.sleep(0.2)
+            time.sleep(self.action_wait)
 
-            # Change 2: Adjust trigger threshold using threshold slider
-            try:
-                print("[GUI]   - Setting trigger threshold slider to 128...")
-                threshold_slider = self.main_window.child_window(auto_id="threshold", control_type="Slider")
-                if threshold_slider.exists():
-                    threshold_slider.set_value(128)
-                    time.sleep(self.action_wait)
-            except Exception as e:
-                print(f"[GUI]     Note: Could not set threshold slider ({e})")
+            # Change 2: Adjust gain using Shift+Up
+            print("[GUI]   - Pressing Shift+Up 3 times (increase gain)...")
+            for i in range(3):
+                pyautogui.hotkey('shift', 'up')
+                time.sleep(0.2)
+            time.sleep(self.action_wait)
 
-            # Change 3: Adjust trigger position using thresholdPos slider
-            try:
-                print("[GUI]   - Setting trigger position slider to 200...")
-                pos_slider = self.main_window.child_window(auto_id="thresholdPos", control_type="Slider")
-                if pos_slider.exists():
-                    pos_slider.set_value(200)
-                    time.sleep(self.action_wait)
-            except Exception as e:
-                print(f"[GUI]     Note: Could not set thresholdPos slider ({e})")
+            # Change 3: Adjust offset using Down arrow
+            print("[GUI]   - Pressing Down arrow 5 times (decrease offset)...")
+            for i in range(5):
+                pyautogui.press('down')
+                time.sleep(0.2)
+            time.sleep(self.action_wait)
 
-            # Change 4: Toggle persist mode checkbox (use index to disambiguate)
+            # Change 4: Adjust trigger threshold using Ctrl+Up
+            print("[GUI]   - Pressing Ctrl+Up 4 times (increase trigger threshold)...")
+            for i in range(4):
+                pyautogui.hotkey('ctrl', 'up')
+                time.sleep(0.2)
+            time.sleep(self.action_wait)
+
+            # Change 5: Adjust trigger position using Ctrl+Right
+            print("[GUI]   - Pressing Ctrl+Right 3 times (increase trigger position)...")
+            for i in range(3):
+                pyautogui.hotkey('ctrl', 'right')
+                time.sleep(0.2)
+            time.sleep(self.action_wait)
+
+            # Change 6: Adjust trigger delta using Alt+Up
+            print("[GUI]   - Pressing Alt+Up 2 times (increase trigger delta)...")
+            for i in range(2):
+                pyautogui.hotkey('alt', 'up')
+                time.sleep(0.2)
+            time.sleep(self.action_wait)
+
+            # Change 7: Toggle persist mode checkbox
             try:
                 print("[GUI]   - Toggling persist mode...")
-                # Get all persist checkboxes and use the first one
-                persist_checks = self.main_window.children(title_re=".*Persist.*", control_type="CheckBox")
-                if persist_checks and len(persist_checks) > 0:
-                    persist_checks[0].click()
+                persist_check = self.main_window.child_window(title_re=".*Persist.*", control_type="CheckBox", found_index=0)
+                if persist_check.exists():
+                    persist_check.click_input()
                     time.sleep(self.action_wait)
+                    print(f"[GUI]     Toggled persist checkbox")
             except Exception as e:
                 print(f"[GUI]     Note: Could not toggle persist ({e})")
 
-            # Change 5: Use keyboard shortcuts
-            print("[GUI]   - Using keyboard shortcuts...")
-            self.main_window.set_focus()
-
-            # Press 'r' for run/stop
+            # Change 8: Toggle run/stop with 'r' key
+            print("[GUI]   - Pressing 'r' to toggle run/stop...")
             pyautogui.press('r')
             time.sleep(self.action_wait)
 
-            # Press 'r' again to toggle back
+            # Toggle back
+            print("[GUI]   - Pressing 'r' again to toggle back...")
             pyautogui.press('r')
             time.sleep(self.action_wait)
 
-            print("[GUI] Settings changed successfully")
+            print("[GUI] Settings changed successfully using keyboard shortcuts")
             return True
 
         except Exception as e:

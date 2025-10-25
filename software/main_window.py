@@ -1069,15 +1069,37 @@ class MainWindow(TemplateBaseClass):
         if event.key() == QtCore.Qt.Key_Up:
             if modifiers & QtCore.Qt.ShiftModifier:
                 self.ui.gainBox.setValue(self.ui.gainBox.value() + 1)
+            elif modifiers & QtCore.Qt.ControlModifier:
+                # Ctrl+Up: Increase trigger threshold
+                self.ui.threshold.setValue(self.ui.threshold.value() + 5)
+            elif modifiers & QtCore.Qt.AltModifier:
+                # Alt+Up: Increase trigger delta
+                self.ui.thresholdDelta.setValue(self.ui.thresholdDelta.value() + 1)
             else:
                 self.ui.offsetBox.stepUp()
         if event.key() == QtCore.Qt.Key_Down:
             if modifiers & QtCore.Qt.ShiftModifier:
                 self.ui.gainBox.setValue(self.ui.gainBox.value() - 1)
+            elif modifiers & QtCore.Qt.ControlModifier:
+                # Ctrl+Down: Decrease trigger threshold
+                self.ui.threshold.setValue(self.ui.threshold.value() - 5)
+            elif modifiers & QtCore.Qt.AltModifier:
+                # Alt+Down: Decrease trigger delta
+                self.ui.thresholdDelta.setValue(self.ui.thresholdDelta.value() - 1)
             else:
                 self.ui.offsetBox.stepDown()
-        if event.key() == QtCore.Qt.Key_Left: self.time_slow()
-        if event.key() == QtCore.Qt.Key_Right: self.time_fast()
+        if event.key() == QtCore.Qt.Key_Left:
+            if modifiers & QtCore.Qt.ControlModifier:
+                # Ctrl+Left: Decrease trigger position
+                self.ui.thresholdPos.setValue(self.ui.thresholdPos.value() - 100)
+            else:
+                self.time_slow()
+        if event.key() == QtCore.Qt.Key_Right:
+            if modifiers & QtCore.Qt.ControlModifier:
+                # Ctrl+Right: Increase trigger position
+                self.ui.thresholdPos.setValue(self.ui.thresholdPos.value() + 100)
+            else:
+                self.time_fast()
         if event.key() == QtCore.Qt.Key_R: self.dostartstop()
 
     def eventFilter(self, obj, event):
