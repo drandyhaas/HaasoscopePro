@@ -1,0 +1,23 @@
+# Testing Requirements for HaasoscopeProQt GUI Tests
+# Install with: pip install -r test_requirements.txt
+
+# Core testing framework
+pytest>=7.0.0
+pytest-qt>=4.2.0
+
+# Screenshot and image comparison
+Pillow>=9.0.0
+numpy>=1.20.0
+
+# GUI automation (Windows)
+pywinauto>=0.6.8; sys_platform == 'win32'
+
+# Screen capture and automation
+pyautogui>=0.9.53
+python-xlib>=0.31; sys_platform == 'linux'
+
+# Optional: Advanced image comparison
+opencv-python>=4.5.0
+
+# Optional: Test reporting
+pytest-html>=3.1.0
