@@ -2,6 +2,9 @@
 """
 HaasoscopeProQt Settings Save/Load Test
 
+⚠️ WINDOWS ONLY - This test requires pywinauto for GUI automation.
+   NOT supported on macOS or Linux.
+
 Comprehensive functional test that:
 1. Launches HaasoscopeProQt
 2. Changes multiple GUI settings via simulated user interaction
@@ -17,11 +20,11 @@ Usage:
     cd test
     python test_settings.py
 
-Requirements:
-    pip install pyautogui pillow pygetwindow numpy
+Requirements (Windows only):
+    pip install -r test_requirements.txt
 
-    Windows only (for GUI automation):
-    pip install pywinauto
+    Or manually:
+    pip install pyautogui pillow pygetwindow numpy pywinauto
 """
 import os
 import sys

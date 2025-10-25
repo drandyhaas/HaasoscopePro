@@ -6,20 +6,29 @@ Automated GUI testing for HaasoscopeProQt using the dummy oscilloscope server.
 
 ### 1. Install Dependencies
 
+**Option 1: Using requirements file (recommended)**
+```bash
+cd software/test
+pip install -r test_requirements.txt
+```
+
+**Option 2: Manual installation**
 ```bash
 cd software/test
 pip install pyautogui pillow numpy
 
 # Platform-specific:
-# macOS: PyObjC for window detection
+# macOS: PyObjC for window detection (test_gui.py only)
 pip install pyobjc-framework-Quartz
 
-# Windows: pygetwindow and pywinauto
+# Windows: pygetwindow and pywinauto (required for test_settings.py)
 pip install pygetwindow pywinauto
 
 # Linux: pygetwindow
 pip install pygetwindow
 ```
+
+**Note:** `test_settings.py` requires pywinauto and only works on Windows.
 
 ### 2. Run a Test
 
@@ -38,8 +47,13 @@ python test_gui.py --compare
 **Settings Save/Load Test (Comprehensive):**
 ```bash
 # Full functional test - changes settings, saves, reloads, verifies
+# NOTE: Windows only - requires pywinauto for GUI automation
 python test_settings.py
 ```
+
+**⚠️ Platform Support:**
+- `test_gui.py` - Supported on Windows, macOS, and Linux
+- `test_settings.py` - **Windows only** (requires pywinauto for GUI automation)
 
 ## Test Scripts
 
@@ -55,6 +69,8 @@ Simple screenshot-based test for quick verification:
 
 ### test_settings.py - Settings Save/Load Test
 
+**⚠️ WINDOWS ONLY - This test requires pywinauto for GUI automation and is not supported on macOS or Linux.**
+
 Comprehensive functional test that exercises the complete save/load workflow:
 
 1. **Starts HaasoscopeProQt** - Launches GUI with dummy server
@@ -69,7 +85,7 @@ Comprehensive functional test that exercises the complete save/load workflow:
 6. **Loads settings** - Uses Ctrl+O to load saved configuration
 7. **Compares screenshots** - Verifies settings were restored correctly
 
-**This is the recommended comprehensive test** as it validates actual functionality, not just appearance.
+**This is the recommended comprehensive test on Windows** as it validates actual functionality, not just appearance.
 
 ## Test Modes
 
@@ -205,9 +221,14 @@ The script returns:
 - Exit code `0` - Test passed
 - Exit code `1` - Test failed
 
-## macOS-Specific Setup
+## Platform-Specific Notes
+
+### macOS
 
 **⚠️ IMPORTANT for macOS users:**
+
+- **test_gui.py**: ✅ Supported (requires Screen Recording permission)
+- **test_settings.py**: ❌ NOT supported (requires Windows-only pywinauto library)
 
 Window capture on macOS requires **Screen Recording** permission. Without it, screenshots will only show the desktop background, not the actual window content.
 
