@@ -371,42 +371,6 @@ Same pattern as per-channel, but use `s.activeboard` instead of `s.activexychann
 - Use type hints where helpful
 - Keep UI logic in `main_window.py`, processing in separate modules
 
-## Testing
-
-### Automated GUI Testing
-
-The `test/` directory contains automated GUI testing tools:
-
-```bash
-cd test
-
-# Install test dependencies
-pip install -r test_requirements.txt
-
-# Run basic test
-python test_gui.py
-
-# Create baseline screenshots
-python test_gui.py --baseline
-
-# Run regression test (compare to baseline)
-python test_gui.py --compare
-```
-
-See [test/README.md](test/README.md) for complete testing documentation.
-
-### Manual Testing with Dummy Server
-
-For manual testing, start the dummy server and connect HaasoscopeProQt:
-
-```bash
-# Terminal 1: Start dummy server
-python dummy_scope/dummy_server.py --port 9999 --no-noise
-
-# Terminal 2: Connect HaasoscopeProQt
-python HaasoscopeProQt.py --socket localhost:9999 --testing
-```
-
 ## Troubleshooting
 
 **ImportError: No module named 'PyQt5'**
@@ -422,13 +386,7 @@ pip3 install PyQt5 pyqtgraph
 **Slow performance**
 - Reduce persistence time
 - Disable peak detect when not needed
-- Lower screen refresh rate in settings
 - Close FFT window when not in use
-
-**Settings not saving**
-- Check file permissions in application directory
-- Ensure `.hsp` file is not read-only
-- Try "Save As" to different location
 
 ## Dependencies
 
@@ -449,13 +407,6 @@ pip install -r requirements.txt
 ### Optional Dependencies
 - **requests** - For automatic update checking (gracefully degrades if not installed)
 - **packaging** - For version comparison in update checker
-
-### Testing Dependencies (optional)
-See [test/test_requirements.txt](test/test_requirements.txt) for complete list:
-- **pyautogui** - Screen capture and GUI automation
-- **Pillow** - Image processing for screenshot comparison
-- **pygetwindow** - Window-specific screenshot capture
-- **numpy** - Image comparison calculations
 
 ## License
 
