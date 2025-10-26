@@ -776,6 +776,20 @@ class PlotManager(pg.QtCore.QObject):
             if self.state.persist_heatmap_enabled[line_idx]:
                 self.heatmap_manager.remove_trace(oldest_x, oldest_y, line_idx)
 
+        # If heatmap mode is enabled, check if settings changed BEFORE adding to persist buffer
+        if self.state.persist_heatmap_enabled[line_idx]:
+            if self.heatmap_manager.check_zoom_changed(line_idx) or self.heatmap_manager.check_gain_offset_changed(line_idx):
+                # Clear all persist lines for this channel since they're in the old scale
+                for item_data in list(persist_lines):
+                    item = item_data[0]
+                    self.plot.removeItem(item)
+                persist_lines.clear()
+                # Just clear the heatmap - don't regenerate with empty data
+                # It will rebuild naturally as new traces come in
+                self.heatmap_manager.clear_for_settings_change(line_idx)
+                # Continue to add the current trace with the new scale
+                # Don't return - let it fall through to add this trace
+
         pen = self.linepens[line_idx]
         color = pen.color()
         color.setAlpha(100)
@@ -789,9 +803,8 @@ class PlotManager(pg.QtCore.QObject):
 
         # If heatmap mode is enabled, add this trace to the heatmap
         if self.state.persist_heatmap_enabled[line_idx]:
-            # Calculate ranges from all current persist lines
-            self.heatmap_manager._calculate_heatmap_ranges(line_idx, persist_lines)
-            # Add the new trace (pass persist_lines for zoom change detection)
+            # Don't recalculate ranges - use fixed ranges set during initialization
+            # This prevents rect/data mismatch that causes scaling artifacts
             self.heatmap_manager.add_trace(x, y, line_idx, persist_lines)
 
     def update_persist_effect(self):

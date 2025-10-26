@@ -27,6 +27,8 @@ class HeatmapManager:
         self.persist_heatmap_items = {}  # Dictionary: {channel_index: ImageItem}
         self.persist_heatmap_ranges = {}  # Dictionary: {channel_index: ((x_min, x_max), (y_min, y_max))}
         self.persist_heatmap_zoom = {}  # Dictionary: {channel_index: last zoom level when heatmap was created}
+        self.persist_heatmap_yscale = {}  # Dictionary: {channel_index: last yscale when heatmap was created}
+        self.persist_heatmap_offset = {}  # Dictionary: {channel_index: last offset when heatmap was created}
 
         # Bin configuration - reduced by 2x for better performance
         self.heatmap_bins_y = 200   # Number of bins in y-direction (voltage)
@@ -56,8 +58,17 @@ class HeatmapManager:
         bins_x = self.get_heatmap_bins_x()
         self.persist_heatmap_data[line_idx] = np.zeros((self.heatmap_bins_y, bins_x))
 
-        # Store the current zoom level
+        # Store the current zoom level and gain/offset
         self.persist_heatmap_zoom[line_idx] = self.state.downsamplezoom
+        self.persist_heatmap_yscale[line_idx] = self.state.yscale
+        self.persist_heatmap_offset[line_idx] = self.state.offset
+
+        # Use FIXED ranges based on state (not dynamic calculation from data)
+        # This ensures consistency when gain/offset changes
+        self.persist_heatmap_ranges[line_idx] = (
+            (self.state.min_x, self.state.max_x),
+            (self.state.min_y, self.state.max_y)
+        )
 
         # Create ImageItem for rendering
         image_item = pg.ImageItem()
@@ -160,6 +171,100 @@ class HeatmapManager:
 
         return self.persist_heatmap_zoom[line_idx] != self.state.downsamplezoom
 
+    def check_gain_offset_changed(self, line_idx):
+        """
+        Check if gain (yscale) or offset has changed since heatmap was created.
+
+        Args:
+            line_idx: Channel index
+
+        Returns:
+            True if gain or offset changed, False otherwise
+        """
+        if line_idx not in self.persist_heatmap_yscale or line_idx not in self.persist_heatmap_offset:
+            return False
+
+        yscale_changed = self.persist_heatmap_yscale[line_idx] != self.state.yscale
+        offset_changed = self.persist_heatmap_offset[line_idx] != self.state.offset
+
+        return yscale_changed or offset_changed
+
+    def clear_for_settings_change(self, line_idx):
+        """
+        Clear heatmap completely when settings change (gain/offset/zoom).
+        Does NOT regenerate - lets new traces build it naturally.
+
+        Args:
+            line_idx: Channel index
+        """
+        # Completely remove the ImageItem from the plot
+        if line_idx in self.persist_heatmap_items:
+            image_item = self.persist_heatmap_items[line_idx]
+            image_item.setVisible(False)
+            self.plot.removeItem(image_item)
+            image_item.clear()
+            del self.persist_heatmap_items[line_idx]
+
+        # Remove all stored data
+        if line_idx in self.persist_heatmap_data:
+            del self.persist_heatmap_data[line_idx]
+
+        if line_idx in self.persist_heatmap_ranges:
+            del self.persist_heatmap_ranges[line_idx]
+
+        if line_idx in self.persist_heatmap_zoom:
+            del self.persist_heatmap_zoom[line_idx]
+
+        if line_idx in self.persist_heatmap_yscale:
+            del self.persist_heatmap_yscale[line_idx]
+
+        if line_idx in self.persist_heatmap_offset:
+            del self.persist_heatmap_offset[line_idx]
+
+        # Force a plot update
+        self.plot.update()
+
+    def reset_and_regenerate(self, line_idx, persist_lines):
+        """
+        Fully reset heatmap (like turning checkbox off and on) and regenerate.
+        Used when gain/offset/zoom changes require complete rebuild.
+
+        Args:
+            line_idx: Channel index
+            persist_lines: List of persist line tuples for regeneration
+        """
+        # Completely remove the ImageItem from the plot first
+        if line_idx in self.persist_heatmap_items:
+            image_item = self.persist_heatmap_items[line_idx]
+            image_item.setVisible(False)
+            self.plot.removeItem(image_item)
+            # Force the item to be cleared
+            image_item.clear()
+            del self.persist_heatmap_items[line_idx]
+
+        # Remove all stored data
+        if line_idx in self.persist_heatmap_data:
+            del self.persist_heatmap_data[line_idx]
+
+        if line_idx in self.persist_heatmap_ranges:
+            del self.persist_heatmap_ranges[line_idx]
+
+        if line_idx in self.persist_heatmap_zoom:
+            del self.persist_heatmap_zoom[line_idx]
+
+        if line_idx in self.persist_heatmap_yscale:
+            del self.persist_heatmap_yscale[line_idx]
+
+        if line_idx in self.persist_heatmap_offset:
+            del self.persist_heatmap_offset[line_idx]
+
+        # Force a plot update to ensure the old item is removed
+        self.plot.update()
+
+        # Now regenerate from scratch (like turning checkbox back on)
+        # This will create a completely new ImageItem
+        self.regenerate(line_idx, persist_lines)
+
     def add_trace(self, x, y, line_idx, persist_lines=None):
         """
         Add a trace to the heatmap for a specific channel.
@@ -168,17 +273,25 @@ class HeatmapManager:
             x: x-coordinate data (time)
             y: y-coordinate data (voltage)
             line_idx: Channel index
-            persist_lines: Optional list of all persist lines (for regeneration if zoom changed)
+            persist_lines: Optional list of all persist lines (for regeneration if settings changed)
         """
         self._init_heatmap_for_channel(line_idx)
 
-        # Check if zoom level changed - if so, regenerate entire heatmap
-        if self.check_zoom_changed(line_idx) and persist_lines is not None:
-            self.regenerate(line_idx, persist_lines)
-            return
-
         heatmap = self.persist_heatmap_data[line_idx]
         (x_min, x_max), (y_min, y_max) = self._get_heatmap_ranges(line_idx)
+
+        # Filter to current view range for performance (simple approach - just filter incoming data)
+        view_range = self.plot.getViewBox().viewRange()
+        view_min_x, view_max_x = view_range[0]
+
+        # Only process data points within the current view
+        mask = (x >= view_min_x) & (x <= view_max_x)
+        if not np.any(mask):
+            # No data in view, skip
+            return
+
+        x_filtered = x[mask]
+        y_filtered = y[mask]
 
         # Get bins from actual array dimensions (handles zoom changes)
         bins_y, bins_x = heatmap.shape
@@ -187,11 +300,11 @@ class HeatmapManager:
         # x (time) should map to columns (x_bins)
         # y (voltage) should map to rows (y_bins)
         x_bins = np.clip(
-            ((x - x_min) / (x_max - x_min) * bins_x).astype(int),
+            ((x_filtered - x_min) / (x_max - x_min) * bins_x).astype(int),
             0, bins_x - 1
         )
         y_bins = np.clip(
-            ((y - y_min) / (y_max - y_min) * bins_y).astype(int),
+            ((y_filtered - y_min) / (y_max - y_min) * bins_y).astype(int),
             0, bins_y - 1
         )
 
@@ -218,16 +331,29 @@ class HeatmapManager:
         heatmap = self.persist_heatmap_data[line_idx]
         (x_min, x_max), (y_min, y_max) = self._get_heatmap_ranges(line_idx)
 
+        # Filter to current view range (simple approach - only remove data in view)
+        view_range = self.plot.getViewBox().viewRange()
+        view_min_x, view_max_x = view_range[0]
+
+        # Only process data points within the current view
+        mask = (x >= view_min_x) & (x <= view_max_x)
+        if not np.any(mask):
+            # No data in view, skip
+            return
+
+        x_filtered = x[mask]
+        y_filtered = y[mask]
+
         # Get bins from actual array dimensions (handles zoom changes)
         bins_y, bins_x = heatmap.shape
 
         # Convert x, y data to bin indices (same as add_trace)
         x_bins = np.clip(
-            ((x - x_min) / (x_max - x_min) * bins_x).astype(int),
+            ((x_filtered - x_min) / (x_max - x_min) * bins_x).astype(int),
             0, bins_x - 1
         )
         y_bins = np.clip(
-            ((y - y_min) / (y_max - y_min) * bins_y).astype(int),
+            ((y_filtered - y_min) / (y_max - y_min) * bins_y).astype(int),
             0, bins_y - 1
         )
 
@@ -294,16 +420,22 @@ class HeatmapManager:
         """
         self._init_heatmap_for_channel(line_idx)
 
-        # Recalculate the ranges from all current persist lines
-        self._calculate_heatmap_ranges(line_idx, persist_lines)
+        # Use fixed ranges from state (set during init)
+        # Don't recalculate from data to avoid rect/data mismatch
+        self.persist_heatmap_ranges[line_idx] = (
+            (self.state.min_x, self.state.max_x),
+            (self.state.min_y, self.state.max_y)
+        )
 
         # Recreate heatmap with potentially different x bin count
         bins_x = self.get_heatmap_bins_x()
         self.persist_heatmap_data[line_idx] = np.zeros((self.heatmap_bins_y, bins_x))
         heatmap = self.persist_heatmap_data[line_idx]
 
-        # Update stored zoom level
+        # Update stored zoom level and gain/offset
         self.persist_heatmap_zoom[line_idx] = self.state.downsamplezoom
+        self.persist_heatmap_yscale[line_idx] = self.state.yscale
+        self.persist_heatmap_offset[line_idx] = self.state.offset
 
         if not persist_lines or len(persist_lines) == 0:
             self.update_image(line_idx)
@@ -365,3 +497,9 @@ class HeatmapManager:
 
         if line_idx in self.persist_heatmap_zoom:
             del self.persist_heatmap_zoom[line_idx]
+
+        if line_idx in self.persist_heatmap_yscale:
+            del self.persist_heatmap_yscale[line_idx]
+
+        if line_idx in self.persist_heatmap_offset:
+            del self.persist_heatmap_offset[line_idx]
