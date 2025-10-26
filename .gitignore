@@ -13,5 +13,3 @@ software/dist/*.zip
 /.claude/settings.local.json
 /software/.claude/settings.local.json
 /software/*.spec
-/software/test/screenshots/
-/software/test/test_settings.haasoscope.json
