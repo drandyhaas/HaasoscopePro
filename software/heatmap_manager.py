@@ -6,6 +6,7 @@ Handles persist line heatmap visualization
 import numpy as np
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore
+from scipy.ndimage import gaussian_filter
 
 
 class HeatmapManager:
@@ -33,6 +34,9 @@ class HeatmapManager:
         # Bin configuration - reduced by 2x for better performance
         self.heatmap_bins_y = 200   # Number of bins in y-direction (voltage)
         self._base_heatmap_bins_x = 1000  # Base number of bins in x-direction (time) at downsample=0
+
+        # Smoothing configuration
+        self.heatmap_smoothing_sigma = 1.0  # Gaussian smoothing sigma (0 = no smoothing)
 
     def get_heatmap_bins_x(self):
         """
@@ -396,8 +400,14 @@ class HeatmapManager:
         heatmap = self.persist_heatmap_data[line_idx]
         image_item = self.persist_heatmap_items[line_idx]
 
+        # Apply Gaussian smoothing to reduce pixelation
+        if self.heatmap_smoothing_sigma > 0:
+            heatmap_smoothed = gaussian_filter(heatmap, sigma=self.heatmap_smoothing_sigma)
+        else:
+            heatmap_smoothed = heatmap
+
         # Get non-zero values for better color scaling
-        nonzero_values = heatmap[heatmap > 0]
+        nonzero_values = heatmap_smoothed[heatmap_smoothed > 0]
 
         if len(nonzero_values) == 0:
             # No data - use default scaling
@@ -415,7 +425,7 @@ class HeatmapManager:
         # PyQtGraph default: array[i,j] where i is treated as x (horizontal) and j as y (vertical)
         # Our array is (y_bins, x_bins), so we need to transpose to (x_bins, y_bins)
         # PyQtGraph puts j=0 at the bottom by default, which matches y_bin=0 = y_min
-        heatmap_display = heatmap.T  # Transpose to (x_bins, y_bins)
+        heatmap_display = heatmap_smoothed.T  # Transpose to (x_bins, y_bins)
 
         # Update the image with percentile-based color scaling
         # This distributes colors more evenly - blues for lower counts, reds for higher counts
