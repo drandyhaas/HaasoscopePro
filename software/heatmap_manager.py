@@ -36,17 +36,10 @@ class HeatmapManager:
 
     def get_heatmap_bins_x(self):
         """
-        Get the number of x bins based on current zoom level.
-        When zoomed in (downsample < 0), increase bins to maintain resolution.
-        Each bin should span: original_time_per_bin / downsamplezoom
+        Get the number of x bins.
+        Keep constant regardless of zoom to avoid sparsity when zoomed in.
         """
-        if self.state.downsample < 0:
-            # Zoomed in - multiply bins by downsamplezoom factor for higher resolution
-            # This makes each bin cover less time (original_bin_width / downsamplezoom)
-            return int(self._base_heatmap_bins_x * self.state.downsamplezoom)
-        else:
-            # Not zoomed or zoomed out - use base bins
-            return self._base_heatmap_bins_x
+        return self._base_heatmap_bins_x
 
     def _init_heatmap_for_channel(self, line_idx):
         """Initialize heatmap data structures for a channel."""
@@ -63,11 +56,14 @@ class HeatmapManager:
         self.persist_heatmap_yscale[line_idx] = self.state.yscale
         self.persist_heatmap_offset[line_idx] = self.state.offset
 
-        # Use FIXED ranges based on state (not dynamic calculation from data)
-        # This ensures consistency when gain/offset changes
+        # Use view range for x (time) and state range for y (voltage)
+        # This gives high resolution in the visible area when zoomed
+        view_range = self.plot.getViewBox().viewRange()
+        view_min_x, view_max_x = view_range[0]
+
         self.persist_heatmap_ranges[line_idx] = (
-            (self.state.min_x, self.state.max_x),
-            (self.state.min_y, self.state.max_y)
+            (view_min_x, view_max_x),  # X from current view
+            (self.state.min_y, self.state.max_y)  # Y from state (gain/offset)
         )
 
         # Create ImageItem for rendering
@@ -170,6 +166,37 @@ class HeatmapManager:
             return False
 
         return self.persist_heatmap_zoom[line_idx] != self.state.downsamplezoom
+
+    def check_view_changed(self, line_idx, threshold=0.1):
+        """
+        Check if the view range has changed significantly since heatmap was created.
+
+        Args:
+            line_idx: Channel index
+            threshold: Fraction of range change to trigger regeneration (default 0.1 = 10%)
+
+        Returns:
+            True if view range changed significantly, False otherwise
+        """
+        if line_idx not in self.persist_heatmap_ranges:
+            return False
+
+        # Get current and stored view ranges
+        view_range = self.plot.getViewBox().viewRange()
+        current_min_x, current_max_x = view_range[0]
+        (stored_min_x, stored_max_x), _ = self.persist_heatmap_ranges[line_idx]
+
+        # Calculate the range width
+        stored_width = stored_max_x - stored_min_x
+        if stored_width == 0:
+            return True
+
+        # Check if the view has shifted or changed size significantly
+        shift = abs((current_min_x + current_max_x) / 2 - (stored_min_x + stored_max_x) / 2)
+        size_change = abs((current_max_x - current_min_x) - stored_width)
+
+        # Trigger regeneration if shift or size change exceeds threshold
+        return (shift > stored_width * threshold) or (size_change > stored_width * threshold)
 
     def check_gain_offset_changed(self, line_idx):
         """
@@ -280,20 +307,16 @@ class HeatmapManager:
         heatmap = self.persist_heatmap_data[line_idx]
         (x_min, x_max), (y_min, y_max) = self._get_heatmap_ranges(line_idx)
 
-        # Filter to current view range for performance (simple approach - just filter incoming data)
-        view_range = self.plot.getViewBox().viewRange()
-        view_min_x, view_max_x = view_range[0]
-
-        # Only process data points within the current view
-        mask = (x >= view_min_x) & (x <= view_max_x)
+        # Filter to only data within the heatmap's range
+        mask = (x >= x_min) & (x <= x_max)
         if not np.any(mask):
-            # No data in view, skip
+            # No data in heatmap range, skip
             return
 
         x_filtered = x[mask]
         y_filtered = y[mask]
 
-        # Get bins from actual array dimensions (handles zoom changes)
+        # Get bins from actual array dimensions
         bins_y, bins_x = heatmap.shape
 
         # Convert x, y data to bin indices
@@ -331,20 +354,16 @@ class HeatmapManager:
         heatmap = self.persist_heatmap_data[line_idx]
         (x_min, x_max), (y_min, y_max) = self._get_heatmap_ranges(line_idx)
 
-        # Filter to current view range (simple approach - only remove data in view)
-        view_range = self.plot.getViewBox().viewRange()
-        view_min_x, view_max_x = view_range[0]
-
-        # Only process data points within the current view
-        mask = (x >= view_min_x) & (x <= view_max_x)
+        # Filter to only data within the heatmap's range
+        mask = (x >= x_min) & (x <= x_max)
         if not np.any(mask):
-            # No data in view, skip
+            # No data in heatmap range, skip
             return
 
         x_filtered = x[mask]
         y_filtered = y[mask]
 
-        # Get bins from actual array dimensions (handles zoom changes)
+        # Get bins from actual array dimensions
         bins_y, bins_x = heatmap.shape
 
         # Convert x, y data to bin indices (same as add_trace)
@@ -420,11 +439,13 @@ class HeatmapManager:
         """
         self._init_heatmap_for_channel(line_idx)
 
-        # Use fixed ranges from state (set during init)
-        # Don't recalculate from data to avoid rect/data mismatch
+        # Update ranges to current view (for x) and state (for y)
+        view_range = self.plot.getViewBox().viewRange()
+        view_min_x, view_max_x = view_range[0]
+
         self.persist_heatmap_ranges[line_idx] = (
-            (self.state.min_x, self.state.max_x),
-            (self.state.min_y, self.state.max_y)
+            (view_min_x, view_max_x),  # X from current view
+            (self.state.min_y, self.state.max_y)  # Y from state (gain/offset)
         )
 
         # Recreate heatmap with potentially different x bin count
@@ -449,13 +470,21 @@ class HeatmapManager:
             if x is None or y is None or len(x) == 0:
                 continue
 
+            # Filter to only data within the heatmap's range
+            mask = (x >= x_min) & (x <= x_max)
+            if not np.any(mask):
+                continue
+
+            x_filtered = x[mask]
+            y_filtered = y[mask]
+
             # Convert x, y data to bin indices
             x_bins = np.clip(
-                ((x - x_min) / (x_max - x_min) * bins_x).astype(int),
+                ((x_filtered - x_min) / (x_max - x_min) * bins_x).astype(int),
                 0, bins_x - 1
             )
             y_bins = np.clip(
-                ((y - y_min) / (y_max - y_min) * self.heatmap_bins_y).astype(int),
+                ((y_filtered - y_min) / (y_max - y_min) * self.heatmap_bins_y).astype(int),
                 0, self.heatmap_bins_y - 1
             )
 

@@ -776,9 +776,10 @@ class PlotManager(pg.QtCore.QObject):
             if self.state.persist_heatmap_enabled[line_idx]:
                 self.heatmap_manager.remove_trace(oldest_x, oldest_y, line_idx)
 
-        # If heatmap mode is enabled, check if settings changed BEFORE adding to persist buffer
+        # If heatmap mode is enabled, check if settings or view changed BEFORE adding to persist buffer
         if self.state.persist_heatmap_enabled[line_idx]:
-            if self.heatmap_manager.check_zoom_changed(line_idx) or self.heatmap_manager.check_gain_offset_changed(line_idx):
+            # Check if gain/offset changed - need to clear everything
+            if self.heatmap_manager.check_gain_offset_changed(line_idx):
                 # Clear all persist lines for this channel since they're in the old scale
                 for item_data in list(persist_lines):
                     item = item_data[0]
@@ -789,6 +790,10 @@ class PlotManager(pg.QtCore.QObject):
                 self.heatmap_manager.clear_for_settings_change(line_idx)
                 # Continue to add the current trace with the new scale
                 # Don't return - let it fall through to add this trace
+            # Check if view (pan/zoom) changed - regenerate heatmap from existing persist lines
+            elif self.heatmap_manager.check_view_changed(line_idx):
+                # Regenerate heatmap with new view range
+                self.heatmap_manager.regenerate(line_idx, persist_lines)
 
         pen = self.linepens[line_idx]
         color = pen.color()
