@@ -58,6 +58,7 @@ class ScopeState:
         self.persist_time = [0] * (num_boards * num_chan_per_board)  # Persistence time in ms for each channel
         self.persist_lines_enabled = [True] * (num_boards * num_chan_per_board)  # Show faint persist lines
         self.persist_avg_enabled = [True] * (num_boards * num_chan_per_board)  # Show persist average
+        self.persist_heatmap_enabled = [False] * (num_boards * num_chan_per_board)  # Show heatmap instead of lines
 
         # Triggering Parameters
         self.triggerlevel = 127

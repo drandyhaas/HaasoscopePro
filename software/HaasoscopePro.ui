@@ -1101,7 +1101,7 @@ threshold</string>
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>70</y>
+          <y>90</y>
           <width>121</width>
           <height>17</height>
          </rect>
@@ -1116,6 +1116,30 @@ threshold</string>
         </property>
         <property name="text">
          <string>Persist average</string>
+        </property>
+        <property name="checked">
+         <bool>true</bool>
+        </property>
+       </widget>
+       <widget class="QCheckBox" name="persistheatCheck">
+        <property name="geometry">
+         <rect>
+          <x>10</x>
+          <y>70</y>
+          <width>121</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Arial</family>
+         </font>
+        </property>
+        <property name="toolTip">
+         <string>Whether to draw the persist heatmap</string>
+        </property>
+        <property name="text">
+         <string>Persist heatmap</string>
         </property>
         <property name="checked">
          <bool>true</bool>
