@@ -5,6 +5,7 @@ from pyqtgraph.Qt import QtCore, QtWidgets
 from PyQt5.QtGui import QColor, QPen
 from PyQt5.QtCore import pyqtSignal
 from plot_manager import add_secondary_axis
+from heatmap_manager import HeatmapManager
 
 
 class ZoomWindow(QtWidgets.QWidget):
@@ -109,6 +110,9 @@ class ZoomWindow(QtWidgets.QWidget):
         self.peak_min_lines = {}  # {channel_index: plot_line} for peak min lines
         self.persist_lines = {}  # {channel_index: [plot_line, ...]} for persist lines
         self.average_persist_lines = {}  # {channel_index: plot_line} for average persist lines
+
+        # Create heatmap manager for this zoom window
+        self.heatmap_manager = HeatmapManager(self.plot, self.state)
 
         layout.addWidget(self.plot_widget)
         self.setLayout(layout)
@@ -461,7 +465,7 @@ class ZoomWindow(QtWidgets.QWidget):
                     self.peak_min_lines[ch_idx].setVisible(False)
 
     def update_persist_lines(self, main_plot_manager):
-        """Update the zoom window's persist lines and average persist lines to match the main plot.
+        """Update the zoom window's persist lines, heatmaps, and average persist lines to match the main plot.
 
         Args:
             main_plot_manager: The main window's plot manager to get persist data from
@@ -475,16 +479,30 @@ class ZoomWindow(QtWidgets.QWidget):
                 self.plot.removeItem(persist_line)
             self.persist_lines[ch_idx] = []
 
+        # Clear all existing heatmaps
+        for ch_idx in list(self.heatmap_manager.persist_heatmap_items.keys()):
+            self.heatmap_manager.clear_channel(ch_idx)
+
         # Add persist lines from main plot manager
         if hasattr(main_plot_manager, 'persist_lines_per_channel'):
             for ch_idx, persist_deque in main_plot_manager.persist_lines_per_channel.items():
                 if ch_idx not in self.persist_lines:
                     self.persist_lines[ch_idx] = []
 
+                # Convert deque to list for heatmap regeneration
+                persist_list = list(persist_deque)
+
                 # Iterate through persist items in the deque
-                for persist_item, creation_time, line_idx in persist_deque:
-                    # Get the data from the persist item
-                    x_data, y_data = persist_item.getData()
+                for item_data in persist_list:
+                    # Unpack the 5-tuple format (persist_item, timestamp, line_idx, x_data, y_data)
+                    persist_item = item_data[0]
+                    x_data = item_data[3] if len(item_data) >= 4 else None
+                    y_data = item_data[4] if len(item_data) >= 5 else None
+
+                    # Fallback to getData if x_data/y_data not in tuple (backwards compatibility)
+                    if x_data is None or y_data is None:
+                        x_data, y_data = persist_item.getData()
+
                     if x_data is not None and y_data is not None:
                         # Get the pen from the persist item to maintain the same alpha
                         pen = persist_item.opts['pen']
@@ -492,8 +510,18 @@ class ZoomWindow(QtWidgets.QWidget):
                         # Create a new persist line in the zoom window with the same pen
                         zoom_persist_line = self.plot.plot(x=x_data, y=y_data, pen=pen,
                                                           skipFiniteCheck=True, connect="finite")
-                        zoom_persist_line.setVisible(persist_item.isVisible())
+                        # Show persist lines only if heatmap is disabled
+                        is_heatmap_enabled = self.state.persist_heatmap_enabled[ch_idx]
+                        zoom_persist_line.setVisible(persist_item.isVisible() and not is_heatmap_enabled)
                         self.persist_lines[ch_idx].append(zoom_persist_line)
+
+                # Regenerate heatmap if enabled for this channel
+                if self.state.persist_heatmap_enabled[ch_idx]:
+                    # Sync smoothing settings from main plot manager
+                    if hasattr(main_plot_manager, 'heatmap_manager'):
+                        self.heatmap_manager.heatmap_smoothing_sigma = main_plot_manager.heatmap_manager.heatmap_smoothing_sigma
+                    # Regenerate heatmap from all persist lines
+                    self.heatmap_manager.regenerate(ch_idx, persist_list)
 
         # Update average persist lines
         if hasattr(main_plot_manager, 'average_lines'):

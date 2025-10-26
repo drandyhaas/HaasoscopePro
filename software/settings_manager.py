@@ -140,6 +140,8 @@ def save_setup(main_window):
         'persist_time': main_window.state.persist_time,
         'persist_lines_enabled': main_window.state.persist_lines_enabled,
         'persist_avg_enabled': main_window.state.persist_avg_enabled,
+        'persist_heatmap_enabled': main_window.state.persist_heatmap_enabled,
+        'heatmap_smoothing_sigma': main_window.plot_manager.heatmap_manager.heatmap_smoothing_sigma,
 
         # Channel enabled state (per-channel, from chanonCheck)
         'channel_enabled': main_window.state.channel_enabled,
@@ -435,6 +437,19 @@ def load_setup(main_window):
         else:
             # New format: per-channel list
             main_window.state.persist_avg_enabled = persist_avg
+
+    if 'persist_heatmap_enabled' in setup:
+        persist_heatmap = setup['persist_heatmap_enabled']
+        # Handle both old (bool) and new (list) formats
+        if isinstance(persist_heatmap, bool):
+            # Old format: single bool, apply to all channels
+            main_window.state.persist_heatmap_enabled = [persist_heatmap] * len(main_window.state.persist_heatmap_enabled)
+        else:
+            # New format: per-channel list
+            main_window.state.persist_heatmap_enabled = persist_heatmap
+
+    if 'heatmap_smoothing_sigma' in setup:
+        main_window.plot_manager.heatmap_manager.heatmap_smoothing_sigma = setup['heatmap_smoothing_sigma']
 
     # Sync UI controls to reflect active channel's persistence settings
     main_window.sync_persistence_ui()
