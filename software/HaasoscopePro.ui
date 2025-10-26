@@ -2387,7 +2387,6 @@ Outlined if triggering on this channel</string>
     <property name="toolTipsVisible">
      <bool>true</bool>
     </property>
-    <addaction name="actionTrigger_thresh"/>
     <addaction name="separator"/>
     <addaction name="action_For_Board_X_Channel_Y"/>
     <addaction name="actionADC_temperature"/>
