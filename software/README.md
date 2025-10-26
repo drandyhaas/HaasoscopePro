@@ -150,9 +150,13 @@ graph TD
     B -.-> W2["🧮 MathChannelsWindow<br>math_channels_window.py<br>Channel Math"]
     B -.-> W3["📊 HistogramWindow<br>histogram_window.py<br>Distribution View"]
     B -.-> W4["🕐 HistoryWindow<br>history_window.py<br>Waveform History"]
+    B -.-> W5["📉 XYWindow<br>xy_window.py<br>XY Plot Mode"]
+    B -.-> W6["🔍 ZoomWindow<br>zoom_window.py<br>Zoomed View"]
 
     W1 --> C
     W2 --> C
+    W5 --> C
+    W6 --> C
 
     %% --- Data Flow ---
     D -- "Raw ADC Data" --> E
@@ -177,7 +181,7 @@ graph TD
     class C datastore
     class D,E,F core
     class M1,M2,M3,P1 core
-    class W1,W2,W3,W4 helpers
+    class W1,W2,W3,W4,W5,W6 helpers
     class H1,H2 hardware
     class DEV1 device
     class DEV2 testing
@@ -240,6 +244,33 @@ graph TD
 - Digital filters operate at the actual hardware sample rate
 - Min/Max tracking automatically handles array size changes when `doresamp` is modified
 
+**`xy_window.py`** - XY Plot window
+- Displays Lissajous figures and parametric plots
+- Plots one channel against another (X vs Y)
+- Supports both physical and math channels
+- Channel selection via dropdown menus
+- Useful for I-V curves, phase relationships, and parametric analysis
+- Accessed via View menu → XY Plot
+
+**`zoom_window.py`** - Zoom window
+- Synchronized zoomed view of the main plot
+- Shows all active channels, math channels, and references
+- Displays trigger lines, cursors, peak detect, and persistence
+- Region of Interest (ROI) selection on main plot
+- Secondary Y-axis for voltage display
+- Non-interactive view (pan/zoom controlled by ROI on main plot)
+- Accessed via View menu → Zoom Window
+
+**`histogram_window.py`** - Histogram display
+- Statistical distribution visualization
+- Waveform amplitude analysis
+- Histogram binning and counting
+
+**`history_window.py`** - Waveform history viewer
+- Stores previous waveform captures
+- Allows review of historical data
+- Sequential playback of captured waveforms
+
 **`measurements_manager.py`** - Measurements display
 - Automated measurement calculations
 - Statistics table display
@@ -292,10 +323,6 @@ graph TD
 ### Utility Modules
 
 **`calibration.py`** - Calibration data management
-
-**`histogram_window.py`** - Histogram display
-
-**`history_window.py`** - Waveform history viewer
 
 **`SCPIsocket.py`** - SCPI remote control interface
 
