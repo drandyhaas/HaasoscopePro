@@ -2,19 +2,21 @@
 
 An affordable 2 GHz 3.2 GS/s 12 bit open-source open-hardware expandable USB oscilloscope
 
-<img src="software/GUI.png" width="600">
+<img src="software/GUI.png" width="700">
 
 ## Links
 
-[Available on CrowdSupply](https://www.crowdsupply.com/andy-haas/haasoscope-pro) and at [Mouser](https://www.mouser.com/c/?q=Haasoscope)
+Available on [CrowdSupply](https://www.crowdsupply.com/andy-haas/haasoscope-pro) and at [Mouser](https://www.mouser.com/c/?q=Haasoscope)
 
-[Hackaday.io Page](https://hackaday.io/project/200773-haasoscope-pro)
+[Hackaday.io page](https://hackaday.io/project/200773-haasoscope-pro)
 
-[Schematics PDF](adc board/haasoscope_pro_adc_fpga_board_schematics.pdf)
+[Schematics PDF](adc%20board/haasoscope_pro_adc_fpga_board_schematics.pdf)
 
-[Routing image](adc board/haasoscope_pro_adc_fpga_board_routing.png)
+[Routing image](adc%20board/haasoscope_pro_adc_fpga_board_routing.png)
 
-[Firmware overview](adc board firmware/schematic.pdf)
+[Firmware overview](adc%20board%20firmware/schematic.pdf)
+
+[Software overview](software/diagram.png)
 
 ## Video tutorials
 
