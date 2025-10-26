@@ -197,7 +197,6 @@ python dummy_server.py --no-noise --port 9999
 python dummy_server.py --no-noise --port 9999 &
 
 # Run automated tests
-python test/test_gui_automated.py --socket localhost:9999
 
 # All screenshots and data will be identical across runs
 ```
