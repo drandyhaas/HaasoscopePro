@@ -63,11 +63,11 @@ Then run the new software, update the firmware (if needed) on your board from th
 
 ## Repository structure
 
-- [adc board](adc board/): Design files and documentation for the main board, based on Eagle 9.6.2
-- [adc board firmware](adc board firmware/): Quartus lite project and documentation for the Altera Cyclone IV FPGA firmware
+- [adc board](adc%20board/): Design files and documentation for the main board, based on Eagle 9.6.2
+- [adc board firmware](adc%20board%20 firmware/): Quartus lite project and documentation for the Altera Cyclone IV FPGA firmware
 - [case](case/): Front and back PCB panels for the aluminum case
 - [software](software/): Python files and documentation for the oscilloscope program
-- [sub boards](sub boards/): Eagle design files and documentation for smaller test boards that were used during development
+- [sub boards](sub%20boards/): Eagle design files and documentation for smaller test boards that were used during development
 
 ## 2 GHz Active Probe
 
