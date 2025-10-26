@@ -198,8 +198,16 @@ class ZoomWindow(QtWidgets.QWidget):
                     connect="finite"
                 )
 
-            # Show and update line data
-            self.channel_lines[ch_idx].setVisible(True)
+            # Hide main line if any persistence visualization is enabled
+            has_persistence = (
+                self.state.persist_time[ch_idx] > 0 and
+                (self.state.persist_lines_enabled[ch_idx] or
+                 self.state.persist_avg_enabled[ch_idx] or
+                 self.state.persist_heatmap_enabled[ch_idx])
+            )
+
+            # Show and update line data (hide if persistence is on)
+            self.channel_lines[ch_idx].setVisible(not has_persistence)
             self.channel_lines[ch_idx].setData(x=x_data, y=y_data, skipFiniteCheck=True)
 
         # Update math channels
