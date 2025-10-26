@@ -28,9 +28,9 @@ class HeatmapManager:
         self.persist_heatmap_ranges = {}  # Dictionary: {channel_index: ((x_min, x_max), (y_min, y_max))}
         self.persist_heatmap_zoom = {}  # Dictionary: {channel_index: last zoom level when heatmap was created}
 
-        # Bin configuration
-        self.heatmap_bins_y = 400   # Number of bins in y-direction (voltage)
-        self._base_heatmap_bins_x = 2000  # Base number of bins in x-direction (time) at downsample=0
+        # Bin configuration - reduced by 2x for better performance
+        self.heatmap_bins_y = 200   # Number of bins in y-direction (voltage)
+        self._base_heatmap_bins_x = 1000  # Base number of bins in x-direction (time) at downsample=0
 
     def get_heatmap_bins_x(self):
         """
@@ -251,17 +251,30 @@ class HeatmapManager:
         heatmap = self.persist_heatmap_data[line_idx]
         image_item = self.persist_heatmap_items[line_idx]
 
-        # Get max value for scaling (use a reasonable max based on number of persist lines)
-        max_count = np.max(heatmap) if np.max(heatmap) > 0 else 1
+        # Get non-zero values for better color scaling
+        nonzero_values = heatmap[heatmap > 0]
+
+        if len(nonzero_values) == 0:
+            # No data - use default scaling
+            min_level = 0
+            max_level = 1
+        else:
+            # Use percentile-based scaling for balanced color distribution
+            # This ensures we see the full color range (blue to red) in the data
+            min_level = 0
+            # Use 90th percentile instead of max to avoid outliers dominating the scale
+            max_level = np.percentile(nonzero_values, 90)
+            # Ensure max_level is at least 1
+            max_level = max(max_level, 1)
 
         # PyQtGraph default: array[i,j] where i is treated as x (horizontal) and j as y (vertical)
         # Our array is (y_bins, x_bins), so we need to transpose to (x_bins, y_bins)
         # PyQtGraph puts j=0 at the bottom by default, which matches y_bin=0 = y_min
         heatmap_display = heatmap.T  # Transpose to (x_bins, y_bins)
 
-        # Update the image
-        # Use fixed levels from 0 to max_count for consistent coloring
-        image_item.setImage(heatmap_display, levels=(0, max_count))
+        # Update the image with percentile-based color scaling
+        # This distributes colors more evenly - blues for lower counts, reds for higher counts
+        image_item.setImage(heatmap_display, levels=(min_level, max_level))
 
         # Set the position and scale to match the plot coordinates
         (x_min, x_max), (y_min, y_max) = self._get_heatmap_ranges(line_idx)
