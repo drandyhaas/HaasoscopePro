@@ -221,42 +221,6 @@ The script returns:
 - Exit code `0` - Test passed
 - Exit code `1` - Test failed
 
-## Platform-Specific Notes
-
-### macOS
-
-**⚠️ IMPORTANT for macOS users:**
-
-- **test_gui.py**: ✅ Supported (requires Screen Recording permission)
-- **test_settings.py**: ❌ NOT supported (requires Windows-only pywinauto library)
-
-Window capture on macOS requires **Screen Recording** permission. Without it, screenshots will only show the desktop background, not the actual window content.
-
-### Quick Setup (macOS):
-
-1. **Enable Screen Recording permission:**
-   - Open **System Settings** → **Privacy & Security** → **Screen Recording**
-   - Click **[+]** and add your Terminal or IDE (Terminal.app, iTerm.app, VS Code, etc.)
-   - Enable the checkbox next to it
-
-2. **Restart your Terminal/IDE:**
-   - **Must fully quit** (Cmd+Q) and restart
-   - Just closing the window is not enough!
-
-3. **Run the test again**
-
-### Verify Setup:
-
-```bash
-# Run diagnostic to check your setup
-python diagnose_macos_capture.py
-
-# Test window capture
-python test_window_capture.py
-```
-
-**For detailed instructions, see [MACOS_SCREEN_CAPTURE.md](MACOS_SCREEN_CAPTURE.md)**
-
 ## Troubleshooting
 
 **Problem: Screenshots only show desktop background (macOS)**
