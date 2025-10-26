@@ -340,17 +340,39 @@ class CursorManager:
         trigger_delay_ns = trigger_delay_value * self.state.downsamplefactor * 40.0 / self.state.samplerate
         trigger_time_with_delay_ns = trigger_time_ns - trigger_delay_ns
 
+        # Get the center of the current view
+        try:
+            view_range = self.plot.getViewBox().viewRange()
+            min_x, max_x = view_range[0]
+            center_x = (min_x + max_x) / 2.0
+        except:
+            center_x = (self.state.min_x + self.state.max_x) / 2.0
+
+        # Convert center position to nanoseconds
+        center_x += self.state.downsamplefactor * 40.0 / self.state.samplerate / self.state.downsamplezoom # correct for center offset
+        center_x_ns = center_x * self.state.nsunits
+
+        # Calculate times relative to view center
+        trigger_time_rel_ns = trigger_time_ns - center_x_ns
+        trigger_time_with_delay_rel_ns = trigger_time_with_delay_ns - center_x_ns
+
         # Format with appropriate units
         from data_processor import format_period
         trig_time_val, trig_time_unit = format_period(trigger_time_ns, "s", False)
         trig_delay_time_val, trig_delay_time_unit = format_period(trigger_time_with_delay_ns, "s", False)
+        trig_time_rel_val, trig_time_rel_unit = format_period(abs(trigger_time_rel_ns), "s", False)
+        trig_delay_time_rel_val, trig_delay_time_rel_unit = format_period(abs(trigger_time_with_delay_rel_ns), "s", False)
+
+        # Format relative times with explicit + or - sign
+        trig_time_rel_sign = "+" if trigger_time_rel_ns >= 0 else "-"
+        trig_delay_time_rel_sign = "+" if trigger_time_with_delay_rel_ns >= 0 else "-"
 
         # Format the text with multiple lines
         info_lines = [
             f"Trigger info (Board {active_board} Channel {active_channel}):",
-            f"  Threshold: {threshold_mV:.1f} mV",
-            f"  Trigger time: {trig_time_val:.2f} {trig_time_unit}"]
-        if trigger_delay_value>0: info_lines.append(f"  Trigger time - delay: {trig_delay_time_val:.2f} {trig_delay_time_unit}")
+            f"  Threshold: {hline_pos:.2f} div, {threshold_mV:.1f} mV",
+            f"  Trigger time: {trig_time_val:.2f} {trig_time_unit} ({trig_time_rel_sign}{trig_time_rel_val:.2f} {trig_time_rel_unit} from center)"]
+        if trigger_delay_value>0: info_lines.append(f"  Trigger time - delay: {trig_delay_time_val:.2f} {trig_delay_time_unit} ({trig_delay_time_rel_sign}{trig_delay_time_rel_val:.2f} {trig_delay_time_rel_unit} from center)")
         info_text = "<br>".join(info_lines)
         self.cursor_labels['trigger_thresh'].setHtml(info_text)
 

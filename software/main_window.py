@@ -1402,11 +1402,16 @@ class MainWindow(TemplateBaseClass):
             # Reset cursor positions if they are outside the visible range
             if self.plot_manager.cursor_manager:
                 self.plot_manager.cursor_manager.adjust_cursor_positions()
+                # Update trigger info display since view center has changed
+                self.plot_manager.cursor_manager.update_trigger_threshold_text()
 
         else:  # Normal trigger adjust mode
             s.triggerpos = int(s.expect_samples * value / 10000.)
             self.controller.send_trigger_info_all()
             self.plot_manager.draw_trigger_lines()
+            # Update trigger info display after trigger position changes
+            if self.plot_manager.cursor_manager:
+                self.plot_manager.cursor_manager.update_trigger_threshold_text()
 
     def on_vline_dragged(self, value):
         """
@@ -1445,6 +1450,10 @@ class MainWindow(TemplateBaseClass):
                 self.ui.thresholdPos.blockSignals(True)
                 self.ui.thresholdPos.setValue(int(slider_value))
                 self.ui.thresholdPos.blockSignals(False)
+
+            # Update trigger info display since view has panned
+            if self.plot_manager.cursor_manager:
+                self.plot_manager.cursor_manager.update_trigger_threshold_text()
 
         else:  # Normal trigger adjust mode
             t = (value / (4 * 10 * (s.downsamplefactor / s.nsunits / s.samplerate)) - 1.0) * 10000. / s.expect_samples
