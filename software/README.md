@@ -70,6 +70,10 @@ python HaasoscopeProQt.py --help
 
 See [dummy_scope/README.md](dummy_scope/README.md) for detailed dummy server documentation.
 
+## Editing the GUI
+
+The Haasoscope Pro GUI can be edited using [Qt Designer](https://www.pythonguis.com/installation/install-qt-designer-standalone/), on software/HaasoscopePro.ui or HaasoscopeProFFT.ui etc.
+
 ## Keyboard Shortcuts
 
 The GUI supports keyboard shortcuts for quick control adjustments:
