@@ -1832,7 +1832,7 @@ class MainWindow(TemplateBaseClass):
         # Get the line objects
         main_line = self.plot_manager.lines[channel_index]
         average_line = self.plot_manager.average_lines.get(channel_index)
-        heatmap_item = self.plot_manager.persist_heatmap_items.get(channel_index)
+        heatmap_item = self.plot_manager.heatmap_manager.persist_heatmap_items.get(channel_index)
 
         # If channel is not enabled, hide everything
         if not is_chan_on:
@@ -1889,7 +1889,8 @@ class MainWindow(TemplateBaseClass):
         # If heatmap mode was just enabled, regenerate the heatmap from current persist lines
         if s.persist_heatmap_enabled[active_channel] and s.persist_time[active_channel] > 0:
             if active_channel in self.plot_manager.persist_lines_per_channel:
-                self.plot_manager._regenerate_heatmap(active_channel)
+                persist_lines = self.plot_manager.persist_lines_per_channel[active_channel]
+                self.plot_manager.heatmap_manager.regenerate(active_channel, persist_lines)
 
         # Update visibility for the active channel
         self.update_channel_visibility(active_channel)

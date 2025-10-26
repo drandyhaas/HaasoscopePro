@@ -12,6 +12,7 @@ from scipy.signal import resample
 from scipy.interpolate import interp1d
 from data_processor import find_crossing_distance
 from cursor_manager import CursorManager
+from heatmap_manager import HeatmapManager
 import math
 
 
@@ -106,12 +107,8 @@ class PlotManager(pg.QtCore.QObject):
         self.persist_timer = QtCore.QTimer()
         self.persist_timer.timeout.connect(self.update_persist_effect)
 
-        # Heatmap attributes (per-channel)
-        self.persist_heatmap_data = {}  # Dictionary: {channel_index: 2D numpy array}
-        self.persist_heatmap_items = {}  # Dictionary: {channel_index: ImageItem}
-        self.persist_heatmap_ranges = {}  # Dictionary: {channel_index: ((x_min, x_max), (y_min, y_max))}
-        self.heatmap_bins_x = 2000  # Number of bins in x-direction (increased for better resolution)
-        self.heatmap_bins_y = 400   # Number of bins in y-direction (increased for better resolution)
+        # Heatmap manager for persist line visualization
+        self.heatmap_manager = HeatmapManager(self.plot, self.state)
 
         # Peak detect attributes
         self.peak_detect_enabled = {}  # {channel_index: bool} - per-channel peak detect enabled state
@@ -771,10 +768,13 @@ class PlotManager(pg.QtCore.QObject):
 
         persist_lines = self.persist_lines_per_channel[line_idx]
 
-        # If we're about to remove the oldest line, remove it
+        # If we're about to remove the oldest line, remove it from heatmap first
         if len(persist_lines) >= self.max_persist_lines:
             oldest_item, _, _, oldest_x, oldest_y = persist_lines.popleft()
             self.plot.removeItem(oldest_item)
+            # Remove from heatmap
+            if self.state.persist_heatmap_enabled[line_idx]:
+                self.heatmap_manager.remove_trace(oldest_x, oldest_y, line_idx)
 
         pen = self.linepens[line_idx]
         color = pen.color()
@@ -787,208 +787,12 @@ class PlotManager(pg.QtCore.QObject):
         # Store a copy of the data for later heatmap removal
         persist_lines.append((persist_item, time.time(), line_idx, x.copy(), y.copy()))
 
-        # If heatmap mode is enabled, regenerate the entire heatmap from all persist lines
-        # This ensures all lines in the buffer are always included
+        # If heatmap mode is enabled, add this trace to the heatmap
         if self.state.persist_heatmap_enabled[line_idx]:
-            self._regenerate_heatmap(line_idx)
-
-    def _init_heatmap_for_channel(self, line_idx):
-        """Initialize heatmap data structures for a channel."""
-        if line_idx in self.persist_heatmap_data:
-            return
-
-        # Create 2D histogram initialized to zeros
-        # For ImageItem: array shape must be (height, width) = (y_bins, x_bins) = (rows, cols)
-        self.persist_heatmap_data[line_idx] = np.zeros((self.heatmap_bins_y, self.heatmap_bins_x))
-
-        # Create ImageItem for rendering
-        image_item = pg.ImageItem()
-        self.persist_heatmap_items[line_idx] = image_item
-        self.plot.addItem(image_item)
-
-        # Set the colormap (blue to red)
-        colors = [
-            (0, 0, 0, 0),      # transparent (no data)
-            (0, 0, 128),       # dark blue (few lines)
-            (0, 0, 255),       # blue
-            (0, 128, 255),     # cyan
-            (0, 255, 128),     # cyan-green
-            (0, 255, 0),       # green
-            (128, 255, 0),     # yellow-green
-            (255, 255, 0),     # yellow
-            (255, 128, 0),     # orange
-            (255, 0, 0),       # red (many lines)
-        ]
-        colormap = pg.ColorMap(
-            pos=np.linspace(0.0, 1.0, len(colors)),
-            color=colors
-        )
-        image_item.setLookupTable(colormap.getLookupTable())
-
-    def _calculate_heatmap_ranges(self, line_idx):
-        """Calculate the x and y ranges for the heatmap from the actual persist line data."""
-        # Use the actual data range from persist lines, not the view range
-        # This ensures heatmap works correctly when zoomed
-        if line_idx not in self.persist_lines_per_channel or len(self.persist_lines_per_channel[line_idx]) == 0:
-            # Fallback to state ranges
-            return (self.state.min_x, self.state.max_x), (self.state.min_y, self.state.max_y)
-
-        persist_lines = self.persist_lines_per_channel[line_idx]
-
-        # Find the overall min/max across ALL persist lines for this channel
-        x_min = None
-        x_max = None
-        y_min = None
-        y_max = None
-
-        for item, _, _, x_data, y_data in persist_lines:
-            if x_data is not None and len(x_data) > 0:
-                x_data_min = np.min(x_data)
-                x_data_max = np.max(x_data)
-                if x_min is None or x_data_min < x_min:
-                    x_min = x_data_min
-                if x_max is None or x_data_max > x_max:
-                    x_max = x_data_max
-
-            if y_data is not None and len(y_data) > 0:
-                y_data_min = np.min(y_data)
-                y_data_max = np.max(y_data)
-                if y_min is None or y_data_min < y_min:
-                    y_min = y_data_min
-                if y_max is None or y_data_max > y_max:
-                    y_max = y_data_max
-
-        # Use calculated ranges or fallback to state ranges
-        if x_min is not None and x_max is not None:
-            x_range = (x_min, x_max)
-        else:
-            x_range = (self.state.min_x, self.state.max_x)
-
-        if y_min is not None and y_max is not None:
-            y_range = (y_min, y_max)
-        else:
-            y_range = (self.state.min_y, self.state.max_y)
-
-        # Store the calculated ranges for consistent use
-        self.persist_heatmap_ranges[line_idx] = (x_range, y_range)
-
-        return x_range, y_range
-
-    def _get_heatmap_ranges(self, line_idx):
-        """Get the stored heatmap ranges, calculating if needed."""
-        if line_idx not in self.persist_heatmap_ranges:
-            return self._calculate_heatmap_ranges(line_idx)
-        return self.persist_heatmap_ranges[line_idx]
-
-    def _add_to_heatmap(self, x, y, line_idx, update_image=True):
-        """Add a trace to the heatmap for a specific channel."""
-        self._init_heatmap_for_channel(line_idx)
-
-        heatmap = self.persist_heatmap_data[line_idx]
-        (x_min, x_max), (y_min, y_max) = self._get_heatmap_ranges(line_idx)
-
-        # Convert x, y data to bin indices
-        # x (time) should map to columns (x_bins = 2000)
-        # y (voltage) should map to rows (y_bins = 400)
-        x_bins = np.clip(
-            ((x - x_min) / (x_max - x_min) * self.heatmap_bins_x).astype(int),
-            0, self.heatmap_bins_x - 1
-        )
-        y_bins = np.clip(
-            ((y - y_min) / (y_max - y_min) * self.heatmap_bins_y).astype(int),
-            0, self.heatmap_bins_y - 1
-        )
-
-
-        # Accumulate into the heatmap
-        # Array is [rows, cols] = [y_bins, x_bins] = [voltage, time]
-        for xb, yb in zip(x_bins, y_bins):
-            if 0 <= xb < self.heatmap_bins_x and 0 <= yb < self.heatmap_bins_y:
-                heatmap[yb, xb] += 1
-
-        if update_image:
-            self._update_heatmap_image(line_idx)
-
-    def _remove_from_heatmap(self, x, y, line_idx):
-        """Remove a trace from the heatmap for a specific channel."""
-        if line_idx not in self.persist_heatmap_data:
-            return
-
-        heatmap = self.persist_heatmap_data[line_idx]
-        (x_min, x_max), (y_min, y_max) = self._get_heatmap_ranges(line_idx)
-
-        # Convert x, y data to bin indices (same as _add_to_heatmap)
-        x_bins = np.clip(
-            ((x - x_min) / (x_max - x_min) * self.heatmap_bins_x).astype(int),
-            0, self.heatmap_bins_x - 1
-        )
-        y_bins = np.clip(
-            ((y - y_min) / (y_max - y_min) * self.heatmap_bins_y).astype(int),
-            0, self.heatmap_bins_y - 1
-        )
-
-        # Subtract from the heatmap (don't go below 0)
-        for xb, yb in zip(x_bins, y_bins):
-            if 0 <= xb < self.heatmap_bins_x and 0 <= yb < self.heatmap_bins_y:
-                heatmap[yb, xb] = max(0, heatmap[yb, xb] - 1)
-
-        self._update_heatmap_image(line_idx)
-
-    def _update_heatmap_image(self, line_idx):
-        """Update the heatmap image display."""
-        if line_idx not in self.persist_heatmap_items:
-            return
-
-        heatmap = self.persist_heatmap_data[line_idx]
-        image_item = self.persist_heatmap_items[line_idx]
-
-        # Get max value for scaling (use a reasonable max based on number of persist lines)
-        max_count = np.max(heatmap) if np.max(heatmap) > 0 else 1
-
-        # PyQtGraph default: array[i,j] where i is treated as x (horizontal) and j as y (vertical)
-        # Our array is (400, 2000) = (y_bins, x_bins), so we need to transpose to (2000, 400) = (x_bins, y_bins)
-        # PyQtGraph puts j=0 at the bottom by default, which matches y_bin=0 = y_min
-        heatmap_display = heatmap.T  # Transpose to (2000, 400) = (x_bins, y_bins)
-
-        # Update the image
-        # Use fixed levels from 0 to max_count for consistent coloring
-        image_item.setImage(heatmap_display, levels=(0, max_count))
-
-        # Set the position and scale to match the plot coordinates
-        (x_min, x_max), (y_min, y_max) = self._get_heatmap_ranges(line_idx)
-        image_item.setRect(pg.QtCore.QRectF(x_min, y_min, x_max - x_min, y_max - y_min))
-
-        # Ensure visibility is set correctly
-        image_item.setVisible(self.state.persist_heatmap_enabled[line_idx] and self.state.persist_time[line_idx] > 0)
-
-    def _regenerate_heatmap(self, line_idx):
-        """Regenerate the heatmap from all current persist lines for a specific channel."""
-        self._init_heatmap_for_channel(line_idx)
-
-        # Recalculate the ranges from all current persist lines
-        self._calculate_heatmap_ranges(line_idx)
-
-        # Clear the heatmap
-        heatmap = self.persist_heatmap_data[line_idx]
-        heatmap.fill(0)
-
-        # Get all current persist lines for this channel
-        if line_idx not in self.persist_lines_per_channel:
-            return
-
-        persist_lines = self.persist_lines_per_channel[line_idx]
-        if len(persist_lines) == 0:
-            return
-
-        # Accumulate all persist lines into the heatmap (without updating image each time for efficiency)
-        for item, _, _, x, y in persist_lines:
-            if x is None or y is None or len(x) == 0:
-                continue
-
-            self._add_to_heatmap(x, y, line_idx, update_image=False)
-
-        # Update the image once after all traces are added
-        self._update_heatmap_image(line_idx)
+            # Calculate ranges from all current persist lines
+            self.heatmap_manager._calculate_heatmap_ranges(line_idx, persist_lines)
+            # Add the new trace (pass persist_lines for zoom change detection)
+            self.heatmap_manager.add_trace(x, y, line_idx, persist_lines)
 
     def update_persist_effect(self):
         """Updates the alpha/transparency of persistent lines for all channels."""
@@ -1022,16 +826,13 @@ class PlotManager(pg.QtCore.QObject):
                     item.setPen(new_pen)
 
             # Remove expired items
-            heatmap_needs_update = False
             for item_data in items_to_remove:
-                item = item_data[0]
+                item, _, _, x_data, y_data = item_data
                 self.plot.removeItem(item)
                 persist_lines.remove(item_data)
-                heatmap_needs_update = True
-
-            # If heatmap mode is enabled and items were removed, regenerate the entire heatmap
-            if heatmap_needs_update and self.state.persist_heatmap_enabled[channel_idx]:
-                self._regenerate_heatmap(channel_idx)
+                # Remove from heatmap incrementally
+                if self.state.persist_heatmap_enabled[channel_idx]:
+                    self.heatmap_manager.remove_trace(x_data, y_data, channel_idx)
 
     def update_persist_average(self):
         """Calculates and plots the average of persistent traces for all channels with data."""
@@ -1089,16 +890,7 @@ class PlotManager(pg.QtCore.QObject):
                     self.plot.removeItem(item)
                 persist_lines.clear()
             # Clear heatmap for this channel
-            if channel_index in self.persist_heatmap_data:
-                self.persist_heatmap_data[channel_index].fill(0)
-                if channel_index in self.persist_heatmap_items:
-                    # Array is stored as [y, x] so dimensions are (bins_y, bins_x)
-                    self.persist_heatmap_items[channel_index].setImage(
-                        np.zeros((self.heatmap_bins_y, self.heatmap_bins_x))
-                    )
-            # Clear stored ranges
-            if channel_index in self.persist_heatmap_ranges:
-                del self.persist_heatmap_ranges[channel_index]
+            self.heatmap_manager.clear_channel(channel_index)
         else:
             # Clear all channels
             for channel_idx, persist_lines in list(self.persist_lines_per_channel.items()):
@@ -1108,14 +900,8 @@ class PlotManager(pg.QtCore.QObject):
                 persist_lines.clear()
             self.persist_lines_per_channel.clear()
             # Clear all heatmaps
-            for channel_idx in list(self.persist_heatmap_data.keys()):
-                self.persist_heatmap_data[channel_idx].fill(0)
-                if channel_idx in self.persist_heatmap_items:
-                    self.persist_heatmap_items[channel_idx].setImage(
-                        np.zeros((self.heatmap_bins_y, self.heatmap_bins_x))
-                    )
-            # Clear all stored ranges
-            self.persist_heatmap_ranges.clear()
+            for channel_idx in list(self.heatmap_manager.persist_heatmap_data.keys()):
+                self.heatmap_manager.clear_channel(channel_idx)
 
         # Clear the average line(s) for the specified channel(s)
         if channel_index is not None:
