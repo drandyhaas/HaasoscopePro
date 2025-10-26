@@ -293,7 +293,7 @@ class GUIController:
                 self.main_window.set_focus()
                 time.sleep(0.3)
 
-                # Use pyautogui to find "Peak waveforrm" text on screen and click it
+                # Use pyautogui to find "Peak waveform" text on screen and click it
                 # First, open the View menu by finding and clicking it
                 view_menu = self.main_window.child_window(title="View", control_type="MenuItem")
                 if view_menu.exists():
@@ -306,7 +306,7 @@ class GUIController:
                     pyautogui.click(center_x, center_y)
                     time.sleep(0.5)  # Wait for menu to open
 
-                    # Now try to locate "Peak waveforrm" text on screen
+                    # Now try to locate "Peak waveform" text on screen
                     try:
                         # Get only MenuItem descendants for faster search
                         menu_items = self.main_window.descendants(control_type="MenuItem")
@@ -316,8 +316,8 @@ class GUIController:
                         for item in menu_items:
                             try:
                                 item_text = item.window_text()
-                                # Look for "Peak" or the typo "waveforrm"
-                                if item_text and ("Peak" in item_text or "waveforrm" in item_text):
+                                # Look for "Peak" or the typo "waveform"
+                                if item_text and ("Peak" in item_text or "waveform" in item_text):
                                     rect = item.rectangle()
                                     center_x = (rect.left + rect.right) // 2
                                     center_y = (rect.top + rect.bottom) // 2
