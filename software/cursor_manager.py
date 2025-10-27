@@ -155,7 +155,13 @@ class CursorManager:
             max_y = self.state.max_y
 
         # Position in top-left corner of visible area
-        self.cursor_labels['readout'].setPos(min_x + 0.1*(max_x - min_x), max_y - 0.1)
+        try:
+            self.cursor_labels['readout'].setPos(
+                min_x + 0.01*(max_x - min_x),
+                max_y - 0.1
+            )
+        except KeyError:
+            pass
 
     def _update_trigger_info_position(self):
         """Update trigger info position based on visible view range."""
@@ -169,11 +175,14 @@ class CursorManager:
             min_y = self.state.min_y
             max_y = self.state.max_y
 
-        # Position in lower-left corner of visible area
-        self.cursor_labels['trigger_thresh'].setPos(
-            min_x + 0.1*(max_x - min_x),
-            min_y + 0.1
-        )
+        try:
+            # Position in lower-left corner of visible area
+            self.cursor_labels['trigger_thresh'].setPos(
+                min_x + 0.01*(max_x - min_x),
+                min_y + 0.1
+            )
+        except KeyError:
+            pass
 
     def _update_cursor_arrows(self, cursor_name):
         """Update the position of arrow markers for a specific cursor.
