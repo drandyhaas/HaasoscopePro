@@ -586,11 +586,16 @@ class ZoomWindow(QtWidgets.QWidget):
                 if ch_idx not in self.persist_lines:
                     self.persist_lines[ch_idx] = []
 
-                # Convert deque to list for heatmap regeneration
+                # Convert deque to list
                 persist_list = list(persist_deque)
 
-                # Iterate through persist items in the deque
-                for item_data in persist_list:
+                # Only draw the last 16 persist lines for performance (matching main plot)
+                # But use all 100 for heatmap
+                max_visible_persist = 16
+                lines_to_draw = persist_list[-max_visible_persist:] if len(persist_list) > max_visible_persist else persist_list
+
+                # Iterate through the visible persist items only
+                for item_data in lines_to_draw:
                     # Unpack the 5-tuple format (persist_item, timestamp, line_idx, x_data, y_data)
                     persist_item = item_data[0]
                     x_data = item_data[3] if len(item_data) >= 4 else None
@@ -612,12 +617,12 @@ class ZoomWindow(QtWidgets.QWidget):
                         zoom_persist_line.setVisible(persist_item.isVisible() and not is_heatmap_enabled)
                         self.persist_lines[ch_idx].append(zoom_persist_line)
 
-                # Regenerate heatmap if enabled for this channel
+                # Regenerate heatmap if enabled for this channel (uses ALL persist lines, not just 16)
                 if self.state.persist_heatmap_enabled[ch_idx]:
                     # Sync smoothing settings from main plot manager
                     if hasattr(main_plot_manager, 'heatmap_manager'):
                         self.heatmap_manager.heatmap_smoothing_sigma = main_plot_manager.heatmap_manager.heatmap_smoothing_sigma
-                    # Regenerate heatmap from all persist lines
+                    # Regenerate heatmap from all persist lines (full buffer of up to 100)
                     self.heatmap_manager.regenerate(ch_idx, persist_list)
 
         # Update average persist lines

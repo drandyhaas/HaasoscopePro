@@ -102,7 +102,8 @@ class PlotManager(pg.QtCore.QObject):
         self.zoom_roi = None
 
         # Persistence attributes (per-channel)
-        self.max_persist_lines = 16
+        self.max_persist_lines = 100  # Total buffer size for heatmap
+        self.max_visible_persist_lines = 16  # Only show last 16 for performance
         self.persist_lines_per_channel = {}  # Dictionary: {channel_index: deque of persist lines}
         self.persist_timer = QtCore.QTimer()
         self.persist_timer.timeout.connect(self.update_persist_effect)
@@ -828,7 +829,12 @@ class PlotManager(pg.QtCore.QObject):
                 continue
 
             items_to_remove = []
-            for item_data in persist_lines:
+            # Only show the last max_visible_persist_lines (16) for performance
+            # But keep all 100 in the buffer for heatmap
+            total_lines = len(persist_lines)
+            visible_start_idx = max(0, total_lines - self.max_visible_persist_lines)
+
+            for idx, item_data in enumerate(persist_lines):
                 item = item_data[0]
                 creation_time = item_data[1]
                 li = item_data[2]
@@ -836,12 +842,23 @@ class PlotManager(pg.QtCore.QObject):
                 if age > channel_persist_time:
                     items_to_remove.append(item_data)
                 else:
-                    alpha = int(100 * (1 - (age / channel_persist_time)))
-                    pen = self.linepens[li]
-                    color = pen.color()
-                    color.setAlpha(alpha)
-                    new_pen = pg.mkPen(color, width=1)
-                    item.setPen(new_pen)
+                    # Only make the last 16 lines visible
+                    should_be_visible = (idx >= visible_start_idx and
+                                        self.state.persist_lines_enabled[channel_idx] and
+                                        not self.state.persist_heatmap_enabled[channel_idx])
+
+                    if should_be_visible:
+                        # Update alpha for visible lines
+                        alpha = int(100 * (1 - (age / channel_persist_time)))
+                        pen = self.linepens[li]
+                        color = pen.color()
+                        color.setAlpha(alpha)
+                        new_pen = pg.mkPen(color, width=1)
+                        item.setPen(new_pen)
+                        item.setVisible(True)
+                    else:
+                        # Hide older lines to improve performance
+                        item.setVisible(False)
 
             # Remove expired items
             for item_data in items_to_remove:
@@ -876,14 +893,17 @@ class PlotManager(pg.QtCore.QObject):
                 # Set initial visibility based on state
                 avg_line.setVisible(s.persist_avg_enabled[channel_idx])
 
-            first_line_item = persist_lines[0][0]
+            # Only use the last 16 lines for averaging (for performance)
+            lines_to_average = list(persist_lines)[-self.max_visible_persist_lines:]
+
+            first_line_item = lines_to_average[0][0]
             min_x, max_x = first_line_item.xData.min(), first_line_item.xData.max()
 
             board_idx = channel_idx // s.num_chan_per_board
             num_points = s.expect_samples * 40 * (2 if s.dointerleaved[board_idx] else 1)
             common_x_axis = np.linspace(min_x, max_x, num_points)
 
-            resampled_y_values = [np.interp(common_x_axis, item.xData, item.yData) for item, _, _, _, _ in persist_lines]
+            resampled_y_values = [np.interp(common_x_axis, item.xData, item.yData) for item, _, _, _, _ in lines_to_average]
 
             if resampled_y_values:
                 y_average = np.mean(resampled_y_values, axis=0)
