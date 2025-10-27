@@ -32,7 +32,7 @@ class HeatmapManager:
         self.persist_heatmap_offset = {}  # Dictionary: {channel_index: last offset when heatmap was created}
 
         # Bin configuration - reduced by 2x for better performance
-        self.heatmap_bins_y = 200   # Number of bins in y-direction (voltage)
+        self.heatmap_bins_y = 500   # Number of bins in y-direction (voltage)
         self._base_heatmap_bins_x = 1000  # Base number of bins in x-direction (time) at downsample=0
 
         # Smoothing configuration
