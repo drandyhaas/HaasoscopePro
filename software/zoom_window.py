@@ -5,6 +5,7 @@ from pyqtgraph.Qt import QtCore, QtWidgets
 from PyQt5.QtGui import QColor, QPen
 from PyQt5.QtCore import pyqtSignal
 from plot_manager import add_secondary_axis
+from heatmap_manager import HeatmapManager
 
 
 class ZoomWindow(QtWidgets.QWidget):
@@ -110,6 +111,14 @@ class ZoomWindow(QtWidgets.QWidget):
         self.persist_lines = {}  # {channel_index: [plot_line, ...]} for persist lines
         self.average_persist_lines = {}  # {channel_index: plot_line} for average persist lines
 
+        # Create heatmap manager for this zoom window
+        # We'll adjust bin counts to match main plot's bin size
+        self.heatmap_manager = HeatmapManager(self.plot, self.state)
+        self.main_plot_manager = plot_manager  # Store reference to get main plot's bin size
+
+        # Override heatmap's _init_heatmap_for_channel to use zoom ROI ranges
+        self._patch_heatmap_manager()
+
         layout.addWidget(self.plot_widget)
         self.setLayout(layout)
 
@@ -141,6 +150,87 @@ class ZoomWindow(QtWidgets.QWidget):
         # Update the plot view range
         if x_range and y_range:
             self.plot.setRange(xRange=x_range, yRange=y_range, padding=0)
+
+        # Update heatmap bin counts to match main plot's bin size
+        self._update_heatmap_bins()
+
+    def _patch_heatmap_manager(self):
+        """Patch heatmap manager to use zoom window's view range for both x and y."""
+        # Store the original methods
+        original_init = self.heatmap_manager._init_heatmap_for_channel
+        original_regenerate = self.heatmap_manager.regenerate
+
+        # Create a wrapper that uses view range for y as well
+        def patched_init(line_idx):
+            # Call original to set up most things
+            original_init(line_idx)
+
+            # Override the ranges to use actual view range for both x and y
+            view_range = self.plot.getViewBox().viewRange()
+            view_min_x, view_max_x = view_range[0]
+            view_min_y, view_max_y = view_range[1]
+
+            self.heatmap_manager.persist_heatmap_ranges[line_idx] = (
+                (view_min_x, view_max_x),  # X from current view
+                (view_min_y, view_max_y)   # Y from current view (not state!)
+            )
+
+        # Wrapper for regenerate to use view range for y
+        def patched_regenerate(line_idx, persist_lines):
+            # Update ranges to use current view before regenerating
+            view_range = self.plot.getViewBox().viewRange()
+            view_min_x, view_max_x = view_range[0]
+            view_min_y, view_max_y = view_range[1]
+
+            # Temporarily override state to set proper ranges
+            self.heatmap_manager.persist_heatmap_ranges[line_idx] = (
+                (view_min_x, view_max_x),  # X from current view
+                (view_min_y, view_max_y)   # Y from current view (not state!)
+            )
+
+            # Call original regenerate
+            original_regenerate(line_idx, persist_lines)
+
+        # Replace the methods
+        self.heatmap_manager._init_heatmap_for_channel = patched_init
+        self.heatmap_manager.regenerate = patched_regenerate
+
+    def _update_heatmap_bins(self):
+        """Calculate heatmap bin counts for zoom window to match main plot's bin size."""
+        if not self.main_plot_manager or not self.zoom_x_range or not self.zoom_y_range:
+            return
+
+        # Get main plot's view range
+        main_view_range = self.main_plot_manager.plot.getViewBox().viewRange()
+        main_x_min, main_x_max = main_view_range[0]
+        main_y_min, main_y_max = main_view_range[1]
+
+        # Get main plot's bin counts
+        main_bins_x = self.main_plot_manager.heatmap_manager.get_heatmap_bins_x()
+        main_bins_y = self.main_plot_manager.heatmap_manager.heatmap_bins_y
+
+        # Calculate main plot's bin sizes
+        main_x_range = main_x_max - main_x_min
+        main_y_range = main_y_max - main_y_min
+        if main_x_range == 0 or main_y_range == 0:
+            return
+
+        bin_size_x = main_x_range / main_bins_x
+        bin_size_y = main_y_range / main_bins_y
+
+        # Calculate zoom window's range
+        zoom_x_min, zoom_x_max = self.zoom_x_range
+        zoom_y_min, zoom_y_max = self.zoom_y_range
+        zoom_x_range = zoom_x_max - zoom_x_min
+        zoom_y_range = zoom_y_max - zoom_y_min
+
+        # Calculate how many bins we need in the zoom window to maintain the same bin size
+        zoom_bins_x = max(1, int(zoom_x_range / bin_size_x))
+        zoom_bins_y = max(1, int(zoom_y_range / bin_size_y))
+
+        # Update the zoom heatmap manager's bin counts
+        self.heatmap_manager._base_heatmap_bins_x = zoom_bins_x
+        self.heatmap_manager.heatmap_bins_y = zoom_bins_y
 
     def update_zoom_plot(self, stabilized_data, math_results=None):
         """Update the zoom plot with new data.
@@ -194,8 +284,16 @@ class ZoomWindow(QtWidgets.QWidget):
                     connect="finite"
                 )
 
-            # Show and update line data
-            self.channel_lines[ch_idx].setVisible(True)
+            # Hide main line if any persistence visualization is enabled
+            has_persistence = (
+                self.state.persist_time[ch_idx] > 0 and
+                (self.state.persist_lines_enabled[ch_idx] or
+                 self.state.persist_avg_enabled[ch_idx] or
+                 self.state.persist_heatmap_enabled[ch_idx])
+            )
+
+            # Show and update line data (hide if persistence is on)
+            self.channel_lines[ch_idx].setVisible(not has_persistence)
             self.channel_lines[ch_idx].setData(x=x_data, y=y_data, skipFiniteCheck=True)
 
         # Update math channels
@@ -461,7 +559,7 @@ class ZoomWindow(QtWidgets.QWidget):
                     self.peak_min_lines[ch_idx].setVisible(False)
 
     def update_persist_lines(self, main_plot_manager):
-        """Update the zoom window's persist lines and average persist lines to match the main plot.
+        """Update the zoom window's persist lines, heatmaps, and average persist lines to match the main plot.
 
         Args:
             main_plot_manager: The main window's plot manager to get persist data from
@@ -469,11 +567,18 @@ class ZoomWindow(QtWidgets.QWidget):
         if not main_plot_manager:
             return
 
+        # Update heatmap bin counts to match main plot's bin size
+        self._update_heatmap_bins()
+
         # Clear all existing persist lines
         for ch_idx in list(self.persist_lines.keys()):
             for persist_line in self.persist_lines[ch_idx]:
                 self.plot.removeItem(persist_line)
             self.persist_lines[ch_idx] = []
+
+        # Clear all existing heatmaps
+        for ch_idx in list(self.heatmap_manager.persist_heatmap_items.keys()):
+            self.heatmap_manager.clear_channel(ch_idx)
 
         # Add persist lines from main plot manager
         if hasattr(main_plot_manager, 'persist_lines_per_channel'):
@@ -481,10 +586,25 @@ class ZoomWindow(QtWidgets.QWidget):
                 if ch_idx not in self.persist_lines:
                     self.persist_lines[ch_idx] = []
 
-                # Iterate through persist items in the deque
-                for persist_item, creation_time, line_idx in persist_deque:
-                    # Get the data from the persist item
-                    x_data, y_data = persist_item.getData()
+                # Convert deque to list
+                persist_list = list(persist_deque)
+
+                # Only draw the last 16 persist lines for performance (matching main plot)
+                # But use all 100 for heatmap
+                max_visible_persist = 16
+                lines_to_draw = persist_list[-max_visible_persist:] if len(persist_list) > max_visible_persist else persist_list
+
+                # Iterate through the visible persist items only
+                for item_data in lines_to_draw:
+                    # Unpack the 5-tuple format (persist_item, timestamp, line_idx, x_data, y_data)
+                    persist_item = item_data[0]
+                    x_data = item_data[3] if len(item_data) >= 4 else None
+                    y_data = item_data[4] if len(item_data) >= 5 else None
+
+                    # Fallback to getData if x_data/y_data not in tuple (backwards compatibility)
+                    if x_data is None or y_data is None:
+                        x_data, y_data = persist_item.getData()
+
                     if x_data is not None and y_data is not None:
                         # Get the pen from the persist item to maintain the same alpha
                         pen = persist_item.opts['pen']
@@ -492,8 +612,18 @@ class ZoomWindow(QtWidgets.QWidget):
                         # Create a new persist line in the zoom window with the same pen
                         zoom_persist_line = self.plot.plot(x=x_data, y=y_data, pen=pen,
                                                           skipFiniteCheck=True, connect="finite")
-                        zoom_persist_line.setVisible(persist_item.isVisible())
+                        # Show persist lines only if heatmap is disabled
+                        is_heatmap_enabled = self.state.persist_heatmap_enabled[ch_idx]
+                        zoom_persist_line.setVisible(persist_item.isVisible() and not is_heatmap_enabled)
                         self.persist_lines[ch_idx].append(zoom_persist_line)
+
+                # Regenerate heatmap if enabled for this channel (uses ALL persist lines, not just 16)
+                if self.state.persist_heatmap_enabled[ch_idx]:
+                    # Sync smoothing settings from main plot manager
+                    if hasattr(main_plot_manager, 'heatmap_manager'):
+                        self.heatmap_manager.heatmap_smoothing_sigma = main_plot_manager.heatmap_manager.heatmap_smoothing_sigma
+                    # Regenerate heatmap from all persist lines (full buffer of up to 100)
+                    self.heatmap_manager.regenerate(ch_idx, persist_list)
 
         # Update average persist lines
         if hasattr(main_plot_manager, 'average_lines'):

@@ -5,7 +5,7 @@ class ScopeState:
 
     def __init__(self, num_boards, num_chan_per_board):
         # General and Hardware Configuration
-        self.softwareversion = 31.07
+        self.softwareversion = 31.08
         self.num_board = num_boards
         self.num_chan_per_board = num_chan_per_board
         self.samplerate = 3.2  # GHz
@@ -56,8 +56,9 @@ class ScopeState:
 
         # Per-channel persistence settings
         self.persist_time = [0] * (num_boards * num_chan_per_board)  # Persistence time in ms for each channel
-        self.persist_lines_enabled = [True] * (num_boards * num_chan_per_board)  # Show faint persist lines
+        self.persist_lines_enabled = [False] * (num_boards * num_chan_per_board)  # Show faint persist lines
         self.persist_avg_enabled = [True] * (num_boards * num_chan_per_board)  # Show persist average
+        self.persist_heatmap_enabled = [True] * (num_boards * num_chan_per_board)  # Show heatmap instead of lines
 
         # Triggering Parameters
         self.triggerlevel = 127

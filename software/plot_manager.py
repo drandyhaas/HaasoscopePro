@@ -12,6 +12,7 @@ from scipy.signal import resample
 from scipy.interpolate import interp1d
 from data_processor import find_crossing_distance
 from cursor_manager import CursorManager
+from heatmap_manager import HeatmapManager
 import math
 
 
@@ -101,10 +102,14 @@ class PlotManager(pg.QtCore.QObject):
         self.zoom_roi = None
 
         # Persistence attributes (per-channel)
-        self.max_persist_lines = 16
+        self.max_persist_lines = 100  # Total buffer size for heatmap
+        self.max_visible_persist_lines = 16  # Only show last 16 for performance
         self.persist_lines_per_channel = {}  # Dictionary: {channel_index: deque of persist lines}
         self.persist_timer = QtCore.QTimer()
         self.persist_timer.timeout.connect(self.update_persist_effect)
+
+        # Heatmap manager for persist line visualization
+        self.heatmap_manager = HeatmapManager(self.plot, self.state)
 
         # Peak detect attributes
         self.peak_detect_enabled = {}  # {channel_index: bool} - per-channel peak detect enabled state
@@ -441,9 +446,9 @@ class PlotManager(pg.QtCore.QObject):
                 self.stabilized_data_noresamp[li] = (xdatanew, ydatanew)  # Fallback to resampled
 
             # Add to persistence if channel is enabled and has persistence enabled
-            # Accumulate if either persist lines OR persist average is enabled (average needs the data)
+            # Accumulate if persist lines OR persist average OR persist heatmap is enabled
             if (s.persist_time[li] > 0 and s.channel_enabled[li] and
-                (s.persist_lines_enabled[li] or s.persist_avg_enabled[li])):
+                (s.persist_lines_enabled[li] or s.persist_avg_enabled[li] or s.persist_heatmap_enabled[li])):
                 self._add_to_persistence(xdatanew, ydatanew, li)
 
             # --- Peak detect update ---
@@ -764,17 +769,49 @@ class PlotManager(pg.QtCore.QObject):
 
         persist_lines = self.persist_lines_per_channel[line_idx]
 
+        # If we're about to remove the oldest line, remove it from heatmap first
         if len(persist_lines) >= self.max_persist_lines:
-            oldest_item, _, _ = persist_lines.popleft()
+            oldest_item, _, _, oldest_x, oldest_y = persist_lines.popleft()
             self.plot.removeItem(oldest_item)
+            # Remove from heatmap
+            if self.state.persist_heatmap_enabled[line_idx]:
+                self.heatmap_manager.remove_trace(oldest_x, oldest_y, line_idx)
+
+        # If heatmap mode is enabled, check if settings or view changed BEFORE adding to persist buffer
+        if self.state.persist_heatmap_enabled[line_idx]:
+            # Check if gain/offset changed - need to clear everything
+            if self.heatmap_manager.check_gain_offset_changed(line_idx):
+                # Clear all persist lines for this channel since they're in the old scale
+                for item_data in list(persist_lines):
+                    item = item_data[0]
+                    self.plot.removeItem(item)
+                persist_lines.clear()
+                # Just clear the heatmap - don't regenerate with empty data
+                # It will rebuild naturally as new traces come in
+                self.heatmap_manager.clear_for_settings_change(line_idx)
+                # Continue to add the current trace with the new scale
+                # Don't return - let it fall through to add this trace
+            # Check if view (pan/zoom) changed - regenerate heatmap from existing persist lines
+            elif self.heatmap_manager.check_view_changed(line_idx):
+                # Regenerate heatmap with new view range
+                self.heatmap_manager.regenerate(line_idx, persist_lines)
 
         pen = self.linepens[line_idx]
         color = pen.color()
         color.setAlpha(100)
         new_pen = pg.mkPen(color, width=1)
         persist_item = self.plot.plot(x, y, pen=new_pen, skipFiniteCheck=True, connect="finite")
-        persist_item.setVisible(self.state.persist_lines_enabled[line_idx])
-        persist_lines.append((persist_item, time.time(), line_idx))
+        # If heatmap mode is enabled, hide the individual persist lines
+        persist_item.setVisible(self.state.persist_lines_enabled[line_idx] and not self.state.persist_heatmap_enabled[line_idx])
+
+        # Store a copy of the data for later heatmap removal
+        persist_lines.append((persist_item, time.time(), line_idx, x.copy(), y.copy()))
+
+        # If heatmap mode is enabled, add this trace to the heatmap
+        if self.state.persist_heatmap_enabled[line_idx]:
+            # Don't recalculate ranges - use fixed ranges set during initialization
+            # This prevents rect/data mismatch that causes scaling artifacts
+            self.heatmap_manager.add_trace(x, y, line_idx, persist_lines)
 
     def update_persist_effect(self):
         """Updates the alpha/transparency of persistent lines for all channels."""
@@ -792,21 +829,45 @@ class PlotManager(pg.QtCore.QObject):
                 continue
 
             items_to_remove = []
-            for item, creation_time, li in persist_lines:
+            # Only show the last max_visible_persist_lines (16) for performance
+            # But keep all 100 in the buffer for heatmap
+            total_lines = len(persist_lines)
+            visible_start_idx = max(0, total_lines - self.max_visible_persist_lines)
+
+            for idx, item_data in enumerate(persist_lines):
+                item = item_data[0]
+                creation_time = item_data[1]
+                li = item_data[2]
                 age = (current_time - creation_time) * 1000.0
                 if age > channel_persist_time:
-                    items_to_remove.append((item, creation_time, li))
+                    items_to_remove.append(item_data)
                 else:
-                    alpha = int(100 * (1 - (age / channel_persist_time)))
-                    pen = self.linepens[li]
-                    color = pen.color()
-                    color.setAlpha(alpha)
-                    new_pen = pg.mkPen(color, width=1)
-                    item.setPen(new_pen)
+                    # Only make the last 16 lines visible
+                    should_be_visible = (idx >= visible_start_idx and
+                                        self.state.persist_lines_enabled[channel_idx] and
+                                        not self.state.persist_heatmap_enabled[channel_idx])
 
-            for item_tuple in items_to_remove:
-                self.plot.removeItem(item_tuple[0])
-                persist_lines.remove(item_tuple)
+                    if should_be_visible:
+                        # Update alpha for visible lines
+                        alpha = int(100 * (1 - (age / channel_persist_time)))
+                        pen = self.linepens[li]
+                        color = pen.color()
+                        color.setAlpha(alpha)
+                        new_pen = pg.mkPen(color, width=1)
+                        item.setPen(new_pen)
+                        item.setVisible(True)
+                    else:
+                        # Hide older lines to improve performance
+                        item.setVisible(False)
+
+            # Remove expired items
+            for item_data in items_to_remove:
+                item, _, _, x_data, y_data = item_data
+                self.plot.removeItem(item)
+                persist_lines.remove(item_data)
+                # Remove from heatmap incrementally
+                if self.state.persist_heatmap_enabled[channel_idx]:
+                    self.heatmap_manager.remove_trace(x_data, y_data, channel_idx)
 
     def update_persist_average(self):
         """Calculates and plots the average of persistent traces for all channels with data."""
@@ -832,14 +893,17 @@ class PlotManager(pg.QtCore.QObject):
                 # Set initial visibility based on state
                 avg_line.setVisible(s.persist_avg_enabled[channel_idx])
 
-            first_line_item = persist_lines[0][0]
+            # Only use the last 16 lines for averaging (for performance)
+            lines_to_average = list(persist_lines)[-self.max_visible_persist_lines:]
+
+            first_line_item = lines_to_average[0][0]
             min_x, max_x = first_line_item.xData.min(), first_line_item.xData.max()
 
             board_idx = channel_idx // s.num_chan_per_board
             num_points = s.expect_samples * 40 * (2 if s.dointerleaved[board_idx] else 1)
             common_x_axis = np.linspace(min_x, max_x, num_points)
 
-            resampled_y_values = [np.interp(common_x_axis, item.xData, item.yData) for item, _, _ in persist_lines]
+            resampled_y_values = [np.interp(common_x_axis, item.xData, item.yData) for item, _, _, _, _ in lines_to_average]
 
             if resampled_y_values:
                 y_average = np.mean(resampled_y_values, axis=0)
@@ -859,16 +923,23 @@ class PlotManager(pg.QtCore.QObject):
             # Clear only the specified channel
             if channel_index in self.persist_lines_per_channel:
                 persist_lines = self.persist_lines_per_channel[channel_index]
-                for item, _, _ in list(persist_lines):
+                for item_data in list(persist_lines):
+                    item = item_data[0]
                     self.plot.removeItem(item)
                 persist_lines.clear()
+            # Clear heatmap for this channel
+            self.heatmap_manager.clear_channel(channel_index)
         else:
             # Clear all channels
             for channel_idx, persist_lines in list(self.persist_lines_per_channel.items()):
-                for item, _, _ in list(persist_lines):
+                for item_data in list(persist_lines):
+                    item = item_data[0]
                     self.plot.removeItem(item)
                 persist_lines.clear()
             self.persist_lines_per_channel.clear()
+            # Clear all heatmaps
+            for channel_idx in list(self.heatmap_manager.persist_heatmap_data.keys()):
+                self.heatmap_manager.clear_channel(channel_idx)
 
         # Clear the average line(s) for the specified channel(s)
         if channel_index is not None:

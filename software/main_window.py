@@ -319,6 +319,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.persistTbox.valueChanged.connect(self.set_persistence)
         self.ui.persistAvgCheck.stateChanged.connect(self.set_average_line_pen)
         self.ui.persistlinesCheck.clicked.connect(self.set_average_line_pen)
+        self.ui.persistheatCheck.clicked.connect(self.set_average_line_pen)
         self.ui.actionLine_color.triggered.connect(self.change_channel_color)
         self.ui.actionHigh_resolution.triggered.connect(self.high_resolution_toggled)
 
@@ -1402,11 +1403,16 @@ class MainWindow(TemplateBaseClass):
             # Reset cursor positions if they are outside the visible range
             if self.plot_manager.cursor_manager:
                 self.plot_manager.cursor_manager.adjust_cursor_positions()
+                # Update trigger info display since view center has changed
+                self.plot_manager.cursor_manager.update_trigger_threshold_text()
 
         else:  # Normal trigger adjust mode
             s.triggerpos = int(s.expect_samples * value / 10000.)
             self.controller.send_trigger_info_all()
             self.plot_manager.draw_trigger_lines()
+            # Update trigger info display after trigger position changes
+            if self.plot_manager.cursor_manager:
+                self.plot_manager.cursor_manager.update_trigger_threshold_text()
 
     def on_vline_dragged(self, value):
         """
@@ -1445,6 +1451,10 @@ class MainWindow(TemplateBaseClass):
                 self.ui.thresholdPos.blockSignals(True)
                 self.ui.thresholdPos.setValue(int(slider_value))
                 self.ui.thresholdPos.blockSignals(False)
+
+            # Update trigger info display since view has panned
+            if self.plot_manager.cursor_manager:
+                self.plot_manager.cursor_manager.update_trigger_threshold_text()
 
         else:  # Normal trigger adjust mode
             t = (value / (4 * 10 * (s.downsamplefactor / s.nsunits / s.samplerate)) - 1.0) * 10000. / s.expect_samples
@@ -1768,6 +1778,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.persistTbox.blockSignals(True)
         self.ui.persistlinesCheck.blockSignals(True)
         self.ui.persistAvgCheck.blockSignals(True)
+        self.ui.persistheatCheck.blockSignals(True)
 
         # Convert persist_time back to the spinbox value (reverse of the formula)
         persist_time_ms = s.persist_time[active_channel]
@@ -1782,11 +1793,13 @@ class MainWindow(TemplateBaseClass):
         # Update checkboxes
         self.ui.persistlinesCheck.setChecked(s.persist_lines_enabled[active_channel])
         self.ui.persistAvgCheck.setChecked(s.persist_avg_enabled[active_channel])
+        self.ui.persistheatCheck.setChecked(s.persist_heatmap_enabled[active_channel])
 
         # Unblock signals
         self.ui.persistTbox.blockSignals(False)
         self.ui.persistlinesCheck.blockSignals(False)
         self.ui.persistAvgCheck.blockSignals(False)
+        self.ui.persistheatCheck.blockSignals(False)
 
     def set_persistence(self, value):
         """Handle persistence time changes from the UI."""
@@ -1813,11 +1826,13 @@ class MainWindow(TemplateBaseClass):
         is_chan_on = s.channel_enabled[channel_index]
         show_persist_lines = s.persist_lines_enabled[channel_index]
         show_persist_avg = s.persist_avg_enabled[channel_index]
+        show_persist_heatmap = s.persist_heatmap_enabled[channel_index]
         persist_time = s.persist_time[channel_index]
 
         # Get the line objects
         main_line = self.plot_manager.lines[channel_index]
         average_line = self.plot_manager.average_lines.get(channel_index)
+        heatmap_item = self.plot_manager.heatmap_manager.persist_heatmap_items.get(channel_index)
 
         # If channel is not enabled, hide everything
         if not is_chan_on:
@@ -1825,8 +1840,11 @@ class MainWindow(TemplateBaseClass):
             if average_line:
                 average_line.setVisible(False)
             if channel_index in self.plot_manager.persist_lines_per_channel:
-                for item, _, _ in self.plot_manager.persist_lines_per_channel[channel_index]:
+                for item_data in self.plot_manager.persist_lines_per_channel[channel_index]:
+                    item = item_data[0]
                     item.setVisible(False)
+            if heatmap_item:
+                heatmap_item.setVisible(False)
             return
 
         # Channel is enabled - apply visibility rules
@@ -1835,13 +1853,18 @@ class MainWindow(TemplateBaseClass):
         if average_line:
             average_line.setVisible(show_persist_avg)
 
-        # Persist lines visibility
-        if channel_index in self.plot_manager.persist_lines_per_channel:
-            for item, _, _ in self.plot_manager.persist_lines_per_channel[channel_index]:
-                item.setVisible(show_persist_lines)
+        # Persist heatmap visibility (mutually exclusive with persist lines)
+        if heatmap_item:
+            heatmap_item.setVisible(show_persist_heatmap and persist_time > 0)
 
-        # Main trace visibility: hide ONLY if average is on AND persist lines are off AND persist time > 0
-        if show_persist_avg and not show_persist_lines and persist_time > 0:
+        # Persist lines visibility (hide if heatmap is enabled)
+        if channel_index in self.plot_manager.persist_lines_per_channel:
+            for item_data in self.plot_manager.persist_lines_per_channel[channel_index]:
+                item = item_data[0]
+                item.setVisible(show_persist_lines and not show_persist_heatmap)
+
+        # Main trace visibility: hide ONLY if (average is on OR heatmap is on) AND persist lines are off AND persist time > 0
+        if (show_persist_avg or show_persist_heatmap) and not show_persist_lines and persist_time > 0:
             main_line.setVisible(False)
         else:
             main_line.setVisible(True)
@@ -1857,10 +1880,17 @@ class MainWindow(TemplateBaseClass):
         # Store UI checkbox states to the active channel's state
         s.persist_lines_enabled[active_channel] = self.ui.persistlinesCheck.isChecked()
         s.persist_avg_enabled[active_channel] = self.ui.persistAvgCheck.isChecked()
+        s.persist_heatmap_enabled[active_channel] = self.ui.persistheatCheck.isChecked()
         s.channel_enabled[active_channel] = self.ui.chanonCheck.isChecked()
 
         # Update the pen style/color of the average line
         self.plot_manager.set_average_line_pen()
+
+        # If heatmap mode was just enabled, regenerate the heatmap from current persist lines
+        if s.persist_heatmap_enabled[active_channel] and s.persist_time[active_channel] > 0:
+            if active_channel in self.plot_manager.persist_lines_per_channel:
+                persist_lines = self.plot_manager.persist_lines_per_channel[active_channel]
+                self.plot_manager.heatmap_manager.regenerate(active_channel, persist_lines)
 
         # Update visibility for the active channel
         self.update_channel_visibility(active_channel)

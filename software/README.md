@@ -101,6 +101,7 @@ The GUI supports keyboard shortcuts for quick control adjustments:
 ## Code Architecture
 
 This diagram shows the software architecture with all major components, data flows, and relationships.
+Use [mermaid.live](https://mermaid.live/) to convert it to [diagram.png](https://raw.githubusercontent.com/drandyhaas/HaasoscopePro/refs/heads/main/software/diagram.png).
 
 ```mermaid
 graph TD
@@ -146,8 +147,10 @@ graph TD
 
     %% --- Plot Manager Owned Components ---
     F --> P1["🎯 CursorManager<br>cursor_manager.py<br>H/V Cursors"]
+    F --> P2["🔥 HeatmapManager<br>heatmap_manager.py<br>Persistence Heatmap"]
 
     P1 --> C
+    P2 --> C
 
     %% --- Popup Windows ---
     B -.-> W1["📈 FFTWindow<br>FFTWindow.py<br>Frequency Analysis"]
@@ -184,7 +187,7 @@ graph TD
     class B core
     class C datastore
     class D,E,F core
-    class M1,M2,M3,P1 core
+    class M1,M2,M3,P1,P2 core
     class W1,W2,W3,W4,W5,W6 helpers
     class H1,H2 hardware
     class DEV1 device
@@ -290,6 +293,13 @@ graph TD
 - Delta measurements
 - Snap to waveform
 - Rise time fit visualization
+
+**`heatmap_manager.py`** - Persistence heatmap visualization
+- Density-based visualization of persist lines
+- Adaptive resolution based on zoom level (1000x200 bins)
+- Gaussian smoothing for professional appearance
+- Color-coded density (blue-to-red gradient)
+- Automatic regeneration on pan/zoom/gain changes
 
 **`settings_manager.py`** - Settings persistence
 - Save/load configuration files (.hsp)
