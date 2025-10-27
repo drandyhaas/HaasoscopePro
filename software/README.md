@@ -101,7 +101,7 @@ The GUI supports keyboard shortcuts for quick control adjustments:
 ## Code Architecture
 
 This diagram shows the software architecture with all major components, data flows, and relationships.
-Use [mermaid.live](https://mermaid.live/) to convert it to [diagram.png](diagram.png).
+Use [mermaid.live](https://mermaid.live/) to convert it to [diagram.png](https://raw.githubusercontent.com/drandyhaas/HaasoscopePro/refs/heads/main/software/diagram.png).
 
 ```mermaid
 graph TD
