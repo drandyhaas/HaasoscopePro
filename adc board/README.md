@@ -90,8 +90,8 @@ The Haasoscope Pro ADC board is a high-performance data acquisition board featur
 - **jlcpcb_parts_scraper.py**: Python script for JLCPCB parts database
 
 ### CAM Files
-- Use [../jlcpcb_10_layer_v9_haas.cam](../jlcpcb_10_layer_v9_haas.cam) for generating Gerbers
-- Design rules: [../jlcpcb-10layers-haas.dru](../jlcpcb-10layers-haas.dru)
+- Use [jlcpcb_10_layer_v9_haas.cam](../other/jlcpcb_10_layer_v9_haas.cam) for generating Gerbers
+- Design rules: [jlcpcb-10layers-haas.dru](../other/jlcpcb-10layers-haas.dru)
 
 ## Bill of Materials Summary
 
@@ -139,13 +139,13 @@ The board contains approximately:
 2. FPGA requires proper thermal management (heatsink + fan)
 3. High-speed ADC sections require careful assembly to maintain signal integrity
 4. Multiple voltage regulators must be populated in correct sequence
-5. USB EEPROM (93LC56B) should be programmed with configuration (see ftdi_template_haasoscopepro.xml in parent directory)
+5. USB EEPROM (93LC56B) should be programmed with configuration (see [../other/ftdi_template_haasoscopepro.xml](../other/ftdi_template_haasoscopepro.xml))
 
 ## Programming & Firmware
 
 - **FPGA Programming**: Via JTAG connector using Quartus Programmer
 - **Firmware**: See [../adc board firmware](../adc%20board%20firmware/) directory
-- **USB Configuration**: Use FT_Prog tool with ftdi_template_haasoscopepro.xml template
+- **USB Configuration**: Use FT_Prog tool with [../other/ftdi_template_haasoscopepro.xml](../other/ftdi_template_haasoscopepro.xml) template
 
 ## Testing & Calibration
 

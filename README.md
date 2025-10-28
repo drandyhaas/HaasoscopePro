@@ -68,6 +68,7 @@ Then run the new software, update the firmware (if needed) on your board from th
 - [adc board](adc%20board/): Design files and documentation for the main board, based on Eagle 9.6.2
 - [adc board firmware](adc%20board%20firmware/): Quartus lite project and documentation for the Altera Cyclone IV FPGA firmware
 - [case](case/): Front and back PCB panels for the aluminum case
+- [other](other/): Other files like safety docs, jlc files, and ftdi template
 - [software](software/): Python files and documentation for the oscilloscope program
 - [sub boards](sub%20boards/): Eagle design files and documentation for smaller test boards that were used during development
 
