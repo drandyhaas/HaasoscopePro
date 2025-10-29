@@ -25,7 +25,7 @@ See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiK
 ## Software and firmware versions
 
 - "main" branch currently has v31 firmware which adds fan PWM control and more software features
-- "v31_test" branch: new development is occuring here
+- "v31_test" branch: new development is happening here
 - old: "v30" branch has v30 firmware which adds trigger delay and holdoff options and more software features
 - old: "v29_cleanup" branch has a beta version of the software with yet more features
 - old: "v29" branch has v29 firmware and adds more software features
