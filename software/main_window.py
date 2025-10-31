@@ -537,6 +537,15 @@ class MainWindow(TemplateBaseClass):
                               "Please unpause (start acquisition) before measuring calibration.")
             return
 
+        # Verify we're at maximum sample rate (downsample = 0)
+        if self.state.downsample > 0:
+            QMessageBox.warning(self, "FIR Calibration",
+                              "FIR calibration must be performed at maximum sample rate.\n\n"
+                              "Please set Downsample to 0 (no downsampling) before measuring calibration.\n\n"
+                              "After calibration, the corrections will be applied at all sample rates, "
+                              "though accuracy may be reduced at heavily downsampled rates.")
+            return
+
         # Show status
         self.statusBar().showMessage("Capturing calibration waveforms...", 3000)
 
@@ -649,6 +658,7 @@ class MainWindow(TemplateBaseClass):
         fir_data = {
             'fir_coefficients': self.state.fir_coefficients.tolist(),
             'calibration_samplerate_hz': self.state.fir_calibration_samplerate,
+            'calibration_downsample': 0,  # Calibration is always at downsample=0 (max rate)
             'num_taps': len(self.state.fir_coefficients),
             'calibration_type': '10MHz_square_wave',
             'software_version': self.state.softwareversion,
@@ -714,12 +724,16 @@ class MainWindow(TemplateBaseClass):
 
         # Check if sample rate matches current sample rate
         current_samplerate_hz = self.state.samplerate * 1e9
+        calibration_downsample = fir_data.get('calibration_downsample', 0)
+
         if self.state.fir_calibration_samplerate is not None:
+            # Check if we're at the same base sample rate (downsample=0)
             if abs(current_samplerate_hz - self.state.fir_calibration_samplerate) > 1e6:  # 1 MHz tolerance
+                # Different base sample rates
                 reply = QMessageBox.question(
                     self, "Sample Rate Mismatch",
-                    f"FIR calibration was performed at {self.state.fir_calibration_samplerate/1e9:.3f} GS/s,\n"
-                    f"but current sample rate is {current_samplerate_hz/1e9:.3f} GS/s.\n\n"
+                    f"FIR calibration was performed at {self.state.fir_calibration_samplerate/1e9:.3f} GS/s (downsample={calibration_downsample}),\n"
+                    f"but current base sample rate is {current_samplerate_hz/1e9:.3f} GS/s.\n\n"
                     f"The correction may not be accurate. Continue anyway?",
                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No
                 )
@@ -729,6 +743,15 @@ class MainWindow(TemplateBaseClass):
                     self.state.fir_calibration_samplerate = None
                     self.state.fir_freq_response = None
                     return
+            elif self.state.downsample > 0:
+                # Same base rate but currently downsampled - inform user
+                QMessageBox.information(
+                    self, "FIR Filter Loaded",
+                    f"FIR calibration was performed at maximum sample rate (downsample=0).\n"
+                    f"You are currently using downsample={self.state.downsample}.\n\n"
+                    f"The correction will be applied, but accuracy may be reduced at downsampled rates.\n"
+                    f"For best results, use downsample=0 (maximum sample rate)."
+                )
 
         # Enable correction
         self.state.fir_correction_enabled = True
@@ -736,9 +759,12 @@ class MainWindow(TemplateBaseClass):
 
         self.statusBar().showMessage(f"FIR filter loaded from {filename}", 5000)
         print(f"FIR filter loaded from {filename}")
-        QMessageBox.information(self, "FIR Filter Loaded",
-                              f"FIR filter loaded successfully from:\n{filename}\n\n"
-                              f"Correction is now enabled.")
+
+        # Show success message if we didn't already show the downsample warning
+        if not (self.state.downsample > 0 and abs(current_samplerate_hz - self.state.fir_calibration_samplerate) <= 1e6):
+            QMessageBox.information(self, "FIR Filter Loaded",
+                                  f"FIR filter loaded successfully from:\n{filename}\n\n"
+                                  f"Correction is now enabled.")
 
     def update_plot_loop(self):
         """Main acquisition loop, with full status bar and FFT plot updates."""

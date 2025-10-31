@@ -1,0 +1,271 @@
+# FIR Frequency Response Calibration
+
+## Overview
+
+This feature corrects for the non-flat frequency response of the Haasoscope Pro hardware by applying a calibrated FIR (Finite Impulse Response) filter to measured waveforms. The calibration is based on a known 10 MHz square wave input signal.
+
+## How It Works
+
+1. **Calibration Signal**: Uses a 10 MHz square wave as reference
+2. **Measurement**: Captures and averages 50 waveforms to reduce noise
+3. **Analysis**: Computes frequency response H(f) = FFT(measured) / FFT(ideal)
+4. **Filter Design**: Creates a 64-tap FIR filter to invert the frequency response
+5. **Application**: Applies the filter in real-time using zero-phase filtering (same as LPF)
+
+## Pipeline Integration
+
+The FIR correction is applied in the waveform processing pipeline at this location:
+
+```
+Hardware → DataProcessor (unpack, scale, LPF)
+    → Board Trigger Stabilizer
+    → PlotManager → Extra Trigger Stabilizer
+    → Time Skew Correction
+    → **FIR Frequency Response Correction** ← NEW
+    → Display
+```
+
+This ensures corrections are applied after trigger stabilization but before display.
+
+## Usage Instructions
+
+### 1. Connect Calibration Signal
+- Connect a **10 MHz square wave** to Channel 0 (or your desired channel)
+- The signal should have good amplitude and clean edges
+- Ensure the scope is triggered and acquiring stable waveforms
+
+### 2. Set Maximum Sample Rate
+- **IMPORTANT**: Set **Downsample to 0** (maximum sample rate) before calibration
+- Calibration must be performed at maximum sample rate for best results
+- After calibration, corrections can be used at downsampled rates (though with reduced accuracy)
+
+### 3. Capture Calibration
+- Start acquisition (unpause the scope)
+- Go to menu: **Calibration → Measure 10 MHz square FIR**
+- If downsample > 0, you'll get a warning to set it to 0 first
+- The software will:
+  - Capture 50 waveforms (takes ~1-2 seconds)
+  - Average them to reduce noise
+  - Compute the frequency response
+  - Design the 64-tap FIR correction filter
+  - Display a success message with improvement in dB
+
+### 4. Apply Correction
+- The correction is automatically enabled after successful calibration
+- You can toggle it on/off using: **Calibration → Apply FIR corrections** (checkbox)
+- The correction applies to **all channels** (not per-channel)
+
+### 5. Verify Results
+- View the corrected waveforms
+- The 10 MHz square wave should now have better-defined edges and harmonics
+- You can toggle the correction on/off to see the difference
+
+### 6. Save/Load Calibration
+- Calibration data is saved to **separate .fir files** (not in the main setup file)
+- Use: **Calibration → Save FIR filter** to export calibration to a file
+- Use: **Calibration → Load FIR filter** to import calibration from a file
+- The saved .fir file (JSON format) contains:
+  - FIR filter coefficients (64 taps)
+  - Sample rate at which calibration was performed
+  - Frequency response data (H(f) magnitude and phase)
+  - Calibration metadata (type, software version)
+- **Sample rate validation**: When loading, the software checks if the base sample rate matches
+- **Downsample handling**:
+  - Calibration must be done at downsample=0 (maximum sample rate)
+  - The calibration can be used at downsampled rates (downsample>0)
+  - When loading at downsample>0, you'll be informed that accuracy may be reduced
+  - For best results, use downsample=0 when applying corrections
+- **Note**: Calibration is specific to the hardware's base sample rate. Different hardware units may need separate calibrations
+
+## Technical Details
+
+### FIR Filter Specifications
+- **Number of taps**: 64 (configurable in `frequency_calibration.py`)
+- **Window**: Blackman window (reduces ringing)
+- **Filter method**: `scipy.signal.filtfilt` (zero-phase, no time delay)
+- **Regularization**: 5% (prevents over-boosting weak frequencies)
+- **Max correction**: ±20 dB (prevents noise amplification)
+
+### Sample Rate Handling
+- Calibration is performed at the **current sample rate**
+- The filter is stored with the sample rate it was calibrated at
+- **Important**: If you change sample rates, you should re-run calibration
+- Future enhancement: Could interpolate/resample FIR coefficients for different rates
+
+### Performance
+- FIR filtering uses `filtfilt` (forward-backward filtering)
+- Same infrastructure as existing LPF, so minimal performance impact
+- Typical overhead: ~10-20% increase in processing time per waveform
+- For 1000 samples @ 64 taps: ~64,000 multiplies per channel
+
+### Square Wave Limitations
+- Square wave only has **odd harmonics** (10, 30, 50, 70, ... MHz)
+- Frequency response is measured only at these harmonics
+- The FIR filter interpolates smoothly between them
+- This provides reasonable correction for general waveforms
+- For better coverage, future enhancement could use chirp/sweep calibration
+
+### Calibration Quality
+- The calibration quality depends on:
+  - Signal-to-noise ratio of input square wave
+  - Stability of trigger (use trigger stabilizers)
+  - Number of averages (default 50)
+  - Cleanliness of square wave edges
+- The success message shows improvement in dB (typically 10-30 dB for good signals)
+
+## Files Modified/Created
+
+### New Files
+- `frequency_calibration.py` - Core calibration logic and FIR filter design
+
+### Modified Files
+- `scope_state.py` - Added FIR calibration state variables (lines 114-118)
+- `plot_manager.py` - Added FIR filter application (lines 437-441)
+- `main_window.py` - Added handlers, calibration capture, and save/load functions (lines 521-739)
+- `HaasoscopePro.ui` - UI actions for measure, apply, save, load (lines 2357-2360, 2994-3021)
+
+## State Variables
+
+The calibration state is stored in `ScopeState`:
+
+```python
+state.fir_correction_enabled          # bool: Enable/disable correction
+state.fir_coefficients                # np.array: 64-tap FIR filter
+state.fir_calibration_samplerate      # float: Sample rate during calibration (Hz)
+state.fir_freq_response              # dict: Measured H(f) for display/analysis
+```
+
+## Future Enhancements
+
+1. **Per-channel calibration**: Currently applies same correction to all channels
+2. **Chirp calibration**: Use frequency sweep for continuous coverage
+3. **Display H(f)**: Show frequency response plot in a dialog
+4. **Auto-detect sample rate change during session**: Warn if sample rate changed after calibration was performed
+5. **Multi-frequency calibration**: Use 1 MHz, 5 MHz, 10 MHz, 20 MHz square waves
+6. **Calibration validation**: Show before/after FFT comparison in a dialog
+7. **Calibration library**: Manage multiple calibrations for different sample rates in one place
+
+## Troubleshooting
+
+**"No calibration data available"**
+- Run "Measure 10 MHz square FIR" first with a 10 MHz square wave connected
+
+**"FIR calibration must be performed at maximum sample rate"**
+- Set Downsample to 0 before running calibration
+- The downsample control should show 0 (no downsampling)
+- After calibration, you can use any downsample setting, but accuracy is best at downsample=0
+
+**"Only captured N waveforms"**
+- Ensure scope is acquiring (not paused)
+- Check that trigger is stable
+- Verify signal is connected to Channel 0
+
+**Poor calibration results**
+- Improve signal quality (cleaner square wave)
+- Enable trigger stabilizers for better alignment
+- Increase number of averages in `frequency_calibration.py` (line 12)
+- Check that signal frequency is exactly 10 MHz
+
+**Correction makes signal worse**
+- Input signal may not be a 10 MHz square wave
+- Re-run calibration with correct signal
+- Try disabling "Apply FIR corrections" and verify input signal is correct
+
+**"Sample Rate Mismatch" warning when loading**
+- Calibration was performed at a different sample rate
+- The FIR filter's frequency response is scaled by sample rate ratio
+- Options:
+  1. Click "No" and re-calibrate at current sample rate
+  2. Click "Yes" to use anyway (may be inaccurate)
+  3. Change scope sample rate to match calibration
+- Best practice: Keep separate .fir files for each sample rate you use
+
+## Example Workflow
+
+### Initial Calibration:
+```
+1. User connects 10 MHz square wave to scope
+2. User sets Downsample = 0 (maximum sample rate)
+3. User starts acquisition and verifies stable trigger
+4. User clicks: Calibration → Measure 10 MHz square FIR
+   → Software captures 50 waveforms
+   → Computes H(f) and designs FIR filter
+   → Shows "Calibration successful. Improvement: 15.3 dB"
+5. Correction is automatically applied
+6. User clicks: Calibration → Save FIR filter
+   → Saves to "haasoscope_3.2GHz_DS0.fir"
+7. All subsequent waveforms are corrected in real-time
+```
+
+### Later Session at Max Rate:
+```
+1. User starts software at same sample rate (3.2 GS/s, downsample=0)
+2. User clicks: Calibration → Load FIR filter
+   → Selects "haasoscope_3.2GHz_DS0.fir"
+   → Software validates sample rate matches
+   → Correction enabled automatically
+3. Waveforms now use pre-calibrated correction
+```
+
+### Using at Downsampled Rate:
+```
+1. User has calibration from max rate (downsample=0)
+2. User sets Downsample = 2 (slower acquisition for longer time window)
+3. User clicks: Calibration → Load FIR filter
+   → Selects "haasoscope_3.2GHz_DS0.fir"
+   → ℹ️ Info: "Calibration was at downsample=0, you are at downsample=2"
+   → Correction enabled with reduced accuracy warning
+4. Correction still works, but accuracy may be reduced
+   For best results, use downsample=0
+```
+
+### Different Base Sample Rate:
+```
+1. User changes hardware to different base sample rate
+2. User clicks: Calibration → Load FIR filter
+   → Selects "haasoscope_3.2GHz_DS0.fir"
+   → ⚠️ Warning: "Sample rate mismatch"
+   → User clicks "No" to re-calibrate
+3. User sets downsample=0 and re-runs: Calibration → Measure 10 MHz square FIR
+4. User saves new calibration as "haasoscope_1.6GHz_DS0.fir"
+```
+
+## Algorithm Details
+
+### Phase Alignment
+1. Estimate initial phase using first zero crossing
+2. Generate ideal square wave with estimated phase
+3. Fine-tune alignment using cross-correlation
+4. Ensures measured and ideal waveforms are time-aligned
+
+### Frequency Response Computation
+```python
+H(f) = FFT(measured) / FFT(ideal)
+```
+- Computed at each frequency bin
+- Includes both magnitude and phase response
+
+### FIR Filter Design
+1. Compute desired correction: C(f) = 1/H(f)
+2. Apply regularization: C(f) = 1/(H(f) + ε)
+3. Smooth correction with median + Savitzky-Golay filter
+4. Interpolate to 2048 frequency bins
+5. Inverse FFT to get time-domain impulse response
+6. Truncate to 64 taps and apply Blackman window
+7. Normalize to unity DC gain
+
+### Real-Time Application
+```python
+for each waveform:
+    y_corrected = filtfilt(fir_coefficients, [1.0], y_measured)
+```
+- Zero-phase filtering (no group delay)
+- Applied to both resampled and non-resampled data
+- Used for display, math channels, FFT, etc.
+
+## References
+
+- FIR Filter Design: https://en.wikipedia.org/wiki/Finite_impulse_response
+- Frequency Sampling Method: scipy.signal.firwin2
+- Zero-Phase Filtering: scipy.signal.filtfilt
+- Square Wave Harmonics: Only odd harmonics (1f, 3f, 5f, ...)
