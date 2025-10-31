@@ -38,6 +38,10 @@ This ensures corrections are applied after trigger stabilization but before disp
 - **IMPORTANT**: Set **Downsample to 0** (maximum sample rate) before calibration
 - Calibration must be performed at maximum sample rate for best results
 - After calibration, corrections can be used at downsampled rates (though with reduced accuracy)
+- **Depth**: The software automatically increases depth to 1000 samples during calibration for optimal frequency resolution
+  - Your current depth setting is temporarily changed and then restored
+  - This gives the finest possible frequency resolution (Δf = sample_rate / 1000)
+  - After calibration, you can use any depth - the FIR filter works identically at all depths
 
 ### 3. Capture Calibration
 - Start acquisition (unpause the scope)
@@ -87,10 +91,20 @@ This ensures corrections are applied after trigger stabilization but before disp
 - **Max correction**: ±20 dB (prevents noise amplification)
 
 ### Sample Rate Handling
-- Calibration is performed at the **current sample rate**
+- Calibration is performed at the **current sample rate** (at downsample=0)
 - The filter is stored with the sample rate it was calibrated at
-- **Important**: If you change sample rates, you should re-run calibration
-- Future enhancement: Could interpolate/resample FIR coefficients for different rates
+- **Important**: If you change base sample rates, you should re-run calibration
+- Can be used at different downsample settings (with reduced accuracy)
+
+### Depth (Sample Count) Handling
+- **Automatic depth optimization during calibration**: Software temporarily sets depth to 1000 samples
+  - Maximum depth = finest frequency resolution: Δf = sample_rate / 1000 ≈ 3.2 MHz / 1000 = 3.2 kHz bins at 3.2 GS/s
+  - For 10 MHz square wave, harmonics at 10, 30, 50, 70, 90 MHz are measured very precisely
+  - After calibration completes, original depth is restored automatically
+- **FIR filter is depth-independent**: Works identically at any depth
+  - During calibration: depth affects frequency resolution of H(f) measurement
+  - After calibration: freely change depth - correction applies the same way
+  - **Why**: FIR filtering is sample-by-sample convolution, not dependent on signal length
 
 ### Performance
 - FIR filtering uses `filtfilt` (forward-backward filtering)

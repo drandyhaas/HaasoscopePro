@@ -556,6 +556,16 @@ class MainWindow(TemplateBaseClass):
         # Capture multiple waveforms
         captured_waveforms = []
 
+        # Temporarily increase depth for better frequency resolution during calibration
+        # Similar to what's done during PLL reset
+        old_depth = self.state.expect_samples
+        calibration_depth = 1000  # Maximum depth for best frequency resolution
+        if old_depth != calibration_depth:
+            self.state.expect_samples = calibration_depth
+            self.allocate_xy_data()
+            self.controller.send_trigger_info_all()
+            print(f"FIR calibration: Temporarily increased depth from {old_depth} to {calibration_depth} for better frequency resolution")
+
         # Temporarily disable drawing for faster capture
         old_dodrawing = self.state.dodrawing
         self.state.dodrawing = False
@@ -590,8 +600,14 @@ class MainWindow(TemplateBaseClass):
                     y_data = self.xydata[channel_idx][1].copy()  # Copy the y-data
                     captured_waveforms.append(y_data)
 
-            # Restore drawing
+            # Restore drawing and depth
             self.state.dodrawing = old_dodrawing
+            if old_depth != calibration_depth:
+                self.state.expect_samples = old_depth
+                self.allocate_xy_data()
+                self.controller.send_trigger_info_all()
+                self.sync_depthbox_to_state()
+                print(f"FIR calibration: Restored depth to {old_depth}")
 
             if len(captured_waveforms) < 10:
                 QMessageBox.warning(self, "FIR Calibration",
@@ -624,7 +640,14 @@ class MainWindow(TemplateBaseClass):
                 self.statusBar().showMessage(f"FIR calibration failed: {result['message']}", 5000)
 
         except Exception as e:
+            # Restore drawing and depth on error
             self.state.dodrawing = old_dodrawing
+            if old_depth != calibration_depth:
+                self.state.expect_samples = old_depth
+                self.allocate_xy_data()
+                self.controller.send_trigger_info_all()
+                self.sync_depthbox_to_state()
+                print(f"FIR calibration error: Restored depth to {old_depth}")
             QMessageBox.critical(self, "FIR Calibration Error", f"Error during calibration: {str(e)}")
             self.statusBar().showMessage(f"FIR calibration error: {str(e)}", 5000)
 
