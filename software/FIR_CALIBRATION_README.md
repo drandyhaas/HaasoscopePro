@@ -113,15 +113,37 @@ This ensures corrections are applied after trigger stabilization but before disp
   - Cleanliness of square wave edges
 - The success message shows improvement in dB (typically 10-30 dB for good signals)
 
+## File Format (.fir)
+
+FIR calibration files use JSON format with the following structure:
+
+```json
+{
+  "fir_coefficients": [0.0123, 0.0234, ... 64 values],
+  "calibration_samplerate_hz": 3200000000.0,
+  "calibration_downsample": 0,
+  "num_taps": 64,
+  "calibration_type": "10MHz_square_wave",
+  "software_version": 31.08,
+  "frequency_response": {
+    "freqs": [0, 1e6, 2e6, ... frequency bins in Hz],
+    "magnitude": [1.0, 0.98, ... magnitude at each frequency],
+    "phase": [0.0, -0.01, ... phase in radians]
+  }
+}
+```
+
+**File Size:** ~10-20 KB per .fir file
+
 ## Files Modified/Created
 
 ### New Files
-- `frequency_calibration.py` - Core calibration logic and FIR filter design
+- `frequency_calibration.py` - Core calibration logic, FIR filter design, save/load functions
 
 ### Modified Files
 - `scope_state.py` - Added FIR calibration state variables (lines 114-118)
 - `plot_manager.py` - Added FIR filter application (lines 437-441)
-- `main_window.py` - Added handlers, calibration capture, and save/load functions (lines 521-739)
+- `main_window.py` - Added handlers and calibration capture (lines 521-637)
 - `HaasoscopePro.ui` - UI actions for measure, apply, save, load (lines 2357-2360, 2994-3021)
 
 ## State Variables
@@ -172,13 +194,22 @@ state.fir_freq_response              # dict: Measured H(f) for display/analysis
 - Try disabling "Apply FIR corrections" and verify input signal is correct
 
 **"Sample Rate Mismatch" warning when loading**
-- Calibration was performed at a different sample rate
+- Calibration was performed at a different base sample rate
 - The FIR filter's frequency response is scaled by sample rate ratio
 - Options:
   1. Click "No" and re-calibrate at current sample rate
-  2. Click "Yes" to use anyway (may be inaccurate)
+  2. Click "Yes" to use anyway (not recommended - may be inaccurate)
   3. Change scope sample rate to match calibration
-- Best practice: Keep separate .fir files for each sample rate you use
+- Best practice: Keep separate .fir files for each base sample rate
+
+**"Invalid FIR filter file" error**
+- File is corrupted or not a valid .fir file
+- Check file format (should be JSON with required fields)
+- Try re-saving the calibration
+
+**File dialog cancellation**
+- No error occurs if you cancel the save/load dialog
+- Simply try again when ready
 
 ## Example Workflow
 
