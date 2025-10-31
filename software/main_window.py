@@ -589,8 +589,7 @@ class MainWindow(TemplateBaseClass):
                         self.processor.process_board_data(
                             raw_data_map[board_idx],
                             board_idx,
-                            self.xydata,
-                            self.xydatainterleaved
+                            self.xydata
                         )
 
                 # Extract y-data from selected channel (just use first channel for simplicity)
@@ -606,7 +605,7 @@ class MainWindow(TemplateBaseClass):
                 self.state.expect_samples = old_depth
                 self.allocate_xy_data()
                 self.controller.send_trigger_info_all()
-                self.sync_depthbox_to_state()
+                self.sync_depth_ui_from_state()
                 print(f"FIR calibration: Restored depth to {old_depth}")
 
             if len(captured_waveforms) < 10:
@@ -646,7 +645,7 @@ class MainWindow(TemplateBaseClass):
                 self.state.expect_samples = old_depth
                 self.allocate_xy_data()
                 self.controller.send_trigger_info_all()
-                self.sync_depthbox_to_state()
+                self.sync_depth_ui_from_state()
                 print(f"FIR calibration error: Restored depth to {old_depth}")
             QMessageBox.critical(self, "FIR Calibration Error", f"Error during calibration: {str(e)}")
             self.statusBar().showMessage(f"FIR calibration error: {str(e)}", 5000)
