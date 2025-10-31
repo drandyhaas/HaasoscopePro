@@ -15,10 +15,10 @@ from PyQt5.QtWidgets import QMessageBox, QFileDialog
 class FrequencyCalibration:
     """Handles frequency response calibration using 10 MHz square wave"""
 
-    def __init__(self):
-        self.num_taps = 64  # FIR filter length
+    def __init__(self, num_taps=64):
+        self.num_taps = num_taps  # FIR filter length (64, 128, or 256)
         self.num_averages = 2*100  # Number of waveforms to average for calibration
-        self.regularization = 0.05  # Prevents over-boosting weak frequencies
+        self.regularization = 0.001  # Small epsilon to prevent division by zero (was 0.05, too aggressive)
 
     def generate_ideal_square_wave(self, frequency_hz, sample_rate_hz, num_samples, phase_offset=0):
         """

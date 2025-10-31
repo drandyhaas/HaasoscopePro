@@ -550,7 +550,8 @@ class MainWindow(TemplateBaseClass):
         self.statusBar().showMessage("Capturing calibration waveforms...", 3000)
 
         # Create calibration object
-        fir_cal = FrequencyCalibration()
+        # num_taps options: 64 (fast), 128 (balanced), 256 (best quality, slower)
+        fir_cal = FrequencyCalibration(num_taps=128)
         num_averages = fir_cal.num_averages
 
         # Capture multiple waveforms

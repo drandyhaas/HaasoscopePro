@@ -84,10 +84,14 @@ This ensures corrections are applied after trigger stabilization but before disp
 ## Technical Details
 
 ### FIR Filter Specifications
-- **Number of taps**: 64 (configurable in `frequency_calibration.py`)
+- **Number of taps**: Configurable (default: 64)
+  - **64 taps**: Fast, good for most hardware (default)
+  - **128 taps**: Better frequency resolution, balanced performance
+  - **256 taps**: Best quality, slowest (2-4x processing time)
+  - Change in `main_window.py` line 554: `FrequencyCalibration(num_taps=128)`
 - **Window**: Blackman window (reduces ringing)
 - **Filter method**: `scipy.signal.filtfilt` (zero-phase, no time delay)
-- **Regularization**: 5% (prevents over-boosting weak frequencies)
+- **Regularization**: 0.1% (small epsilon to prevent division by zero, not aggressive damping)
 - **Max correction**: ±20 dB (prevents noise amplification)
 
 ### Sample Rate Handling
@@ -217,6 +221,9 @@ state.fir_freq_response              # dict: Measured H(f) for display/analysis
   - Check that signal is a clean 10 MHz square wave
   - Verify trigger is stable (use trigger stabilizers)
   - Ensure sufficient signal amplitude and SNR
+  - Try increasing number of taps to 128 or 256 (see main_window.py line 554)
+    - More taps = better frequency resolution and smoother corrections
+    - Especially helpful if you have sharp frequency response variations
 
 **"Sample Rate Mismatch" warning when loading**
 - Calibration was performed at a different base sample rate
@@ -321,7 +328,9 @@ H(f)[0] = 1.0
 
 ### FIR Filter Design (Accounting for filtfilt Double-Pass)
 1. Compute desired correction at significant bins: C(f) = 1/(H(f) + ε)
-   - Regularization ε = 5% of max(H(f)) prevents over-boosting weak frequencies
+   - Regularization ε = 0.1% of max(H(f)) prevents division by exact zero (numerical stability)
+   - **Important**: Should be very small (0.001) to avoid weakening corrections unnecessarily
+   - The ±20 dB clipping (step 2) is the real protection against over-boosting
 2. Clip correction to ±20 dB range (prevents noise amplification)
 3. **Take square root**: C(f) = sqrt(C(f))
    - **Critical**: `filtfilt` applies the filter twice (forward + backward pass)
@@ -391,6 +400,13 @@ for each waveform:
 - `irfft` produces circular impulse response with peak centered
 - Taking first 64 samples captures mostly zeros, producing useless filter
 - **Solution**: Use `fftshift` to center, then extract middle 64 taps around peak
+
+**8. Excessive Regularization**
+- Original regularization = 5% of max(H(f)) was too aggressive
+- For H(f) = 1.0 (flat response): correction = 1.0 / (1.0 + 0.05) = 0.95 (5% attenuation everywhere!)
+- This weakened all corrections and prevented proper frequency response flattening
+- **Solution**: Reduce to 0.1% (0.001) - just enough to prevent division by exact zero
+- Real protection against over-boosting comes from ±20 dB clipping, not regularization
 
 ## References
 
