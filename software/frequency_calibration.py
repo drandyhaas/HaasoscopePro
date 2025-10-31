@@ -15,8 +15,8 @@ from PyQt5.QtWidgets import QMessageBox, QFileDialog
 class FrequencyCalibration:
     """Handles frequency response calibration using 10 MHz square wave"""
 
-    def __init__(self, num_taps=64):
-        self.num_taps = num_taps  # FIR filter length (64, 128, or 256)
+    def __init__(self):
+        self.num_taps = 128  # FIR filter length (64, 128, or 256)
         self.num_averages = 2*100  # Number of waveforms to average for calibration
         self.regularization = 0.001  # Small epsilon to prevent division by zero (was 0.05, too aggressive)
 
@@ -84,7 +84,7 @@ class FrequencyCalibration:
 
         return phase_offset
 
-    def compute_frequency_response(self, measured, ideal, sample_rate_hz):
+    def compute_frequency_response(self, measured, ideal, sample_rate_hz, is_interleaved=False):
         """
         Compute frequency response H(f) = FFT(measured) / FFT(ideal)
 
@@ -92,6 +92,7 @@ class FrequencyCalibration:
             measured: Measured waveform (aligned to ideal)
             ideal: Ideal reference waveform
             sample_rate_hz: Sample rate in Hz
+            is_interleaved: True if interleaved mode (affects hardware LPF cutoff)
 
         Returns:
             dict with keys:
@@ -100,6 +101,8 @@ class FrequencyCalibration:
                 'magnitude': Magnitude response |H(f)|
                 'phase': Phase response in radians
         """
+        # No windowing for calibration - the signal is already periodic (exact integer number of periods)
+        # Windowing would spread energy across bins and contaminate the measurement
         # Compute FFTs directly without amplitude normalization
         # The FIR filter will include overall gain correction as part of frequency response
         measured_fft = np.fft.rfft(measured)
@@ -107,18 +110,39 @@ class FrequencyCalibration:
 
         # Square wave has energy ONLY at odd harmonics (10, 30, 50, 70 MHz...)
         # At other frequencies, both FFTs are near-zero, causing H(f) = 0/0 = garbage
-        # Solution: Only compute H(f) where ideal signal has significant energy
+        # Solution: Only compute H(f) at EXACTLY the bins where 10 MHz harmonics land
 
-        # Find frequencies with significant energy in ideal signal
-        ideal_magnitude = np.abs(ideal_fft)
-        max_ideal_mag = np.max(ideal_magnitude)
-        threshold = 0.01 * max_ideal_mag  # 1% of peak is "significant"
+        # Frequency array
+        freqs = np.fft.rfftfreq(len(measured), d=1/sample_rate_hz)
+
+        # Compute bin spacing
+        nyquist_freq = sample_rate_hz / 2
+        df = sample_rate_hz / len(measured)  # Bin spacing in Hz
+
+        # Find bins for 10 MHz odd harmonics: 10, 30, 50, 70, ... up to hardware LPF cutoff
+        # Hardware LPF cutoff depends on mode:
+        # - Normal/Oversampling mode: ~1.4 GHz
+        # - Interleaved mode: ~2.5 GHz
+        max_calibration_freq = 2.5e9 if is_interleaved else 1.4e9
+        harmonic_freqs = []
+        harmonic_bins = []
+        for n in range(1, 1000):  # Large upper limit
+            freq = 10e6 * (2*n - 1)  # Odd harmonics: 10, 30, 50, 70...
+            if freq > min(nyquist_freq, max_calibration_freq):
+                break
+            bin_idx = int(round(freq / df))
+            if bin_idx < len(freqs):
+                harmonic_freqs.append(freq)
+                harmonic_bins.append(bin_idx)
+
+        harmonic_bins = np.array(harmonic_bins)
 
         # Initialize H_complex to 1.0 (no correction) everywhere
         H_complex = np.ones_like(measured_fft, dtype=complex)
 
-        # Only compute H(f) at frequencies with significant energy
-        significant_bins = ideal_magnitude > threshold
+        # Only compute H(f) at the exact harmonic bins
+        significant_bins = np.zeros(len(measured_fft), dtype=bool)
+        significant_bins[harmonic_bins] = True
         H_complex[significant_bins] = measured_fft[significant_bins] / ideal_fft[significant_bins]
 
         # Force DC bin to 1.0 (no correction for DC offset)
@@ -128,21 +152,20 @@ class FrequencyCalibration:
         H_mag = np.abs(H_complex)
         H_phase = np.angle(H_complex)
 
-        # Frequency array
-        freqs = np.fft.rfftfreq(len(measured), d=1/sample_rate_hz)
-
         # Diagnostic output
         print(f"Frequency response measurement:")
-        print(f"  - Number of significant frequency bins: {np.sum(significant_bins)} / {len(freqs)}")
-        print(f"  - H(f) magnitude range: [{np.min(H_mag):.4f}, {np.max(H_mag):.4f}]")
+        print(f"  - Number of harmonic bins measured: {np.sum(significant_bins)} / {len(freqs)}")
+        # Show H(f) magnitude range only at the measured harmonics
+        H_mag_at_harmonics = H_mag[significant_bins]
+        print(f"  - H(f) magnitude range at harmonics: [{np.min(H_mag_at_harmonics):.4f}, {np.max(H_mag_at_harmonics):.4f}]")
         print(f"  - H(f) magnitude at DC: {H_mag[0]:.4f}")
-        # Find the 10 MHz bin (approximately)
-        idx_10MHz = np.argmin(np.abs(freqs - 10e6))
-        print(f"  - H(f) magnitude near 10 MHz: {H_mag[idx_10MHz]:.4f} at {freqs[idx_10MHz]/1e6:.1f} MHz")
-        # Show frequencies with significant energy
+        # Find the 10 MHz bin
+        idx_10MHz = harmonic_bins[0] if len(harmonic_bins) > 0 else 0
+        print(f"  - H(f) magnitude at 10 MHz: {H_mag[idx_10MHz]:.4f}")
+        # Show first 10 harmonic frequencies
         sig_freqs = freqs[significant_bins]
         if len(sig_freqs) > 0:
-            print(f"  - Calibration frequencies: {', '.join([f'{f/1e6:.1f}' for f in sig_freqs[:10]])} MHz..." if len(sig_freqs) > 10 else f"  - Calibration frequencies: {', '.join([f'{f/1e6:.1f}' for f in sig_freqs])} MHz")
+            print(f"  - Calibration frequencies: {', '.join([f'{f/1e6:.0f}' for f in sig_freqs[:10]])} MHz..." if len(sig_freqs) > 10 else f"  - Calibration frequencies: {', '.join([f'{f/1e6:.0f}' for f in sig_freqs])} MHz")
 
         return {
             'freqs': freqs,
@@ -152,7 +175,7 @@ class FrequencyCalibration:
             'significant_bins': significant_bins
         }
 
-    def design_correction_fir(self, freq_response, sample_rate_hz, max_correction_db=20):
+    def design_correction_fir(self, freq_response, sample_rate_hz, max_correction_db=6):
         """
         Design FIR filter to correct frequency response
 
@@ -183,11 +206,11 @@ class FrequencyCalibration:
 
         correction_mag = np.ones_like(H_mag)  # Start with 1.0 (no correction)
 
-        # Only compute correction at significant frequencies
+        # Only compute correction at harmonic frequencies (limited to below hardware LPF)
         correction_mag[significant_bins] = 1.0 / (H_mag[significant_bins] + regularization_factor)
 
         # Limit maximum correction to prevent noise amplification
-        max_correction_factor = 10 ** (max_correction_db / 20)  # Convert dB to linear
+        max_correction_factor = 10 ** (max_correction_db / 20)  # Convert dB to linear (6 dB = 2x)
         correction_mag = np.clip(correction_mag, 1/max_correction_factor, max_correction_factor)
 
         # IMPORTANT: filtfilt applies the filter twice (forward + backward pass)
@@ -326,13 +349,14 @@ class FrequencyCalibration:
             'mse_after': mse_after
         }
 
-    def calibrate_from_data(self, waveform_data_list, sample_rate_hz):
+    def calibrate_from_data(self, waveform_data_list, sample_rate_hz, is_interleaved=False):
         """
         Complete calibration process from list of captured waveforms
 
         Args:
             waveform_data_list: List of numpy arrays (captured waveforms)
             sample_rate_hz: Sample rate in Hz
+            is_interleaved: True if interleaved mode (affects hardware LPF cutoff)
 
         Returns:
             dict with:
@@ -377,7 +401,7 @@ class FrequencyCalibration:
 
             # Compute frequency response using normalized signals
             # This H(f) will show only frequency-dependent variations, not overall gain
-            freq_response = self.compute_frequency_response(measured_normalized, ideal, sample_rate_hz)
+            freq_response = self.compute_frequency_response(measured_normalized, ideal, sample_rate_hz, is_interleaved)
 
             # Design correction FIR filter
             fir_coefficients = self.design_correction_fir(freq_response, sample_rate_hz)

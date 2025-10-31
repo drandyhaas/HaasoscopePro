@@ -130,7 +130,6 @@ The FIR calibration system automatically detects the current operating mode and 
   - **64 taps**: Fast, good for most hardware (default)
   - **128 taps**: Better frequency resolution, balanced performance
   - **256 taps**: Best quality, slowest (2-4x processing time)
-  - Change in `main_window.py` line 554: `FrequencyCalibration(num_taps=128)`
 - **Window**: Blackman window (reduces ringing)
 - **Filter method**: `scipy.signal.filtfilt` (zero-phase, no time delay)
 - **Regularization**: 0.1% (small epsilon to prevent division by zero, not aggressive damping)
@@ -145,12 +144,13 @@ The FIR calibration system automatically detects the current operating mode and 
 - **Important**: If you change base sample rates, you should re-run calibration
 - Can be used at different downsample settings (with reduced accuracy)
 
-### Depth (Sample Count) Handling
-- **Automatic depth optimization during calibration**: Software temporarily sets depth to 1000 samples
-  - Maximum depth = finest frequency resolution: Δf = sample_rate / 1000
-    - Normal/Oversampling: 3.2 GHz / 1000 = 3.2 MHz bins
-    - Interleaved: 6.4 GHz / 1000 = 6.4 MHz bins (finer resolution at higher frequencies)
-  - For 10 MHz square wave, harmonics at 10, 30, 50, 70, 90 MHz are measured very precisely
+### Depth (Sample Count) and Windowing
+- **Automatic depth optimization during calibration**: Software temporarily sets depth to 640 samples
+  - Chosen so 10 MHz harmonics land exactly on FFT bin centers (avoids spectral leakage)
+  - FFT bin spacing:
+    - Normal/Oversampling: Δf = 3.2 GHz / 640 = 5 MHz → harmonics at bins 2, 6, 10, 14...
+    - Interleaved: Δf = 6.4 GHz / 640 = 10 MHz → harmonics at bins 1, 3, 5, 7...
+  - This ensures accurate measurement of harmonic amplitudes without leakage between bins
   - After calibration completes, original depth is restored automatically
 - **FIR filter is depth-independent**: Works identically at any depth
   - During calibration: depth affects frequency resolution of H(f) measurement
@@ -163,12 +163,15 @@ The FIR calibration system automatically detects the current operating mode and 
 - Typical overhead: ~10-20% increase in processing time per waveform
 - For 1000 samples @ 64 taps: ~64,000 multiplies per channel
 
-### Square Wave Limitations
-- Square wave only has **odd harmonics** (10, 30, 50, 70, ... MHz)
-- Frequency response is measured only at these harmonics
-- The FIR filter interpolates smoothly between them
-- This provides reasonable correction for general waveforms
-- For better coverage, future enhancement could use chirp/sweep calibration
+### Square Wave Calibration Coverage
+- Square wave has **odd harmonics** at 10, 30, 50, 70, ... MHz up to hardware LPF cutoff
+- **Hardware LPF cutoff (mode-dependent)**:
+  - Normal/Oversampling mode: ~1.4 GHz → ~70 harmonics measured
+  - Interleaved mode: ~2.5 GHz → ~125 harmonics measured
+- Calibration is limited to frequencies below the hardware LPF cutoff
+- Frequencies above the cutoff are intentionally filtered by hardware and not corrected
+- The FIR filter interpolates smoothly between measured harmonics
+- This provides correction across the usable hardware bandwidth
 
 ### Calibration Quality
 - The calibration quality depends on:

@@ -590,19 +590,20 @@ class MainWindow(TemplateBaseClass):
                                   f"Click OK when ready...")
 
         # Create calibration object
-        # num_taps options: 64 (fast), 128 (balanced), 256 (best quality, slower)
-        fir_cal = FrequencyCalibration(num_taps=128)
+        fir_cal = FrequencyCalibration()
         num_averages = fir_cal.num_averages
 
         # Temporarily increase depth for better frequency resolution during calibration
-        # Similar to what's done during PLL reset
+        # Use 640 samples: ensures 10 MHz harmonics land exactly on FFT bin centers
+        # Normal mode (3.2 GHz): Δf = 3.2 GHz / 640 = 5 MHz → 10 MHz is bin 2, 30 MHz is bin 6, etc.
+        # Interleaved (6.4 GHz): Δf = 6.4 GHz / 640 = 10 MHz → 10 MHz is bin 1, 30 MHz is bin 3, etc.
         old_depth = self.state.expect_samples
-        calibration_depth = 1000  # Maximum depth for best frequency resolution
+        calibration_depth = 640  # Optimized for 10 MHz harmonics landing on bin centers
         if old_depth != calibration_depth:
             self.state.expect_samples = calibration_depth
             self.allocate_xy_data()
             self.controller.send_trigger_info_all()
-            print(f"FIR calibration: Temporarily increased depth from {old_depth} to {calibration_depth} for better frequency resolution")
+            print(f"FIR calibration: Temporarily set depth to {calibration_depth} (was {old_depth}) for bin alignment with 10 MHz harmonics")
 
         # Temporarily disable drawing for faster capture
         old_dodrawing = self.state.dodrawing
@@ -746,7 +747,7 @@ class MainWindow(TemplateBaseClass):
             if oversample_mode and interleaved_mode:
                 # Run calibration for interleaved data at 2x sample rate
                 sample_rate_hz_interleaved = sample_rate_hz * 2  # 6.4 GHz
-                result = fir_cal.calibrate_from_data(captured_waveforms_interleaved, sample_rate_hz_interleaved)
+                result = fir_cal.calibrate_from_data(captured_waveforms_interleaved, sample_rate_hz_interleaved, is_interleaved=True)
 
                 if result['success']:
                     # Store interleaved calibration in state
