@@ -431,8 +431,12 @@ def save_fir_filter(parent_window, state):
     Returns:
         True if save successful, False otherwise
     """
-    # Check if calibration exists
-    if state.fir_coefficients is None:
+    # Check if any calibration exists
+    has_normal = state.fir_coefficients is not None
+    has_oversample = (state.fir_coefficients_oversample[0] is not None and
+                     state.fir_coefficients_oversample[1] is not None)
+
+    if not has_normal and not has_oversample:
         QMessageBox.warning(parent_window, "Save FIR Filter",
                           "No FIR calibration data to save. Please measure calibration first.")
         return False
@@ -451,23 +455,49 @@ def save_fir_filter(parent_window, state):
     if not os.path.splitext(filename)[1]:
         filename += ".fir"
 
-    # Prepare data to save
+    # Prepare data to save - save both normal and oversampling if they exist
     fir_data = {
-        'fir_coefficients': state.fir_coefficients.tolist(),
-        'calibration_samplerate_hz': state.fir_calibration_samplerate,
         'calibration_downsample': 0,  # Calibration is always at downsample=0 (max rate)
-        'num_taps': len(state.fir_coefficients),
         'calibration_type': '10MHz_square_wave',
         'software_version': state.softwareversion,
     }
 
-    # Optionally save frequency response if available
-    if state.fir_freq_response is not None:
-        fir_data['frequency_response'] = {
-            'freqs': state.fir_freq_response['freqs'].tolist(),
-            'magnitude': state.fir_freq_response['magnitude'].tolist(),
-            'phase': state.fir_freq_response['phase'].tolist(),
-        }
+    # Save normal mode calibration if exists
+    if has_normal:
+        fir_data['fir_coefficients'] = state.fir_coefficients.tolist()
+        fir_data['calibration_samplerate_hz'] = state.fir_calibration_samplerate
+        fir_data['num_taps'] = len(state.fir_coefficients)
+
+        # Save frequency response if available
+        if state.fir_freq_response is not None:
+            fir_data['frequency_response'] = {
+                'freqs': state.fir_freq_response['freqs'].tolist(),
+                'magnitude': state.fir_freq_response['magnitude'].tolist(),
+                'phase': state.fir_freq_response['phase'].tolist(),
+            }
+
+    # Save oversampling mode calibration if exists
+    if has_oversample:
+        fir_data['fir_coefficients_board0'] = state.fir_coefficients_oversample[0].tolist()
+        fir_data['fir_coefficients_board1'] = state.fir_coefficients_oversample[1].tolist()
+        fir_data['calibration_samplerate_hz_board0'] = state.fir_calibration_samplerate_oversample[0]
+        fir_data['calibration_samplerate_hz_board1'] = state.fir_calibration_samplerate_oversample[1]
+        if 'num_taps' not in fir_data:  # Only set if not already set by normal mode
+            fir_data['num_taps'] = len(state.fir_coefficients_oversample[0])
+
+        # Save frequency responses if available
+        if state.fir_freq_response_oversample[0] is not None:
+            fir_data['frequency_response_board0'] = {
+                'freqs': state.fir_freq_response_oversample[0]['freqs'].tolist(),
+                'magnitude': state.fir_freq_response_oversample[0]['magnitude'].tolist(),
+                'phase': state.fir_freq_response_oversample[0]['phase'].tolist(),
+            }
+        if state.fir_freq_response_oversample[1] is not None:
+            fir_data['frequency_response_board1'] = {
+                'freqs': state.fir_freq_response_oversample[1]['freqs'].tolist(),
+                'magnitude': state.fir_freq_response_oversample[1]['magnitude'].tolist(),
+                'phase': state.fir_freq_response_oversample[1]['phase'].tolist(),
+            }
 
     # Save to file
     try:
@@ -512,66 +542,103 @@ def load_fir_filter(parent_window, state, ui):
         QMessageBox.critical(parent_window, "Load Failed", f"Failed to load FIR filter:\n{e}")
         return False
 
-    # Validate data
-    if 'fir_coefficients' not in fir_data or fir_data['fir_coefficients'] is None:
+    # Check which calibrations are present in the file
+    has_normal_in_file = 'fir_coefficients' in fir_data and fir_data['fir_coefficients'] is not None
+    has_oversample_in_file = ('fir_coefficients_board0' in fir_data and fir_data['fir_coefficients_board0'] is not None and
+                             'fir_coefficients_board1' in fir_data and fir_data['fir_coefficients_board1'] is not None)
+
+    if not has_normal_in_file and not has_oversample_in_file:
         QMessageBox.warning(parent_window, "Load Failed", "Invalid FIR filter file: missing coefficients.")
         return False
 
-    # Restore calibration data
-    state.fir_coefficients = np.array(fir_data['fir_coefficients'])
-    state.fir_calibration_samplerate = fir_data.get('calibration_samplerate_hz', None)
-
-    # Restore frequency response if available
-    if 'frequency_response' in fir_data:
-        state.fir_freq_response = {
-            'freqs': np.array(fir_data['frequency_response']['freqs']),
-            'magnitude': np.array(fir_data['frequency_response']['magnitude']),
-            'phase': np.array(fir_data['frequency_response']['phase']),
-        }
-
-    # Check if sample rate matches current sample rate
     current_samplerate_hz = state.samplerate * 1e9
     calibration_downsample = fir_data.get('calibration_downsample', 0)
 
-    if state.fir_calibration_samplerate is not None:
-        # Check if we're at the same base sample rate (downsample=0)
-        if abs(current_samplerate_hz - state.fir_calibration_samplerate) > 1e6:  # 1 MHz tolerance
-            # Different base sample rates
-            reply = QMessageBox.question(
-                parent_window, "Sample Rate Mismatch",
-                f"FIR calibration was performed at {state.fir_calibration_samplerate/1e9:.3f} GS/s (downsample={calibration_downsample}),\n"
-                f"but current base sample rate is {current_samplerate_hz/1e9:.3f} GS/s.\n\n"
-                f"The correction may not be accurate. Continue anyway?",
-                QMessageBox.Yes | QMessageBox.No, QMessageBox.No
-            )
-            if reply == QMessageBox.No:
-                # Clear loaded data
-                state.fir_coefficients = None
-                state.fir_calibration_samplerate = None
-                state.fir_freq_response = None
-                return False
-        elif state.downsample > 0:
-            # Same base rate but currently downsampled - inform user
-            QMessageBox.information(
-                parent_window, "FIR Filter Loaded",
-                f"FIR calibration was performed at maximum sample rate (downsample=0).\n"
-                f"You are currently using downsample={state.downsample}.\n\n"
-                f"The correction will be applied, but accuracy may be reduced at downsampled rates.\n"
-                f"For best results, use downsample=0 (maximum sample rate)."
-            )
+    # Load normal mode calibration if present
+    if has_normal_in_file:
+        state.fir_coefficients = np.array(fir_data['fir_coefficients'])
+        state.fir_calibration_samplerate = fir_data.get('calibration_samplerate_hz', None)
+
+        # Restore frequency response if available
+        if 'frequency_response' in fir_data:
+            state.fir_freq_response = {
+                'freqs': np.array(fir_data['frequency_response']['freqs']),
+                'magnitude': np.array(fir_data['frequency_response']['magnitude']),
+                'phase': np.array(fir_data['frequency_response']['phase']),
+            }
+
+        # Check sample rate match
+        if state.fir_calibration_samplerate is not None:
+            if abs(current_samplerate_hz - state.fir_calibration_samplerate) > 1e6:  # 1 MHz tolerance
+                reply = QMessageBox.question(
+                    parent_window, "Sample Rate Mismatch",
+                    f"Normal FIR calibration was performed at {state.fir_calibration_samplerate/1e9:.3f} GS/s,\n"
+                    f"but current base sample rate is {current_samplerate_hz/1e9:.3f} GS/s.\n\n"
+                    f"The correction may not be accurate. Continue anyway?",
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+                )
+                if reply == QMessageBox.No:
+                    state.fir_coefficients = None
+                    state.fir_calibration_samplerate = None
+                    state.fir_freq_response = None
+                    return False
+
+    # Load oversampling mode calibration if present
+    if has_oversample_in_file:
+        state.fir_coefficients_oversample[0] = np.array(fir_data['fir_coefficients_board0'])
+        state.fir_coefficients_oversample[1] = np.array(fir_data['fir_coefficients_board1'])
+        state.fir_calibration_samplerate_oversample[0] = fir_data.get('calibration_samplerate_hz_board0', None)
+        state.fir_calibration_samplerate_oversample[1] = fir_data.get('calibration_samplerate_hz_board1', None)
+
+        # Restore frequency responses if available
+        if 'frequency_response_board0' in fir_data:
+            state.fir_freq_response_oversample[0] = {
+                'freqs': np.array(fir_data['frequency_response_board0']['freqs']),
+                'magnitude': np.array(fir_data['frequency_response_board0']['magnitude']),
+                'phase': np.array(fir_data['frequency_response_board0']['phase']),
+            }
+        if 'frequency_response_board1' in fir_data:
+            state.fir_freq_response_oversample[1] = {
+                'freqs': np.array(fir_data['frequency_response_board1']['freqs']),
+                'magnitude': np.array(fir_data['frequency_response_board1']['magnitude']),
+                'phase': np.array(fir_data['frequency_response_board1']['phase']),
+            }
+
+        # Check sample rate match (check board 0)
+        if state.fir_calibration_samplerate_oversample[0] is not None:
+            if abs(current_samplerate_hz - state.fir_calibration_samplerate_oversample[0]) > 1e6:
+                reply = QMessageBox.question(
+                    parent_window, "Sample Rate Mismatch",
+                    f"Oversampling FIR calibration was performed at {state.fir_calibration_samplerate_oversample[0]/1e9:.3f} GS/s,\n"
+                    f"but current base sample rate is {current_samplerate_hz/1e9:.3f} GS/s.\n\n"
+                    f"The correction may not be accurate. Continue anyway?",
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+                )
+                if reply == QMessageBox.No:
+                    state.fir_coefficients_oversample = [None, None]
+                    state.fir_calibration_samplerate_oversample = [None, None]
+                    state.fir_freq_response_oversample = [None, None]
+                    # Don't return False here - normal mode might still be loaded
+                    if not has_normal_in_file:
+                        return False
 
     # Enable correction
     state.fir_correction_enabled = True
     ui.actionApply_FIR_corrections.setChecked(True)
 
-    if hasattr(parent_window, 'statusBar'):
-        parent_window.statusBar().showMessage(f"FIR filter loaded from {filename}", 5000)
-    print(f"FIR filter loaded from {filename}")
+    # Build success message based on what was loaded
+    loaded_modes = []
+    if has_normal_in_file and state.fir_coefficients is not None:
+        loaded_modes.append("Normal")
+    if has_oversample_in_file and state.fir_coefficients_oversample[0] is not None:
+        loaded_modes.append("Oversampling")
 
-    # Show success message if we didn't already show the downsample warning
-    if not (state.downsample > 0 and abs(current_samplerate_hz - state.fir_calibration_samplerate) <= 1e6):
-        QMessageBox.information(parent_window, "FIR Filter Loaded",
-                              f"FIR filter loaded successfully from:\n{filename}\n\n"
-                              f"Correction is now enabled.")
+    mode_text = " and ".join(loaded_modes)
+    print(f"FIR filter ({mode_text}) loaded from {filename}")
+
+    # Show success message
+    QMessageBox.information(parent_window, "FIR Filter Loaded",
+                          f"{mode_text} FIR filter loaded successfully from:\n{filename}\n\n"
+                          f"Correction is now enabled.")
 
     return True

@@ -435,10 +435,25 @@ class PlotManager(pg.QtCore.QObject):
                 xdata_noresamp = xdata_noresamp + time_skew_offset
 
             # Apply frequency response correction (FIR filter) if enabled
-            if s.fir_correction_enabled and s.fir_coefficients is not None:
-                ydatanew = filtfilt(s.fir_coefficients, [1.0], ydatanew)
-                if ydata_noresamp is not None:
-                    ydata_noresamp = filtfilt(s.fir_coefficients, [1.0], ydata_noresamp)
+            if s.fir_correction_enabled:
+                # Determine which FIR coefficients to use
+                fir_coeffs = None
+
+                if s.dooversample[board_idx]:
+                    # Oversampling mode: use board-specific coefficients
+                    # Board N uses oversample[0], Board N+1 uses oversample[1]
+                    if board_idx % 2 == 0:
+                        fir_coeffs = s.fir_coefficients_oversample[0]
+                    else:
+                        fir_coeffs = s.fir_coefficients_oversample[1]
+                else:
+                    # Non-oversampling mode: use regular coefficients
+                    fir_coeffs = s.fir_coefficients
+
+                if fir_coeffs is not None:
+                    ydatanew = filtfilt(fir_coeffs, [1.0], ydatanew)
+                    if ydata_noresamp is not None:
+                        ydata_noresamp = filtfilt(fir_coeffs, [1.0], ydata_noresamp)
 
             # --- Final plotting and persistence ---
             # Optimization: Use skipFiniteCheck for faster setData

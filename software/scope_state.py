@@ -113,9 +113,15 @@ class ScopeState:
 
         # Frequency response correction (FIR filter)
         self.fir_correction_enabled = False  # Whether to apply FIR correction
-        self.fir_coefficients = None  # 64-tap FIR filter coefficients (numpy array)
+        self.fir_coefficients = None  # 64-tap FIR filter coefficients for non-oversampling (numpy array)
         self.fir_calibration_samplerate = None  # Sample rate at which calibration was performed
         self.fir_freq_response = None  # Measured H(f) for display (dict: {'freqs': array, 'magnitude': array, 'phase': array})
+
+        # FIR coefficients for oversampling mode (board-specific)
+        # When oversampling, boards N and N+1 form a pair and need separate calibrations
+        self.fir_coefficients_oversample = [None, None]  # [board_N, board_N+1]
+        self.fir_calibration_samplerate_oversample = [None, None]
+        self.fir_freq_response_oversample = [None, None]
 
         # Performance metrics
         self.nevents = 0

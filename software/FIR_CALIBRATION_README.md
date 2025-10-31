@@ -29,8 +29,24 @@ This ensures corrections are applied after trigger stabilization but before disp
 
 ## Usage Instructions
 
+### Oversampling vs Non-Oversampling Modes
+
+The FIR calibration system automatically detects whether the active board is using oversampling mode:
+
+- **Non-Oversampling Mode** (normal operation): Single calibration applies to all boards/channels
+- **Oversampling Mode** (active board has oversampling enabled): Board pair (N and N+1) are calibrated separately
+  - Determined by checking `state.dooversample[activeboard]`
+  - Board N and Board N+1 each get independent FIR coefficients
+  - Hardware duplicates the 10 MHz signal to both boards automatically
+  - Both boards are calibrated simultaneously from the same capture session
+  - Corrections are automatically applied per-board during acquisition
+
 ### 1. Connect Calibration Signal
-- Connect a **10 MHz square wave** to Channel 0 (or your desired channel)
+- Connect a **10 MHz square wave** to the input
+- **Non-Oversampling**: Signal goes to Board 0, Channel 0
+- **Oversampling**: Hardware automatically duplicates signal to both Board N and Board N+1
+  - Both boards are calibrated simultaneously from the same signal
+  - No need to move the signal between boards
 - The signal should have good amplitude and clean edges
 - Ensure the scope is triggered and acquiring stable waveforms
 
@@ -68,18 +84,28 @@ This ensures corrections are applied after trigger stabilization but before disp
 - Calibration data is saved to **separate .fir files** (not in the main setup file)
 - Use: **Calibration → Save FIR filter** to export calibration to a file
 - Use: **Calibration → Load FIR filter** to import calibration from a file
+- **Calibration Storage**:
+  - A single .fir file can contain **both** normal and oversampling calibrations
+  - When saving: All available calibrations (normal and/or oversampling) are saved to the same file
+  - When loading: Software automatically detects which calibrations are present and loads them
+  - The appropriate calibration is selected automatically based on current mode during acquisition
 - The saved .fir file (JSON format) contains:
-  - FIR filter coefficients (64 taps)
-  - Sample rate at which calibration was performed
-  - Frequency response data (H(f) magnitude and phase)
-  - Calibration metadata (type, software version)
+  - **Normal Mode data** (if calibrated): FIR coefficients (64-256 taps), sample rate, frequency response, metadata
+  - **Oversampling Mode data** (if calibrated): Two sets of FIR coefficients (one per board), sample rates, frequency responses, metadata
 - **Sample rate validation**: When loading, the software checks if the base sample rate matches
 - **Downsample handling**:
   - Calibration must be done at downsample=0 (maximum sample rate)
   - The calibration can be used at downsampled rates (downsample>0)
   - When loading at downsample>0, you'll be informed that accuracy may be reduced
   - For best results, use downsample=0 when applying corrections
-- **Note**: Calibration is specific to the hardware's base sample rate. Different hardware units may need separate calibrations
+- **Note**: Calibration is specific to the hardware's base sample rate. Different hardware units need separate calibrations
+- **Recommended workflow**:
+  1. Connect 10 MHz square wave to input
+  2. Calibrate in normal mode (no oversampling)
+  3. Save calibration file
+  4. Enable oversampling on active board
+  5. Run calibration again (will calibrate both boards in pair simultaneously)
+  6. Save again (same file now contains both normal and oversampling calibrations)
 
 ## Technical Details
 

@@ -523,11 +523,17 @@ class MainWindow(TemplateBaseClass):
     def fir_correction_toggled(self, checked):
         """Toggle FIR frequency response correction on/off."""
         self.state.fir_correction_enabled = checked
-        if checked and self.state.fir_coefficients is None:
-            QMessageBox.warning(self, "FIR Correction",
-                              "No calibration data available. Please measure calibration first using a 10 MHz square wave.")
-            self.ui.actionApply_FIR_corrections.setChecked(False)
-            self.state.fir_correction_enabled = False
+        if checked:
+            # Check if any calibration data is available (normal or oversampling)
+            has_normal = self.state.fir_coefficients is not None
+            has_oversample = (self.state.fir_coefficients_oversample[0] is not None and
+                             self.state.fir_coefficients_oversample[1] is not None)
+
+            if not has_normal and not has_oversample:
+                QMessageBox.warning(self, "FIR Correction",
+                                  "No calibration data available. Please measure calibration first using a 10 MHz square wave.")
+                self.ui.actionApply_FIR_corrections.setChecked(False)
+                self.state.fir_correction_enabled = False
 
     def measure_fir_calibration(self):
         """Measure FIR calibration using 10 MHz square wave input."""
@@ -546,16 +552,28 @@ class MainWindow(TemplateBaseClass):
                               "though accuracy may be reduced at heavily downsampled rates.")
             return
 
-        # Show status
-        self.statusBar().showMessage("Capturing calibration waveforms...", 3000)
+        # Check if active board is in oversampling mode
+        oversample_mode = self.state.dooversample[self.state.activeboard]
+
+        if oversample_mode:
+            # Determine board pair (even board N and odd board N+1)
+            if self.state.activeboard % 2 == 0:
+                board_N = self.state.activeboard
+            else:
+                board_N = self.state.activeboard - 1
+            board_N1 = board_N + 1
+
+            QMessageBox.information(self, "FIR Calibration - Oversampling Mode",
+                                  f"Oversampling detected!\n\n"
+                                  f"Board {board_N} and Board {board_N1} will be calibrated separately.\n\n"
+                                  f"Connect 10 MHz square wave to input.\n"
+                                  f"(Signal is duplicated to both boards by hardware)\n\n"
+                                  f"Click OK when ready...")
 
         # Create calibration object
         # num_taps options: 64 (fast), 128 (balanced), 256 (best quality, slower)
         fir_cal = FrequencyCalibration(num_taps=128)
         num_averages = fir_cal.num_averages
-
-        # Capture multiple waveforms
-        captured_waveforms = []
 
         # Temporarily increase depth for better frequency resolution during calibration
         # Similar to what's done during PLL reset
@@ -571,34 +589,85 @@ class MainWindow(TemplateBaseClass):
         old_dodrawing = self.state.dodrawing
         self.state.dodrawing = False
 
-        try:
+        # Helper function to capture waveforms from a specific board
+        def capture_board_waveforms(board_idx, num_averages):
+            captured = []
             for i in range(num_averages):
-                # Update status every 10 captures
-                if i % 10 == 0:
-                    self.statusBar().showMessage(f"Capturing waveform {i+1}/{num_averages}...", 3000)
-
-                # Get event data - use update_plot_event() to get raw data
+                # Get event data
                 raw_data_map, rx_len = self.controller.get_event()
                 if not raw_data_map:
                     continue
 
-                # Process the event to get waveform data
-                # We'll use the currently selected channel
-                # Process all boards first
-                for board_idx in range(self.state.num_board):
-                    if board_idx in raw_data_map:
+                # Process all boards
+                for b_idx in range(self.state.num_board):
+                    if b_idx in raw_data_map:
                         self.processor.process_board_data(
-                            raw_data_map[board_idx],
-                            board_idx,
+                            raw_data_map[b_idx],
+                            b_idx,
                             self.xydata
                         )
 
-                # Extract y-data from selected channel (just use first channel for simplicity)
-                # We want the y-data after basic processing but before plotting
-                channel_idx = 0  # Use channel 0 for calibration
+                # Extract y-data from the target board's channel 0
+                # Channel index = board_idx * num_chan_per_board + 0
+                channel_idx = board_idx * self.state.num_chan_per_board
                 if channel_idx < len(self.xydata) and self.xydata[channel_idx] is not None:
-                    y_data = self.xydata[channel_idx][1].copy()  # Copy the y-data
-                    captured_waveforms.append(y_data)
+                    y_data = self.xydata[channel_idx][1].copy()
+                    captured.append(y_data)
+
+            return captured
+
+        try:
+            if oversample_mode:
+                # Capture calibration for both boards simultaneously
+                # (Hardware duplicates signal to both boards)
+                captured_waveforms_N = []
+                captured_waveforms_N1 = []
+
+                for i in range(num_averages):
+                    # Get event data
+                    raw_data_map, rx_len = self.controller.get_event()
+                    if not raw_data_map:
+                        continue
+
+                    # Process all boards
+                    for b_idx in range(self.state.num_board):
+                        if b_idx in raw_data_map:
+                            self.processor.process_board_data(
+                                raw_data_map[b_idx],
+                                b_idx,
+                                self.xydata
+                            )
+
+                    # Extract y-data from both boards
+                    channel_idx_N = board_N * self.state.num_chan_per_board
+                    channel_idx_N1 = board_N1 * self.state.num_chan_per_board
+
+                    if channel_idx_N < len(self.xydata) and self.xydata[channel_idx_N] is not None:
+                        y_data_N = self.xydata[channel_idx_N][1].copy()
+                        captured_waveforms_N.append(y_data_N)
+
+                    if channel_idx_N1 < len(self.xydata) and self.xydata[channel_idx_N1] is not None:
+                        y_data_N1 = self.xydata[channel_idx_N1][1].copy()
+                        captured_waveforms_N1.append(y_data_N1)
+
+                if len(captured_waveforms_N) < 10:
+                    QMessageBox.warning(self, "FIR Calibration",
+                                      f"Only captured {len(captured_waveforms_N)} waveforms from Board {board_N}. Need at least 10.")
+                    return
+
+                if len(captured_waveforms_N1) < 10:
+                    QMessageBox.warning(self, "FIR Calibration",
+                                      f"Only captured {len(captured_waveforms_N1)} waveforms from Board {board_N1}. Need at least 10.")
+                    return
+
+            else:
+                # Normal mode: capture from channel 0 (board 0, channel 0)
+                captured_waveforms = capture_board_waveforms(0, num_averages)
+
+                if len(captured_waveforms) < 10:
+                    QMessageBox.warning(self, "FIR Calibration",
+                                      f"Only captured {len(captured_waveforms)} waveforms. Need at least 10 for good calibration.")
+                    return
 
             # Restore drawing and depth
             self.state.dodrawing = old_dodrawing
@@ -609,35 +678,61 @@ class MainWindow(TemplateBaseClass):
                 self.sync_depth_ui_from_state()
                 print(f"FIR calibration: Restored depth to {old_depth}")
 
-            if len(captured_waveforms) < 10:
-                QMessageBox.warning(self, "FIR Calibration",
-                                  f"Only captured {len(captured_waveforms)} waveforms. Need at least 10 for good calibration.")
-                return
-
             # Compute sample rate in Hz
             sample_rate_hz = self.state.samplerate * 1e9  # Convert GHz to Hz
 
-            # Run calibration
-            self.statusBar().showMessage("Computing FIR correction filter...", 3000)
-            result = fir_cal.calibrate_from_data(captured_waveforms, sample_rate_hz)
+            if oversample_mode:
+                # Run calibration for both boards
+                result_N = fir_cal.calibrate_from_data(captured_waveforms_N, sample_rate_hz)
+                result_N1 = fir_cal.calibrate_from_data(captured_waveforms_N1, sample_rate_hz)
 
-            if result['success']:
-                # Store calibration in state
-                self.state.fir_coefficients = result['fir_coefficients']
-                self.state.fir_calibration_samplerate = sample_rate_hz
-                self.state.fir_freq_response = result['freq_response']
+                if result_N['success'] and result_N1['success']:
+                    # Store oversampling calibrations in state
+                    self.state.fir_coefficients_oversample[0] = result_N['fir_coefficients']
+                    self.state.fir_calibration_samplerate_oversample[0] = sample_rate_hz
+                    self.state.fir_freq_response_oversample[0] = result_N['freq_response']
 
-                # Show success message
-                QMessageBox.information(self, "FIR Calibration Complete", result['message'])
-                self.statusBar().showMessage(f"FIR calibration complete: {result['message']}", 5000)
+                    self.state.fir_coefficients_oversample[1] = result_N1['fir_coefficients']
+                    self.state.fir_calibration_samplerate_oversample[1] = sample_rate_hz
+                    self.state.fir_freq_response_oversample[1] = result_N1['freq_response']
 
-                # Enable the apply checkbox if it's not already enabled
-                if not self.state.fir_correction_enabled:
-                    self.ui.actionApply_FIR_corrections.setChecked(True)
-                    self.state.fir_correction_enabled = True
+                    # Show success message
+                    message = (f"Oversampling FIR Calibration Complete!\n\n"
+                             f"Board {board_N}: {result_N['message']}\n"
+                             f"Board {board_N1}: {result_N1['message']}")
+                    QMessageBox.information(self, "FIR Calibration Complete", message)
+
+                    # Enable the apply checkbox if it's not already enabled
+                    if not self.state.fir_correction_enabled:
+                        self.ui.actionApply_FIR_corrections.setChecked(True)
+                        self.state.fir_correction_enabled = True
+                else:
+                    error_msgs = []
+                    if not result_N['success']:
+                        error_msgs.append(f"Board {board_N}: {result_N['message']}")
+                    if not result_N1['success']:
+                        error_msgs.append(f"Board {board_N1}: {result_N1['message']}")
+                    QMessageBox.critical(self, "FIR Calibration Failed", "\n".join(error_msgs))
+
             else:
-                QMessageBox.critical(self, "FIR Calibration Failed", result['message'])
-                self.statusBar().showMessage(f"FIR calibration failed: {result['message']}", 5000)
+                # Run normal calibration
+                result = fir_cal.calibrate_from_data(captured_waveforms, sample_rate_hz)
+
+                if result['success']:
+                    # Store calibration in state
+                    self.state.fir_coefficients = result['fir_coefficients']
+                    self.state.fir_calibration_samplerate = sample_rate_hz
+                    self.state.fir_freq_response = result['freq_response']
+
+                    # Show success message
+                    QMessageBox.information(self, "FIR Calibration Complete", result['message'])
+
+                    # Enable the apply checkbox if it's not already enabled
+                    if not self.state.fir_correction_enabled:
+                        self.ui.actionApply_FIR_corrections.setChecked(True)
+                        self.state.fir_correction_enabled = True
+                else:
+                    QMessageBox.critical(self, "FIR Calibration Failed", result['message'])
 
         except Exception as e:
             # Restore drawing and depth on error
@@ -649,7 +744,6 @@ class MainWindow(TemplateBaseClass):
                 self.sync_depth_ui_from_state()
                 print(f"FIR calibration error: Restored depth to {old_depth}")
             QMessageBox.critical(self, "FIR Calibration Error", f"Error during calibration: {str(e)}")
-            self.statusBar().showMessage(f"FIR calibration error: {str(e)}", 5000)
 
     def save_fir_filter(self):
         """Save FIR calibration to a separate file."""
@@ -1390,6 +1484,7 @@ class MainWindow(TemplateBaseClass):
 
         # This now correctly calls the method to update the checkbox
         self.update_fft_checkbox_state()
+        self.update_fir_checkbox_state()
 
         # Update the "Two Channel" checkbox to reflect the state of the newly selected board
         # Block signals to prevent triggering twochan_changed when switching boards
@@ -2384,6 +2479,28 @@ class MainWindow(TemplateBaseClass):
         self.ui.fftCheck.setChecked(self.state.fft_enabled[active_channel_name])
         self.ui.fftCheck.blockSignals(False)
 
+    def update_fir_checkbox_state(self):
+        """Updates the 'Apply FIR corrections' checkbox to reflect if corrections are available for current mode."""
+        s = self.state
+
+        # Check if corrections are available for the current mode
+        is_oversampling = s.dooversample[s.activeboard]
+
+        if is_oversampling:
+            # Oversampling mode: check if oversampling corrections are available
+            has_corrections = (s.fir_coefficients_oversample[0] is not None and
+                              s.fir_coefficients_oversample[1] is not None)
+        else:
+            # Normal mode: check if normal corrections are available
+            has_corrections = s.fir_coefficients is not None
+
+        # Checkbox should be checked if corrections are available AND enabled
+        should_be_checked = has_corrections and s.fir_correction_enabled
+
+        self.ui.actionApply_FIR_corrections.blockSignals(True)
+        self.ui.actionApply_FIR_corrections.setChecked(should_be_checked)
+        self.ui.actionApply_FIR_corrections.blockSignals(False)
+
     def update_reference_checkbox_state(self):
         """Updates the 'Show Reference' checkbox to reflect the active channel's reference visibility."""
         s = self.state
@@ -2698,6 +2815,9 @@ class MainWindow(TemplateBaseClass):
         # Update XY window channel lists (channel availability changed)
         if self.xy_window is not None and self.xy_window.isVisible():
             self.xy_window.refresh_channel_list()
+
+        # Update FIR checkbox state (oversampling mode changed)
+        self.update_fir_checkbox_state()
 
     def interleave_changed(self, checked):
         s = self.state
