@@ -524,12 +524,13 @@ class MainWindow(TemplateBaseClass):
         """Toggle FIR frequency response correction on/off."""
         self.state.fir_correction_enabled = checked
         if checked:
-            # Check if any calibration data is available (normal or oversampling)
+            # Check if any calibration data is available (normal, oversampling, or interleaved)
             has_normal = self.state.fir_coefficients is not None
             has_oversample = (self.state.fir_coefficients_oversample[0] is not None and
                              self.state.fir_coefficients_oversample[1] is not None)
+            has_interleaved = self.state.fir_coefficients_interleaved is not None
 
-            if not has_normal and not has_oversample:
+            if not has_normal and not has_oversample and not has_interleaved:
                 QMessageBox.warning(self, "FIR Correction",
                                   "No calibration data available. Please measure calibration first using a 10 MHz square wave.")
                 self.ui.actionApply_FIR_corrections.setChecked(False)
@@ -554,8 +555,26 @@ class MainWindow(TemplateBaseClass):
 
         # Check if active board is in oversampling mode
         oversample_mode = self.state.dooversample[self.state.activeboard]
+        interleaved_mode = self.state.dointerleaved[self.state.activeboard]
 
-        if oversample_mode:
+        if oversample_mode and interleaved_mode:
+            # Interleaved oversampling mode: calibrate the interleaved waveform at 2x sample rate
+            # Determine board pair (even board N and odd board N+1)
+            if self.state.activeboard % 2 == 0:
+                board_N = self.state.activeboard
+            else:
+                board_N = self.state.activeboard - 1
+            board_N1 = board_N + 1
+
+            QMessageBox.information(self, "FIR Calibration - Interleaved Mode",
+                                  f"Interleaved oversampling detected!\n\n"
+                                  f"The interleaved waveform at 6.4 GHz will be calibrated.\n\n"
+                                  f"Connect 10 MHz square wave to input.\n"
+                                  f"(Signal is duplicated to both boards by hardware)\n\n"
+                                  f"Click OK when ready...")
+
+        elif oversample_mode:
+            # Oversampling only (not interleaved): calibrate boards separately
             # Determine board pair (even board N and odd board N+1)
             if self.state.activeboard % 2 == 0:
                 board_N = self.state.activeboard
@@ -617,8 +636,51 @@ class MainWindow(TemplateBaseClass):
             return captured
 
         try:
-            if oversample_mode:
-                # Capture calibration for both boards simultaneously
+            if oversample_mode and interleaved_mode:
+                # Interleaved oversampling mode: capture the interleaved waveform at 2x sample rate
+                captured_waveforms_interleaved = []
+
+                for i in range(num_averages):
+                    # Get event data
+                    raw_data_map, rx_len = self.controller.get_event()
+                    if not raw_data_map:
+                        continue
+
+                    # Process all boards
+                    for b_idx in range(self.state.num_board):
+                        if b_idx in raw_data_map:
+                            self.processor.process_board_data(
+                                raw_data_map[b_idx],
+                                b_idx,
+                                self.xydata
+                            )
+
+                    # Manually interleave the data (same logic as in plot_manager.py)
+                    # The processor doesn't automatically create xydatainterleaved during event processing
+                    channel_idx_N = board_N * self.state.num_chan_per_board
+                    channel_idx_N1 = board_N1 * self.state.num_chan_per_board
+
+                    if channel_idx_N < len(self.xydata) and self.xydata[channel_idx_N] is not None:
+                        if channel_idx_N1 < len(self.xydata) and self.xydata[channel_idx_N1] is not None:
+                            # Get data from both boards
+                            primary_data = self.xydata[channel_idx_N][1].copy()
+                            secondary_data = self.xydata[channel_idx_N1][1].copy()
+
+                            # Create interleaved array
+                            interleaved_length = len(primary_data) + len(secondary_data)
+                            y_interleaved = np.zeros(interleaved_length)
+                            y_interleaved[0::2] = primary_data
+                            y_interleaved[1::2] = secondary_data
+
+                            captured_waveforms_interleaved.append(y_interleaved)
+
+                if len(captured_waveforms_interleaved) < 10:
+                    QMessageBox.warning(self, "FIR Calibration",
+                                      f"Only captured {len(captured_waveforms_interleaved)} interleaved waveforms. Need at least 10.")
+                    return
+
+            elif oversample_mode:
+                # Oversampling only (not interleaved): capture both boards separately
                 # (Hardware duplicates signal to both boards)
                 captured_waveforms_N = []
                 captured_waveforms_N1 = []
@@ -681,8 +743,32 @@ class MainWindow(TemplateBaseClass):
             # Compute sample rate in Hz
             sample_rate_hz = self.state.samplerate * 1e9  # Convert GHz to Hz
 
-            if oversample_mode:
-                # Run calibration for both boards
+            if oversample_mode and interleaved_mode:
+                # Run calibration for interleaved data at 2x sample rate
+                sample_rate_hz_interleaved = sample_rate_hz * 2  # 6.4 GHz
+                result = fir_cal.calibrate_from_data(captured_waveforms_interleaved, sample_rate_hz_interleaved)
+
+                if result['success']:
+                    # Store interleaved calibration in state
+                    self.state.fir_coefficients_interleaved = result['fir_coefficients']
+                    self.state.fir_calibration_samplerate_interleaved = sample_rate_hz_interleaved
+                    self.state.fir_freq_response_interleaved = result['freq_response']
+
+                    # Show success message
+                    message = (f"Interleaved FIR Calibration Complete!\n\n"
+                             f"Calibrated at {sample_rate_hz_interleaved/1e9:.2f} GHz\n\n"
+                             f"{result['message']}")
+                    QMessageBox.information(self, "FIR Calibration Complete", message)
+
+                    # Enable the apply checkbox if it's not already enabled
+                    if not self.state.fir_correction_enabled:
+                        self.ui.actionApply_FIR_corrections.setChecked(True)
+                        self.state.fir_correction_enabled = True
+                else:
+                    QMessageBox.critical(self, "FIR Calibration Failed", result['message'])
+
+            elif oversample_mode:
+                # Run calibration for both boards (oversampling only, not interleaved)
                 result_N = fir_cal.calibrate_from_data(captured_waveforms_N, sample_rate_hz)
                 result_N1 = fir_cal.calibrate_from_data(captured_waveforms_N1, sample_rate_hz)
 
@@ -2485,9 +2571,13 @@ class MainWindow(TemplateBaseClass):
 
         # Check if corrections are available for the current mode
         is_oversampling = s.dooversample[s.activeboard]
+        is_interleaved = s.dointerleaved[s.activeboard]
 
-        if is_oversampling:
-            # Oversampling mode: check if oversampling corrections are available
+        if is_oversampling and is_interleaved:
+            # Interleaved oversampling mode: check if interleaved corrections are available
+            has_corrections = s.fir_coefficients_interleaved is not None
+        elif is_oversampling:
+            # Oversampling only (not interleaved): check if oversampling corrections are available
             has_corrections = (s.fir_coefficients_oversample[0] is not None and
                               s.fir_coefficients_oversample[1] is not None)
         else:
@@ -2846,6 +2936,9 @@ class MainWindow(TemplateBaseClass):
         # Update XY window channel lists (channel availability changed)
         if self.xy_window is not None and self.xy_window.isVisible():
             self.xy_window.refresh_channel_list()
+
+        # Update FIR checkbox state (interleaving mode changed)
+        self.update_fir_checkbox_state()
 
     def dopllreset(self):
         while self.state.downsamplezoom>1: self.time_slow()

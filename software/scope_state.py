@@ -123,6 +123,12 @@ class ScopeState:
         self.fir_calibration_samplerate_oversample = [None, None]
         self.fir_freq_response_oversample = [None, None]
 
+        # FIR coefficients for interleaved oversampling mode
+        # When both oversampling and interleaving are enabled, the interleaved data at 6.4 GHz needs its own calibration
+        self.fir_coefficients_interleaved = None  # Interleaved waveform at 2x sample rate
+        self.fir_calibration_samplerate_interleaved = None
+        self.fir_freq_response_interleaved = None
+
         # Performance metrics
         self.nevents = 0
         self.oldnevents = 0

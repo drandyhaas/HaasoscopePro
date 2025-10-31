@@ -435,8 +435,9 @@ def save_fir_filter(parent_window, state):
     has_normal = state.fir_coefficients is not None
     has_oversample = (state.fir_coefficients_oversample[0] is not None and
                      state.fir_coefficients_oversample[1] is not None)
+    has_interleaved = state.fir_coefficients_interleaved is not None
 
-    if not has_normal and not has_oversample:
+    if not has_normal and not has_oversample and not has_interleaved:
         QMessageBox.warning(parent_window, "Save FIR Filter",
                           "No FIR calibration data to save. Please measure calibration first.")
         return False
@@ -499,6 +500,21 @@ def save_fir_filter(parent_window, state):
                 'phase': state.fir_freq_response_oversample[1]['phase'].tolist(),
             }
 
+    # Save interleaved mode calibration if exists
+    if has_interleaved:
+        fir_data['fir_coefficients_interleaved'] = state.fir_coefficients_interleaved.tolist()
+        fir_data['calibration_samplerate_hz_interleaved'] = state.fir_calibration_samplerate_interleaved
+        if 'num_taps' not in fir_data:  # Only set if not already set by other modes
+            fir_data['num_taps'] = len(state.fir_coefficients_interleaved)
+
+        # Save frequency response if available
+        if state.fir_freq_response_interleaved is not None:
+            fir_data['frequency_response_interleaved'] = {
+                'freqs': state.fir_freq_response_interleaved['freqs'].tolist(),
+                'magnitude': state.fir_freq_response_interleaved['magnitude'].tolist(),
+                'phase': state.fir_freq_response_interleaved['phase'].tolist(),
+            }
+
     # Save to file
     try:
         with open(filename, 'w') as f:
@@ -546,8 +562,9 @@ def load_fir_filter(parent_window, state, ui):
     has_normal_in_file = 'fir_coefficients' in fir_data and fir_data['fir_coefficients'] is not None
     has_oversample_in_file = ('fir_coefficients_board0' in fir_data and fir_data['fir_coefficients_board0'] is not None and
                              'fir_coefficients_board1' in fir_data and fir_data['fir_coefficients_board1'] is not None)
+    has_interleaved_in_file = 'fir_coefficients_interleaved' in fir_data and fir_data['fir_coefficients_interleaved'] is not None
 
-    if not has_normal_in_file and not has_oversample_in_file:
+    if not has_normal_in_file and not has_oversample_in_file and not has_interleaved_in_file:
         QMessageBox.warning(parent_window, "Load Failed", "Invalid FIR filter file: missing coefficients.")
         return False
 
@@ -618,8 +635,40 @@ def load_fir_filter(parent_window, state, ui):
                     state.fir_coefficients_oversample = [None, None]
                     state.fir_calibration_samplerate_oversample = [None, None]
                     state.fir_freq_response_oversample = [None, None]
-                    # Don't return False here - normal mode might still be loaded
-                    if not has_normal_in_file:
+                    # Don't return False here - other modes might still be loaded
+                    if not has_normal_in_file and not has_interleaved_in_file:
+                        return False
+
+    # Load interleaved mode calibration if present
+    if has_interleaved_in_file:
+        state.fir_coefficients_interleaved = np.array(fir_data['fir_coefficients_interleaved'])
+        state.fir_calibration_samplerate_interleaved = fir_data.get('calibration_samplerate_hz_interleaved', None)
+
+        # Restore frequency response if available
+        if 'frequency_response_interleaved' in fir_data:
+            state.fir_freq_response_interleaved = {
+                'freqs': np.array(fir_data['frequency_response_interleaved']['freqs']),
+                'magnitude': np.array(fir_data['frequency_response_interleaved']['magnitude']),
+                'phase': np.array(fir_data['frequency_response_interleaved']['phase']),
+            }
+
+        # Check sample rate match (interleaved is at 2x sample rate)
+        if state.fir_calibration_samplerate_interleaved is not None:
+            expected_interleaved_rate = current_samplerate_hz * 2  # 6.4 GHz
+            if abs(expected_interleaved_rate - state.fir_calibration_samplerate_interleaved) > 1e6:
+                reply = QMessageBox.question(
+                    parent_window, "Sample Rate Mismatch",
+                    f"Interleaved FIR calibration was performed at {state.fir_calibration_samplerate_interleaved/1e9:.3f} GS/s,\n"
+                    f"but current interleaved sample rate is {expected_interleaved_rate/1e9:.3f} GS/s.\n\n"
+                    f"The correction may not be accurate. Continue anyway?",
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+                )
+                if reply == QMessageBox.No:
+                    state.fir_coefficients_interleaved = None
+                    state.fir_calibration_samplerate_interleaved = None
+                    state.fir_freq_response_interleaved = None
+                    # Don't return False here - other modes might still be loaded
+                    if not has_normal_in_file and not has_oversample_in_file:
                         return False
 
     # Enable correction
@@ -632,8 +681,10 @@ def load_fir_filter(parent_window, state, ui):
         loaded_modes.append("Normal")
     if has_oversample_in_file and state.fir_coefficients_oversample[0] is not None:
         loaded_modes.append("Oversampling")
+    if has_interleaved_in_file and state.fir_coefficients_interleaved is not None:
+        loaded_modes.append("Interleaved")
 
-    mode_text = " and ".join(loaded_modes)
+    mode_text = ", ".join(loaded_modes)
     print(f"FIR filter ({mode_text}) loaded from {filename}")
 
     # Show success message

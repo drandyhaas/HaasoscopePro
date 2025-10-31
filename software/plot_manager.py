@@ -439,8 +439,11 @@ class PlotManager(pg.QtCore.QObject):
                 # Determine which FIR coefficients to use
                 fir_coeffs = None
 
-                if s.dooversample[board_idx]:
-                    # Oversampling mode: use board-specific coefficients
+                if s.dooversample[board_idx] and s.dointerleaved[board_idx]:
+                    # Interleaved oversampling mode: use interleaved coefficients (6.4 GHz)
+                    fir_coeffs = s.fir_coefficients_interleaved
+                elif s.dooversample[board_idx]:
+                    # Oversampling only (not interleaved): use board-specific coefficients
                     # Board N uses oversample[0], Board N+1 uses oversample[1]
                     if board_idx % 2 == 0:
                         fir_coeffs = s.fir_coefficients_oversample[0]

@@ -29,24 +29,36 @@ This ensures corrections are applied after trigger stabilization but before disp
 
 ## Usage Instructions
 
-### Oversampling vs Non-Oversampling Modes
+### Operating Modes: Normal, Oversampling, and Interleaved
 
-The FIR calibration system automatically detects whether the active board is using oversampling mode:
+The FIR calibration system automatically detects the current operating mode and applies the appropriate calibration:
 
-- **Non-Oversampling Mode** (normal operation): Single calibration applies to all boards/channels
-- **Oversampling Mode** (active board has oversampling enabled): Board pair (N and N+1) are calibrated separately
+- **Normal Mode**: Single calibration applies to all boards/channels at base sample rate (3.2 GHz)
+
+- **Oversampling Mode** (not interleaved): Board pair (N and N+1) are calibrated separately at base sample rate
   - Determined by checking `state.dooversample[activeboard]`
   - Board N and Board N+1 each get independent FIR coefficients
   - Hardware duplicates the 10 MHz signal to both boards automatically
   - Both boards are calibrated simultaneously from the same capture session
   - Corrections are automatically applied per-board during acquisition
 
+- **Interleaved Oversampling Mode** (both oversampling AND interleaving enabled): Interleaved waveform calibrated at 2x sample rate (6.4 GHz)
+  - Determined by checking both `state.dooversample[activeboard]` and `state.dointerleaved[activeboard]`
+  - Single calibration for the interleaved waveform combining both boards
+  - Sample rate is 2x the base rate (6.4 GHz instead of 3.2 GHz)
+  - Captures both boards simultaneously and interleaves them during calibration
+  - Hardware automatically duplicates the 10 MHz signal to both boards
+  - Correction is applied to the already-interleaved waveform during plotting
+
 ### 1. Connect Calibration Signal
 - Connect a **10 MHz square wave** to the input
-- **Non-Oversampling**: Signal goes to Board 0, Channel 0
-- **Oversampling**: Hardware automatically duplicates signal to both Board N and Board N+1
-  - Both boards are calibrated simultaneously from the same signal
+- **Normal Mode**: Signal goes to Board 0, Channel 0
+- **Oversampling Mode** (not interleaved): Hardware automatically duplicates signal to both Board N and Board N+1
+  - Both boards are calibrated separately but simultaneously from the same signal
   - No need to move the signal between boards
+- **Interleaved Mode**: Hardware automatically duplicates signal to both Board N and Board N+1
+  - The interleaved waveform at 6.4 GHz is calibrated as a single entity
+  - Both boards contribute to the same calibration
 - The signal should have good amplitude and clean edges
 - Ensure the scope is triggered and acquiring stable waveforms
 
@@ -85,13 +97,14 @@ The FIR calibration system automatically detects whether the active board is usi
 - Use: **Calibration → Save FIR filter** to export calibration to a file
 - Use: **Calibration → Load FIR filter** to import calibration from a file
 - **Calibration Storage**:
-  - A single .fir file can contain **both** normal and oversampling calibrations
-  - When saving: All available calibrations (normal and/or oversampling) are saved to the same file
+  - A single .fir file can contain **all three** calibration types: normal, oversampling, and interleaved
+  - When saving: All available calibrations are saved to the same file
   - When loading: Software automatically detects which calibrations are present and loads them
   - The appropriate calibration is selected automatically based on current mode during acquisition
 - The saved .fir file (JSON format) contains:
-  - **Normal Mode data** (if calibrated): FIR coefficients (64-256 taps), sample rate, frequency response, metadata
-  - **Oversampling Mode data** (if calibrated): Two sets of FIR coefficients (one per board), sample rates, frequency responses, metadata
+  - **Normal Mode data** (if calibrated): FIR coefficients (64-256 taps), sample rate (3.2 GHz), frequency response, metadata
+  - **Oversampling Mode data** (if calibrated): Two sets of FIR coefficients (one per board), sample rates (3.2 GHz each), frequency responses, metadata
+  - **Interleaved Mode data** (if calibrated): FIR coefficients, sample rate (6.4 GHz), frequency response, metadata
 - **Sample rate validation**: When loading, the software checks if the base sample rate matches
 - **Downsample handling**:
   - Calibration must be done at downsample=0 (maximum sample rate)
@@ -101,11 +114,14 @@ The FIR calibration system automatically detects whether the active board is usi
 - **Note**: Calibration is specific to the hardware's base sample rate. Different hardware units need separate calibrations
 - **Recommended workflow**:
   1. Connect 10 MHz square wave to input
-  2. Calibrate in normal mode (no oversampling)
+  2. Calibrate in normal mode (no oversampling, no interleaving)
   3. Save calibration file
-  4. Enable oversampling on active board
+  4. Enable oversampling on active board (without interleaving)
   5. Run calibration again (will calibrate both boards in pair simultaneously)
   6. Save again (same file now contains both normal and oversampling calibrations)
+  7. Enable both oversampling AND interleaving on active board
+  8. Run calibration again (will calibrate interleaved waveform at 6.4 GHz)
+  9. Save again (same file now contains all three calibration types: normal, oversampling, and interleaved)
 
 ## Technical Details
 
@@ -122,13 +138,18 @@ The FIR calibration system automatically detects whether the active board is usi
 
 ### Sample Rate Handling
 - Calibration is performed at the **current sample rate** (at downsample=0)
+  - **Normal mode**: 3.2 GHz (base sample rate)
+  - **Oversampling mode** (not interleaved): 3.2 GHz per board
+  - **Interleaved mode**: 6.4 GHz (2x base sample rate)
 - The filter is stored with the sample rate it was calibrated at
 - **Important**: If you change base sample rates, you should re-run calibration
 - Can be used at different downsample settings (with reduced accuracy)
 
 ### Depth (Sample Count) Handling
 - **Automatic depth optimization during calibration**: Software temporarily sets depth to 1000 samples
-  - Maximum depth = finest frequency resolution: Δf = sample_rate / 1000 ≈ 3.2 MHz / 1000 = 3.2 kHz bins at 3.2 GS/s
+  - Maximum depth = finest frequency resolution: Δf = sample_rate / 1000
+    - Normal/Oversampling: 3.2 GHz / 1000 = 3.2 MHz bins
+    - Interleaved: 6.4 GHz / 1000 = 6.4 MHz bins (finer resolution at higher frequencies)
   - For 10 MHz square wave, harmonics at 10, 30, 50, 70, 90 MHz are measured very precisely
   - After calibration completes, original depth is restored automatically
 - **FIR filter is depth-independent**: Works identically at any depth
