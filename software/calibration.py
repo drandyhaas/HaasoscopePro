@@ -175,13 +175,17 @@ def do_meanrms_calibration(main_window, doprint=False):
             # The correction to ADD to the secondary data is (primary - secondary)
             mean_cor = mean_primary - mean_secondary
             #print("mean_primary, mean_secondary:",mean_primary,mean_secondary)
-            s.extrigboardmeancorrection[s.activeboard] += max(min(mean_cor,1),-1) # cap the correction just in case
+            # Apply damping (only 10% of correction) to prevent oscillation with high-frequency signals
+            damping_factor = 0.1
+            s.extrigboardmeancorrection[s.activeboard] += damping_factor * max(min(mean_cor,1),-1) # cap the correction just in case
 
             # The correction to MULTIPLY the secondary data by is (primary / secondary)
             #print("std_primary, std_secondary:",std_primary,std_secondary)
             if std_primary > 0 and std_secondary > 0:
                 std_corr = std_primary / std_secondary
-                s.extrigboardstdcorrection[s.activeboard] *= max(min(std_corr,2),0.5) #  cap the correction just in case
+                # Apply geometric damping for multiplicative correction
+                std_corr_damped = std_corr ** damping_factor  # Interpolate between 1.0 and std_corr
+                s.extrigboardstdcorrection[s.activeboard] *= max(min(std_corr_damped,1.2),0.83) #  cap the correction just in case
 
             if doprint:
                 print(f"Updated corrections to be applied to board {s.activeboard + 1}: "
