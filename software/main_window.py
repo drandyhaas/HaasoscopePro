@@ -24,6 +24,7 @@ from measurements_manager import MeasurementsManager
 from calibration import autocalibration, do_meanrms_calibration
 from settings_manager import save_setup, load_setup
 from math_channels_window import MathChannelsWindow
+from frequency_calibration import FrequencyCalibration
 from reference_manager import save_reference_lines, load_reference_lines
 from dummy_scope.dummy_server_config_dialog import DummyServerConfigDialog
 from update_checker import UpdateChecker
@@ -360,6 +361,10 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionToggle_trig_stabilizer.triggered.connect(self.trig_stabilizer_toggled)
         self.ui.actionToggle_extra_trig_stabilizer.triggered.connect(self.extra_trig_stabilizer_toggled)
         self.ui.actionPulse_stabilizer.triggered.connect(self.pulse_stabilizer_toggled)
+        self.ui.actionMeasure_10_MHz_square_FIR.triggered.connect(self.measure_fir_calibration)
+        self.ui.actionApply_FIR_corrections.triggered.connect(self.fir_correction_toggled)
+        self.ui.actionSave_FIR_filter.triggered.connect(self.save_fir_filter)
+        self.ui.actionLoad_FIR_filter.triggered.connect(self.load_fir_filter)
 
         # Plot manager signals
         self.plot_manager.vline_dragged_signal.connect(self.on_vline_dragged)
@@ -514,6 +519,226 @@ class MainWindow(TemplateBaseClass):
     def pulse_stabilizer_toggled(self, checked):
         """Updates the state for pulse stabilizer mode (uses edge midpoint instead of threshold)."""
         self.state.pulse_stabilizer_enabled[self.state.activeboard] = checked
+
+    def fir_correction_toggled(self, checked):
+        """Toggle FIR frequency response correction on/off."""
+        self.state.fir_correction_enabled = checked
+        if checked and self.state.fir_coefficients is None:
+            QMessageBox.warning(self, "FIR Correction",
+                              "No calibration data available. Please measure calibration first using a 10 MHz square wave.")
+            self.ui.actionApply_FIR_corrections.setChecked(False)
+            self.state.fir_correction_enabled = False
+
+    def measure_fir_calibration(self):
+        """Measure FIR calibration using 10 MHz square wave input."""
+        # Verify we're not paused
+        if self.state.paused:
+            QMessageBox.warning(self, "FIR Calibration",
+                              "Please unpause (start acquisition) before measuring calibration.")
+            return
+
+        # Show status
+        self.statusBar().showMessage("Capturing calibration waveforms...", 3000)
+
+        # Create calibration object
+        fir_cal = FrequencyCalibration()
+        num_averages = fir_cal.num_averages
+
+        # Capture multiple waveforms
+        captured_waveforms = []
+
+        # Temporarily disable drawing for faster capture
+        old_dodrawing = self.state.dodrawing
+        self.state.dodrawing = False
+
+        try:
+            for i in range(num_averages):
+                # Update status every 10 captures
+                if i % 10 == 0:
+                    self.statusBar().showMessage(f"Capturing waveform {i+1}/{num_averages}...", 3000)
+
+                # Get event data - use update_plot_event() to get raw data
+                raw_data_map, rx_len = self.controller.get_event()
+                if not raw_data_map:
+                    continue
+
+                # Process the event to get waveform data
+                # We'll use the currently selected channel
+                # Process all boards first
+                for board_idx in range(self.state.num_board):
+                    if board_idx in raw_data_map:
+                        self.processor.process_board_data(
+                            raw_data_map[board_idx],
+                            board_idx,
+                            self.xydata,
+                            self.xydatainterleaved
+                        )
+
+                # Extract y-data from selected channel (just use first channel for simplicity)
+                # We want the y-data after basic processing but before plotting
+                channel_idx = 0  # Use channel 0 for calibration
+                if channel_idx < len(self.xydata) and self.xydata[channel_idx] is not None:
+                    y_data = self.xydata[channel_idx][1].copy()  # Copy the y-data
+                    captured_waveforms.append(y_data)
+
+            # Restore drawing
+            self.state.dodrawing = old_dodrawing
+
+            if len(captured_waveforms) < 10:
+                QMessageBox.warning(self, "FIR Calibration",
+                                  f"Only captured {len(captured_waveforms)} waveforms. Need at least 10 for good calibration.")
+                return
+
+            # Compute sample rate in Hz
+            sample_rate_hz = self.state.samplerate * 1e9  # Convert GHz to Hz
+
+            # Run calibration
+            self.statusBar().showMessage("Computing FIR correction filter...", 3000)
+            result = fir_cal.calibrate_from_data(captured_waveforms, sample_rate_hz)
+
+            if result['success']:
+                # Store calibration in state
+                self.state.fir_coefficients = result['fir_coefficients']
+                self.state.fir_calibration_samplerate = sample_rate_hz
+                self.state.fir_freq_response = result['freq_response']
+
+                # Show success message
+                QMessageBox.information(self, "FIR Calibration Complete", result['message'])
+                self.statusBar().showMessage(f"FIR calibration complete: {result['message']}", 5000)
+
+                # Enable the apply checkbox if it's not already enabled
+                if not self.state.fir_correction_enabled:
+                    self.ui.actionApply_FIR_corrections.setChecked(True)
+                    self.state.fir_correction_enabled = True
+            else:
+                QMessageBox.critical(self, "FIR Calibration Failed", result['message'])
+                self.statusBar().showMessage(f"FIR calibration failed: {result['message']}", 5000)
+
+        except Exception as e:
+            self.state.dodrawing = old_dodrawing
+            QMessageBox.critical(self, "FIR Calibration Error", f"Error during calibration: {str(e)}")
+            self.statusBar().showMessage(f"FIR calibration error: {str(e)}", 5000)
+
+    def save_fir_filter(self):
+        """Save FIR calibration to a separate file."""
+        import json
+        import numpy as np
+        from PyQt5.QtWidgets import QFileDialog
+
+        # Check if calibration exists
+        if self.state.fir_coefficients is None:
+            QMessageBox.warning(self, "Save FIR Filter",
+                              "No FIR calibration data to save. Please measure calibration first.")
+            return
+
+        # Open file dialog
+        options = QFileDialog.Options()
+        if sys.platform.startswith('linux'):
+            options |= QFileDialog.DontUseNativeDialog
+        filename, _ = QFileDialog.getSaveFileName(
+            self, "Save FIR Filter", "", "FIR Filter Files (*.fir);;All Files (*)", options=options
+        )
+        if not filename:
+            return
+
+        # Add .fir extension if not present
+        if not os.path.splitext(filename)[1]:
+            filename += ".fir"
+
+        # Prepare data to save
+        fir_data = {
+            'fir_coefficients': self.state.fir_coefficients.tolist(),
+            'calibration_samplerate_hz': self.state.fir_calibration_samplerate,
+            'num_taps': len(self.state.fir_coefficients),
+            'calibration_type': '10MHz_square_wave',
+            'software_version': self.state.softwareversion,
+        }
+
+        # Optionally save frequency response if available
+        if self.state.fir_freq_response is not None:
+            fir_data['frequency_response'] = {
+                'freqs': self.state.fir_freq_response['freqs'].tolist(),
+                'magnitude': self.state.fir_freq_response['magnitude'].tolist(),
+                'phase': self.state.fir_freq_response['phase'].tolist(),
+            }
+
+        # Save to file
+        try:
+            with open(filename, 'w') as f:
+                json.dump(fir_data, f, indent=2)
+            self.statusBar().showMessage(f"FIR filter saved to {filename}", 5000)
+            print(f"FIR filter saved to {filename}")
+        except Exception as e:
+            QMessageBox.critical(self, "Save Failed", f"Failed to save FIR filter:\n{e}")
+
+    def load_fir_filter(self):
+        """Load FIR calibration from a file."""
+        import json
+        import numpy as np
+        from PyQt5.QtWidgets import QFileDialog
+
+        # Open file dialog
+        options = QFileDialog.Options()
+        if sys.platform.startswith('linux'):
+            options |= QFileDialog.DontUseNativeDialog
+        filename, _ = QFileDialog.getOpenFileName(
+            self, "Load FIR Filter", "", "FIR Filter Files (*.fir);;All Files (*)", options=options
+        )
+        if not filename:
+            return
+
+        # Load from file
+        try:
+            with open(filename, 'r') as f:
+                fir_data = json.load(f)
+        except Exception as e:
+            QMessageBox.critical(self, "Load Failed", f"Failed to load FIR filter:\n{e}")
+            return
+
+        # Validate data
+        if 'fir_coefficients' not in fir_data or fir_data['fir_coefficients'] is None:
+            QMessageBox.warning(self, "Load Failed", "Invalid FIR filter file: missing coefficients.")
+            return
+
+        # Restore calibration data
+        self.state.fir_coefficients = np.array(fir_data['fir_coefficients'])
+        self.state.fir_calibration_samplerate = fir_data.get('calibration_samplerate_hz', None)
+
+        # Restore frequency response if available
+        if 'frequency_response' in fir_data:
+            self.state.fir_freq_response = {
+                'freqs': np.array(fir_data['frequency_response']['freqs']),
+                'magnitude': np.array(fir_data['frequency_response']['magnitude']),
+                'phase': np.array(fir_data['frequency_response']['phase']),
+            }
+
+        # Check if sample rate matches current sample rate
+        current_samplerate_hz = self.state.samplerate * 1e9
+        if self.state.fir_calibration_samplerate is not None:
+            if abs(current_samplerate_hz - self.state.fir_calibration_samplerate) > 1e6:  # 1 MHz tolerance
+                reply = QMessageBox.question(
+                    self, "Sample Rate Mismatch",
+                    f"FIR calibration was performed at {self.state.fir_calibration_samplerate/1e9:.3f} GS/s,\n"
+                    f"but current sample rate is {current_samplerate_hz/1e9:.3f} GS/s.\n\n"
+                    f"The correction may not be accurate. Continue anyway?",
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+                )
+                if reply == QMessageBox.No:
+                    # Clear loaded data
+                    self.state.fir_coefficients = None
+                    self.state.fir_calibration_samplerate = None
+                    self.state.fir_freq_response = None
+                    return
+
+        # Enable correction
+        self.state.fir_correction_enabled = True
+        self.ui.actionApply_FIR_corrections.setChecked(True)
+
+        self.statusBar().showMessage(f"FIR filter loaded from {filename}", 5000)
+        print(f"FIR filter loaded from {filename}")
+        QMessageBox.information(self, "FIR Filter Loaded",
+                              f"FIR filter loaded successfully from:\n{filename}\n\n"
+                              f"Correction is now enabled.")
 
     def update_plot_loop(self):
         """Main acquisition loop, with full status bar and FFT plot updates."""

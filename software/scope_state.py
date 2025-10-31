@@ -111,6 +111,12 @@ class ScopeState:
         self.extra_trig_stabilizer_enabled = True
         self.pulse_stabilizer_enabled = [False] * self.num_board  # Per-board pulse stabilizer
 
+        # Frequency response correction (FIR filter)
+        self.fir_correction_enabled = False  # Whether to apply FIR correction
+        self.fir_coefficients = None  # 64-tap FIR filter coefficients (numpy array)
+        self.fir_calibration_samplerate = None  # Sample rate at which calibration was performed
+        self.fir_freq_response = None  # Measured H(f) for display (dict: {'freqs': array, 'magnitude': array, 'phase': array})
+
         # Performance metrics
         self.nevents = 0
         self.oldnevents = 0

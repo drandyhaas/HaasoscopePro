@@ -8,7 +8,7 @@ import numpy as np
 import time
 from collections import deque
 import colorsys
-from scipy.signal import resample
+from scipy.signal import resample, filtfilt
 from scipy.interpolate import interp1d
 from data_processor import find_crossing_distance
 from cursor_manager import CursorManager
@@ -433,6 +433,12 @@ class PlotManager(pg.QtCore.QObject):
             xdatanew = xdatanew + time_skew_offset
             if xdata_noresamp is not None:
                 xdata_noresamp = xdata_noresamp + time_skew_offset
+
+            # Apply frequency response correction (FIR filter) if enabled
+            if s.fir_correction_enabled and s.fir_coefficients is not None:
+                ydatanew = filtfilt(s.fir_coefficients, [1.0], ydatanew)
+                if ydata_noresamp is not None:
+                    ydata_noresamp = filtfilt(s.fir_coefficients, [1.0], ydata_noresamp)
 
             # --- Final plotting and persistence ---
             # Optimization: Use skipFiniteCheck for faster setData
