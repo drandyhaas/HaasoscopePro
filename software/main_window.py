@@ -1095,14 +1095,13 @@ class MainWindow(TemplateBaseClass):
                 if s.fft_enabled.get(ch_name, False):
                     is_active = (ch_name == active_channel_name)
 
-                    y_full = self.xydata[ch_idx][1]
-                    midpoint = len(y_full) // 2
-                    if s.dotwochannel[board_idx]:
-                        y_data_for_analysis = y_full[:midpoint]
-                    elif s.dointerleaved[board_idx]:
-                        y_data_for_analysis = self.xydatainterleaved[ch_idx][1]
+                    # Use FIR-corrected data WITHOUT resampling (stabilized_data_noresamp)
+                    # This has FIR corrections applied but avoids upsampled/resampled artifacts
+                    if self.plot_manager.stabilized_data_noresamp[ch_idx] is not None:
+                        x_data, y_data_for_analysis = self.plot_manager.stabilized_data_noresamp[ch_idx]
                     else:
-                        y_data_for_analysis = y_full
+                        # Channel data not available (e.g., secondary channel in interleaved mode)
+                        continue
 
                     # Pass the correct board_idx to get the right sample rate
                     freq, mag = self.processor.calculate_fft(y_data_for_analysis, board_idx)
