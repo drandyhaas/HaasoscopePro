@@ -17,7 +17,7 @@ class FrequencyCalibration:
 
     def __init__(self):
         self.num_taps = 64  # FIR filter length
-        self.num_averages = 50  # Number of waveforms to average for calibration
+        self.num_averages = 2*100  # Number of waveforms to average for calibration
         self.regularization = 0.05  # Prevents over-boosting weak frequencies
 
     def generate_ideal_square_wave(self, frequency_hz, sample_rate_hz, num_samples, phase_offset=0):
@@ -100,14 +100,29 @@ class FrequencyCalibration:
                 'magnitude': Magnitude response |H(f)|
                 'phase': Phase response in radians
         """
-        # Compute FFTs
+        # Compute FFTs directly without amplitude normalization
+        # The FIR filter will include overall gain correction as part of frequency response
         measured_fft = np.fft.rfft(measured)
         ideal_fft = np.fft.rfft(ideal)
 
-        # Avoid division by zero - square wave has zero energy at even harmonics
-        # Add small epsilon to prevent inf/nan
-        epsilon = 1e-10 * np.max(np.abs(ideal_fft))
-        H_complex = measured_fft / (ideal_fft + epsilon)
+        # Square wave has energy ONLY at odd harmonics (10, 30, 50, 70 MHz...)
+        # At other frequencies, both FFTs are near-zero, causing H(f) = 0/0 = garbage
+        # Solution: Only compute H(f) where ideal signal has significant energy
+
+        # Find frequencies with significant energy in ideal signal
+        ideal_magnitude = np.abs(ideal_fft)
+        max_ideal_mag = np.max(ideal_magnitude)
+        threshold = 0.01 * max_ideal_mag  # 1% of peak is "significant"
+
+        # Initialize H_complex to 1.0 (no correction) everywhere
+        H_complex = np.ones_like(measured_fft, dtype=complex)
+
+        # Only compute H(f) at frequencies with significant energy
+        significant_bins = ideal_magnitude > threshold
+        H_complex[significant_bins] = measured_fft[significant_bins] / ideal_fft[significant_bins]
+
+        # Force DC bin to 1.0 (no correction for DC offset)
+        H_complex[0] = 1.0 + 0j
 
         # Compute magnitude and phase
         H_mag = np.abs(H_complex)
@@ -116,11 +131,25 @@ class FrequencyCalibration:
         # Frequency array
         freqs = np.fft.rfftfreq(len(measured), d=1/sample_rate_hz)
 
+        # Diagnostic output
+        print(f"Frequency response measurement:")
+        print(f"  - Number of significant frequency bins: {np.sum(significant_bins)} / {len(freqs)}")
+        print(f"  - H(f) magnitude range: [{np.min(H_mag):.4f}, {np.max(H_mag):.4f}]")
+        print(f"  - H(f) magnitude at DC: {H_mag[0]:.4f}")
+        # Find the 10 MHz bin (approximately)
+        idx_10MHz = np.argmin(np.abs(freqs - 10e6))
+        print(f"  - H(f) magnitude near 10 MHz: {H_mag[idx_10MHz]:.4f} at {freqs[idx_10MHz]/1e6:.1f} MHz")
+        # Show frequencies with significant energy
+        sig_freqs = freqs[significant_bins]
+        if len(sig_freqs) > 0:
+            print(f"  - Calibration frequencies: {', '.join([f'{f/1e6:.1f}' for f in sig_freqs[:10]])} MHz..." if len(sig_freqs) > 10 else f"  - Calibration frequencies: {', '.join([f'{f/1e6:.1f}' for f in sig_freqs])} MHz")
+
         return {
             'freqs': freqs,
             'H_complex': H_complex,
             'magnitude': H_mag,
-            'phase': H_phase
+            'phase': H_phase,
+            'significant_bins': significant_bins
         }
 
     def design_correction_fir(self, freq_response, sample_rate_hz, max_correction_db=20):
@@ -143,34 +172,34 @@ class FrequencyCalibration:
         freqs = freq_response['freqs']
         H_mag = freq_response['magnitude']
         H_phase = freq_response['phase']
-
-        # Identify harmonics with significant energy (odd harmonics of 10 MHz)
-        # Square wave has harmonics at f, 3f, 5f, 7f, ...
-        fundamental = 10e6  # 10 MHz
+        significant_bins = freq_response['significant_bins']
 
         # Create correction magnitude: C_mag(f) = 1 / H_mag(f)
         # With regularization to prevent over-boosting
-        H_mag_max = np.max(H_mag)
-        regularization_factor = self.regularization * H_mag_max
+        # Only apply regularization to significant bins (where we measured H(f))
+        H_mag_significant = H_mag[significant_bins]
+        H_mag_max_significant = np.max(H_mag_significant)
+        regularization_factor = self.regularization * H_mag_max_significant
 
-        correction_mag = 1.0 / (H_mag + regularization_factor)
+        correction_mag = np.ones_like(H_mag)  # Start with 1.0 (no correction)
+
+        # Only compute correction at significant frequencies
+        correction_mag[significant_bins] = 1.0 / (H_mag[significant_bins] + regularization_factor)
 
         # Limit maximum correction to prevent noise amplification
         max_correction_factor = 10 ** (max_correction_db / 20)  # Convert dB to linear
         correction_mag = np.clip(correction_mag, 1/max_correction_factor, max_correction_factor)
 
-        # Smooth the correction to avoid sharp transitions
-        # Use median filter to remove outliers, then smooth
-        window_length = min(11, len(correction_mag) // 10)
-        if window_length >= 3 and window_length % 2 == 1:  # Must be odd
-            correction_mag = signal.medfilt(correction_mag, kernel_size=window_length)
+        # IMPORTANT: filtfilt applies the filter twice (forward + backward pass)
+        # So the effective correction is correction_mag^2
+        # We need to take square root so that after filtfilt we get the desired correction
+        correction_mag = np.sqrt(correction_mag)
 
-        # Apply additional smoothing
-        if len(correction_mag) > 20:
-            window_length = min(15, len(correction_mag) // 5)
-            if window_length >= 5 and window_length % 2 == 1:
-                polyorder = min(3, window_length - 2)
-                correction_mag = signal.savgol_filter(correction_mag, window_length=window_length, polyorder=polyorder)
+        # NOTE: Skip smoothing for square wave calibration
+        # Square wave has sparse spectrum (only odd harmonics), so smoothing
+        # would average each harmonic peak with many neighboring zero-energy bins,
+        # destroying the correction information. The interpolation step below
+        # will naturally smooth between harmonics.
 
         # Correction phase: invert the measured phase
         correction_phase = -H_phase
@@ -195,17 +224,32 @@ class FrequencyCalibration:
 
         fft_length = 2048  # Use longer FFT for better frequency resolution in design
 
-        # Interpolate correction to fft_length//2 + 1 points
+        # For square wave with sparse harmonics, we need to interpolate between
+        # ONLY the significant frequencies, not the entire sparse array with 1.0 everywhere
         from scipy.interpolate import interp1d
 
         new_freqs = np.linspace(0, sample_rate_hz/2, fft_length//2 + 1)
 
-        # Interpolate magnitude and phase separately
-        interp_mag = interp1d(freqs, correction_mag, kind='linear', fill_value='extrapolate')
-        interp_phase = interp1d(freqs, correction_phase, kind='linear', fill_value='extrapolate')
+        # Extract only significant frequencies and their corrections
+        sig_freqs = freqs[significant_bins]
+        sig_correction_mag = correction_mag[significant_bins]
+        sig_correction_phase = correction_phase[significant_bins]
+
+        # Interpolate between ONLY the significant harmonics
+        # Use linear interpolation (no overshoot, unlike cubic which can overshoot between sparse points)
+        interp_mag = interp1d(sig_freqs, sig_correction_mag, kind='linear',
+                             fill_value=(sig_correction_mag[0], sig_correction_mag[-1]),
+                             bounds_error=False)
+        interp_phase = interp1d(sig_freqs, sig_correction_phase, kind='linear',
+                               fill_value=(sig_correction_phase[0], sig_correction_phase[-1]),
+                               bounds_error=False)
 
         correction_mag_interp = interp_mag(new_freqs)
         correction_phase_interp = interp_phase(new_freqs)
+
+        # Set DC explicitly to 1.0 (no correction)
+        correction_mag_interp[0] = 1.0
+        correction_phase_interp[0] = 0.0
 
         # Reconstruct complex correction
         correction_complex_interp = correction_mag_interp * np.exp(1j * correction_phase_interp)
@@ -213,17 +257,34 @@ class FrequencyCalibration:
         # IFFT to get time-domain impulse response
         fir_full = np.fft.irfft(correction_complex_interp, n=fft_length)
 
-        # Truncate to desired number of taps and apply window
-        fir_coefficients = fir_full[:self.num_taps]
+        # Center the impulse response (shifts zero-frequency component to center)
+        fir_full_centered = np.fft.fftshift(fir_full)
+
+        # Extract middle num_taps samples (centered around the peak)
+        center_idx = len(fir_full_centered) // 2
+        start_idx = center_idx - self.num_taps // 2
+        end_idx = start_idx + self.num_taps
+        fir_coefficients = fir_full_centered[start_idx:end_idx]
 
         # Apply Blackman window to reduce ringing
         window = signal.windows.blackman(self.num_taps)
         fir_coefficients = fir_coefficients * window
 
-        # Normalize to approximately unity gain at DC
+        # Normalize to unity gain at DC
         dc_gain = np.sum(fir_coefficients)
-        if abs(dc_gain) > 0.1:
+        if abs(dc_gain) > 1e-6:  # Only skip normalization if gain is essentially zero
             fir_coefficients = fir_coefficients / dc_gain
+        else:
+            print(f"  - WARNING: DC gain too small ({dc_gain:.2e}), normalization skipped")
+
+        # Diagnostic output
+        print(f"FIR filter design:")
+        print(f"  - DC gain before normalization: {dc_gain:.4f}")
+        print(f"  - Filter coefficient range: [{np.min(fir_coefficients):.4f}, {np.max(fir_coefficients):.4f}]")
+        print(f"  - Filter sum (DC response): {np.sum(fir_coefficients):.4f}")
+        print(f"  - Filter correction (at harmonics): [{np.min(correction_mag[significant_bins]):.4f}, {np.max(correction_mag[significant_bins]):.4f}] (sqrt for filtfilt)")
+        print(f"  - Effective correction after filtfilt: [{np.min(correction_mag[significant_bins])**2:.4f}, {np.max(correction_mag[significant_bins])**2:.4f}]")
+        print(f"  - Interpolated correction range: [{np.min(correction_mag_interp):.4f}, {np.max(correction_mag_interp):.4f}]")
 
         return fir_coefficients
 
@@ -294,14 +355,44 @@ class FrequencyCalibration:
             # Fine-tune alignment using cross-correlation
             measured_aligned, shift = self.align_signals(measured, ideal)
 
-            # Compute frequency response
-            freq_response = self.compute_frequency_response(measured_aligned, ideal, sample_rate_hz)
+            # Normalize measured signal to match ideal amplitude
+            # This removes overall gain, leaving only frequency-dependent response variations
+            # The FIR filter will then preserve input amplitude while correcting frequency response
+            measured_rms = np.std(measured_aligned)
+            ideal_rms = np.std(ideal)
+            if measured_rms > 0:
+                amplitude_scale = ideal_rms / measured_rms
+                measured_normalized = measured_aligned * amplitude_scale
+            else:
+                measured_normalized = measured_aligned
+                amplitude_scale = 1.0
+
+            # Diagnostic: Show signal characteristics
+            print(f"\nSignal alignment:")
+            print(f"  - Measured signal range: [{np.min(measured_aligned):.4f}, {np.max(measured_aligned):.4f}]")
+            print(f"  - Ideal signal range: [{np.min(ideal):.4f}, {np.max(ideal):.4f}]")
+            print(f"  - Cross-correlation shift: {shift} samples")
+            print(f"  - Measured RMS: {np.std(measured_aligned):.4f}")
+            print(f"  - Amplitude normalization: {amplitude_scale:.4f}x (for H(f) computation only)")
+
+            # Compute frequency response using normalized signals
+            # This H(f) will show only frequency-dependent variations, not overall gain
+            freq_response = self.compute_frequency_response(measured_normalized, ideal, sample_rate_hz)
 
             # Design correction FIR filter
             fir_coefficients = self.design_correction_fir(freq_response, sample_rate_hz)
 
-            # Validate the correction
-            validation = self.validate_correction(measured_aligned, ideal, fir_coefficients)
+            # Validate the correction using normalized signal
+            # This tests if the FIR corrects frequency response while preserving amplitude
+            validation = self.validate_correction(measured_normalized, ideal, fir_coefficients)
+
+            # Show validation results
+            print(f"\nCalibration validation:")
+            print(f"  - MSE before correction: {validation['mse_before']:.6f}")
+            print(f"  - MSE after correction: {validation['mse_after']:.6f}")
+            print(f"  - Improvement: {validation['improvement_db']:.1f} dB")
+            print(f"  - Corrected signal range: [{np.min(validation['corrected']):.4f}, {np.max(validation['corrected']):.4f}]")
+            print(f"  - Ideal signal range: [{np.min(ideal):.4f}, {np.max(ideal):.4f}]")
 
             message = f"Calibration successful. Improvement: {validation['improvement_db']:.1f} dB"
 

@@ -123,9 +123,10 @@ This ensures corrections are applied after trigger stabilization but before disp
 - The calibration quality depends on:
   - Signal-to-noise ratio of input square wave
   - Stability of trigger (use trigger stabilizers)
-  - Number of averages (default 50)
+  - Number of averages (default 200)
   - Cleanliness of square wave edges
-- The success message shows improvement in dB (typically 10-30 dB for good signals)
+- The success message shows improvement in dB (typically 3-10 dB for hardware with already-flat response)
+- **Note**: If your hardware already has good frequency response (H(f) ≈ 1.0 at most frequencies), improvement will be modest. This is actually a good sign!
 
 ## File Format (.fir)
 
@@ -207,6 +208,16 @@ state.fir_freq_response              # dict: Measured H(f) for display/analysis
 - Re-run calibration with correct signal
 - Try disabling "Apply FIR corrections" and verify input signal is correct
 
+**Very small improvement (< 1 dB)**
+- This is often **normal and good** - it means your hardware already has flat frequency response!
+- Check the diagnostic output: if H(f) magnitude ≈ 1.0 at most frequencies, hardware is working well
+- Example: H(f) = 1.01 at 10 MHz means only 1% deviation (excellent)
+- Corrections will be subtle but still improve edges at frequencies that need it
+- If H(f) shows large deviations (e.g., 0.5 or 2.0) but improvement is still small:
+  - Check that signal is a clean 10 MHz square wave
+  - Verify trigger is stable (use trigger stabilizers)
+  - Ensure sufficient signal amplitude and SNR
+
 **"Sample Rate Mismatch" warning when loading**
 - Calibration was performed at a different base sample rate
 - The FIR filter's frequency response is scaled by sample rate ratio
@@ -278,26 +289,53 @@ state.fir_freq_response              # dict: Measured H(f) for display/analysis
 ## Algorithm Details
 
 ### Phase Alignment
-1. Estimate initial phase using first zero crossing
-2. Generate ideal square wave with estimated phase
-3. Fine-tune alignment using cross-correlation
-4. Ensures measured and ideal waveforms are time-aligned
+1. Average 200 captured waveforms to reduce noise
+2. Estimate initial phase using first zero crossing
+3. Generate ideal square wave with estimated phase
+4. Fine-tune alignment using cross-correlation
+5. Ensures measured and ideal waveforms are time-aligned
 
-### Frequency Response Computation
+### Amplitude Normalization
+- Normalize measured signal to match ideal signal's RMS amplitude
+- This separates overall gain from frequency-dependent response
+- The FIR filter then corrects only frequency response, preserving input signal amplitude
+- **Critical**: Without this step, the filter would include overall gain correction
+
+### Frequency Response Computation (Sparse Spectrum Handling)
+Square waves have energy ONLY at odd harmonics (10, 30, 50 MHz...), not at even harmonics or other frequencies.
+
 ```python
-H(f) = FFT(measured) / FFT(ideal)
-```
-- Computed at each frequency bin
-- Includes both magnitude and phase response
+# Find significant frequency bins (>1% of peak energy)
+significant_bins = |FFT(ideal)| > 0.01 * max(|FFT(ideal)|)
 
-### FIR Filter Design
-1. Compute desired correction: C(f) = 1/H(f)
-2. Apply regularization: C(f) = 1/(H(f) + ε)
-3. Smooth correction with median + Savitzky-Golay filter
-4. Interpolate to 2048 frequency bins
-5. Inverse FFT to get time-domain impulse response
-6. Truncate to 64 taps and apply Blackman window
-7. Normalize to unity DC gain
+# Only compute H(f) where signal has energy (typically 43 bins out of 20,000)
+H(f) = 1.0 everywhere  # Default: no correction
+H(f)[significant_bins] = FFT(measured)[significant_bins] / FFT(ideal)[significant_bins]
+
+# Force DC to 1.0 (DC offset isn't a frequency response issue)
+H(f)[0] = 1.0
+```
+
+- **Why**: At non-significant frequencies, both FFTs ≈ 0, giving H(f) = 0/0 = numerical garbage
+- Includes both magnitude and phase response at significant frequencies only
+
+### FIR Filter Design (Accounting for filtfilt Double-Pass)
+1. Compute desired correction at significant bins: C(f) = 1/(H(f) + ε)
+   - Regularization ε = 5% of max(H(f)) prevents over-boosting weak frequencies
+2. Clip correction to ±20 dB range (prevents noise amplification)
+3. **Take square root**: C(f) = sqrt(C(f))
+   - **Critical**: `filtfilt` applies the filter twice (forward + backward pass)
+   - Effective correction = C(f)² after filtfilt
+   - Without sqrt, we'd get massive over-correction
+4. **Skip smoothing** (smoothing would destroy sparse harmonic corrections by averaging with neighboring zero-energy bins)
+5. Interpolate correction between ONLY the 43 significant harmonic frequencies (not full 20,000 sparse array)
+   - Use linear interpolation (no overshoot, unlike cubic)
+   - Extrapolate beyond last harmonic using edge values
+6. Inverse FFT to get time-domain impulse response (2048-point FFT)
+7. **Center the impulse response** using `fftshift` (critical: impulse peak is centered, not at start)
+8. Extract middle 64 taps centered around the peak
+9. Apply Blackman window to reduce ringing
+10. Normalize to unity DC gain (preserves overall signal amplitude)
 
 ### Real-Time Application
 ```python
@@ -307,6 +345,52 @@ for each waveform:
 - Zero-phase filtering (no group delay)
 - Applied to both resampled and non-resampled data
 - Used for display, math channels, FFT, etc.
+
+## Technical Notes (Implementation Details)
+
+### Critical Design Decisions
+
+**1. Sparse Spectrum Handling**
+- Square waves have energy only at 43 out of 20,000 frequency bins
+- Computing H(f) = measured/ideal at zero-energy bins gives 0/0 = numerical garbage
+- **Solution**: Only compute H(f) at significant bins, set others to 1.0 (no correction)
+
+**2. DC Bin Instability**
+- Both measured and ideal square waves have near-zero DC (bipolar signals)
+- DC bin division can give huge unstable values (observed: 195 million)
+- This pollutes the entire correction via regularization and clipping
+- **Solution**: Force H(f)[0] = 1.0 (DC offset isn't a frequency response issue)
+
+**3. Smoothing Incompatible with Sparse Spectrum**
+- Traditional FIR design uses median + Savitzky-Golay smoothing
+- For sparse spectrum, this averages each harmonic with thousands of 1.0 values
+- Result: All corrections averaged to constant ~0.9, destroying correction information
+- **Solution**: Skip smoothing entirely for square wave calibration
+
+**4. Interpolation from Sparse Points**
+- Cannot interpolate from full 20,000-point array (mostly 1.0 with 43 corrections)
+- Interpolation samples mostly 1.0 values, losing corrections
+- **Solution**: Extract only the 43 significant frequencies and interpolate between those
+- Use linear interpolation (cubic can overshoot between sparse points)
+
+**5. filtfilt Double-Pass Effect**
+- `filtfilt` applies filter forward then backward (zero-phase filtering)
+- Effective gain = (filter_gain)²
+- Example: 1.5x correction → filtfilt applies 1.5² = 2.25x → massive over-correction
+- **Solution**: Take sqrt of correction magnitude before filter design
+- Filter designed with 1.22x → filtfilt applies 1.22² = 1.5x ✓
+
+**6. Amplitude Normalization**
+- Input signal may have different overall amplitude than ideal (e.g., ±2.5 vs ±1.0)
+- This isn't a frequency response issue, just signal scaling
+- Without normalization: H(f) includes 2.5x gain at all frequencies
+- **Solution**: Normalize measured to ideal RMS before computing H(f)
+- FIR filter then corrects only frequency-dependent variations, preserving input amplitude
+
+**7. Impulse Response Centering**
+- `irfft` produces circular impulse response with peak centered
+- Taking first 64 samples captures mostly zeros, producing useless filter
+- **Solution**: Use `fftshift` to center, then extract middle 64 taps around peak
 
 ## References
 
