@@ -123,8 +123,11 @@ class PlotManager(pg.QtCore.QObject):
     def _create_click_handler(self, channel_index):
         """Creates a unique click handler function that remembers the channel index."""
         def handler(curve_item):
-            # Only emit signal if channel line is actually visible
-            if channel_index < len(self.lines) and self.lines[channel_index].isVisible():
+            # Only emit signal if channel is enabled and line is visible and clickable
+            if (channel_index < len(self.state.channel_enabled) and
+                self.state.channel_enabled[channel_index] and
+                channel_index < len(self.lines) and
+                self.lines[channel_index].isVisible()):
                 self.curve_clicked_signal.emit(channel_index)
         return handler
 

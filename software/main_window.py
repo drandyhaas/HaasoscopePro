@@ -1600,11 +1600,27 @@ class MainWindow(TemplateBaseClass):
 
     def on_curve_clicked(self, channel_index):
         """Slot for when a waveform on the plot is clicked."""
+        # Safety check: only process if channel is actually enabled
+        if not self.state.channel_enabled[channel_index]:
+            return
+
         board = channel_index // self.state.num_chan_per_board
         channel = channel_index % self.state.num_chan_per_board
+
+        # Block signals to prevent multiple calls to select_channel
+        self.ui.boardBox.blockSignals(True)
+        self.ui.chanBox.blockSignals(True)
+
+        # Set both board and channel
         self.ui.boardBox.setCurrentIndex(board)
         self.ui.chanBox.setCurrentIndex(channel)
-        # select_channel is called automatically by the currentIndexChanged signal
+
+        # Unblock signals
+        self.ui.boardBox.blockSignals(False)
+        self.ui.chanBox.blockSignals(False)
+
+        # Call select_channel manually once with both values set correctly
+        self.select_channel()
 
     def on_math_curve_clicked(self, math_channel_name):
         """Slot for when a math channel waveform on the plot is clicked."""
@@ -2319,9 +2335,10 @@ class MainWindow(TemplateBaseClass):
         average_line = self.plot_manager.average_lines.get(channel_index)
         heatmap_item = self.plot_manager.heatmap_manager.persist_heatmap_items.get(channel_index)
 
-        # If channel is not enabled, hide everything
+        # If channel is not enabled, hide everything and disable clicking
         if not is_chan_on:
             main_line.setVisible(False)
+            main_line.curve.setClickable(False)
             if average_line:
                 average_line.setVisible(False)
             if channel_index in self.plot_manager.persist_lines_per_channel:
@@ -2351,8 +2368,10 @@ class MainWindow(TemplateBaseClass):
         # Main trace visibility: hide ONLY if (average is on OR heatmap is on) AND persist lines are off AND persist time > 0
         if (show_persist_avg or show_persist_heatmap) and not show_persist_lines and persist_time > 0:
             main_line.setVisible(False)
+            main_line.curve.setClickable(False)
         else:
             main_line.setVisible(True)
+            main_line.curve.setClickable(True)
 
     def set_average_line_pen(self):
         """
