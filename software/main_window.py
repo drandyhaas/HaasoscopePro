@@ -1356,12 +1356,56 @@ class MainWindow(TemplateBaseClass):
         time_per_div = time_span / 10.0
         # Format the string with appropriate precision and the current units
 
-        if time_per_div * s.nsunits < 1:
-            display_text = f"{1000*time_per_div:.1f} ps"
-        elif time_per_div < 10:
-            display_text = f"{time_per_div:.2f} {s.units}"
+        # Convert to nanoseconds first
+        time_per_div_ns = time_per_div * s.nsunits
+
+        # Choose units so the displayed value is >= 1, format to 5 total digits
+        if time_per_div_ns >= 1e9:
+            # Seconds
+            value = time_per_div_ns / 1e9
+            if value >= 100:
+                display_text = f"{value:.1f} s"
+            elif value >= 10:
+                display_text = f"{value:.2f} s"
+            else:
+                display_text = f"{value:.3f} s"
+        elif time_per_div_ns >= 1e6:
+            # Milliseconds
+            value = time_per_div_ns / 1e6
+            if value >= 100:
+                display_text = f"{value:.1f} ms"
+            elif value >= 10:
+                display_text = f"{value:.2f} ms"
+            else:
+                display_text = f"{value:.3f} ms"
+        elif time_per_div_ns >= 1e3:
+            # Microseconds
+            value = time_per_div_ns / 1e3
+            if value >= 100:
+                display_text = f"{value:.1f} us"
+            elif value >= 10:
+                display_text = f"{value:.2f} us"
+            else:
+                display_text = f"{value:.3f} us"
+        elif time_per_div_ns >= 1:
+            # Nanoseconds
+            value = time_per_div_ns
+            if value >= 100:
+                display_text = f"{value:.1f} ns"
+            elif value >= 10:
+                display_text = f"{value:.2f} ns"
+            else:
+                display_text = f"{value:.3f} ns"
         else:
-            display_text = f"{time_per_div:.1f} {s.units}"
+            # Picoseconds
+            value = time_per_div_ns * 1000
+            if value >= 100:
+                display_text = f"{value:.1f} ps"
+            elif value >= 10:
+                display_text = f"{value:.2f} ps"
+            else:
+                display_text = f"{value:.3f} ps"
+
         self.ui.timebaseBox.setText(display_text)
         # self.ui.timebaseBox.setText(f"2^{self.state.downsample}")
 
