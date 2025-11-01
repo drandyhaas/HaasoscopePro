@@ -416,8 +416,15 @@ class ZoomWindow(QtWidgets.QWidget):
             # Use stored doresamp if available (for backward compatibility)
             doresamp_to_use = ref_data.get('doresamp', self.state.doresamp[ch_idx])
             if doresamp_to_use > 1:
-                from scipy.signal import resample
-                y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
+                from scipy.signal import resample_poly, resample
+                import numpy as np
+                if self.state.polyphase_upsampling_enabled:
+                    # Use polyphase resampling to reduce ringing artifacts
+                    y_resampled = resample_poly(y_data, doresamp_to_use, 1)
+                    x_resampled = np.linspace(x_data[0], x_data[-1], len(y_resampled))
+                else:
+                    # Use FFT-based resampling
+                    y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
                 self.reference_lines[ch_idx].setData(x=x_resampled, y=y_resampled, skipFiniteCheck=True)
             else:
                 self.reference_lines[ch_idx].setData(x=x_data, y=y_data, skipFiniteCheck=True)
@@ -465,8 +472,15 @@ class ZoomWindow(QtWidgets.QWidget):
             # Use stored doresamp if available (for backward compatibility and for references)
             doresamp_to_use = ref_data.get('doresamp', 1)
             if doresamp_to_use > 1:
-                from scipy.signal import resample
-                y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
+                from scipy.signal import resample_poly, resample
+                import numpy as np
+                if self.state.polyphase_upsampling_enabled:
+                    # Use polyphase resampling to reduce ringing artifacts
+                    y_resampled = resample_poly(y_data, doresamp_to_use, 1)
+                    x_resampled = np.linspace(x_data[0], x_data[-1], len(y_resampled))
+                else:
+                    # Use FFT-based resampling
+                    y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
                 self.math_reference_lines[math_name].setData(x=x_resampled, y=y_resampled, skipFiniteCheck=True)
             else:
                 self.math_reference_lines[math_name].setData(x=x_data, y=y_data, skipFiniteCheck=True)

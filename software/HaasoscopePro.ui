@@ -2377,6 +2377,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionToggle_extra_trig_stabilizer"/>
     <addaction name="actionPulse_stabilizer"/>
     <addaction name="separator"/>
+    <addaction name="actionPolyphase_upsampling"/>
     <addaction name="actionPolynomial_filtering"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
@@ -3028,6 +3029,17 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Polynomial filtering</string>
+   </property>
+  </action>
+  <action name="actionPolyphase_upsampling">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Polyphase upsampling</string>
    </property>
   </action>
  </widget>

@@ -140,6 +140,9 @@ class ScopeState:
         self.savgol_window_length = 15  # Window length (must be odd, >= 3)
         self.savgol_polyorder = 3  # Polynomial order (must be < window_length)
 
+        # Resampling method
+        self.polyphase_upsampling_enabled = True  # Use polyphase (less ringing) vs FFT-based resampling
+
         # Performance metrics
         self.nevents = 0
         self.oldnevents = 0

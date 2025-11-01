@@ -8,7 +8,7 @@ import numpy as np
 import time
 from collections import deque
 import colorsys
-from scipy.signal import resample, filtfilt, savgol_filter
+from scipy.signal import resample, resample_poly, filtfilt, savgol_filter
 from scipy.interpolate import interp1d
 from data_processor import find_crossing_distance
 from cursor_manager import CursorManager
@@ -343,7 +343,14 @@ class PlotManager(pg.QtCore.QObject):
 
             # --- Resampling (if enabled) ---
             if s.doresamp[li]:
-                ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * s.doresamp[li], t=xdatanew)
+                if s.polyphase_upsampling_enabled:
+                    # Use polyphase resampling to reduce ringing artifacts on sharp edges
+                    ydatanew = resample_poly(ydatanew, s.doresamp[li], 1)
+                    # Reconstruct time axis with finer spacing
+                    xdatanew = np.linspace(xdatanew[0], xdatanew[-1], len(ydatanew))
+                else:
+                    # Use FFT-based resampling (faster, but with ringing on sharp edges)
+                    ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * s.doresamp[li], t=xdatanew)
 
             # Store the processed data (with resampling)
             processed_data[li] = (xdatanew, ydatanew)
@@ -749,8 +756,13 @@ class PlotManager(pg.QtCore.QObject):
             # Use stored doresamp if available (for backward compatibility and for references)
             doresamp_to_use = ref_data.get('doresamp', 1)
             if doresamp_to_use > 1:
-                from scipy.signal import resample
-                y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
+                if self.state.polyphase_upsampling_enabled:
+                    # Use polyphase resampling to reduce ringing artifacts
+                    y_resampled = resample_poly(y_data, doresamp_to_use, 1)
+                    x_resampled = np.linspace(x_data[0], x_data[-1], len(y_resampled))
+                else:
+                    # Use FFT-based resampling
+                    y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
                 self.math_reference_lines[math_name].setData(x_resampled, y_resampled, skipFiniteCheck=True)
             else:
                 self.math_reference_lines[math_name].setData(x_data, y_data, skipFiniteCheck=True)
@@ -979,8 +991,13 @@ class PlotManager(pg.QtCore.QObject):
             if resampled_y_values:
                 y_average = np.mean(resampled_y_values, axis=0)
                 if s.doresamp[channel_idx]:
-                    y_average, common_x_axis = resample(y_average, len(common_x_axis) * s.doresamp[channel_idx],
-                                                        t=common_x_axis)
+                    if s.polyphase_upsampling_enabled:
+                        # Use polyphase resampling to reduce ringing artifacts
+                        y_average = resample_poly(y_average, s.doresamp[channel_idx], 1)
+                        common_x_axis = np.linspace(common_x_axis[0], common_x_axis[-1], len(y_average))
+                    else:
+                        # Use FFT-based resampling
+                        y_average, common_x_axis = resample(y_average, len(common_x_axis) * s.doresamp[channel_idx], t=common_x_axis)
                 # Optimization: Use skipFiniteCheck for faster setData
                 self.average_lines[channel_idx].setData(common_x_axis, y_average, skipFiniteCheck=True)
 

@@ -366,6 +366,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionSave_FIR_filter.triggered.connect(self.save_fir_filter)
         self.ui.actionLoad_FIR_filter.triggered.connect(self.load_fir_filter)
         self.ui.actionPolynomial_filtering.triggered.connect(self.polynomial_filtering_toggled)
+        self.ui.actionPolyphase_upsampling.triggered.connect(self.polyphase_upsampling_toggled)
 
         # Plot manager signals
         self.plot_manager.vline_dragged_signal.connect(self.on_vline_dragged)
@@ -554,6 +555,10 @@ class MainWindow(TemplateBaseClass):
     def polynomial_filtering_toggled(self, checked):
         """Toggle Savitzky-Golay polynomial filtering on/off."""
         self.state.polynomial_filtering_enabled = checked
+
+    def polyphase_upsampling_toggled(self, checked):
+        """Toggle polyphase (less ringing) vs FFT-based upsampling."""
+        self.state.polyphase_upsampling_enabled = checked
 
     def measure_fir_calibration(self):
         """Measure FIR calibration using 10 MHz square wave input."""
@@ -1136,7 +1141,7 @@ class MainWindow(TemplateBaseClass):
             self.math_results_noresamp = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data_noresamp)
 
             # Resample math channel results for display based on source channel's doresamp
-            from scipy.signal import resample
+            from scipy.signal import resample_poly, resample
             math_results = {}
             for math_name, (x_data, y_data) in self.math_results_noresamp.items():
                 # Find the math channel definition
@@ -1163,7 +1168,13 @@ class MainWindow(TemplateBaseClass):
 
                     # Apply resampling if needed
                     if doresamp_factor > 1:
-                        y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_factor, t=x_data)
+                        if s.polyphase_upsampling_enabled:
+                            # Use polyphase to reduce ringing
+                            y_resampled = resample_poly(y_data, doresamp_factor, 1)
+                            x_resampled = np.linspace(x_data[0], x_data[-1], len(y_resampled))
+                        else:
+                            # Use FFT-based resampling
+                            y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_factor, t=x_data)
                         math_results[math_name] = (x_resampled, y_resampled)
                     else:
                         math_results[math_name] = (x_data, y_data)
@@ -1463,8 +1474,14 @@ class MainWindow(TemplateBaseClass):
                 # Use stored doresamp if available (for backward compatibility)
                 doresamp_to_use = data.get('doresamp', s.doresamp[i])
                 if doresamp_to_use > 1:
-                    from scipy.signal import resample
-                    y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
+                    from scipy.signal import resample_poly, resample
+                    if s.polyphase_upsampling_enabled:
+                        # Use polyphase resampling to reduce ringing artifacts
+                        y_resampled = resample_poly(y_data, doresamp_to_use, 1)
+                        x_resampled = np.linspace(x_data[0], x_data[-1], len(y_resampled))
+                    else:
+                        # Use FFT-based resampling
+                        y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
                     self.plot_manager.update_reference_plot(i, x_resampled, y_resampled, width=stored_width)
                 else:
                     self.plot_manager.update_reference_plot(i, x_data, y_data, width=stored_width)
