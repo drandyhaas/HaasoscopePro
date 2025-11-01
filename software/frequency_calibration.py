@@ -16,7 +16,7 @@ class FrequencyCalibration:
     """Handles frequency response calibration using 10 MHz square wave"""
 
     # Calibration parameters (magic numbers)
-    NUM_TAPS = 128  # FIR filter length (default, overridden based on sample rate: 32/64/128)
+    NUM_TAPS_FACTOR = 1  # FIR filter length is (depending on sample rate: 32/64/128) x this
     NUM_AVERAGES = 1000  # Number of waveforms to average for calibration
     REGULARIZATION = 0.001  # Small epsilon to prevent division by zero
     MAX_CORRECTION_DB = 6  # Maximum boost/cut in dB (prevents over-correction)
@@ -27,7 +27,7 @@ class FrequencyCalibration:
     MEDIAN_FILTER_SIZE = 10  # Median filter window for smoothing corrections
 
     def __init__(self):
-        self.num_taps = self.NUM_TAPS
+        self.num_taps = None
         self.num_averages = self.NUM_AVERAGES
         self.regularization = self.REGULARIZATION
 
@@ -542,15 +542,15 @@ class FrequencyCalibration:
             sample_rate_ghz = sample_rate_hz / 1e9
             if sample_rate_ghz < 2.0:
                 # Two-channel mode (1.6 GHz) → 32 taps for ~50 MHz resolution
-                self.num_taps = 32
+                self.num_taps = 32 * self.NUM_TAPS_FACTOR
                 mode_name = "Two-channel"
             elif sample_rate_ghz < 4.5:
                 # Normal/Oversampling mode (3.2 GHz) → 64 taps for ~50 MHz resolution
-                self.num_taps = 64
+                self.num_taps = 64 * self.NUM_TAPS_FACTOR
                 mode_name = "Normal/Oversampling"
             else:
                 # Interleaved mode (6.4 GHz) → 128 taps for ~50 MHz resolution
-                self.num_taps = 128
+                self.num_taps = 128 * self.NUM_TAPS_FACTOR
                 mode_name = "Interleaved"
 
             print(f"\nMode detected: {mode_name} ({sample_rate_ghz:.2f} GHz)")
