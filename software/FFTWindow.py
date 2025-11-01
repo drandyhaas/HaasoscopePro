@@ -180,6 +180,12 @@ class FFTWindow(FFTTemplateBaseClass):
         Public method to update a channel's FFT plot.
         Advanced features are linked to the active channel.
         """
+        # Skip the DC bin (0 Hz) plus a little maybe - start from index fft_start_bin
+        fft_start_bin = 2
+        if x_data is not None and len(x_data) > fft_start_bin:
+            x_data = x_data[fft_start_bin:]
+            y_data = y_data[fft_start_bin:]
+
         # --- Multi-channel Trace Update ---
         if channel_name not in self.fft_lines:
             self.fft_lines[channel_name] = self.plot.plot(pen=pen)
