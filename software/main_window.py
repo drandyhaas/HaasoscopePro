@@ -566,12 +566,16 @@ class MainWindow(TemplateBaseClass):
                 board_N = self.state.activeboard - 1
             board_N1 = board_N + 1
 
-            QMessageBox.information(self, "FIR Calibration - Interleaved Mode",
+            reply = QMessageBox.question(self, "FIR Calibration - Interleaved Mode",
                                   f"Interleaved oversampling detected!\n\n"
                                   f"The interleaved waveform at 6.4 GHz will be calibrated.\n\n"
                                   f"Connect 10 MHz square wave to input.\n"
                                   f"(Signal is duplicated to both boards by hardware)\n\n"
-                                  f"Click OK when ready...")
+                                  f"Proceed with calibration?",
+                                  QMessageBox.Yes | QMessageBox.Cancel,
+                                  QMessageBox.Yes)
+            if reply == QMessageBox.Cancel:
+                return
 
         elif oversample_mode:
             # Oversampling only (not interleaved): calibrate boards separately
@@ -582,12 +586,27 @@ class MainWindow(TemplateBaseClass):
                 board_N = self.state.activeboard - 1
             board_N1 = board_N + 1
 
-            QMessageBox.information(self, "FIR Calibration - Oversampling Mode",
+            reply = QMessageBox.question(self, "FIR Calibration - Oversampling Mode",
                                   f"Oversampling detected!\n\n"
                                   f"Board {board_N} and Board {board_N1} will be calibrated separately.\n\n"
                                   f"Connect 10 MHz square wave to input.\n"
                                   f"(Signal is duplicated to both boards by hardware)\n\n"
-                                  f"Click OK when ready...")
+                                  f"Proceed with calibration?",
+                                  QMessageBox.Yes | QMessageBox.Cancel,
+                                  QMessageBox.Yes)
+            if reply == QMessageBox.Cancel:
+                return
+
+        else:
+            # Normal mode
+            reply = QMessageBox.question(self, "FIR Calibration - Normal Mode",
+                                  f"Normal mode detected.\n\n"
+                                  f"Connect 10 MHz square wave to input.\n\n"
+                                  f"Proceed with calibration?",
+                                  QMessageBox.Yes | QMessageBox.Cancel,
+                                  QMessageBox.Yes)
+            if reply == QMessageBox.Cancel:
+                return
 
         # Create calibration object
         fir_cal = FrequencyCalibration()
@@ -613,6 +632,10 @@ class MainWindow(TemplateBaseClass):
         def capture_board_waveforms(board_idx, num_averages):
             captured = []
             for i in range(num_averages):
+
+                # Print progress at 10% intervals
+                if i % 100 == 0: print(f"Capturing waveforms: {i}/{num_averages}")
+
                 # Get event data
                 raw_data_map, rx_len = self.controller.get_event()
                 if not raw_data_map:
@@ -642,6 +665,10 @@ class MainWindow(TemplateBaseClass):
                 captured_waveforms_interleaved = []
 
                 for i in range(num_averages):
+
+                    # Print progress at 10% intervals
+                    if i % 100 == 0: print(f"Capturing interleaved waveforms: {i}/{num_averages}")
+
                     # Get event data
                     raw_data_map, rx_len = self.controller.get_event()
                     if not raw_data_map:
@@ -687,6 +714,10 @@ class MainWindow(TemplateBaseClass):
                 captured_waveforms_N1 = []
 
                 for i in range(num_averages):
+
+                    # Print progress at 10% intervals
+                    if i % 100 == 0: print(f"Capturing oversample waveforms: {i}/{num_averages}")
+
                     # Get event data
                     raw_data_map, rx_len = self.controller.get_event()
                     if not raw_data_map:

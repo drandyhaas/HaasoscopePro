@@ -15,12 +15,23 @@ from PyQt5.QtWidgets import QMessageBox, QFileDialog
 class FrequencyCalibration:
     """Handles frequency response calibration using 10 MHz square wave"""
 
-    def __init__(self):
-        self.num_taps = 128  # FIR filter length (64, 128, or 256)
-        self.num_averages = 2*100  # Number of waveforms to average for calibration
-        self.regularization = 0.001  # Small epsilon to prevent division by zero (was 0.05, too aggressive)
+    # Calibration parameters (magic numbers)
+    NUM_TAPS = 128  # FIR filter length
+    NUM_AVERAGES = 1000  # Number of waveforms to average for calibration
+    REGULARIZATION = 0.001  # Small epsilon to prevent division by zero
+    MAX_CORRECTION_DB = 6  # Maximum boost/cut in dB (prevents over-correction)
+    MAX_PHASE_CORRECTION_DEG = 25  # Maximum phase correction in degrees
+    SNR_THRESHOLD = 100  # Require signal > this much x noise floor
+    HARMONIC_EXCLUSION_MHZ = 2.5  # Exclude ± this many MHz around harmonics for noise estimation
+    NOISE_WINDOW_MHZ = 250  # ± This many MHz window for noise estimation
+    MEDIAN_FILTER_SIZE = 10  # Median filter window for smoothing corrections
 
-    def generate_ideal_square_wave(self, frequency_hz, sample_rate_hz, num_samples, phase_offset=0):
+    def __init__(self):
+        self.num_taps = self.NUM_TAPS
+        self.num_averages = self.NUM_AVERAGES
+        self.regularization = self.REGULARIZATION
+
+    def generate_ideal_square_wave(self, frequency_hz, sample_rate_hz, num_samples, phase_offset=0, duty_cycle=0.5):
         """
         Generate ideal square wave with specified parameters
 
@@ -29,12 +40,14 @@ class FrequencyCalibration:
             sample_rate_hz: Sample rate in Hz
             num_samples: Number of samples to generate
             phase_offset: Phase offset in radians (for alignment with measured signal)
+            duty_cycle: Duty cycle as fraction (0.5 = 50%, 0.502 = 50.2%, etc.)
 
         Returns:
             numpy array of square wave values (+1 or -1)
         """
         t = np.arange(num_samples) / sample_rate_hz
-        square = signal.square(2 * np.pi * frequency_hz * t + phase_offset)
+        # scipy.signal.square uses duty parameter which is the fraction of high state
+        square = signal.square(2 * np.pi * frequency_hz * t + phase_offset, duty=duty_cycle)
         return square
 
     def align_signals(self, measured, ideal):
@@ -84,14 +97,108 @@ class FrequencyCalibration:
 
         return phase_offset
 
-    def compute_frequency_response(self, measured, ideal, sample_rate_hz, is_interleaved=False):
+    def measure_duty_cycle(self, measured, frequency_hz, sample_rate_hz):
+        """
+        Measure the duty cycle of the measured square wave
+
+        Args:
+            measured: Measured waveform
+            frequency_hz: Fundamental frequency
+            sample_rate_hz: Sample rate
+
+        Returns:
+            duty_cycle: Measured duty cycle as fraction (0.5 = 50%, etc.)
+        """
+        # Find threshold (midpoint between min and max)
+        threshold = (np.max(measured) + np.min(measured)) / 2.0
+
+        # Find all samples above threshold
+        high_samples = measured > threshold
+
+        # Count transitions to verify we have a clean signal
+        transitions = np.diff(high_samples.astype(int))
+        num_rising = np.sum(transitions > 0)
+        num_falling = np.sum(transitions < 0)
+
+        if num_rising < 2 or num_falling < 2:
+            # Not enough transitions to measure duty cycle reliably
+            print(f"  - WARNING: Only {num_rising} rising and {num_falling} falling edges detected")
+            return 0.5
+
+        # Duty cycle is fraction of time spent high
+        duty_cycle = np.mean(high_samples)
+
+        # Sanity check: duty cycle should be between 0.4 and 0.6 for square waves
+        if duty_cycle < 0.4 or duty_cycle > 0.6:
+            print(f"  - WARNING: Measured duty cycle {duty_cycle:.1%} is outside expected range [40%, 60%]")
+            # Clamp to reasonable range
+            duty_cycle = np.clip(duty_cycle, 0.4, 0.6)
+
+        return duty_cycle
+
+    def measure_frequency(self, measured, sample_rate_hz, expected_freq=10e6):
+        """
+        Measure the actual fundamental frequency of the input signal
+
+        Args:
+            measured: Measured waveform
+            sample_rate_hz: Sample rate
+            expected_freq: Expected frequency (for search range)
+
+        Returns:
+            measured_freq: Measured fundamental frequency in Hz
+        """
+        # FFT to find the fundamental frequency
+        fft = np.fft.rfft(measured)
+        freqs = np.fft.rfftfreq(len(measured), d=1/sample_rate_hz)
+
+        # Search for peak within ±10% of expected frequency
+        search_min = expected_freq * 0.9
+        search_max = expected_freq * 1.1
+        search_mask = (freqs >= search_min) & (freqs <= search_max)
+
+        if np.sum(search_mask) == 0:
+            print(f"  - WARNING: No bins in search range [{search_min/1e6:.2f}, {search_max/1e6:.2f}] MHz")
+            return expected_freq
+
+        # Find peak frequency in search range
+        search_freqs = freqs[search_mask]
+        search_fft = np.abs(fft[search_mask])
+        peak_idx = np.argmax(search_fft)
+        measured_freq = search_freqs[peak_idx]
+
+        # Parabolic interpolation for sub-bin accuracy
+        if 0 < peak_idx < len(search_fft) - 1:
+            # Use 3-point parabolic interpolation
+            y1 = search_fft[peak_idx - 1]
+            y2 = search_fft[peak_idx]
+            y3 = search_fft[peak_idx + 1]
+
+            # Parabolic peak offset
+            denom = y1 - 2*y2 + y3
+            if abs(denom) > 1e-10:
+                offset = 0.5 * (y1 - y3) / denom
+                # Interpolate frequency
+                df = search_freqs[1] - search_freqs[0] if len(search_freqs) > 1 else 0
+                measured_freq = measured_freq + offset * df
+
+        return measured_freq
+
+    def compute_frequency_response(self, measured, ideal, sample_rate_hz, fundamental_freq, is_interleaved=False):
         """
         Compute frequency response H(f) = FFT(measured) / FFT(ideal)
 
+        For square wave calibration with measured duty cycle:
+        - The ideal square wave is generated with the same duty cycle as the measured signal
+        - Both odd and even harmonics now have known energy in the ideal
+        - We can use ALL harmonics for calibration
+        - This gives better frequency coverage
+
         Args:
             measured: Measured waveform (aligned to ideal)
-            ideal: Ideal reference waveform
+            ideal: Ideal reference waveform (with matching duty cycle)
             sample_rate_hz: Sample rate in Hz
+            fundamental_freq: Measured fundamental frequency in Hz
             is_interleaved: True if interleaved mode (affects hardware LPF cutoff)
 
         Returns:
@@ -119,16 +226,12 @@ class FrequencyCalibration:
         nyquist_freq = sample_rate_hz / 2
         df = sample_rate_hz / len(measured)  # Bin spacing in Hz
 
-        # Find bins for 10 MHz odd harmonics: 10, 30, 50, 70, ... up to hardware LPF cutoff
-        # Hardware LPF cutoff depends on mode:
-        # - Normal/Oversampling mode: ~1.4 GHz
-        # - Interleaved mode: ~2.5 GHz
-        max_calibration_freq = 2.5e9 if is_interleaved else 1.4e9
+        # Find bins for ALL harmonics of measured fundamental frequency up to Nyquist
         harmonic_freqs = []
         harmonic_bins = []
         for n in range(1, 1000):  # Large upper limit
-            freq = 10e6 * (2*n - 1)  # Odd harmonics: 10, 30, 50, 70...
-            if freq > min(nyquist_freq, max_calibration_freq):
+            freq = fundamental_freq * n  # All harmonics: f, 2f, 3f, 4f...
+            if freq > nyquist_freq:
                 break
             bin_idx = int(round(freq / df))
             if bin_idx < len(freqs):
@@ -140,10 +243,42 @@ class FrequencyCalibration:
         # Initialize H_complex to 1.0 (no correction) everywhere
         H_complex = np.ones_like(measured_fft, dtype=complex)
 
-        # Only compute H(f) at the exact harmonic bins
+        # Measure noise floor vs frequency
+        # For each harmonic, estimate local noise floor from nearby bins (excluding ±5 MHz around harmonic)
+        measured_mag = np.abs(measured_fft)
         significant_bins = np.zeros(len(measured_fft), dtype=bool)
-        significant_bins[harmonic_bins] = True
-        H_complex[significant_bins] = measured_fft[significant_bins] / ideal_fft[significant_bins]
+
+        exclusion_width = int(self.HARMONIC_EXCLUSION_MHZ * 1e6 / df)
+        snr_threshold = self.SNR_THRESHOLD
+
+        num_bins_used = 0
+        for harmonic_bin in harmonic_bins:
+            # Define noise measurement window
+            noise_window_width = int(self.NOISE_WINDOW_MHZ * 1e6 / df)
+            noise_start = max(1, harmonic_bin - noise_window_width)  # Skip DC bin
+            noise_end = min(len(measured_fft), harmonic_bin + noise_window_width)
+
+            # Exclude the harmonic itself and other nearby harmonics
+            noise_bins = np.ones(noise_end - noise_start, dtype=bool)
+            for other_bin in harmonic_bins:
+                if noise_start <= other_bin < noise_end:
+                    local_idx = other_bin - noise_start
+                    exclude_start = max(0, local_idx - exclusion_width)
+                    exclude_end = min(len(noise_bins), local_idx + exclusion_width + 1)
+                    noise_bins[exclude_start:exclude_end] = False
+
+            # Compute local noise floor as median of non-harmonic bins
+            if np.sum(noise_bins) > 10:  # Need at least 10 bins to estimate noise
+                local_noise = np.median(measured_mag[noise_start:noise_end][noise_bins])
+            else:
+                local_noise = 0.0
+
+            # Check if measured signal at this harmonic is above 10x noise floor
+            signal_level = measured_mag[harmonic_bin]
+            if signal_level > snr_threshold * local_noise and local_noise > 0:
+                H_complex[harmonic_bin] = measured_fft[harmonic_bin] / ideal_fft[harmonic_bin]
+                significant_bins[harmonic_bin] = True
+                num_bins_used += 1
 
         # Force DC bin to 1.0 (no correction for DC offset)
         H_complex[0] = 1.0 + 0j
@@ -154,18 +289,24 @@ class FrequencyCalibration:
 
         # Diagnostic output
         print(f"Frequency response measurement:")
-        print(f"  - Number of harmonic bins measured: {np.sum(significant_bins)} / {len(freqs)}")
+        print(f"  - Number of harmonic bins found: {len(harmonic_bins)}")
+        print(f"  - Number of harmonic bins used (SNR > 10x): {num_bins_used} / {len(freqs)}")
+        print(f"  - SNR threshold: {snr_threshold:.1f}x")
         # Show H(f) magnitude range only at the measured harmonics
-        H_mag_at_harmonics = H_mag[significant_bins]
-        print(f"  - H(f) magnitude range at harmonics: [{np.min(H_mag_at_harmonics):.4f}, {np.max(H_mag_at_harmonics):.4f}]")
+        if np.sum(significant_bins) > 0:
+            H_mag_at_harmonics = H_mag[significant_bins]
+            print(f"  - H(f) magnitude range at harmonics: [{np.min(H_mag_at_harmonics):.4f}, {np.max(H_mag_at_harmonics):.4f}]")
         print(f"  - H(f) magnitude at DC: {H_mag[0]:.4f}")
         # Find the 10 MHz bin
-        idx_10MHz = harmonic_bins[0] if len(harmonic_bins) > 0 else 0
-        print(f"  - H(f) magnitude at 10 MHz: {H_mag[idx_10MHz]:.4f}")
+        if len(harmonic_bins) > 0 and significant_bins[harmonic_bins[0]]:
+            idx_10MHz = harmonic_bins[0]
+            print(f"  - H(f) magnitude at 10 MHz: {H_mag[idx_10MHz]:.4f}")
         # Show first 10 harmonic frequencies
         sig_freqs = freqs[significant_bins]
         if len(sig_freqs) > 0:
             print(f"  - Calibration frequencies: {', '.join([f'{f/1e6:.0f}' for f in sig_freqs[:10]])} MHz..." if len(sig_freqs) > 10 else f"  - Calibration frequencies: {', '.join([f'{f/1e6:.0f}' for f in sig_freqs])} MHz")
+            # Show frequency range
+            print(f"  - Frequency range: {sig_freqs[0]/1e6:.0f} MHz to {sig_freqs[-1]/1e6:.0f} MHz")
 
         return {
             'freqs': freqs,
@@ -175,14 +316,15 @@ class FrequencyCalibration:
             'significant_bins': significant_bins
         }
 
-    def design_correction_fir(self, freq_response, sample_rate_hz, max_correction_db=6):
+    def design_correction_fir(self, freq_response, sample_rate_hz, max_correction_db=None):
         """
         Design FIR filter to correct frequency response
 
-        For square wave calibration:
-        - Only odd harmonics have energy (10, 30, 50, ... MHz)
-        - Compute correction at those frequencies
-        - Interpolate smoothly between them
+        For square wave calibration with measured duty cycle:
+        - H(f) is computed at ALL harmonic positions (10, 20, 30, 40... MHz)
+        - The ideal square wave has matching duty cycle, so all harmonics have known energy
+        - Compute correction C(f) = 1 / H(f) at those frequencies
+        - Interpolate smoothly between them to create full frequency response
 
         Args:
             freq_response: Dict from compute_frequency_response()
@@ -192,6 +334,9 @@ class FrequencyCalibration:
         Returns:
             fir_coefficients: 64-tap FIR filter coefficients
         """
+        if max_correction_db is None:
+            max_correction_db = self.MAX_CORRECTION_DB
+
         freqs = freq_response['freqs']
         H_mag = freq_response['magnitude']
         H_phase = freq_response['phase']
@@ -210,7 +355,7 @@ class FrequencyCalibration:
         correction_mag[significant_bins] = 1.0 / (H_mag[significant_bins] + regularization_factor)
 
         # Limit maximum correction to prevent noise amplification
-        max_correction_factor = 10 ** (max_correction_db / 20)  # Convert dB to linear (6 dB = 2x)
+        max_correction_factor = 10 ** (max_correction_db / 20)  # Convert dB to linear
         correction_mag = np.clip(correction_mag, 1/max_correction_factor, max_correction_factor)
 
         # IMPORTANT: filtfilt applies the filter twice (forward + backward pass)
@@ -218,17 +363,41 @@ class FrequencyCalibration:
         # We need to take square root so that after filtfilt we get the desired correction
         correction_mag = np.sqrt(correction_mag)
 
-        # NOTE: Skip smoothing for square wave calibration
-        # Square wave has sparse spectrum (only odd harmonics), so smoothing
-        # would average each harmonic peak with many neighboring zero-energy bins,
-        # destroying the correction information. The interpolation step below
-        # will naturally smooth between harmonics.
+        # Smooth the correction at significant bins to prevent interpolation artifacts
+        # Only smooth the correction values at harmonics, not all frequencies
+        from scipy.ndimage import median_filter
+        sig_indices = np.where(significant_bins)[0]
+        if len(sig_indices) > self.MEDIAN_FILTER_SIZE:
+            # Extract correction values at significant bins
+            correction_at_harmonics = correction_mag[sig_indices]
+            # Apply median filter to remove outliers
+            smoothed_correction = median_filter(correction_at_harmonics, size=self.MEDIAN_FILTER_SIZE, mode='nearest')
+            # Put smoothed values back
+            correction_mag[sig_indices] = smoothed_correction
 
-        # Correction phase: invert the measured phase
+        # Correction phase: invert the measured phase, but limit phase correction
+        # Large phase corrections can cause artifacts
         correction_phase = -H_phase
+        # Limit phase correction to prevent artifacts
+        max_phase_correction = np.deg2rad(self.MAX_PHASE_CORRECTION_DEG)
+        correction_phase = np.clip(correction_phase, -max_phase_correction, max_phase_correction)
 
         # Construct complex correction response
         correction_complex = correction_mag * np.exp(1j * correction_phase)
+
+        # Report bins with large corrections
+        print(f"\nLarge corrections (>{self.MAX_CORRECTION_DB/2} dB or phase>+-{self.MAX_PHASE_CORRECTION_DEG/2}°):")
+        large_correction_threshold_linear = 10 ** (self.MAX_CORRECTION_DB/2 / 20)
+        large_phase_threshold_rad = np.deg2rad(self.MAX_PHASE_CORRECTION_DEG/2)  # Report if > half max
+
+        for idx in sig_indices:
+            # Convert correction to dB (remember we took sqrt for filtfilt, so square it back)
+            correction_db = 20 * np.log10(correction_mag[idx]**2)
+            phase_deg = np.rad2deg(correction_phase[idx])
+
+            if abs(correction_mag[idx]**2 - 1.0) > (large_correction_threshold_linear - 1.0) or abs(phase_deg) > np.rad2deg(large_phase_threshold_rad):
+                freq_mhz = freqs[idx] / 1e6
+                print(f"  {freq_mhz:6.0f} MHz: magnitude {correction_mag[idx]**2:.3f}x ({correction_db:+.1f} dB), phase {phase_deg:+.1f}°")
 
         # Design FIR filter using frequency sampling method
         # Need to create full spectrum (positive and negative frequencies)
@@ -367,14 +536,32 @@ class FrequencyCalibration:
                 'message': Status message
         """
         try:
+            print("\nProcessing: Averaging waveforms...")
             # Average the captured waveforms
             measured = np.mean(waveform_data_list, axis=0)
 
-            # Estimate phase offset from measured signal
-            phase_offset = self.estimate_phase_offset(measured, 10e6, sample_rate_hz)
+            # Remove DC offset from measured signal
+            measured_mean = np.mean(measured)
+            measured = measured - measured_mean
+            print(f"  - Removed DC offset: {measured_mean:.4f}")
 
-            # Generate ideal 10 MHz square wave with estimated phase
-            ideal = self.generate_ideal_square_wave(10e6, sample_rate_hz, len(measured), phase_offset)
+            print("Processing: Measuring signal frequency...")
+            # Measure actual fundamental frequency (might not be exactly 10 MHz)
+            measured_freq = self.measure_frequency(measured, sample_rate_hz, expected_freq=10e6)
+            print(f"  - Measured frequency: {measured_freq/1e6:.6f} MHz (expected 10.000000 MHz)")
+            freq_error_ppm = (measured_freq - 10e6) / 10e6 * 1e6
+            print(f"  - Frequency error: {freq_error_ppm:+.1f} ppm")
+
+            print("Processing: Measuring duty cycle...")
+            # Measure duty cycle from measured signal
+            duty_cycle = self.measure_duty_cycle(measured, measured_freq, sample_rate_hz)
+
+            print("Processing: Aligning signals...")
+            # Estimate phase offset from measured signal
+            phase_offset = self.estimate_phase_offset(measured, measured_freq, sample_rate_hz)
+
+            # Generate ideal square wave with measured frequency, duty cycle, and phase
+            ideal = self.generate_ideal_square_wave(measured_freq, sample_rate_hz, len(measured), phase_offset, duty_cycle)
 
             # Fine-tune alignment using cross-correlation
             measured_aligned, shift = self.align_signals(measured, ideal)
@@ -393,19 +580,23 @@ class FrequencyCalibration:
 
             # Diagnostic: Show signal characteristics
             print(f"\nSignal alignment:")
+            print(f"  - Measured duty cycle: {duty_cycle*100:.2f}%")
             print(f"  - Measured signal range: [{np.min(measured_aligned):.4f}, {np.max(measured_aligned):.4f}]")
             print(f"  - Ideal signal range: [{np.min(ideal):.4f}, {np.max(ideal):.4f}]")
             print(f"  - Cross-correlation shift: {shift} samples")
             print(f"  - Measured RMS: {np.std(measured_aligned):.4f}")
             print(f"  - Amplitude normalization: {amplitude_scale:.4f}x (for H(f) computation only)")
 
+            print("\nProcessing: Computing frequency response...")
             # Compute frequency response using normalized signals
             # This H(f) will show only frequency-dependent variations, not overall gain
-            freq_response = self.compute_frequency_response(measured_normalized, ideal, sample_rate_hz, is_interleaved)
+            freq_response = self.compute_frequency_response(measured_normalized, ideal, sample_rate_hz, measured_freq, is_interleaved)
 
+            print("\nProcessing: Designing FIR filter...")
             # Design correction FIR filter
             fir_coefficients = self.design_correction_fir(freq_response, sample_rate_hz)
 
+            print("\nProcessing: Validating correction...")
             # Validate the correction using normalized signal
             # This tests if the FIR corrects frequency response while preserving amplitude
             validation = self.validate_correction(measured_normalized, ideal, fir_coefficients)
@@ -419,6 +610,8 @@ class FrequencyCalibration:
             print(f"  - Ideal signal range: [{np.min(ideal):.4f}, {np.max(ideal):.4f}]")
 
             message = f"Calibration successful. Improvement: {validation['improvement_db']:.1f} dB"
+
+            print("\nCalibration complete!")
 
             return {
                 'fir_coefficients': fir_coefficients,
