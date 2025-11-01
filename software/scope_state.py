@@ -139,6 +139,8 @@ class ScopeState:
         self.polynomial_filtering_enabled = False  # Whether to apply Savitzky-Golay filter
         self.savgol_window_length = 15  # Window length (must be odd, >= 3)
         self.savgol_polyorder = 3  # Polynomial order (must be < window_length)
+        self.polynomial_filtering_saved_doresamp = None  # Saved doresamp values before enabling filter
+        self.polynomial_filtering_saved_resamp_overridden = None  # Saved resamp_overridden flags before enabling filter
 
         # Resampling method
         self.polyphase_upsampling_enabled = True  # Use polyphase (less ringing) vs FFT-based resampling

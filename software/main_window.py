@@ -554,7 +554,31 @@ class MainWindow(TemplateBaseClass):
 
     def polynomial_filtering_toggled(self, checked):
         """Toggle Savitzky-Golay polynomial filtering on/off."""
-        self.state.polynomial_filtering_enabled = checked
+        s = self.state
+        s.polynomial_filtering_enabled = checked
+
+        if checked:
+            # Turning ON: Save current doresamp and resamp_overridden for all channels
+            s.polynomial_filtering_saved_doresamp = s.doresamp.copy()
+            s.polynomial_filtering_saved_resamp_overridden = s.resamp_overridden.copy()
+
+            # Set all channels to doresamp=0 (no resampling) as if manually set
+            total_channels = s.num_board * s.num_chan_per_board
+            for ch in range(total_channels):
+                s.doresamp[ch] = 0
+                s.resamp_overridden[ch] = True
+        else:
+            # Turning OFF: Restore saved doresamp and resamp_overridden values
+            if s.polynomial_filtering_saved_doresamp is not None:
+                s.doresamp = s.polynomial_filtering_saved_doresamp.copy()
+                s.resamp_overridden = s.polynomial_filtering_saved_resamp_overridden.copy()
+                s.polynomial_filtering_saved_doresamp = None
+                s.polynomial_filtering_saved_resamp_overridden = None
+
+        # Update the resampBox GUI to reflect the active channel's new doresamp value
+        self.ui.resampBox.blockSignals(True)
+        self.ui.resampBox.setValue(s.doresamp[s.activexychannel])
+        self.ui.resampBox.blockSignals(False)
 
     def polyphase_upsampling_toggled(self, checked):
         """Toggle polyphase (less ringing) vs FFT-based upsampling."""
