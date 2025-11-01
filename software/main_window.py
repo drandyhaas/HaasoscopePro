@@ -692,7 +692,15 @@ class MainWindow(TemplateBaseClass):
 
                 # Extract y-data from the specified channel
                 if channel_idx < len(self.xydata) and self.xydata[channel_idx] is not None:
-                    y_data = self.xydata[channel_idx][1].copy()
+                    y_data_full = self.xydata[channel_idx][1]
+
+                    # In two-channel mode, only first half of array contains valid samples
+                    if self.state.dotwochannel[board_idx]:
+                        num_valid_samples = len(y_data_full) // 2
+                        y_data = y_data_full[:num_valid_samples].copy()
+                    else:
+                        y_data = y_data_full.copy()
+
                     captured.append(y_data)
 
             return captured
