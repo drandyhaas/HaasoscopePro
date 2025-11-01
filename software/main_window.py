@@ -3007,6 +3007,30 @@ class MainWindow(TemplateBaseClass):
     def oversamp_changed(self, checked):
         s = self.state
         board = s.activeboard
+
+        # When enabling oversampling, validate and configure board N+1
+        if bool(checked):
+            # Ensure board N+1 is in single-channel mode
+            if s.dotwochannel[board + 1]:
+                s.dotwochannel[board + 1] = False
+                self.controller.set_twochannel(board + 1, False)
+                print(f"Auto-configured board {board+1} to single-channel mode for oversampling")
+
+            # Ensure board N+1 is on external trigger (this was already done, but moved here for clarity)
+            if not s.doexttrig[board + 1]:
+                s.doexttrig[board + 1] = True
+                self.controller.set_exttrig(board + 1, True)
+                print(f"Auto-configured board {board+1} to external trigger mode for oversampling")
+
+            # Ensure board N+1 is on external clock source
+            from board import clockused, switchclock
+            if clockused(self.controller.usbs[board + 1], board + 1, quiet=True) == 0:
+                # Board is on internal clock, switch to external
+                if switchclock(self.controller.usbs[board + 1], board + 1, external=True):
+                    print(f"Auto-configured board {board+1} to external clock source for oversampling")
+                else:
+                    print(f"WARNING: Failed to switch board {board+1} to external clock source")
+
         s.dooversample[board] = bool(checked)
         s.dooversample[board + 1] = bool(checked)
         s.skip_next_event = True  # Skip next event after oversampling change
@@ -3032,9 +3056,6 @@ class MainWindow(TemplateBaseClass):
         if bool(checked):
             self.ui.interleavedCheck.setEnabled(True)
             self.ui.twochanCheck.setEnabled(False)
-            # Set second board (+1) to external trigger mode
-            s.doexttrig[board + 1] = True
-            self.controller.set_exttrig(board + 1, True)
             if self.ui.actionAuto_oversample_alignment.isChecked():
                 autocalibration(self)
         else:
@@ -3081,8 +3102,15 @@ class MainWindow(TemplateBaseClass):
             s.channel_enabled[c_secondary_ch1] = False
         else:
             # When disabling interleaving, re-enable the secondary board's channels
+            # BUT: if we're still in oversampling mode (without interleaving),
+            # we should only enable ch0 (single-channel mode)
             s.channel_enabled[c_secondary_ch0] = True
-            s.channel_enabled[c_secondary_ch1] = True
+            if s.dooversample[board]:
+                # Still in oversampling mode: keep ch1 disabled (single-channel)
+                s.channel_enabled[c_secondary_ch1] = False
+            else:
+                # Not in oversampling mode: enable ch1
+                s.channel_enabled[c_secondary_ch1] = True
         self.update_channel_visibility(c_secondary_ch0)
         self.update_channel_visibility(c_secondary_ch1)
 
