@@ -984,20 +984,17 @@ class PlotManager(pg.QtCore.QObject):
 
             board_idx = channel_idx // s.num_chan_per_board
             num_points = s.expect_samples * 40 * (2 if s.dointerleaved[board_idx] else 1)
+            # Account for doresamp - the stored lines are already resampled, so we need to match that resolution
+            if s.doresamp[channel_idx]:
+                num_points *= s.doresamp[channel_idx]
             common_x_axis = np.linspace(min_x, max_x, num_points)
 
             resampled_y_values = [np.interp(common_x_axis, item.xData, item.yData) for item, _, _, _, _ in lines_to_average]
 
             if resampled_y_values:
                 y_average = np.mean(resampled_y_values, axis=0)
-                if s.doresamp[channel_idx]:
-                    if s.polyphase_upsampling_enabled:
-                        # Use polyphase resampling to reduce ringing artifacts
-                        y_average = resample_poly(y_average, s.doresamp[channel_idx], 1)
-                        common_x_axis = np.linspace(common_x_axis[0], common_x_axis[-1], len(y_average))
-                    else:
-                        # Use FFT-based resampling
-                        y_average, common_x_axis = resample(y_average, len(common_x_axis) * s.doresamp[channel_idx], t=common_x_axis)
+                # Note: Do NOT resample here - the persist lines are already resampled when stored
+                # Resampling again would cause time shift artifacts
                 # Optimization: Use skipFiniteCheck for faster setData
                 self.average_lines[channel_idx].setData(common_x_axis, y_average, skipFiniteCheck=True)
 
