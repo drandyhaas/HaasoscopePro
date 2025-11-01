@@ -45,7 +45,7 @@ The FIR calibration system automatically detects the current operating mode and 
   - Determined by checking `state.dotwochannel[activeboard]`
   - Sample rate per channel is halved (1.6 GHz instead of 3.2 GHz)
   - Both channels share the same hardware path, so one calibration applies to both
-  - Calibration is performed on Channel 1 (Channel 2 uses the same correction)
+  - Calibration is performed on the active channel (whichever channel is currently selected)
   - Correction is automatically applied to both channels during acquisition
 
 - **Oversampling Mode** (not interleaved): Board pair (N and N+1) are calibrated separately at base sample rate
@@ -66,9 +66,10 @@ The FIR calibration system automatically detects the current operating mode and 
 ### 1. Connect Calibration Signal
 - Connect a **10 MHz square wave** to the input
 - **Normal Mode**: Signal goes to Board 0, Channel 0
-- **Two-Channel Mode**: Signal goes to Channel 1 (both channels share the same hardware path)
-  - Only Channel 1 needs to be calibrated
-  - The same calibration applies to Channel 2 automatically
+- **Two-Channel Mode**: Signal goes to the **active channel** (whichever channel is currently selected)
+  - Both channels share the same hardware path
+  - The calibration applies to both channels automatically
+  - The dialog will tell you which channel to connect to (e.g., "Connect to CH1" or "Connect to CH2")
 - **Oversampling Mode** (not interleaved): Hardware automatically duplicates signal to both Board N and Board N+1
   - Both boards are calibrated separately but simultaneously from the same signal
   - No need to move the signal between boards

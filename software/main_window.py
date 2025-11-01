@@ -619,10 +619,13 @@ class MainWindow(TemplateBaseClass):
 
         elif twochannel_mode:
             # Two-channel mode: sample rate is halved (1.6 GHz per channel instead of 3.2 GHz)
+            # Determine which channel is active (display as 1-based for user)
+            active_channel_display = self.state.activexychannel + 1
             reply = QMessageBox.question(self, "FIR Calibration - Two-Channel Mode",
                                   f"Two-channel mode detected!\n\n"
                                   f"Sample rate is 1.6 GHz per channel (half of normal 3.2 GHz).\n\n"
-                                  f"Connect 10 MHz square wave to Channel 1 (both channels share hardware).\n\n"
+                                  f"Connect 10 MHz square wave to active channel (CH{active_channel_display}).\n"
+                                  f"Both channels share hardware, so calibration applies to both.\n\n"
                                   f"Proceed with calibration?",
                                   QMessageBox.Yes | QMessageBox.Cancel,
                                   QMessageBox.Yes)
@@ -660,9 +663,13 @@ class MainWindow(TemplateBaseClass):
         old_dodrawing = self.state.dodrawing
         self.state.dodrawing = False
 
-        # Helper function to capture waveforms from a specific board
-        def capture_board_waveforms(board_idx, num_averages):
+        # Helper function to capture waveforms from a specific channel
+        def capture_board_waveforms(board_idx, num_averages, channel_idx=None):
             captured = []
+            # Default to channel 0 of the board if not specified
+            if channel_idx is None:
+                channel_idx = board_idx * self.state.num_chan_per_board
+
             for i in range(num_averages):
 
                 # Print progress at 10% intervals
@@ -682,9 +689,7 @@ class MainWindow(TemplateBaseClass):
                             self.xydata
                         )
 
-                # Extract y-data from the target board's channel 0
-                # Channel index = board_idx * num_chan_per_board + 0
-                channel_idx = board_idx * self.state.num_chan_per_board
+                # Extract y-data from the specified channel
                 if channel_idx < len(self.xydata) and self.xydata[channel_idx] is not None:
                     y_data = self.xydata[channel_idx][1].copy()
                     captured.append(y_data)
@@ -787,9 +792,10 @@ class MainWindow(TemplateBaseClass):
                     return
 
             elif twochannel_mode:
-                # Two-channel mode: capture from channel 0 at halved sample rate (1.6 GHz)
+                # Two-channel mode: capture from active channel at halved sample rate (1.6 GHz)
                 # Both channels share the same hardware path, so one calibration applies to both
-                captured_waveforms_twochannel = capture_board_waveforms(self.state.activeboard, num_averages)
+                captured_waveforms_twochannel = capture_board_waveforms(
+                    self.state.activeboard, num_averages, channel_idx=self.state.activexychannel)
 
                 if len(captured_waveforms_twochannel) < 10:
                     QMessageBox.warning(self, "FIR Calibration",
