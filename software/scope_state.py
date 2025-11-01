@@ -129,6 +129,12 @@ class ScopeState:
         self.fir_calibration_samplerate_interleaved = None
         self.fir_freq_response_interleaved = None
 
+        # FIR coefficients for two-channel mode
+        # When two-channel mode is enabled, sample rate is halved (1.6 GHz instead of 3.2 GHz)
+        self.fir_coefficients_twochannel = None  # Two-channel mode at 1.6 GHz per channel
+        self.fir_calibration_samplerate_twochannel = None
+        self.fir_freq_response_twochannel = None
+
         # Performance metrics
         self.nevents = 0
         self.oldnevents = 0

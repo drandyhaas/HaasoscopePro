@@ -16,7 +16,7 @@ class FrequencyCalibration:
     """Handles frequency response calibration using 10 MHz square wave"""
 
     # Calibration parameters (magic numbers)
-    NUM_TAPS = 128  # FIR filter length
+    NUM_TAPS = 128  # FIR filter length (default, overridden based on sample rate: 32/64/128)
     NUM_AVERAGES = 1000  # Number of waveforms to average for calibration
     REGULARIZATION = 0.001  # Small epsilon to prevent division by zero
     MAX_CORRECTION_DB = 6  # Maximum boost/cut in dB (prevents over-correction)
@@ -386,7 +386,8 @@ class FrequencyCalibration:
         correction_complex = correction_mag * np.exp(1j * correction_phase)
 
         # Report bins with large corrections
-        print(f"\nLarge corrections (>{self.MAX_CORRECTION_DB/2} dB or phase>+-{self.MAX_PHASE_CORRECTION_DEG/2}°):")
+        debug_large_corrections = False
+        if debug_large_corrections: print(f"\nLarge corrections (>{self.MAX_CORRECTION_DB/2} dB or phase>+-{self.MAX_PHASE_CORRECTION_DEG/2}°):")
         large_correction_threshold_linear = 10 ** (self.MAX_CORRECTION_DB/2 / 20)
         large_phase_threshold_rad = np.deg2rad(self.MAX_PHASE_CORRECTION_DEG/2)  # Report if > half max
 
@@ -397,7 +398,7 @@ class FrequencyCalibration:
 
             if abs(correction_mag[idx]**2 - 1.0) > (large_correction_threshold_linear - 1.0) or abs(phase_deg) > np.rad2deg(large_phase_threshold_rad):
                 freq_mhz = freqs[idx] / 1e6
-                print(f"  {freq_mhz:6.0f} MHz: magnitude {correction_mag[idx]**2:.3f}x ({correction_db:+.1f} dB), phase {phase_deg:+.1f}°")
+                if debug_large_corrections: print(f"  {freq_mhz:6.0f} MHz: magnitude {correction_mag[idx]**2:.3f}x ({correction_db:+.1f} dB), phase {phase_deg:+.1f}°")
 
         # Design FIR filter using frequency sampling method
         # Need to create full spectrum (positive and negative frequencies)
@@ -529,13 +530,32 @@ class FrequencyCalibration:
 
         Returns:
             dict with:
-                'fir_coefficients': 64-tap FIR filter
+                'fir_coefficients': FIR filter (tap count scales with sample rate)
                 'freq_response': Frequency response dict
                 'validation': Validation results dict
                 'success': True if calibration successful
                 'message': Status message
         """
         try:
+            # Select number of taps based on sample rate to maintain consistent frequency resolution
+            # Target: ~50 MHz frequency resolution across all modes
+            sample_rate_ghz = sample_rate_hz / 1e9
+            if sample_rate_ghz < 2.0:
+                # Two-channel mode (1.6 GHz) → 32 taps for ~50 MHz resolution
+                self.num_taps = 32
+                mode_name = "Two-channel"
+            elif sample_rate_ghz < 4.5:
+                # Normal/Oversampling mode (3.2 GHz) → 64 taps for ~50 MHz resolution
+                self.num_taps = 64
+                mode_name = "Normal/Oversampling"
+            else:
+                # Interleaved mode (6.4 GHz) → 128 taps for ~50 MHz resolution
+                self.num_taps = 128
+                mode_name = "Interleaved"
+
+            print(f"\nMode detected: {mode_name} ({sample_rate_ghz:.2f} GHz)")
+            print(f"Using {self.num_taps} taps for ~{sample_rate_hz/self.num_taps/1e6:.1f} MHz frequency resolution")
+
             print("\nProcessing: Averaging waveforms...")
             # Average the captured waveforms
             measured = np.mean(waveform_data_list, axis=0)
@@ -653,8 +673,9 @@ def save_fir_filter(parent_window, state):
     has_oversample = (state.fir_coefficients_oversample[0] is not None and
                      state.fir_coefficients_oversample[1] is not None)
     has_interleaved = state.fir_coefficients_interleaved is not None
+    has_twochannel = state.fir_coefficients_twochannel is not None
 
-    if not has_normal and not has_oversample and not has_interleaved:
+    if not has_normal and not has_oversample and not has_interleaved and not has_twochannel:
         QMessageBox.warning(parent_window, "Save FIR Filter",
                           "No FIR calibration data to save. Please measure calibration first.")
         return False
@@ -732,6 +753,21 @@ def save_fir_filter(parent_window, state):
                 'phase': state.fir_freq_response_interleaved['phase'].tolist(),
             }
 
+    # Save two-channel mode calibration if exists
+    if has_twochannel:
+        fir_data['fir_coefficients_twochannel'] = state.fir_coefficients_twochannel.tolist()
+        fir_data['calibration_samplerate_hz_twochannel'] = state.fir_calibration_samplerate_twochannel
+        if 'num_taps' not in fir_data:  # Only set if not already set by other modes
+            fir_data['num_taps'] = len(state.fir_coefficients_twochannel)
+
+        # Save frequency response if available
+        if state.fir_freq_response_twochannel is not None:
+            fir_data['frequency_response_twochannel'] = {
+                'freqs': state.fir_freq_response_twochannel['freqs'].tolist(),
+                'magnitude': state.fir_freq_response_twochannel['magnitude'].tolist(),
+                'phase': state.fir_freq_response_twochannel['phase'].tolist(),
+            }
+
     # Save to file
     try:
         with open(filename, 'w') as f:
@@ -780,8 +816,9 @@ def load_fir_filter(parent_window, state, ui):
     has_oversample_in_file = ('fir_coefficients_board0' in fir_data and fir_data['fir_coefficients_board0'] is not None and
                              'fir_coefficients_board1' in fir_data and fir_data['fir_coefficients_board1'] is not None)
     has_interleaved_in_file = 'fir_coefficients_interleaved' in fir_data and fir_data['fir_coefficients_interleaved'] is not None
+    has_twochannel_in_file = 'fir_coefficients_twochannel' in fir_data and fir_data['fir_coefficients_twochannel'] is not None
 
-    if not has_normal_in_file and not has_oversample_in_file and not has_interleaved_in_file:
+    if not has_normal_in_file and not has_oversample_in_file and not has_interleaved_in_file and not has_twochannel_in_file:
         QMessageBox.warning(parent_window, "Load Failed", "Invalid FIR filter file: missing coefficients.")
         return False
 
@@ -885,12 +922,43 @@ def load_fir_filter(parent_window, state, ui):
                     state.fir_calibration_samplerate_interleaved = None
                     state.fir_freq_response_interleaved = None
                     # Don't return False here - other modes might still be loaded
-                    if not has_normal_in_file and not has_oversample_in_file:
+                    if not has_normal_in_file and not has_oversample_in_file and not has_twochannel_in_file:
+                        return False
+
+    # Load two-channel mode calibration if present
+    if has_twochannel_in_file:
+        state.fir_coefficients_twochannel = np.array(fir_data['fir_coefficients_twochannel'])
+        state.fir_calibration_samplerate_twochannel = fir_data.get('calibration_samplerate_hz_twochannel', None)
+
+        # Restore frequency response if available
+        if 'frequency_response_twochannel' in fir_data:
+            state.fir_freq_response_twochannel = {
+                'freqs': np.array(fir_data['frequency_response_twochannel']['freqs']),
+                'magnitude': np.array(fir_data['frequency_response_twochannel']['magnitude']),
+                'phase': np.array(fir_data['frequency_response_twochannel']['phase']),
+            }
+
+        # Check sample rate match (two-channel is at half sample rate)
+        if state.fir_calibration_samplerate_twochannel is not None:
+            expected_twochannel_rate = current_samplerate_hz / 2  # 1.6 GHz
+            if abs(expected_twochannel_rate - state.fir_calibration_samplerate_twochannel) > 1e6:
+                reply = QMessageBox.question(
+                    parent_window, "Sample Rate Mismatch",
+                    f"Two-channel FIR calibration was performed at {state.fir_calibration_samplerate_twochannel/1e9:.3f} GS/s,\n"
+                    f"but current two-channel sample rate is {expected_twochannel_rate/1e9:.3f} GS/s.\n\n"
+                    f"The correction may not be accurate. Continue anyway?",
+                    QMessageBox.Yes | QMessageBox.No, QMessageBox.No
+                )
+                if reply == QMessageBox.No:
+                    state.fir_coefficients_twochannel = None
+                    state.fir_calibration_samplerate_twochannel = None
+                    state.fir_freq_response_twochannel = None
+                    # Don't return False here - other modes might still be loaded
+                    if not has_normal_in_file and not has_oversample_in_file and not has_interleaved_in_file:
                         return False
 
     # Enable correction
     state.fir_correction_enabled = True
-    ui.actionApply_FIR_corrections.setChecked(True)
 
     # Build success message based on what was loaded
     loaded_modes = []
@@ -900,13 +968,22 @@ def load_fir_filter(parent_window, state, ui):
         loaded_modes.append("Oversampling")
     if has_interleaved_in_file and state.fir_coefficients_interleaved is not None:
         loaded_modes.append("Interleaved")
+    if has_twochannel_in_file and state.fir_coefficients_twochannel is not None:
+        loaded_modes.append("Two-channel")
 
     mode_text = ", ".join(loaded_modes)
     print(f"FIR filter ({mode_text}) loaded from {filename}")
 
+    # Update checkbox state to reflect availability for current mode
+    if hasattr(parent_window, 'update_fir_checkbox_state'):
+        parent_window.update_fir_checkbox_state()
+    else:
+        # Fallback if update method doesn't exist
+        ui.actionApply_FIR_corrections.setChecked(True)
+
     # Show success message
     QMessageBox.information(parent_window, "FIR Filter Loaded",
                           f"{mode_text} FIR filter loaded successfully from:\n{filename}\n\n"
-                          f"Correction is now enabled.")
+                          f"Correction will be enabled for modes with available calibration data.")
 
     return True

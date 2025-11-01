@@ -7,10 +7,16 @@ This feature corrects for the non-flat frequency response of the Haasoscope Pro 
 ## How It Works
 
 1. **Calibration Signal**: Uses a 10 MHz square wave as reference
-2. **Measurement**: Captures and averages 50 waveforms to reduce noise
+2. **Measurement**: Captures and averages 1000 waveforms to reduce noise
 3. **Analysis**: Computes frequency response H(f) = FFT(measured) / FFT(ideal)
-4. **Filter Design**: Creates a 64-tap FIR filter to invert the frequency response
+4. **Filter Design**: Creates an adaptive FIR filter (32/64/128 taps based on sample rate) to invert the frequency response
 5. **Application**: Applies the filter in real-time using zero-phase filtering (same as LPF)
+
+**Key Features**:
+- **Adaptive tap count**: Automatically selects 32/64/128 taps based on sample rate for consistent ~50 MHz frequency resolution
+- **Robust to imperfect signals**: Measures actual duty cycle, frequency, and removes DC offset
+- **SNR-based harmonic selection**: Uses 100x noise floor threshold for reliable measurements
+- **Over-correction prevention**: Limits to ±6 dB magnitude and ±25° phase corrections
 
 ## Pipeline Integration
 
@@ -29,11 +35,18 @@ This ensures corrections are applied after trigger stabilization but before disp
 
 ## Usage Instructions
 
-### Operating Modes: Normal, Oversampling, and Interleaved
+### Operating Modes: Normal, Two-Channel, Oversampling, and Interleaved
 
 The FIR calibration system automatically detects the current operating mode and applies the appropriate calibration:
 
 - **Normal Mode**: Single calibration applies to all boards/channels at base sample rate (3.2 GHz)
+
+- **Two-Channel Mode**: Single calibration for dual-channel acquisition at half sample rate (1.6 GHz per channel)
+  - Determined by checking `state.dotwochannel[activeboard]`
+  - Sample rate per channel is halved (1.6 GHz instead of 3.2 GHz)
+  - Both channels share the same hardware path, so one calibration applies to both
+  - Calibration is performed on Channel 1 (Channel 2 uses the same correction)
+  - Correction is automatically applied to both channels during acquisition
 
 - **Oversampling Mode** (not interleaved): Board pair (N and N+1) are calibrated separately at base sample rate
   - Determined by checking `state.dooversample[activeboard]`
@@ -53,6 +66,9 @@ The FIR calibration system automatically detects the current operating mode and 
 ### 1. Connect Calibration Signal
 - Connect a **10 MHz square wave** to the input
 - **Normal Mode**: Signal goes to Board 0, Channel 0
+- **Two-Channel Mode**: Signal goes to Channel 1 (both channels share the same hardware path)
+  - Only Channel 1 needs to be calibrated
+  - The same calibration applies to Channel 2 automatically
 - **Oversampling Mode** (not interleaved): Hardware automatically duplicates signal to both Board N and Board N+1
   - Both boards are calibrated separately but simultaneously from the same signal
   - No need to move the signal between boards
@@ -97,12 +113,13 @@ The FIR calibration system automatically detects the current operating mode and 
 - Use: **Calibration → Save FIR filter** to export calibration to a file
 - Use: **Calibration → Load FIR filter** to import calibration from a file
 - **Calibration Storage**:
-  - A single .fir file can contain **all three** calibration types: normal, oversampling, and interleaved
+  - A single .fir file can contain **all four** calibration types: normal, two-channel, oversampling, and interleaved
   - When saving: All available calibrations are saved to the same file
   - When loading: Software automatically detects which calibrations are present and loads them
   - The appropriate calibration is selected automatically based on current mode during acquisition
 - The saved .fir file (JSON format) contains:
   - **Normal Mode data** (if calibrated): FIR coefficients (64-256 taps), sample rate (3.2 GHz), frequency response, metadata
+  - **Two-Channel Mode data** (if calibrated): FIR coefficients, sample rate (1.6 GHz per channel), frequency response, metadata
   - **Oversampling Mode data** (if calibrated): Two sets of FIR coefficients (one per board), sample rates (3.2 GHz each), frequency responses, metadata
   - **Interleaved Mode data** (if calibrated): FIR coefficients, sample rate (6.4 GHz), frequency response, metadata
 - **Sample rate validation**: When loading, the software checks if the base sample rate matches
@@ -114,30 +131,41 @@ The FIR calibration system automatically detects the current operating mode and 
 - **Note**: Calibration is specific to the hardware's base sample rate. Different hardware units need separate calibrations
 - **Recommended workflow**:
   1. Connect 10 MHz square wave to input
-  2. Calibrate in normal mode (no oversampling, no interleaving)
+  2. Calibrate in normal mode (no oversampling, no interleaving, single channel)
   3. Save calibration file
-  4. Enable oversampling on active board (without interleaving)
-  5. Run calibration again (will calibrate both boards in pair simultaneously)
-  6. Save again (same file now contains both normal and oversampling calibrations)
-  7. Enable both oversampling AND interleaving on active board
-  8. Run calibration again (will calibrate interleaved waveform at 6.4 GHz)
-  9. Save again (same file now contains all three calibration types: normal, oversampling, and interleaved)
+  4. Enable two-channel mode
+  5. Run calibration again (will calibrate at 1.6 GHz per channel)
+  6. Save again (same file now contains both normal and two-channel calibrations)
+  7. Disable two-channel mode, enable oversampling on active board (without interleaving)
+  8. Run calibration again (will calibrate both boards in pair simultaneously)
+  9. Save again (same file now contains normal, two-channel, and oversampling calibrations)
+  10. Enable both oversampling AND interleaving on active board
+  11. Run calibration again (will calibrate interleaved waveform at 6.4 GHz)
+  12. Save again (same file now contains all four calibration types: normal, two-channel, oversampling, and interleaved)
 
 ## Technical Details
 
 ### FIR Filter Specifications
-- **Number of taps**: Configurable (default: 64)
-  - **64 taps**: Fast, good for most hardware (default)
-  - **128 taps**: Better frequency resolution, balanced performance
-  - **256 taps**: Best quality, slowest (2-4x processing time)
+- **Number of taps**: **Automatically scaled based on sample rate** for consistent ~50 MHz frequency resolution
+  - **Two-channel mode** (1.6 GHz): **32 taps** → Δf ≈ 50 MHz
+  - **Normal/Oversampling mode** (3.2 GHz): **64 taps** → Δf ≈ 50 MHz
+  - **Interleaved mode** (6.4 GHz): **128 taps** → Δf ≈ 50 MHz
+  - This scaling maintains consistent filter quality while minimizing computation at lower sample rates
 - **Window**: Blackman window (reduces ringing)
 - **Filter method**: `scipy.signal.filtfilt` (zero-phase, no time delay)
-- **Regularization**: 0.1% (small epsilon to prevent division by zero, not aggressive damping)
-- **Max correction**: ±20 dB (prevents noise amplification)
+- **Regularization**: 0.001 (small epsilon to prevent division by zero, not aggressive damping)
+- **Max magnitude correction**: ±6 dB (prevents excessive boost/cut and over-correction artifacts)
+- **Max phase correction**: ±25 degrees (prevents phase artifacts)
+- **Median filter size**: 10 (smooths correction values to remove outliers)
+- **SNR threshold**: 100x local noise floor (ensures reliable harmonic detection)
+- **Number of averages**: 1000 waveforms (reduces noise for accurate measurements)
+- **Progress reporting**: Prints at 10% intervals during calibration
+- **Diagnostic output**: Reports bins with large corrections (>3 dB or >12.5 degrees)
 
 ### Sample Rate Handling
 - Calibration is performed at the **current sample rate** (at downsample=0)
   - **Normal mode**: 3.2 GHz (base sample rate)
+  - **Two-channel mode**: 1.6 GHz per channel (half of base sample rate)
   - **Oversampling mode** (not interleaved): 3.2 GHz per board
   - **Interleaved mode**: 6.4 GHz (2x base sample rate)
 - The filter is stored with the sample rate it was calibrated at
@@ -148,6 +176,7 @@ The FIR calibration system automatically detects the current operating mode and 
 - **Automatic depth optimization during calibration**: Software temporarily sets depth to 640 samples
   - Chosen so 10 MHz harmonics land exactly on FFT bin centers (avoids spectral leakage)
   - FFT bin spacing:
+    - Two-channel: Δf = 1.6 GHz / 640 = 2.5 MHz → harmonics at bins 4, 8, 12, 16...
     - Normal/Oversampling: Δf = 3.2 GHz / 640 = 5 MHz → harmonics at bins 2, 6, 10, 14...
     - Interleaved: Δf = 6.4 GHz / 640 = 10 MHz → harmonics at bins 1, 3, 5, 7...
   - This ensures accurate measurement of harmonic amplitudes without leakage between bins
@@ -160,16 +189,29 @@ The FIR calibration system automatically detects the current operating mode and 
 ### Performance
 - FIR filtering uses `filtfilt` (forward-backward filtering)
 - Same infrastructure as existing LPF, so minimal performance impact
+- **Adaptive tap count** optimizes performance:
+  - Two-channel (32 taps): ~32,000 multiplies per 1000 samples → **fastest**
+  - Normal/Oversample (64 taps): ~64,000 multiplies per 1000 samples → **moderate**
+  - Interleaved (128 taps): ~128,000 multiplies per 1000 samples → **slower but higher bandwidth**
 - Typical overhead: ~10-20% increase in processing time per waveform
-- For 1000 samples @ 64 taps: ~64,000 multiplies per channel
+- The tap count scaling ensures computational cost scales appropriately with data rate
 
 ### Square Wave Calibration Coverage
-- Square wave has **odd harmonics** at 10, 30, 50, 70, ... MHz up to hardware LPF cutoff
-- **Hardware LPF cutoff (mode-dependent)**:
-  - Normal/Oversampling mode: ~1.4 GHz → ~70 harmonics measured
-  - Interleaved mode: ~2.5 GHz → ~125 harmonics measured
-- Calibration is limited to frequencies below the hardware LPF cutoff
-- Frequencies above the cutoff are intentionally filtered by hardware and not corrected
+- **Imperfect Square Wave Handling**:
+  - The calibration automatically measures the actual duty cycle of the input square wave
+  - Generates an ideal reference with the same duty cycle for comparison
+  - Measures the actual fundamental frequency (may not be exactly 10 MHz)
+  - Removes DC offset from averaged waveforms before processing
+  - This allows calibration to work even with non-ideal square wave inputs
+- **Harmonic Selection**:
+  - Uses both odd AND even harmonics (10, 20, 30, 40... MHz) for better frequency coverage
+  - Measures local noise floor in ±250 MHz window around each harmonic
+  - Only uses harmonics with SNR > 100x local noise floor
+  - Excludes ±2.5 MHz around each harmonic from noise estimation
+  - Applies median filtering (window size 10) to remove outlier corrections
+  - Limits magnitude correction to ±6 dB and phase correction to ±25 degrees
+  - Typical result: 100-250 valid harmonics measured (depending on signal quality)
+- **Hardware LPF cutoff**: No longer enforced - harmonics are selected purely by SNR
 - The FIR filter interpolates smoothly between measured harmonics
 - This provides correction across the usable hardware bandwidth
 
@@ -177,10 +219,18 @@ The FIR calibration system automatically detects the current operating mode and 
 - The calibration quality depends on:
   - Signal-to-noise ratio of input square wave
   - Stability of trigger (use trigger stabilizers)
-  - Number of averages (default 200)
+  - Number of averages (default: 1000)
   - Cleanliness of square wave edges
+- **New features for robust calibration**:
+  - Automatic duty cycle measurement handles non-50% duty cycle square waves
+  - Automatic frequency measurement handles reference signals that aren't exactly 10 MHz
+  - DC offset removal ensures accurate baseline
+  - SNR-based harmonic selection ignores noisy frequency bins
+  - Median filtering removes outlier corrections
+  - Magnitude and phase correction limits prevent over-correction artifacts
 - The success message shows improvement in dB (typically 3-10 dB for hardware with already-flat response)
 - **Note**: If your hardware already has good frequency response (H(f) ≈ 1.0 at most frequencies), improvement will be modest. This is actually a good sign!
+- **Progress tracking**: During calibration, progress is printed at 10% intervals, and bins with large corrections are reported for diagnostic purposes
 
 ## File Format (.fir)
 
@@ -188,10 +238,10 @@ FIR calibration files use JSON format with the following structure:
 
 ```json
 {
-  "fir_coefficients": [0.0123, 0.0234, ... 64 values],
+  "fir_coefficients": [0.0123, 0.0234, ... 32/64/128 values],
   "calibration_samplerate_hz": 3200000000.0,
   "calibration_downsample": 0,
-  "num_taps": 64,
+  "num_taps": 64,  // Automatically determined: 32 (two-channel), 64 (normal), 128 (interleaved)
   "calibration_type": "10MHz_square_wave",
   "software_version": 31.08,
   "frequency_response": {
@@ -202,7 +252,7 @@ FIR calibration files use JSON format with the following structure:
 }
 ```
 
-**File Size:** ~10-20 KB per .fir file
+**File Size:** ~10-20 KB per .fir file (varies with tap count)
 
 ## Files Modified/Created
 
@@ -220,10 +270,28 @@ FIR calibration files use JSON format with the following structure:
 The calibration state is stored in `ScopeState`:
 
 ```python
+# Global enable/disable
 state.fir_correction_enabled          # bool: Enable/disable correction
-state.fir_coefficients                # np.array: 64-tap FIR filter
+
+# Normal mode (3.2 GHz)
+state.fir_coefficients                # np.array: FIR filter coefficients
 state.fir_calibration_samplerate      # float: Sample rate during calibration (Hz)
 state.fir_freq_response              # dict: Measured H(f) for display/analysis
+
+# Two-channel mode (1.6 GHz per channel)
+state.fir_coefficients_twochannel           # np.array: FIR filter coefficients
+state.fir_calibration_samplerate_twochannel # float: Sample rate during calibration
+state.fir_freq_response_twochannel          # dict: Measured H(f)
+
+# Oversampling mode (3.2 GHz per board)
+state.fir_coefficients_oversample           # list[2]: [board_N, board_N+1]
+state.fir_calibration_samplerate_oversample # list[2]: Sample rates
+state.fir_freq_response_oversample          # list[2]: Measured H(f)
+
+# Interleaved mode (6.4 GHz)
+state.fir_coefficients_interleaved           # np.array: FIR filter coefficients
+state.fir_calibration_samplerate_interleaved # float: Sample rate during calibration
+state.fir_freq_response_interleaved          # dict: Measured H(f)
 ```
 
 ## Future Enhancements

@@ -449,8 +449,11 @@ class PlotManager(pg.QtCore.QObject):
                         fir_coeffs = s.fir_coefficients_oversample[0]
                     else:
                         fir_coeffs = s.fir_coefficients_oversample[1]
+                elif s.dotwochannel[board_idx]:
+                    # Two-channel mode: use two-channel coefficients (1.6 GHz per channel)
+                    fir_coeffs = s.fir_coefficients_twochannel
                 else:
-                    # Non-oversampling mode: use regular coefficients
+                    # Non-oversampling, single-channel mode: use regular coefficients (3.2 GHz)
                     fir_coeffs = s.fir_coefficients
 
                 if fir_coeffs is not None:

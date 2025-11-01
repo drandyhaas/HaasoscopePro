@@ -524,15 +524,29 @@ class MainWindow(TemplateBaseClass):
         """Toggle FIR frequency response correction on/off."""
         self.state.fir_correction_enabled = checked
         if checked:
-            # Check if any calibration data is available (normal, oversampling, or interleaved)
-            has_normal = self.state.fir_coefficients is not None
-            has_oversample = (self.state.fir_coefficients_oversample[0] is not None and
-                             self.state.fir_coefficients_oversample[1] is not None)
-            has_interleaved = self.state.fir_coefficients_interleaved is not None
+            # Check if calibration data is available for the current mode
+            is_oversampling = self.state.dooversample[self.state.activeboard]
+            is_interleaved = self.state.dointerleaved[self.state.activeboard]
+            is_twochannel = self.state.dotwochannel[self.state.activeboard]
 
-            if not has_normal and not has_oversample and not has_interleaved:
+            if is_oversampling and is_interleaved:
+                has_corrections = self.state.fir_coefficients_interleaved is not None
+                mode_name = "Interleaved oversampling"
+            elif is_oversampling:
+                has_corrections = (self.state.fir_coefficients_oversample[0] is not None and
+                                  self.state.fir_coefficients_oversample[1] is not None)
+                mode_name = "Oversampling"
+            elif is_twochannel:
+                has_corrections = self.state.fir_coefficients_twochannel is not None
+                mode_name = "Two-channel"
+            else:
+                has_corrections = self.state.fir_coefficients is not None
+                mode_name = "Normal"
+
+            if not has_corrections:
                 QMessageBox.warning(self, "FIR Correction",
-                                  "No calibration data available. Please measure calibration first using a 10 MHz square wave.")
+                                  f"No calibration data available for {mode_name} mode.\n\n"
+                                  f"Please measure calibration in {mode_name} mode first using a 10 MHz square wave.")
                 self.ui.actionApply_FIR_corrections.setChecked(False)
                 self.state.fir_correction_enabled = False
 
@@ -553,9 +567,10 @@ class MainWindow(TemplateBaseClass):
                               "though accuracy may be reduced at heavily downsampled rates.")
             return
 
-        # Check if active board is in oversampling mode
+        # Check current mode of active board
         oversample_mode = self.state.dooversample[self.state.activeboard]
         interleaved_mode = self.state.dointerleaved[self.state.activeboard]
+        twochannel_mode = self.state.dotwochannel[self.state.activeboard]
 
         if oversample_mode and interleaved_mode:
             # Interleaved oversampling mode: calibrate the interleaved waveform at 2x sample rate
@@ -591,6 +606,18 @@ class MainWindow(TemplateBaseClass):
                                   f"Board {board_N} and Board {board_N1} will be calibrated separately.\n\n"
                                   f"Connect 10 MHz square wave to input.\n"
                                   f"(Signal is duplicated to both boards by hardware)\n\n"
+                                  f"Proceed with calibration?",
+                                  QMessageBox.Yes | QMessageBox.Cancel,
+                                  QMessageBox.Yes)
+            if reply == QMessageBox.Cancel:
+                return
+
+        elif twochannel_mode:
+            # Two-channel mode: sample rate is halved (1.6 GHz per channel instead of 3.2 GHz)
+            reply = QMessageBox.question(self, "FIR Calibration - Two-Channel Mode",
+                                  f"Two-channel mode detected!\n\n"
+                                  f"Sample rate is 1.6 GHz per channel (half of normal 3.2 GHz).\n\n"
+                                  f"Connect 10 MHz square wave to Channel 1 (both channels share hardware).\n\n"
                                   f"Proceed with calibration?",
                                   QMessageBox.Yes | QMessageBox.Cancel,
                                   QMessageBox.Yes)
@@ -754,6 +781,16 @@ class MainWindow(TemplateBaseClass):
                                       f"Only captured {len(captured_waveforms_N1)} waveforms from Board {board_N1}. Need at least 10.")
                     return
 
+            elif twochannel_mode:
+                # Two-channel mode: capture from channel 0 at halved sample rate (1.6 GHz)
+                # Both channels share the same hardware path, so one calibration applies to both
+                captured_waveforms_twochannel = capture_board_waveforms(self.state.activeboard, num_averages)
+
+                if len(captured_waveforms_twochannel) < 10:
+                    QMessageBox.warning(self, "FIR Calibration",
+                                      f"Only captured {len(captured_waveforms_twochannel)} waveforms. Need at least 10 for good calibration.")
+                    return
+
             else:
                 # Normal mode: capture from channel 0 (board 0, channel 0)
                 captured_waveforms = capture_board_waveforms(0, num_averages)
@@ -794,6 +831,7 @@ class MainWindow(TemplateBaseClass):
 
                     # Enable the apply checkbox if it's not already enabled
                     if not self.state.fir_correction_enabled:
+                        self.ui.actionApply_FIR_corrections.setEnabled(True)  # Enable so it can be unchecked
                         self.ui.actionApply_FIR_corrections.setChecked(True)
                         self.state.fir_correction_enabled = True
                 else:
@@ -822,6 +860,7 @@ class MainWindow(TemplateBaseClass):
 
                     # Enable the apply checkbox if it's not already enabled
                     if not self.state.fir_correction_enabled:
+                        self.ui.actionApply_FIR_corrections.setEnabled(True)  # Enable so it can be unchecked
                         self.ui.actionApply_FIR_corrections.setChecked(True)
                         self.state.fir_correction_enabled = True
                 else:
@@ -831,6 +870,31 @@ class MainWindow(TemplateBaseClass):
                     if not result_N1['success']:
                         error_msgs.append(f"Board {board_N1}: {result_N1['message']}")
                     QMessageBox.critical(self, "FIR Calibration Failed", "\n".join(error_msgs))
+
+            elif twochannel_mode:
+                # Run two-channel calibration at halved sample rate (1.6 GHz)
+                sample_rate_hz_twochannel = sample_rate_hz / 2  # 1.6 GHz
+                result = fir_cal.calibrate_from_data(captured_waveforms_twochannel, sample_rate_hz_twochannel)
+
+                if result['success']:
+                    # Store two-channel calibration in state
+                    self.state.fir_coefficients_twochannel = result['fir_coefficients']
+                    self.state.fir_calibration_samplerate_twochannel = sample_rate_hz_twochannel
+                    self.state.fir_freq_response_twochannel = result['freq_response']
+
+                    # Show success message
+                    message = (f"Two-Channel FIR Calibration Complete!\n\n"
+                             f"Calibrated at {sample_rate_hz_twochannel/1e9:.2f} GHz per channel\n\n"
+                             f"{result['message']}")
+                    QMessageBox.information(self, "FIR Calibration Complete", message)
+
+                    # Enable the apply checkbox if it's not already enabled
+                    if not self.state.fir_correction_enabled:
+                        self.ui.actionApply_FIR_corrections.setEnabled(True)  # Enable so it can be unchecked
+                        self.ui.actionApply_FIR_corrections.setChecked(True)
+                        self.state.fir_correction_enabled = True
+                else:
+                    QMessageBox.critical(self, "FIR Calibration Failed", result['message'])
 
             else:
                 # Run normal calibration
@@ -847,6 +911,7 @@ class MainWindow(TemplateBaseClass):
 
                     # Enable the apply checkbox if it's not already enabled
                     if not self.state.fir_correction_enabled:
+                        self.ui.actionApply_FIR_corrections.setEnabled(True)  # Enable so it can be unchecked
                         self.ui.actionApply_FIR_corrections.setChecked(True)
                         self.state.fir_correction_enabled = True
                 else:
@@ -2603,6 +2668,7 @@ class MainWindow(TemplateBaseClass):
         # Check if corrections are available for the current mode
         is_oversampling = s.dooversample[s.activeboard]
         is_interleaved = s.dointerleaved[s.activeboard]
+        is_twochannel = s.dotwochannel[s.activeboard]
 
         if is_oversampling and is_interleaved:
             # Interleaved oversampling mode: check if interleaved corrections are available
@@ -2611,12 +2677,23 @@ class MainWindow(TemplateBaseClass):
             # Oversampling only (not interleaved): check if oversampling corrections are available
             has_corrections = (s.fir_coefficients_oversample[0] is not None and
                               s.fir_coefficients_oversample[1] is not None)
+        elif is_twochannel:
+            # Two-channel mode: check if two-channel corrections are available
+            has_corrections = s.fir_coefficients_twochannel is not None
         else:
             # Normal mode: check if normal corrections are available
             has_corrections = s.fir_coefficients is not None
 
+        # Enable/disable menu item based on whether corrections are available
+        self.ui.actionApply_FIR_corrections.setEnabled(has_corrections)
+
         # Checkbox should be checked if corrections are available AND enabled
         should_be_checked = has_corrections and s.fir_correction_enabled
+
+        # If corrections aren't available, uncheck and disable
+        if not has_corrections:
+            should_be_checked = False
+            s.fir_correction_enabled = False
 
         self.ui.actionApply_FIR_corrections.blockSignals(True)
         self.ui.actionApply_FIR_corrections.setChecked(should_be_checked)
