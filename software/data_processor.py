@@ -401,8 +401,15 @@ class DataProcessor:
         elif self.state.dotwochannel[board_idx]:
             uspersample *= 2
 
+        # Apply Hann window to reduce spectral leakage from edge discontinuities
+        window = np.hanning(n)
+        windowed_data = y_data * window
+
+        # Compensate for window's amplitude reduction (Hann window reduces amplitude by ~0.5)
+        window_correction = 2.0
+
         freq = (k / uspersample)[list(range(n // 2))] / n
-        Y = np.fft.fft(y_data)[list(range(n // 2))] / n
+        Y = np.fft.fft(windowed_data)[list(range(n // 2))] / n * window_correction
         Y[0] = 1e-3  # Suppress DC for plotting
 
         return freq, abs(Y)
@@ -446,6 +453,8 @@ class DataProcessor:
         if needs_freq:
             sampling_rate = (state.samplerate * 1e9) / state.downsamplefactor
             if state.dotwochannel[board_index]: sampling_rate /= 2
+            # Account for interleaved mode - doubles the sample rate
+            if state.dointerleaved[board_index]: sampling_rate *= 2
             # Account for resampling - if resampling is applied, it increases sample density and effective sampling rate
             if state.doresamp[channel_index] > 1: sampling_rate *= state.doresamp[channel_index]
             found_freq = find_fundamental_frequency_scipy(y_data, sampling_rate)

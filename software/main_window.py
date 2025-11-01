@@ -24,6 +24,7 @@ from measurements_manager import MeasurementsManager
 from calibration import autocalibration, do_meanrms_calibration
 from settings_manager import save_setup, load_setup
 from math_channels_window import MathChannelsWindow
+from frequency_calibration import FrequencyCalibration, save_fir_filter, load_fir_filter
 from reference_manager import save_reference_lines, load_reference_lines
 from dummy_scope.dummy_server_config_dialog import DummyServerConfigDialog
 from update_checker import UpdateChecker
@@ -360,6 +361,12 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionToggle_trig_stabilizer.triggered.connect(self.trig_stabilizer_toggled)
         self.ui.actionToggle_extra_trig_stabilizer.triggered.connect(self.extra_trig_stabilizer_toggled)
         self.ui.actionPulse_stabilizer.triggered.connect(self.pulse_stabilizer_toggled)
+        self.ui.actionMeasure_10_MHz_square_FIR.triggered.connect(self.measure_fir_calibration)
+        self.ui.actionApply_FIR_corrections.triggered.connect(self.fir_correction_toggled)
+        self.ui.actionSave_FIR_filter.triggered.connect(self.save_fir_filter)
+        self.ui.actionLoad_FIR_filter.triggered.connect(self.load_fir_filter)
+        self.ui.actionPolynomial_filtering.triggered.connect(self.polynomial_filtering_toggled)
+        self.ui.actionPolyphase_upsampling.triggered.connect(self.polyphase_upsampling_toggled)
 
         # Plot manager signals
         self.plot_manager.vline_dragged_signal.connect(self.on_vline_dragged)
@@ -514,6 +521,469 @@ class MainWindow(TemplateBaseClass):
     def pulse_stabilizer_toggled(self, checked):
         """Updates the state for pulse stabilizer mode (uses edge midpoint instead of threshold)."""
         self.state.pulse_stabilizer_enabled[self.state.activeboard] = checked
+
+    def fir_correction_toggled(self, checked):
+        """Toggle FIR frequency response correction on/off."""
+        self.state.fir_correction_enabled = checked
+        if checked:
+            # Check if calibration data is available for the current mode
+            is_oversampling = self.state.dooversample[self.state.activeboard]
+            is_interleaved = self.state.dointerleaved[self.state.activeboard]
+            is_twochannel = self.state.dotwochannel[self.state.activeboard]
+
+            if is_oversampling and is_interleaved:
+                has_corrections = self.state.fir_coefficients_interleaved is not None
+                mode_name = "Interleaved oversampling"
+            elif is_oversampling:
+                has_corrections = (self.state.fir_coefficients_oversample[0] is not None and
+                                  self.state.fir_coefficients_oversample[1] is not None)
+                mode_name = "Oversampling"
+            elif is_twochannel:
+                has_corrections = self.state.fir_coefficients_twochannel is not None
+                mode_name = "Two-channel"
+            else:
+                has_corrections = self.state.fir_coefficients is not None
+                mode_name = "Normal"
+
+            if not has_corrections:
+                QMessageBox.warning(self, "FIR Correction",
+                                  f"No calibration data available for {mode_name} mode.\n\n"
+                                  f"Please measure calibration in {mode_name} mode first using a 10 MHz square wave.")
+                self.ui.actionApply_FIR_corrections.setChecked(False)
+                self.state.fir_correction_enabled = False
+
+    def polynomial_filtering_toggled(self, checked):
+        """Toggle Savitzky-Golay polynomial filtering on/off."""
+        s = self.state
+        s.polynomial_filtering_enabled = checked
+
+        if checked:
+            # Turning ON: Save current doresamp and resamp_overridden for all channels
+            s.polynomial_filtering_saved_doresamp = s.doresamp.copy()
+            s.polynomial_filtering_saved_resamp_overridden = s.resamp_overridden.copy()
+
+            # Set all channels to doresamp=0 (no resampling) as if manually set
+            total_channels = s.num_board * s.num_chan_per_board
+            for ch in range(total_channels):
+                s.doresamp[ch] = 0
+                s.resamp_overridden[ch] = True
+        else:
+            # Turning OFF: Restore saved doresamp and resamp_overridden values
+            if s.polynomial_filtering_saved_doresamp is not None:
+                s.doresamp = s.polynomial_filtering_saved_doresamp.copy()
+                s.resamp_overridden = s.polynomial_filtering_saved_resamp_overridden.copy()
+                s.polynomial_filtering_saved_doresamp = None
+                s.polynomial_filtering_saved_resamp_overridden = None
+
+        # Update the resampBox GUI to reflect the active channel's new doresamp value
+        self.ui.resampBox.blockSignals(True)
+        self.ui.resampBox.setValue(s.doresamp[s.activexychannel])
+        self.ui.resampBox.blockSignals(False)
+
+    def polyphase_upsampling_toggled(self, checked):
+        """Toggle polyphase (less ringing) vs FFT-based upsampling."""
+        self.state.polyphase_upsampling_enabled = checked
+
+    def measure_fir_calibration(self):
+        """Measure FIR calibration using 10 MHz square wave input."""
+        # Verify we're not paused
+        if self.state.paused:
+            QMessageBox.warning(self, "FIR Calibration",
+                              "Please unpause (start acquisition) before measuring calibration.")
+            return
+
+        # Verify we're at maximum sample rate (downsample = 0)
+        if self.state.downsample > 0:
+            QMessageBox.warning(self, "FIR Calibration",
+                              "FIR calibration must be performed at maximum sample rate.\n\n"
+                              "Please set Downsample to 0 (no downsampling) before measuring calibration.\n\n"
+                              "After calibration, the corrections will be applied at all sample rates, "
+                              "though accuracy may be reduced at heavily downsampled rates.")
+            return
+
+        # Check current mode of active board
+        oversample_mode = self.state.dooversample[self.state.activeboard]
+        interleaved_mode = self.state.dointerleaved[self.state.activeboard]
+        twochannel_mode = self.state.dotwochannel[self.state.activeboard]
+
+        if oversample_mode and interleaved_mode:
+            # Interleaved oversampling mode: calibrate the interleaved waveform at 2x sample rate
+            # Determine board pair (even board N and odd board N+1)
+            if self.state.activeboard % 2 == 0:
+                board_N = self.state.activeboard
+            else:
+                board_N = self.state.activeboard - 1
+            board_N1 = board_N + 1
+
+            reply = QMessageBox.question(self, "FIR Calibration - Interleaved Mode",
+                                  f"Interleaved oversampling detected!\n\n"
+                                  f"The interleaved waveform at 6.4 GHz will be calibrated.\n\n"
+                                  f"Connect 10 MHz square wave to input.\n"
+                                  f"(Signal is duplicated to both boards by hardware)\n\n"
+                                  f"Proceed with calibration?",
+                                  QMessageBox.Yes | QMessageBox.Cancel,
+                                  QMessageBox.Yes)
+            if reply == QMessageBox.Cancel:
+                return
+
+        elif oversample_mode:
+            # Oversampling only (not interleaved): calibrate boards separately
+            # Determine board pair (even board N and odd board N+1)
+            if self.state.activeboard % 2 == 0:
+                board_N = self.state.activeboard
+            else:
+                board_N = self.state.activeboard - 1
+            board_N1 = board_N + 1
+
+            reply = QMessageBox.question(self, "FIR Calibration - Oversampling Mode",
+                                  f"Oversampling detected!\n\n"
+                                  f"Board {board_N} and Board {board_N1} will be calibrated separately.\n\n"
+                                  f"Connect 10 MHz square wave to input.\n"
+                                  f"(Signal is duplicated to both boards by hardware)\n\n"
+                                  f"Proceed with calibration?",
+                                  QMessageBox.Yes | QMessageBox.Cancel,
+                                  QMessageBox.Yes)
+            if reply == QMessageBox.Cancel:
+                return
+
+        elif twochannel_mode:
+            # Two-channel mode: sample rate is halved (1.6 GHz per channel instead of 3.2 GHz)
+            # Determine which channel is active
+            active_channel_display = self.state.activexychannel
+            reply = QMessageBox.question(self, "FIR Calibration - Two-Channel Mode",
+                                  f"Two-channel mode detected!\n\n"
+                                  f"Sample rate is 1.6 GHz per channel (half of normal 3.2 GHz).\n\n"
+                                  f"Connect 10 MHz square wave to active channel (CH{active_channel_display}).\n"
+                                  f"Both channels share hardware, so calibration applies to both.\n\n"
+                                  f"Proceed with calibration?",
+                                  QMessageBox.Yes | QMessageBox.Cancel,
+                                  QMessageBox.Yes)
+            if reply == QMessageBox.Cancel:
+                return
+
+        else:
+            # Normal mode
+            reply = QMessageBox.question(self, "FIR Calibration - Normal Mode",
+                                  f"Normal mode detected.\n\n"
+                                  f"Connect 10 MHz square wave to input.\n\n"
+                                  f"Proceed with calibration?",
+                                  QMessageBox.Yes | QMessageBox.Cancel,
+                                  QMessageBox.Yes)
+            if reply == QMessageBox.Cancel:
+                return
+
+        # Create calibration object
+        fir_cal = FrequencyCalibration()
+        num_averages = fir_cal.num_averages
+
+        # Temporarily increase depth for better frequency resolution during calibration
+        # Use 640 samples: ensures 10 MHz harmonics land exactly on FFT bin centers
+        # Normal mode (3.2 GHz): Δf = 3.2 GHz / 640 = 5 MHz → 10 MHz is bin 2, 30 MHz is bin 6, etc.
+        # Interleaved (6.4 GHz): Δf = 6.4 GHz / 640 = 10 MHz → 10 MHz is bin 1, 30 MHz is bin 3, etc.
+        old_depth = self.state.expect_samples
+        calibration_depth = 640  # Optimized for 10 MHz harmonics landing on bin centers
+        if old_depth != calibration_depth:
+            self.state.expect_samples = calibration_depth
+            self.allocate_xy_data()
+            self.controller.send_trigger_info_all()
+            print(f"FIR calibration: Temporarily set depth to {calibration_depth} (was {old_depth}) for bin alignment with 10 MHz harmonics")
+
+        # Temporarily disable drawing for faster capture
+        old_dodrawing = self.state.dodrawing
+        self.state.dodrawing = False
+
+        # Helper function to capture waveforms from a specific channel, called in single-channel (non-oversampling) and two-channel modes
+        def capture_board_waveforms(board_idx, num_averages, channel_idx=None):
+
+            # Default to channel 0 of the board if not specified
+            if channel_idx is None:
+                channel_idx = board_idx * self.state.num_chan_per_board
+
+            captured = []
+            for i in range(num_averages):
+
+                # Print progress at 10% intervals
+                if i % 100 == 0: print(f"Capturing waveforms: {i}/{num_averages} from channel {channel_idx}")
+
+                # Get event data
+                raw_data_map, rx_len = self.controller.get_event()
+                if not raw_data_map:
+                    continue
+
+                # Process all boards
+                for b_idx in range(self.state.num_board):
+                    if b_idx in raw_data_map:
+                        self.processor.process_board_data(
+                            raw_data_map[b_idx],
+                            b_idx,
+                            self.xydata
+                        )
+
+                # Extract y-data from the specified channel
+                if channel_idx < len(self.xydata) and self.xydata[channel_idx] is not None:
+                    y_data_full = self.xydata[channel_idx][1]
+
+                    # In two-channel mode, only first half of array contains valid samples
+                    if self.state.dotwochannel[board_idx]:
+                        num_valid_samples = len(y_data_full) // 2
+                        y_data = y_data_full[:num_valid_samples].copy()
+                    else:
+                        y_data = y_data_full.copy()
+
+                    captured.append(y_data)
+
+            return captured
+
+        try:
+            if oversample_mode and interleaved_mode:
+                # Interleaved oversampling mode: capture the interleaved waveform at 2x sample rate
+                captured_waveforms_interleaved = []
+
+                for i in range(num_averages):
+
+                    # Print progress at 10% intervals
+                    if i % 100 == 0: print(f"Capturing interleaved waveforms: {i}/{num_averages}")
+
+                    # Get event data
+                    raw_data_map, rx_len = self.controller.get_event()
+                    if not raw_data_map:
+                        continue
+
+                    # Process all boards
+                    for b_idx in range(self.state.num_board):
+                        if b_idx in raw_data_map:
+                            self.processor.process_board_data(
+                                raw_data_map[b_idx],
+                                b_idx,
+                                self.xydata
+                            )
+
+                    # Manually interleave the data (same logic as in plot_manager.py)
+                    # The processor doesn't automatically create xydatainterleaved during event processing
+                    channel_idx_N = board_N * self.state.num_chan_per_board
+                    channel_idx_N1 = board_N1 * self.state.num_chan_per_board
+
+                    if channel_idx_N < len(self.xydata) and self.xydata[channel_idx_N] is not None:
+                        if channel_idx_N1 < len(self.xydata) and self.xydata[channel_idx_N1] is not None:
+                            # Get data from both boards
+                            primary_data = self.xydata[channel_idx_N][1].copy()
+                            secondary_data = self.xydata[channel_idx_N1][1].copy()
+
+                            # Create interleaved array
+                            interleaved_length = len(primary_data) + len(secondary_data)
+                            y_interleaved = np.zeros(interleaved_length)
+                            y_interleaved[0::2] = primary_data
+                            y_interleaved[1::2] = secondary_data
+
+                            captured_waveforms_interleaved.append(y_interleaved)
+
+                if len(captured_waveforms_interleaved) < 10:
+                    QMessageBox.warning(self, "FIR Calibration",
+                                      f"Only captured {len(captured_waveforms_interleaved)} interleaved waveforms. Need at least 10.")
+                    return
+
+            elif oversample_mode:
+                # Oversampling only (not interleaved): capture both boards separately
+                # (Hardware duplicates signal to both boards)
+                captured_waveforms_N = []
+                captured_waveforms_N1 = []
+
+                for i in range(num_averages):
+
+                    # Print progress at 10% intervals
+                    if i % 100 == 0: print(f"Capturing oversample waveforms: {i}/{num_averages}")
+
+                    # Get event data
+                    raw_data_map, rx_len = self.controller.get_event()
+                    if not raw_data_map:
+                        continue
+
+                    # Process all boards
+                    for b_idx in range(self.state.num_board):
+                        if b_idx in raw_data_map:
+                            self.processor.process_board_data(
+                                raw_data_map[b_idx],
+                                b_idx,
+                                self.xydata
+                            )
+
+                    # Extract y-data from both boards
+                    channel_idx_N = board_N * self.state.num_chan_per_board
+                    channel_idx_N1 = board_N1 * self.state.num_chan_per_board
+
+                    if channel_idx_N < len(self.xydata) and self.xydata[channel_idx_N] is not None:
+                        y_data_N = self.xydata[channel_idx_N][1].copy()
+                        captured_waveforms_N.append(y_data_N)
+
+                    if channel_idx_N1 < len(self.xydata) and self.xydata[channel_idx_N1] is not None:
+                        y_data_N1 = self.xydata[channel_idx_N1][1].copy()
+                        captured_waveforms_N1.append(y_data_N1)
+
+                if len(captured_waveforms_N) < 10:
+                    QMessageBox.warning(self, "FIR Calibration",
+                                      f"Only captured {len(captured_waveforms_N)} waveforms from Board {board_N}. Need at least 10.")
+                    return
+
+                if len(captured_waveforms_N1) < 10:
+                    QMessageBox.warning(self, "FIR Calibration",
+                                      f"Only captured {len(captured_waveforms_N1)} waveforms from Board {board_N1}. Need at least 10.")
+                    return
+
+            elif twochannel_mode:
+                # Two-channel mode: capture from active channel at halved sample rate (1.6 GHz)
+                # Both channels share the same hardware path, so one calibration applies to both
+                captured_waveforms_twochannel = capture_board_waveforms(
+                    self.state.activeboard, num_averages, channel_idx=self.state.activexychannel)
+
+                if len(captured_waveforms_twochannel) < 10:
+                    QMessageBox.warning(self, "FIR Calibration",
+                                      f"Only captured {len(captured_waveforms_twochannel)} waveforms. Need at least 10 for good calibration.")
+                    return
+
+            else:
+                # Normal mode: capture from channel 0 (board 0, channel 0)
+                captured_waveforms = capture_board_waveforms(0, num_averages)
+
+                if len(captured_waveforms) < 10:
+                    QMessageBox.warning(self, "FIR Calibration",
+                                      f"Only captured {len(captured_waveforms)} waveforms. Need at least 10 for good calibration.")
+                    return
+
+            # Restore drawing and depth
+            self.state.dodrawing = old_dodrawing
+            if old_depth != calibration_depth:
+                self.state.expect_samples = old_depth
+                self.allocate_xy_data()
+                self.controller.send_trigger_info_all()
+                self.sync_depth_ui_from_state()
+                print(f"FIR calibration: Restored depth to {old_depth}")
+
+            # Compute sample rate in Hz
+            sample_rate_hz = self.state.samplerate * 1e9  # Convert GHz to Hz
+
+            if oversample_mode and interleaved_mode:
+                # Run calibration for interleaved data at 2x sample rate
+                sample_rate_hz_interleaved = sample_rate_hz * 2  # 6.4 GHz
+                result = fir_cal.calibrate_from_data(captured_waveforms_interleaved, sample_rate_hz_interleaved, is_interleaved=True)
+
+                if result['success']:
+                    # Store interleaved calibration in state
+                    self.state.fir_coefficients_interleaved = result['fir_coefficients']
+                    self.state.fir_calibration_samplerate_interleaved = sample_rate_hz_interleaved
+                    self.state.fir_freq_response_interleaved = result['freq_response']
+
+                    # Show success message
+                    message = (f"Interleaved FIR Calibration Complete!\n\n"
+                             f"Calibrated at {sample_rate_hz_interleaved/1e9:.2f} GHz\n\n"
+                             f"{result['message']}")
+                    QMessageBox.information(self, "FIR Calibration Complete", message)
+
+                    # Enable the apply checkbox if it's not already enabled
+                    if not self.state.fir_correction_enabled:
+                        self.ui.actionApply_FIR_corrections.setEnabled(True)  # Enable so it can be unchecked
+                        self.ui.actionApply_FIR_corrections.setChecked(True)
+                        self.state.fir_correction_enabled = True
+                else:
+                    QMessageBox.critical(self, "FIR Calibration Failed", result['message'])
+
+            elif oversample_mode:
+                # Run calibration for both boards (oversampling only, not interleaved)
+                result_N = fir_cal.calibrate_from_data(captured_waveforms_N, sample_rate_hz)
+                result_N1 = fir_cal.calibrate_from_data(captured_waveforms_N1, sample_rate_hz)
+
+                if result_N['success'] and result_N1['success']:
+                    # Store oversampling calibrations in state
+                    self.state.fir_coefficients_oversample[0] = result_N['fir_coefficients']
+                    self.state.fir_calibration_samplerate_oversample[0] = sample_rate_hz
+                    self.state.fir_freq_response_oversample[0] = result_N['freq_response']
+
+                    self.state.fir_coefficients_oversample[1] = result_N1['fir_coefficients']
+                    self.state.fir_calibration_samplerate_oversample[1] = sample_rate_hz
+                    self.state.fir_freq_response_oversample[1] = result_N1['freq_response']
+
+                    # Show success message
+                    message = (f"Oversampling FIR Calibration Complete!\n\n"
+                             f"Board {board_N}: {result_N['message']}\n"
+                             f"Board {board_N1}: {result_N1['message']}")
+                    QMessageBox.information(self, "FIR Calibration Complete", message)
+
+                    # Enable the apply checkbox if it's not already enabled
+                    if not self.state.fir_correction_enabled:
+                        self.ui.actionApply_FIR_corrections.setEnabled(True)  # Enable so it can be unchecked
+                        self.ui.actionApply_FIR_corrections.setChecked(True)
+                        self.state.fir_correction_enabled = True
+                else:
+                    error_msgs = []
+                    if not result_N['success']:
+                        error_msgs.append(f"Board {board_N}: {result_N['message']}")
+                    if not result_N1['success']:
+                        error_msgs.append(f"Board {board_N1}: {result_N1['message']}")
+                    QMessageBox.critical(self, "FIR Calibration Failed", "\n".join(error_msgs))
+
+            elif twochannel_mode:
+                # Run two-channel calibration at halved sample rate (1.6 GHz)
+                sample_rate_hz_twochannel = sample_rate_hz / 2  # 1.6 GHz
+                result = fir_cal.calibrate_from_data(captured_waveforms_twochannel, sample_rate_hz_twochannel)
+
+                if result['success']:
+                    # Store two-channel calibration in state
+                    self.state.fir_coefficients_twochannel = result['fir_coefficients']
+                    self.state.fir_calibration_samplerate_twochannel = sample_rate_hz_twochannel
+                    self.state.fir_freq_response_twochannel = result['freq_response']
+
+                    # Show success message
+                    message = (f"Two-Channel FIR Calibration Complete!\n\n"
+                             f"Calibrated at {sample_rate_hz_twochannel/1e9:.2f} GHz per channel\n\n"
+                             f"{result['message']}")
+                    QMessageBox.information(self, "FIR Calibration Complete", message)
+
+                    # Enable the apply checkbox if it's not already enabled
+                    if not self.state.fir_correction_enabled:
+                        self.ui.actionApply_FIR_corrections.setEnabled(True)  # Enable so it can be unchecked
+                        self.ui.actionApply_FIR_corrections.setChecked(True)
+                        self.state.fir_correction_enabled = True
+                else:
+                    QMessageBox.critical(self, "FIR Calibration Failed", result['message'])
+
+            else:
+                # Run normal calibration
+                result = fir_cal.calibrate_from_data(captured_waveforms, sample_rate_hz)
+
+                if result['success']:
+                    # Store calibration in state
+                    self.state.fir_coefficients = result['fir_coefficients']
+                    self.state.fir_calibration_samplerate = sample_rate_hz
+                    self.state.fir_freq_response = result['freq_response']
+
+                    # Show success message
+                    QMessageBox.information(self, "FIR Calibration Complete", result['message'])
+
+                    # Enable the apply checkbox if it's not already enabled
+                    if not self.state.fir_correction_enabled:
+                        self.ui.actionApply_FIR_corrections.setEnabled(True)  # Enable so it can be unchecked
+                        self.ui.actionApply_FIR_corrections.setChecked(True)
+                        self.state.fir_correction_enabled = True
+                else:
+                    QMessageBox.critical(self, "FIR Calibration Failed", result['message'])
+
+        except Exception as e:
+            # Restore drawing and depth on error
+            self.state.dodrawing = old_dodrawing
+            if old_depth != calibration_depth:
+                self.state.expect_samples = old_depth
+                self.allocate_xy_data()
+                self.controller.send_trigger_info_all()
+                self.sync_depth_ui_from_state()
+                print(f"FIR calibration error: Restored depth to {old_depth}")
+            QMessageBox.critical(self, "FIR Calibration Error", f"Error during calibration: {str(e)}")
+
+    def save_fir_filter(self):
+        """Save FIR calibration to a separate file."""
+        save_fir_filter(self, self.state)
+
+    def load_fir_filter(self):
+        """Load FIR calibration from a file."""
+        load_fir_filter(self, self.state, self.ui)
 
     def update_plot_loop(self):
         """Main acquisition loop, with full status bar and FFT plot updates."""
@@ -695,7 +1165,7 @@ class MainWindow(TemplateBaseClass):
             self.math_results_noresamp = self.math_window.calculate_math_channels(self.plot_manager.stabilized_data_noresamp)
 
             # Resample math channel results for display based on source channel's doresamp
-            from scipy.signal import resample
+            from scipy.signal import resample_poly, resample
             math_results = {}
             for math_name, (x_data, y_data) in self.math_results_noresamp.items():
                 # Find the math channel definition
@@ -722,7 +1192,13 @@ class MainWindow(TemplateBaseClass):
 
                     # Apply resampling if needed
                     if doresamp_factor > 1:
-                        y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_factor, t=x_data)
+                        if s.polyphase_upsampling_enabled:
+                            # Use polyphase to reduce ringing
+                            y_resampled = resample_poly(y_data, doresamp_factor, 1)
+                            x_resampled = np.linspace(x_data[0], x_data[-1], len(y_resampled))
+                        else:
+                            # Use FFT-based resampling
+                            y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_factor, t=x_data)
                         math_results[math_name] = (x_resampled, y_resampled)
                     else:
                         math_results[math_name] = (x_data, y_data)
@@ -771,14 +1247,13 @@ class MainWindow(TemplateBaseClass):
                 if s.fft_enabled.get(ch_name, False):
                     is_active = (ch_name == active_channel_name)
 
-                    y_full = self.xydata[ch_idx][1]
-                    midpoint = len(y_full) // 2
-                    if s.dotwochannel[board_idx]:
-                        y_data_for_analysis = y_full[:midpoint]
-                    elif s.dointerleaved[board_idx]:
-                        y_data_for_analysis = self.xydatainterleaved[ch_idx][1]
+                    # Use FIR-corrected data WITHOUT resampling (stabilized_data_noresamp)
+                    # This has FIR corrections applied but avoids upsampled/resampled artifacts
+                    if self.plot_manager.stabilized_data_noresamp[ch_idx] is not None:
+                        x_data, y_data_for_analysis = self.plot_manager.stabilized_data_noresamp[ch_idx]
                     else:
-                        y_data_for_analysis = y_full
+                        # Channel data not available (e.g., secondary channel in interleaved mode)
+                        continue
 
                     # Pass the correct board_idx to get the right sample rate
                     freq, mag = self.processor.calculate_fft(y_data_for_analysis, board_idx)
@@ -868,11 +1343,14 @@ class MainWindow(TemplateBaseClass):
         highres = self.ui.actionHigh_resolution.isChecked()
         effective_sr = s.samplerate * sradjust / (s.downsamplefactor if not highres else 1)
 
+        # Build downsample factor text
+        downsample_text = f"{s.downsamplefactor}x averaging, " if s.downsamplefactor > 1 else ""
+
         # In testing mode, show only sample rate (skip dynamic fps, events, Hz, MB/s)
         if self.testing_mode:
-            status_text = f"{format_freq(effective_sr, 'S/s')}"
+            status_text = f"{format_freq(effective_sr, 'S/s')}, {downsample_text}".rstrip(", ")
         else:
-            status_text = (f"{format_freq(effective_sr, 'S/s')}, {self.fps:.2f} fps, "
+            status_text = (f"{format_freq(effective_sr, 'S/s')}, {downsample_text}{self.fps:.2f} fps, "
                            f"{s.nevents} events, {s.lastrate:.2f} Hz, "
                            f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s")
 
@@ -931,12 +1409,56 @@ class MainWindow(TemplateBaseClass):
         time_per_div = time_span / 10.0
         # Format the string with appropriate precision and the current units
 
-        if time_per_div * s.nsunits < 1:
-            display_text = f"{1000*time_per_div:.1f} ps"
-        elif time_per_div < 10:
-            display_text = f"{time_per_div:.2f} {s.units}"
+        # Convert to nanoseconds first
+        time_per_div_ns = time_per_div * s.nsunits
+
+        # Choose units so the displayed value is >= 1, format to 5 total digits
+        if time_per_div_ns >= 1e9:
+            # Seconds
+            value = time_per_div_ns / 1e9
+            if value >= 100:
+                display_text = f"{value:.1f} s"
+            elif value >= 10:
+                display_text = f"{value:.2f} s"
+            else:
+                display_text = f"{value:.3f} s"
+        elif time_per_div_ns >= 1e6:
+            # Milliseconds
+            value = time_per_div_ns / 1e6
+            if value >= 100:
+                display_text = f"{value:.1f} ms"
+            elif value >= 10:
+                display_text = f"{value:.2f} ms"
+            else:
+                display_text = f"{value:.3f} ms"
+        elif time_per_div_ns >= 1e3:
+            # Microseconds
+            value = time_per_div_ns / 1e3
+            if value >= 100:
+                display_text = f"{value:.1f} us"
+            elif value >= 10:
+                display_text = f"{value:.2f} us"
+            else:
+                display_text = f"{value:.3f} us"
+        elif time_per_div_ns >= 1:
+            # Nanoseconds
+            value = time_per_div_ns
+            if value >= 100:
+                display_text = f"{value:.1f} ns"
+            elif value >= 10:
+                display_text = f"{value:.2f} ns"
+            else:
+                display_text = f"{value:.3f} ns"
         else:
-            display_text = f"{time_per_div:.1f} {s.units}"
+            # Picoseconds
+            value = time_per_div_ns * 1000
+            if value >= 100:
+                display_text = f"{value:.1f} ps"
+            elif value >= 10:
+                display_text = f"{value:.2f} ps"
+            else:
+                display_text = f"{value:.3f} ps"
+
         self.ui.timebaseBox.setText(display_text)
         # self.ui.timebaseBox.setText(f"2^{self.state.downsample}")
 
@@ -979,8 +1501,14 @@ class MainWindow(TemplateBaseClass):
                 # Use stored doresamp if available (for backward compatibility)
                 doresamp_to_use = data.get('doresamp', s.doresamp[i])
                 if doresamp_to_use > 1:
-                    from scipy.signal import resample
-                    y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
+                    from scipy.signal import resample_poly, resample
+                    if s.polyphase_upsampling_enabled:
+                        # Use polyphase resampling to reduce ringing artifacts
+                        y_resampled = resample_poly(y_data, doresamp_to_use, 1)
+                        x_resampled = np.linspace(x_data[0], x_data[-1], len(y_resampled))
+                    else:
+                        # Use FFT-based resampling
+                        y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
                     self.plot_manager.update_reference_plot(i, x_resampled, y_resampled, width=stored_width)
                 else:
                     self.plot_manager.update_reference_plot(i, x_data, y_data, width=stored_width)
@@ -1116,11 +1644,27 @@ class MainWindow(TemplateBaseClass):
 
     def on_curve_clicked(self, channel_index):
         """Slot for when a waveform on the plot is clicked."""
+        # Safety check: only process if channel is actually enabled
+        if not self.state.channel_enabled[channel_index]:
+            return
+
         board = channel_index // self.state.num_chan_per_board
         channel = channel_index % self.state.num_chan_per_board
+
+        # Block signals to prevent multiple calls to select_channel
+        self.ui.boardBox.blockSignals(True)
+        self.ui.chanBox.blockSignals(True)
+
+        # Set both board and channel
         self.ui.boardBox.setCurrentIndex(board)
         self.ui.chanBox.setCurrentIndex(channel)
-        # select_channel is called automatically by the currentIndexChanged signal
+
+        # Unblock signals
+        self.ui.boardBox.blockSignals(False)
+        self.ui.chanBox.blockSignals(False)
+
+        # Call select_channel manually once with both values set correctly
+        self.select_channel()
 
     def on_math_curve_clicked(self, math_channel_name):
         """Slot for when a math channel waveform on the plot is clicked."""
@@ -1246,6 +1790,7 @@ class MainWindow(TemplateBaseClass):
 
         # This now correctly calls the method to update the checkbox
         self.update_fft_checkbox_state()
+        self.update_fir_checkbox_state()
 
         # Update the "Two Channel" checkbox to reflect the state of the newly selected board
         # Block signals to prevent triggering twochan_changed when switching boards
@@ -1834,9 +2379,10 @@ class MainWindow(TemplateBaseClass):
         average_line = self.plot_manager.average_lines.get(channel_index)
         heatmap_item = self.plot_manager.heatmap_manager.persist_heatmap_items.get(channel_index)
 
-        # If channel is not enabled, hide everything
+        # If channel is not enabled, hide everything and disable clicking
         if not is_chan_on:
             main_line.setVisible(False)
+            main_line.curve.setClickable(False)
             if average_line:
                 average_line.setVisible(False)
             if channel_index in self.plot_manager.persist_lines_per_channel:
@@ -1866,8 +2412,10 @@ class MainWindow(TemplateBaseClass):
         # Main trace visibility: hide ONLY if (average is on OR heatmap is on) AND persist lines are off AND persist time > 0
         if (show_persist_avg or show_persist_heatmap) and not show_persist_lines and persist_time > 0:
             main_line.setVisible(False)
+            main_line.curve.setClickable(False)
         else:
             main_line.setVisible(True)
+            main_line.curve.setClickable(True)
 
     def set_average_line_pen(self):
         """
@@ -2240,6 +2788,44 @@ class MainWindow(TemplateBaseClass):
         self.ui.fftCheck.setChecked(self.state.fft_enabled[active_channel_name])
         self.ui.fftCheck.blockSignals(False)
 
+    def update_fir_checkbox_state(self):
+        """Updates the 'Apply FIR corrections' checkbox to reflect if corrections are available for current mode."""
+        s = self.state
+
+        # Check if corrections are available for the current mode
+        is_oversampling = s.dooversample[s.activeboard]
+        is_interleaved = s.dointerleaved[s.activeboard]
+        is_twochannel = s.dotwochannel[s.activeboard]
+
+        if is_oversampling and is_interleaved:
+            # Interleaved oversampling mode: check if interleaved corrections are available
+            has_corrections = s.fir_coefficients_interleaved is not None
+        elif is_oversampling:
+            # Oversampling only (not interleaved): check if oversampling corrections are available
+            has_corrections = (s.fir_coefficients_oversample[0] is not None and
+                              s.fir_coefficients_oversample[1] is not None)
+        elif is_twochannel:
+            # Two-channel mode: check if two-channel corrections are available
+            has_corrections = s.fir_coefficients_twochannel is not None
+        else:
+            # Normal mode: check if normal corrections are available
+            has_corrections = s.fir_coefficients is not None
+
+        # Enable/disable menu item based on whether corrections are available
+        self.ui.actionApply_FIR_corrections.setEnabled(has_corrections)
+
+        # Checkbox should be checked if corrections are available AND enabled
+        should_be_checked = has_corrections and s.fir_correction_enabled
+
+        # If corrections aren't available, uncheck and disable
+        if not has_corrections:
+            should_be_checked = False
+            s.fir_correction_enabled = False
+
+        self.ui.actionApply_FIR_corrections.blockSignals(True)
+        self.ui.actionApply_FIR_corrections.setChecked(should_be_checked)
+        self.ui.actionApply_FIR_corrections.blockSignals(False)
+
     def update_reference_checkbox_state(self):
         """Updates the 'Show Reference' checkbox to reflect the active channel's reference visibility."""
         s = self.state
@@ -2499,34 +3085,48 @@ class MainWindow(TemplateBaseClass):
     def oversamp_changed(self, checked):
         s = self.state
         board = s.activeboard
+
+        # When enabling oversampling, validate and configure board N+1
+        if bool(checked):
+            # Ensure board N+1 is in single-channel mode
+            if s.dotwochannel[board + 1]:
+                s.dotwochannel[board + 1] = False
+                setupboard(self.controller.usbs[board + 1], s.dopattern, False, s.dooverrange, s.basevoltage == 200)
+                self.controller.tell_downsample(self.controller.usbs[board + 1], s.downsample, board + 1)
+                print(f"Auto-configured board {board+1} to single-channel mode for oversampling")
+
+            # Ensure board N+1 is on external trigger (this was already done, but moved here for clarity)
+            if not s.doexttrig[board + 1]:
+                s.doexttrig[board + 1] = True
+                self.controller.set_exttrig(board + 1, True)
+                print(f"Auto-configured board {board+1} to external trigger mode for oversampling")
+
+            # Ensure board N+1 is on external clock source
+            from board import clockused, switchclock
+            if clockused(self.controller.usbs[board + 1], board + 1, quiet=True) == 0:
+                # Board is on internal clock, switch to external
+                if switchclock(self.controller.usbs[board + 1], board + 1, external=True):
+                    print(f"Auto-configured board {board+1} to external clock source for oversampling")
+                else:
+                    print(f"WARNING: Failed to switch board {board+1} to external clock source")
+
         s.dooversample[board] = bool(checked)
         s.dooversample[board + 1] = bool(checked)
         s.skip_next_event = True  # Skip next event after oversampling change
 
-        # Reset persistence settings for both boards in the oversampling pair (ch0 only)
+        # Clear persistence data for both boards in the oversampling pair (ch0 only)
+        # but don't change persistence settings
         ch0_board1 = board * s.num_chan_per_board
         ch0_board2 = (board + 1) * s.num_chan_per_board
 
         for ch_idx in [ch0_board1, ch0_board2]:
-            s.persist_time[ch_idx] = 0
-            s.persist_lines_enabled[ch_idx] = True
-            s.persist_avg_enabled[ch_idx] = True
-            # Clear any existing persistence data
+            # Clear any existing persistence data (but don't change settings)
             self.plot_manager.clear_persist(ch_idx)
-            # Update visibility (might have been hidden if persist avg was on and lines were off)
-            self.update_channel_visibility(ch_idx)
-
-        # If we're resetting the active channel, update UI to reflect defaults
-        if s.activexychannel in [ch0_board1, ch0_board2]:
-            self.sync_persistence_ui()
 
         self.controller.set_oversampling(board, bool(checked))
         if bool(checked):
             self.ui.interleavedCheck.setEnabled(True)
             self.ui.twochanCheck.setEnabled(False)
-            # Set second board (+1) to external trigger mode
-            s.doexttrig[board + 1] = True
-            self.controller.set_exttrig(board + 1, True)
             if self.ui.actionAuto_oversample_alignment.isChecked():
                 autocalibration(self)
         else:
@@ -2555,6 +3155,9 @@ class MainWindow(TemplateBaseClass):
         if self.xy_window is not None and self.xy_window.isVisible():
             self.xy_window.refresh_channel_list()
 
+        # Update FIR checkbox state (oversampling mode changed)
+        self.update_fir_checkbox_state()
+
     def interleave_changed(self, checked):
         s = self.state
         board = s.activeboard
@@ -2570,8 +3173,15 @@ class MainWindow(TemplateBaseClass):
             s.channel_enabled[c_secondary_ch1] = False
         else:
             # When disabling interleaving, re-enable the secondary board's channels
+            # BUT: if we're still in oversampling mode (without interleaving),
+            # we should only enable ch0 (single-channel mode)
             s.channel_enabled[c_secondary_ch0] = True
-            s.channel_enabled[c_secondary_ch1] = True
+            if s.dooversample[board]:
+                # Still in oversampling mode: keep ch1 disabled (single-channel)
+                s.channel_enabled[c_secondary_ch1] = False
+            else:
+                # Not in oversampling mode: enable ch1
+                s.channel_enabled[c_secondary_ch1] = True
         self.update_channel_visibility(c_secondary_ch0)
         self.update_channel_visibility(c_secondary_ch1)
 
@@ -2582,6 +3192,9 @@ class MainWindow(TemplateBaseClass):
         # Update XY window channel lists (channel availability changed)
         if self.xy_window is not None and self.xy_window.isVisible():
             self.xy_window.refresh_channel_list()
+
+        # Update FIR checkbox state (interleaving mode changed)
+        self.update_fir_checkbox_state()
 
     def dopllreset(self):
         while self.state.downsamplezoom>1: self.time_slow()

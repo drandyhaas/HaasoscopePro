@@ -5,7 +5,7 @@ class ScopeState:
 
     def __init__(self, num_boards, num_chan_per_board):
         # General and Hardware Configuration
-        self.softwareversion = 31.08
+        self.softwareversion = 31.09
         self.num_board = num_boards
         self.num_chan_per_board = num_chan_per_board
         self.samplerate = 3.2  # GHz
@@ -110,6 +110,40 @@ class ScopeState:
         self.trig_stabilizer_enabled = True
         self.extra_trig_stabilizer_enabled = True
         self.pulse_stabilizer_enabled = [False] * self.num_board  # Per-board pulse stabilizer
+
+        # Frequency response correction (FIR filter)
+        self.fir_correction_enabled = False  # Whether to apply FIR correction
+        self.fir_coefficients = None  # 64-tap FIR filter coefficients for non-oversampling (numpy array)
+        self.fir_calibration_samplerate = None  # Sample rate at which calibration was performed
+        self.fir_freq_response = None  # Measured H(f) for display (dict: {'freqs': array, 'magnitude': array, 'phase': array})
+
+        # FIR coefficients for oversampling mode (board-specific)
+        # When oversampling, boards N and N+1 form a pair and need separate calibrations
+        self.fir_coefficients_oversample = [None, None]  # [board_N, board_N+1]
+        self.fir_calibration_samplerate_oversample = [None, None]
+        self.fir_freq_response_oversample = [None, None]
+
+        # FIR coefficients for interleaved oversampling mode
+        # When both oversampling and interleaving are enabled, the interleaved data at 6.4 GHz needs its own calibration
+        self.fir_coefficients_interleaved = None  # Interleaved waveform at 2x sample rate
+        self.fir_calibration_samplerate_interleaved = None
+        self.fir_freq_response_interleaved = None
+
+        # FIR coefficients for two-channel mode
+        # When two-channel mode is enabled, sample rate is halved (1.6 GHz instead of 3.2 GHz)
+        self.fir_coefficients_twochannel = None  # Two-channel mode at 1.6 GHz per channel
+        self.fir_calibration_samplerate_twochannel = None
+        self.fir_freq_response_twochannel = None
+
+        # Savitzky-Golay polynomial filtering
+        self.polynomial_filtering_enabled = False  # Whether to apply Savitzky-Golay filter
+        self.savgol_window_length = 15  # Window length (must be odd, >= 3)
+        self.savgol_polyorder = 3  # Polynomial order (must be < window_length)
+        self.polynomial_filtering_saved_doresamp = None  # Saved doresamp values before enabling filter
+        self.polynomial_filtering_saved_resamp_overridden = None  # Saved resamp_overridden flags before enabling filter
+
+        # Resampling method
+        self.polyphase_upsampling_enabled = True  # Use polyphase (less ringing) vs FFT-based resampling
 
         # Performance metrics
         self.nevents = 0

@@ -226,10 +226,20 @@ graph TD
 
 **`plot_manager.py`** - Display and visualization
 - Renders waveforms using PyQtGraph
+- Applies FIR frequency response correction
+- Applies Savitzky-Golay polynomial filtering
 - Manages per-channel peak lines, persistence, references
 - Handles XY plot mode
 - Cursor and measurement overlays
 - Real-time plot updates
+
+**`frequency_calibration.py`** - FIR calibration system
+- Automatic frequency response correction using square wave calibration
+- Support for all modes: normal (3.2 GHz), two-channel (1.6 GHz), oversampling, and interleaved (6.4 GHz)
+- Measures duty cycle, frequency, and DC offset from input signal
+- Adaptive tap count (32/64/128) based on sample rate
+- Save/load calibration files (.fir format)
+- See [FIR_CALIBRATION_README.md](FIR_CALIBRATION_README.md) for details
 
 ### Supporting Components
 
@@ -361,6 +371,12 @@ Settings are saved in `.hsp` files (JSON format):
 - Display preferences (grid, cursors, markers)
 - Math channel definitions
 - Reference waveforms
+- FIR and polynomial filtering enable states
+
+FIR calibration data is saved separately in `.fir` files (JSON format):
+- FIR coefficients for all modes (normal, two-channel, oversampling, interleaved)
+- Sample rates and frequency response data
+- Calibration metadata (timestamp, parameters)
 
 **Backward Compatibility**: The settings manager automatically converts old single-value settings (resamp, peak detect, pulse stabilizer) to per-channel/board arrays when loading legacy files.
 

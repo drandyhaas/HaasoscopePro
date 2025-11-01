@@ -193,6 +193,17 @@ def save_setup(main_window):
         'oversampling_controls': main_window.ui.actionOversampling_controls.isChecked(),
         'pll_controls': main_window.ui.actionToggle_PLL_controls.isChecked(),
         'auto_oversample_alignment': main_window.ui.actionAuto_oversample_alignment.isChecked(),
+
+        # FIR correction settings (coefficients are saved/loaded separately via .fir files)
+        'fir_correction_enabled': s.fir_correction_enabled,
+
+        # Polynomial filtering settings
+        'polynomial_filtering_enabled': s.polynomial_filtering_enabled,
+        'savgol_window_length': s.savgol_window_length,
+        'savgol_polyorder': s.savgol_polyorder,
+
+        # Resampling settings
+        'polyphase_upsampling_enabled': s.polyphase_upsampling_enabled,
     })
 
     # Math channels
@@ -635,6 +646,24 @@ def load_setup(main_window):
             main_window.ui.actionToggle_PLL_controls.setChecked(setup['pll_controls'])
     if 'auto_oversample_alignment' in setup:
         main_window.ui.actionAuto_oversample_alignment.setChecked(setup['auto_oversample_alignment'])
+
+    # FIR correction settings
+    if 'fir_correction_enabled' in setup:
+        s.fir_correction_enabled = setup['fir_correction_enabled']
+        main_window.ui.actionApply_FIR_corrections.setChecked(s.fir_correction_enabled)
+
+    # Polynomial filtering settings
+    if 'polynomial_filtering_enabled' in setup:
+        s.polynomial_filtering_enabled = setup['polynomial_filtering_enabled']
+        main_window.ui.actionApply_polynomial_filtering.setChecked(s.polynomial_filtering_enabled)
+    if 'savgol_window_length' in setup:
+        s.savgol_window_length = setup['savgol_window_length']
+    if 'savgol_polyorder' in setup:
+        s.savgol_polyorder = setup['savgol_polyorder']
+
+    # Resampling settings
+    if 'polyphase_upsampling_enabled' in setup:
+        s.polyphase_upsampling_enabled = setup['polyphase_upsampling_enabled']
 
     # Active board/channel (restore last to trigger UI updates)
     if 'activeboard' in setup:

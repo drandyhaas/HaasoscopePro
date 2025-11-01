@@ -8,7 +8,7 @@ import numpy as np
 import time
 from collections import deque
 import colorsys
-from scipy.signal import resample
+from scipy.signal import resample, resample_poly, filtfilt, savgol_filter
 from scipy.interpolate import interp1d
 from data_processor import find_crossing_distance
 from cursor_manager import CursorManager
@@ -123,13 +123,21 @@ class PlotManager(pg.QtCore.QObject):
     def _create_click_handler(self, channel_index):
         """Creates a unique click handler function that remembers the channel index."""
         def handler(curve_item):
-            self.curve_clicked_signal.emit(channel_index)
+            # Only emit signal if channel is enabled and line is visible and clickable
+            if (channel_index < len(self.state.channel_enabled) and
+                self.state.channel_enabled[channel_index] and
+                channel_index < len(self.lines) and
+                self.lines[channel_index].isVisible()):
+                self.curve_clicked_signal.emit(channel_index)
         return handler
 
     def _create_math_click_handler(self, math_channel_name):
         """Creates a unique click handler function that remembers the math channel name."""
         def handler(curve_item):
-            self.math_curve_clicked_signal.emit(math_channel_name)
+            # Only emit signal if math channel is visible
+            if math_channel_name in self.math_channel_lines:
+                if self.math_channel_lines[math_channel_name].isVisible():
+                    self.math_curve_clicked_signal.emit(math_channel_name)
         return handler
 
     def setup_plots(self):
@@ -335,7 +343,14 @@ class PlotManager(pg.QtCore.QObject):
 
             # --- Resampling (if enabled) ---
             if s.doresamp[li]:
-                ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * s.doresamp[li], t=xdatanew)
+                if s.polyphase_upsampling_enabled:
+                    # Use polyphase resampling to reduce ringing artifacts on sharp edges
+                    ydatanew = resample_poly(ydatanew, s.doresamp[li], 1)
+                    # Reconstruct time axis with finer spacing
+                    xdatanew = np.linspace(xdatanew[0], xdatanew[-1], len(ydatanew))
+                else:
+                    # Use FFT-based resampling (faster, but with ringing on sharp edges)
+                    ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * s.doresamp[li], t=xdatanew)
 
             # Store the processed data (with resampling)
             processed_data[li] = (xdatanew, ydatanew)
@@ -433,6 +448,69 @@ class PlotManager(pg.QtCore.QObject):
             xdatanew = xdatanew + time_skew_offset
             if xdata_noresamp is not None:
                 xdata_noresamp = xdata_noresamp + time_skew_offset
+
+            # Apply frequency response correction (FIR filter) if enabled
+            if s.fir_correction_enabled:
+                # Determine which FIR coefficients to use
+                fir_coeffs = None
+
+                if s.dooversample[board_idx] and s.dointerleaved[board_idx]:
+                    # Interleaved oversampling mode: use interleaved coefficients (6.4 GHz)
+                    fir_coeffs = s.fir_coefficients_interleaved
+                elif s.dooversample[board_idx]:
+                    # Oversampling only (not interleaved): use board-specific coefficients
+                    # Board N uses oversample[0], Board N+1 uses oversample[1]
+                    if board_idx % 2 == 0:
+                        fir_coeffs = s.fir_coefficients_oversample[0]
+                    else:
+                        fir_coeffs = s.fir_coefficients_oversample[1]
+                elif s.dotwochannel[board_idx]:
+                    # Two-channel mode: use two-channel coefficients (1.6 GHz per channel)
+                    fir_coeffs = s.fir_coefficients_twochannel
+                else:
+                    # Non-oversampling, single-channel mode: use regular coefficients (3.2 GHz)
+                    fir_coeffs = s.fir_coefficients
+
+                if fir_coeffs is not None:
+                    ydatanew = filtfilt(fir_coeffs, [1.0], ydatanew)
+                    if ydata_noresamp is not None:
+                        ydata_noresamp = filtfilt(fir_coeffs, [1.0], ydata_noresamp)
+
+            # Apply Savitzky-Golay polynomial filtering if enabled
+            if s.polynomial_filtering_enabled:
+                # Ensure window length is valid (odd and <= data length)
+                window_length = s.savgol_window_length
+                polyorder = s.savgol_polyorder
+
+                # Validate and adjust window length if needed
+                if window_length >= len(ydatanew):
+                    window_length = len(ydatanew) - 1 if len(ydatanew) % 2 == 0 else len(ydatanew) - 2
+                if window_length < 3:
+                    window_length = 3
+                if window_length % 2 == 0:  # Must be odd
+                    window_length += 1
+
+                # Ensure polyorder < window_length
+                if polyorder >= window_length:
+                    polyorder = window_length - 1
+
+                # Apply filter
+                try:
+                    ydatanew = savgol_filter(ydatanew, window_length, polyorder, mode='interp')
+                    if ydata_noresamp is not None:
+                        # Apply same validation for noresamp data
+                        wl_noresamp = window_length
+                        if wl_noresamp >= len(ydata_noresamp):
+                            wl_noresamp = len(ydata_noresamp) - 1 if len(ydata_noresamp) % 2 == 0 else len(ydata_noresamp) - 2
+                        if wl_noresamp < 3:
+                            wl_noresamp = 3
+                        if wl_noresamp % 2 == 0:
+                            wl_noresamp += 1
+                        po_noresamp = polyorder if polyorder < wl_noresamp else wl_noresamp - 1
+                        ydata_noresamp = savgol_filter(ydata_noresamp, wl_noresamp, po_noresamp, mode='interp')
+                except Exception as e:
+                    # If filter fails, continue without filtering
+                    pass
 
             # --- Final plotting and persistence ---
             # Optimization: Use skipFiniteCheck for faster setData
@@ -678,8 +756,13 @@ class PlotManager(pg.QtCore.QObject):
             # Use stored doresamp if available (for backward compatibility and for references)
             doresamp_to_use = ref_data.get('doresamp', 1)
             if doresamp_to_use > 1:
-                from scipy.signal import resample
-                y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
+                if self.state.polyphase_upsampling_enabled:
+                    # Use polyphase resampling to reduce ringing artifacts
+                    y_resampled = resample_poly(y_data, doresamp_to_use, 1)
+                    x_resampled = np.linspace(x_data[0], x_data[-1], len(y_resampled))
+                else:
+                    # Use FFT-based resampling
+                    y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
                 self.math_reference_lines[math_name].setData(x_resampled, y_resampled, skipFiniteCheck=True)
             else:
                 self.math_reference_lines[math_name].setData(x_data, y_data, skipFiniteCheck=True)
@@ -901,15 +984,17 @@ class PlotManager(pg.QtCore.QObject):
 
             board_idx = channel_idx // s.num_chan_per_board
             num_points = s.expect_samples * 40 * (2 if s.dointerleaved[board_idx] else 1)
+            # Account for doresamp - the stored lines are already resampled, so we need to match that resolution
+            if s.doresamp[channel_idx]:
+                num_points *= s.doresamp[channel_idx]
             common_x_axis = np.linspace(min_x, max_x, num_points)
 
             resampled_y_values = [np.interp(common_x_axis, item.xData, item.yData) for item, _, _, _, _ in lines_to_average]
 
             if resampled_y_values:
                 y_average = np.mean(resampled_y_values, axis=0)
-                if s.doresamp[channel_idx]:
-                    y_average, common_x_axis = resample(y_average, len(common_x_axis) * s.doresamp[channel_idx],
-                                                        t=common_x_axis)
+                # Note: Do NOT resample here - the persist lines are already resampled when stored
+                # Resampling again would cause time shift artifacts
                 # Optimization: Use skipFiniteCheck for faster setData
                 self.average_lines[channel_idx].setData(common_x_axis, y_average, skipFiniteCheck=True)
 

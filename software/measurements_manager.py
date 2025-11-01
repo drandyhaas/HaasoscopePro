@@ -423,8 +423,8 @@ class MeasurementsManager:
                     self.histogram_window.position_relative_to_table(self.ui.tableView, self.ui.plot)
                     self.histogram_window.show()
 
-                    # Get color from active channel
-                    brush_color = self.plot_manager.linepens[self.state.activexychannel].color()
+                    # Get color from measurement's channel
+                    brush_color = self.get_channel_color(channel_key)
                     self.histogram_window.update_histogram(
                         f"{measurement_name} ({channel_key})",
                         self.measurement_history[measurement_key],
@@ -441,8 +441,8 @@ class MeasurementsManager:
         if self.current_histogram_measurement and self.histogram_window.isVisible():
             if self.current_histogram_measurement in self.measurement_history:
                 measurement_name, channel_key = self.current_histogram_measurement
-                # Get color from active channel
-                brush_color = self.plot_manager.linepens[self.state.activexychannel].color()
+                # Get color from measurement's channel
+                brush_color = self.get_channel_color(channel_key)
                 self.histogram_window.update_histogram(
                     f"{measurement_name} ({channel_key})",
                     self.measurement_history[self.current_histogram_measurement],
