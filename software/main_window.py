@@ -365,6 +365,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionApply_FIR_corrections.triggered.connect(self.fir_correction_toggled)
         self.ui.actionSave_FIR_filter.triggered.connect(self.save_fir_filter)
         self.ui.actionLoad_FIR_filter.triggered.connect(self.load_fir_filter)
+        self.ui.actionPolynomial_filtering.triggered.connect(self.polynomial_filtering_toggled)
 
         # Plot manager signals
         self.plot_manager.vline_dragged_signal.connect(self.on_vline_dragged)
@@ -549,6 +550,10 @@ class MainWindow(TemplateBaseClass):
                                   f"Please measure calibration in {mode_name} mode first using a 10 MHz square wave.")
                 self.ui.actionApply_FIR_corrections.setChecked(False)
                 self.state.fir_correction_enabled = False
+
+    def polynomial_filtering_toggled(self, checked):
+        """Toggle Savitzky-Golay polynomial filtering on/off."""
+        self.state.polynomial_filtering_enabled = checked
 
     def measure_fir_calibration(self):
         """Measure FIR calibration using 10 MHz square wave input."""

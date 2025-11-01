@@ -8,7 +8,7 @@ import numpy as np
 import time
 from collections import deque
 import colorsys
-from scipy.signal import resample, filtfilt
+from scipy.signal import resample, filtfilt, savgol_filter
 from scipy.interpolate import interp1d
 from data_processor import find_crossing_distance
 from cursor_manager import CursorManager
@@ -460,6 +460,42 @@ class PlotManager(pg.QtCore.QObject):
                     ydatanew = filtfilt(fir_coeffs, [1.0], ydatanew)
                     if ydata_noresamp is not None:
                         ydata_noresamp = filtfilt(fir_coeffs, [1.0], ydata_noresamp)
+
+            # Apply Savitzky-Golay polynomial filtering if enabled
+            if s.polynomial_filtering_enabled:
+                # Ensure window length is valid (odd and <= data length)
+                window_length = s.savgol_window_length
+                polyorder = s.savgol_polyorder
+
+                # Validate and adjust window length if needed
+                if window_length >= len(ydatanew):
+                    window_length = len(ydatanew) - 1 if len(ydatanew) % 2 == 0 else len(ydatanew) - 2
+                if window_length < 3:
+                    window_length = 3
+                if window_length % 2 == 0:  # Must be odd
+                    window_length += 1
+
+                # Ensure polyorder < window_length
+                if polyorder >= window_length:
+                    polyorder = window_length - 1
+
+                # Apply filter
+                try:
+                    ydatanew = savgol_filter(ydatanew, window_length, polyorder, mode='interp')
+                    if ydata_noresamp is not None:
+                        # Apply same validation for noresamp data
+                        wl_noresamp = window_length
+                        if wl_noresamp >= len(ydata_noresamp):
+                            wl_noresamp = len(ydata_noresamp) - 1 if len(ydata_noresamp) % 2 == 0 else len(ydata_noresamp) - 2
+                        if wl_noresamp < 3:
+                            wl_noresamp = 3
+                        if wl_noresamp % 2 == 0:
+                            wl_noresamp += 1
+                        po_noresamp = polyorder if polyorder < wl_noresamp else wl_noresamp - 1
+                        ydata_noresamp = savgol_filter(ydata_noresamp, wl_noresamp, po_noresamp, mode='interp')
+                except Exception as e:
+                    # If filter fails, continue without filtering
+                    pass
 
             # --- Final plotting and persistence ---
             # Optimization: Use skipFiniteCheck for faster setData

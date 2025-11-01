@@ -135,6 +135,11 @@ class ScopeState:
         self.fir_calibration_samplerate_twochannel = None
         self.fir_freq_response_twochannel = None
 
+        # Savitzky-Golay polynomial filtering
+        self.polynomial_filtering_enabled = False  # Whether to apply Savitzky-Golay filter
+        self.savgol_window_length = 15  # Window length (must be odd, >= 3)
+        self.savgol_polyorder = 3  # Polynomial order (must be < window_length)
+
         # Performance metrics
         self.nevents = 0
         self.oldnevents = 0

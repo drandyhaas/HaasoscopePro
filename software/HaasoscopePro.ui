@@ -2372,9 +2372,12 @@ Outlined if triggering on this channel</string>
     <addaction name="actionClock_reset"/>
     <addaction name="actionToggle_PLL_controls"/>
     <addaction name="actionOversampling_controls"/>
+    <addaction name="separator"/>
     <addaction name="actionToggle_trig_stabilizer"/>
     <addaction name="actionToggle_extra_trig_stabilizer"/>
     <addaction name="actionPulse_stabilizer"/>
+    <addaction name="separator"/>
+    <addaction name="actionPolynomial_filtering"/>
    </widget>
    <widget class="QMenu" name="menuHelp">
     <property name="title">
@@ -3017,6 +3020,14 @@ Outlined if triggering on this channel</string>
   <action name="actionLoad_FIR_filter">
    <property name="text">
     <string>Load FIR filter</string>
+   </property>
+  </action>
+  <action name="actionPolynomial_filtering">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Polynomial filtering</string>
    </property>
   </action>
  </widget>
