@@ -1319,11 +1319,14 @@ class MainWindow(TemplateBaseClass):
         highres = self.ui.actionHigh_resolution.isChecked()
         effective_sr = s.samplerate * sradjust / (s.downsamplefactor if not highres else 1)
 
+        # Build downsample factor text
+        downsample_text = f"{s.downsamplefactor}x averaging, " if s.downsamplefactor > 1 else ""
+
         # In testing mode, show only sample rate (skip dynamic fps, events, Hz, MB/s)
         if self.testing_mode:
-            status_text = f"{format_freq(effective_sr, 'S/s')}"
+            status_text = f"{format_freq(effective_sr, 'S/s')}, {downsample_text}".rstrip(", ")
         else:
-            status_text = (f"{format_freq(effective_sr, 'S/s')}, {self.fps:.2f} fps, "
+            status_text = (f"{format_freq(effective_sr, 'S/s')}, {downsample_text}{self.fps:.2f} fps, "
                            f"{s.nevents} events, {s.lastrate:.2f} Hz, "
                            f"{(s.lastrate * s.lastsize / 1e6):.2f} MB/s")
 
