@@ -619,8 +619,8 @@ class MainWindow(TemplateBaseClass):
 
         elif twochannel_mode:
             # Two-channel mode: sample rate is halved (1.6 GHz per channel instead of 3.2 GHz)
-            # Determine which channel is active (display as 1-based for user)
-            active_channel_display = self.state.activexychannel + 1
+            # Determine which channel is active
+            active_channel_display = self.state.activexychannel
             reply = QMessageBox.question(self, "FIR Calibration - Two-Channel Mode",
                                   f"Two-channel mode detected!\n\n"
                                   f"Sample rate is 1.6 GHz per channel (half of normal 3.2 GHz).\n\n"
@@ -663,17 +663,18 @@ class MainWindow(TemplateBaseClass):
         old_dodrawing = self.state.dodrawing
         self.state.dodrawing = False
 
-        # Helper function to capture waveforms from a specific channel
+        # Helper function to capture waveforms from a specific channel, called in single-channel (non-oversampling) and two-channel modes
         def capture_board_waveforms(board_idx, num_averages, channel_idx=None):
-            captured = []
+
             # Default to channel 0 of the board if not specified
             if channel_idx is None:
                 channel_idx = board_idx * self.state.num_chan_per_board
 
+            captured = []
             for i in range(num_averages):
 
                 # Print progress at 10% intervals
-                if i % 100 == 0: print(f"Capturing waveforms: {i}/{num_averages}")
+                if i % 100 == 0: print(f"Capturing waveforms: {i}/{num_averages} from channel {channel_idx}")
 
                 # Get event data
                 raw_data_map, rx_len = self.controller.get_event()
