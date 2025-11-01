@@ -3020,7 +3020,8 @@ class MainWindow(TemplateBaseClass):
             # Ensure board N+1 is in single-channel mode
             if s.dotwochannel[board + 1]:
                 s.dotwochannel[board + 1] = False
-                self.controller.set_twochannel(board + 1, False)
+                setupboard(self.controller.usbs[board + 1], s.dopattern, False, s.dooverrange, s.basevoltage == 200)
+                self.controller.tell_downsample(self.controller.usbs[board + 1], s.downsample, board + 1)
                 print(f"Auto-configured board {board+1} to single-channel mode for oversampling")
 
             # Ensure board N+1 is on external trigger (this was already done, but moved here for clarity)
