@@ -3043,22 +3043,14 @@ class MainWindow(TemplateBaseClass):
         s.dooversample[board + 1] = bool(checked)
         s.skip_next_event = True  # Skip next event after oversampling change
 
-        # Reset persistence settings for both boards in the oversampling pair (ch0 only)
+        # Clear persistence data for both boards in the oversampling pair (ch0 only)
+        # but don't change persistence settings
         ch0_board1 = board * s.num_chan_per_board
         ch0_board2 = (board + 1) * s.num_chan_per_board
 
         for ch_idx in [ch0_board1, ch0_board2]:
-            s.persist_time[ch_idx] = 0
-            s.persist_lines_enabled[ch_idx] = True
-            s.persist_avg_enabled[ch_idx] = True
-            # Clear any existing persistence data
+            # Clear any existing persistence data (but don't change settings)
             self.plot_manager.clear_persist(ch_idx)
-            # Update visibility (might have been hidden if persist avg was on and lines were off)
-            self.update_channel_visibility(ch_idx)
-
-        # If we're resetting the active channel, update UI to reflect defaults
-        if s.activexychannel in [ch0_board1, ch0_board2]:
-            self.sync_persistence_ui()
 
         self.controller.set_oversampling(board, bool(checked))
         if bool(checked):
