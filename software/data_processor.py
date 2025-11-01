@@ -453,6 +453,8 @@ class DataProcessor:
         if needs_freq:
             sampling_rate = (state.samplerate * 1e9) / state.downsamplefactor
             if state.dotwochannel[board_index]: sampling_rate /= 2
+            # Account for interleaved mode - doubles the sample rate
+            if state.dointerleaved[board_index]: sampling_rate *= 2
             # Account for resampling - if resampling is applied, it increases sample density and effective sampling rate
             if state.doresamp[channel_index] > 1: sampling_rate *= state.doresamp[channel_index]
             found_freq = find_fundamental_frequency_scipy(y_data, sampling_rate)
