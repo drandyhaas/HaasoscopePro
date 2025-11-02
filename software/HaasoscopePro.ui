@@ -1776,6 +1776,21 @@ Outlined if triggering on this channel</string>
           <string>400 MHz</string>
          </property>
         </item>
+        <item>
+         <property name="text">
+          <string>700 MHz</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>1400 MHz</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>2500 MHz</string>
+         </property>
+        </item>
        </widget>
        <widget class="QLabel" name="label_24">
         <property name="geometry">
