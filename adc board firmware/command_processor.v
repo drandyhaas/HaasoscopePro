@@ -68,8 +68,8 @@ module command_processor (
    output reg send_color,
    
    // outputs to triggerer
-   output reg signed [11:0]  lowerthresh,
-   output reg signed [11:0]  upperthresh,
+   output reg signed [23:0]  lowerthresh,  // [11:0] = threshold, [23:12] = threshold2
+   output reg signed [23:0]  upperthresh,  // [11:0] = threshold, [23:12] = threshold2
    output reg [15:0] lengthtotake,
    output reg [15:0] prelengthtotake,
    output reg        triggerlive,
@@ -106,7 +106,7 @@ module command_processor (
 
 );
 
-integer version = 31; // firmware version
+integer version = 32; // firmware version
 
 // these first 10 debugout's go to LEDs on the board
 assign debugout[0] = clkswitch;
@@ -414,8 +414,28 @@ always @ (posedge clk) begin
       end
 
       8 : begin // trigger settings
-         lowerthresh <= ((rx_data[1] - rx_data[2] - 12'd128)<<4) + 12'd8;
-         upperthresh <= ((rx_data[1] + rx_data[2] - 12'd128)<<4) + 12'd8;
+         // Pack threshold and threshold2 into 24-bit variables [11:0]=thresh, [23:12]=thresh2
+         if (rx_data[7] >= 8'd128) begin
+            // No runt rejection: set thresh2 to min/max
+            lowerthresh <= {
+                -12'd2048, // lowerthresh2
+                ((rx_data[1] - rx_data[2] - 12'd128)<<4) + 12'd8 // lowerthresh
+                };
+            upperthresh <= {
+                12'd2047,  // upperthresh2
+                ((rx_data[1] + rx_data[2] - 12'd128)<<4) + 12'd8 // upperthresh
+                };
+         end else begin
+            // Runt rejection enabled
+            lowerthresh <= {
+                ((rx_data[1] - rx_data[2] - rx_data[7] - 12'd128)<<4) + 12'd8,  // lowerthresh2
+                ((rx_data[1] - rx_data[2] - 12'd128)<<4) + 12'd8 // lowerthresh
+                };
+            upperthresh <= {
+                ((rx_data[1] + rx_data[2] + rx_data[7] - 12'd128)<<4) + 12'd8, // upperthresh2
+                ((rx_data[1] + rx_data[2] - 12'd128)<<4) + 12'd8 // upperthresh
+                };
+         end
          ram_preoffset <= (rx_data[3][1:0]<<8) + rx_data[4];
          triggerToT <= rx_data[5];
          triggerchan <= rx_data[6][0];

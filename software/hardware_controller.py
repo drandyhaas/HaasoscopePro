@@ -216,9 +216,12 @@ class HardwareController:
             factor = 2 if state.dotwochannel[board_idx] else 1
             triggerpos += int(8 * state.lvdstrigdelay[board_idx] / 40 / state.downsamplefactor / factor)
 
+        delta2 = state.triggerdelta2[board_idx]
+        if state.triggerdelta[board_idx] + delta2 >=128: delta2=128 # disable runt trigger if the runt threshold would be too high
         self.usbs[board_idx].send(bytes([8, min(255,state.triggerlevel+1), state.triggerdelta[board_idx],
                                          int(triggerpos / 256), triggerpos % 256,
-                                         state.triggertimethresh[board_idx], state.triggerchan[board_idx], 100]))
+                                         state.triggertimethresh[board_idx], state.triggerchan[board_idx],
+                                         delta2]))
         self.usbs[board_idx].recv(4)
         prelengthtotake = state.triggerpos + 5
         self.usbs[board_idx].send(bytes([2, 7] + inttobytes(prelengthtotake) + [0, 0]))

@@ -45,6 +45,7 @@ def save_setup(main_window):
         # Trigger settings (per-board arrays)
         'triggerlevel': s.triggerlevel,
         'triggerdelta': s.triggerdelta,
+        'triggerdelta2': s.triggerdelta2,
         'triggerpos': s.triggerpos,
         'triggerchan': s.triggerchan,
         'fallingedge': s.fallingedge,
@@ -308,6 +309,9 @@ def load_setup(main_window):
     if 'triggerdelta' in setup:
         s.triggerdelta = setup['triggerdelta']
         main_window.ui.thresholdDelta.setValue(s.triggerdelta[s.activeboard])
+    if 'triggerdelta2' in setup:
+        s.triggerdelta2 = setup['triggerdelta2']
+        main_window.ui.thresholdDelta_2.setValue(s.triggerdelta2[s.activeboard])
     if 'triggerpos' in setup:
         s.triggerpos = setup['triggerpos']
         # Calculate slider value from triggerpos

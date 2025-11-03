@@ -69,15 +69,15 @@ https://fpgasoftware.intel.com/eula.
 	(port
 		(pt 0 128)
 		(input)
-		(text "lowerthresh[11..0]" (rect 0 0 67 12)(font "Arial" ))
-		(text "lowerthresh[11..0]" (rect 21 123 88 135)(font "Arial" ))
+		(text "lowerthresh[23..0]" (rect 0 0 69 12)(font "Arial" ))
+		(text "lowerthresh[23..0]" (rect 21 123 90 135)(font "Arial" ))
 		(line (pt 0 128)(pt 16 128)(line_width 3))
 	)
 	(port
 		(pt 0 144)
 		(input)
-		(text "upperthresh[11..0]" (rect 0 0 69 12)(font "Arial" ))
-		(text "upperthresh[11..0]" (rect 21 139 90 151)(font "Arial" ))
+		(text "upperthresh[23..0]" (rect 0 0 71 12)(font "Arial" ))
+		(text "upperthresh[23..0]" (rect 21 139 92 151)(font "Arial" ))
 		(line (pt 0 144)(pt 16 144)(line_width 3))
 	)
 	(port

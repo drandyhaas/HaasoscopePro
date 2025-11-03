@@ -284,6 +284,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.thresholdPos.valueChanged.connect(self.trigger_pos_changed)
         self.ui.thresholdPosLabel.clicked.connect(self.trigger_pos_reset)
         self.ui.thresholdDelta.valueChanged.connect(self.trigger_delta_changed)
+        self.ui.thresholdDelta_2.valueChanged.connect(self.trigger_delta2_changed)
         self.ui.risingfalling_comboBox.currentIndexChanged.connect(self.rising_falling_changed)
         self.ui.totBox.valueChanged.connect(self.tot_changed)
         self.ui.trigger_delay_box.valueChanged.connect(self.trigger_delay_changed)
@@ -1841,7 +1842,13 @@ class MainWindow(TemplateBaseClass):
         self.ui.trigger_delay_box.setValue(s.trigger_delay[s.activeboard])
         self.ui.trigger_holdoff_box.setValue(s.trigger_holdoff[s.activeboard])
         self.ui.thresholdDelta.setValue(s.triggerdelta[s.activeboard])
+        self.ui.thresholdDelta_2.setValue(s.triggerdelta2[s.activeboard])
         self.ui.totBox.setValue(s.triggertimethresh[s.activeboard])
+
+        # Enable/disable runt pulse threshold based on minimum firmware version of all boards
+        min_firmware_version = min(s.firmwareversion) if s.firmwareversion else -1
+        firmware_supports_runt = min_firmware_version >= 32
+        self.ui.thresholdDelta_2.setEnabled(firmware_supports_runt)
 
         # Update the consolidated trigger combo box
         # Index mapping: 0=Rising Ch0, 1=Falling Ch0, 2=Rising Ch1, 3=Falling Ch1, 4=Other boards, 5=External SMA
@@ -3221,6 +3228,12 @@ class MainWindow(TemplateBaseClass):
         """Handle changes to trigger delta spinbox."""
         board = self.state.activeboard
         self.state.triggerdelta[board] = value
+        self.controller.send_trigger_info(board)
+
+    def trigger_delta2_changed(self, value):
+        """Handle changes to trigger delta 2 spinbox (runt pulse threshold)."""
+        board = self.state.activeboard
+        self.state.triggerdelta2[board] = value
         self.controller.send_trigger_info(board)
 
     def rising_falling_changed(self, index):
