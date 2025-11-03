@@ -191,8 +191,36 @@ The threshold trigger uses a **two-step detection** algorithm to prevent false t
 
 This hysteresis prevents noise from causing false triggers.
 
+### Runt Pulse Trigger
+
+The firmware implements a **runt pulse rejection** feature that prevents triggering on pulses that exceed a second, higher threshold. This is useful for rejecting overshoot or selecting signals of a specific amplitude range.
+
+**Operation:**
+- When `triggerdelta + triggerdelta2 < 128`, runt rejection is active
+- The trigger system uses two thresholds:
+  - **threshold1** = triggerlevel + triggerdelta (first threshold)
+  - **threshold2** = triggerlevel + triggerdelta + triggerdelta2 (runt threshold)
+- During State 2 (Step 2 of threshold detection), the system checks all 40 samples
+- If any sample exceeds threshold2, the trigger is rejected and returns to State 1
+- This ensures the trigger only fires when the signal crosses threshold1 but does NOT exceed threshold2
+
+**Threshold Encoding:**
+- Both thresholds are packed into 24-bit registers:
+  - `lowerthresh[11:0]` = threshold1, `lowerthresh[23:12]` = threshold2
+  - `upperthresh[11:0]` = threshold1, `upperthresh[23:12]` = threshold2
+- When `triggerdelta + triggerdelta2 >= 128`, runt rejection is disabled
+  - The software sends triggerdelta2 = 128 to the firmware
+  - The firmware sets threshold2 to min/max values (-2048/+2047) to never trigger rejection
+
+**Use Cases:**
+- Reject pulses with overshoot or ringing
+- Select pulses of specific amplitude ranges
+- Discriminate between different signal types by amplitude
+
 ### Trigger Configuration
 - **Thresholds:** Set via command 8, 12-bit signed values
+- **triggerdelta:** Hysteresis threshold offset (upper/lower from triggerlevel)
+- **triggerdelta2:** Runt rejection threshold offset (adds to triggerdelta)
 - **Pre-trigger:** `prelengthtotake` samples captured before trigger
 - **Post-trigger:** `lengthtotake` total samples after trigger fires
 - **ToT:** Minimum time signal must remain outside thresholds
