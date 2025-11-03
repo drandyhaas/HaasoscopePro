@@ -216,6 +216,13 @@ class MainWindow(TemplateBaseClass):
         self.update_checker.update_available.connect(self._show_update_notification)
         self.update_checker.check_for_updates()
 
+        # Load default FIR calibration file at startup (if it exists)
+        default_fir_path = os.path.join(os.path.dirname(__file__), "haasoscope.fir")
+        if os.path.exists(default_fir_path):
+            # Load without enabling corrections and without showing dialogs
+            load_fir_filter(self, self.state, self.ui, filename=default_fir_path,
+                          enable_corrections=False, show_dialogs=False)
+
     def _sync_initial_ui_state(self):
         """A one-time function to sync the UI's visual state after the window has loaded."""
         # This function is called just after the main event loop starts.
@@ -481,13 +488,6 @@ class MainWindow(TemplateBaseClass):
 
         # Also update visibility for the active channel
         self.update_channel_visibility(s.activexychannel)
-
-        # Load default FIR calibration file at startup (if it exists)
-        default_fir_path = os.path.join(os.path.dirname(__file__), "haasoscope.fir")
-        if os.path.exists(default_fir_path):
-            # Load without enabling corrections and without showing dialogs
-            load_fir_filter(self, self.state, self.ui, filename=default_fir_path,
-                          enable_corrections=False, show_dialogs=False)
 
     def open_socket(self):
         print("Starting SCPI socket thread...")
