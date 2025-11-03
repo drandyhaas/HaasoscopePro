@@ -218,7 +218,7 @@ class MainWindow(TemplateBaseClass):
 
         # Load default FIR calibration file at startup (if it exists)
         default_fir_path = os.path.join(os.path.dirname(__file__), "haasoscope.fir")
-        if os.path.exists(default_fir_path):
+        if os.path.exists(default_fir_path) and self.state.num_board>0:
             # Load without enabling corrections and without showing dialogs
             load_fir_filter(self, self.state, self.ui, filename=default_fir_path,
                           enable_corrections=False, show_dialogs=False)
