@@ -38,7 +38,7 @@ class ZoomWindow(QtWidgets.QWidget):
         self.plot_widget.setBackground(QColor('black'))
         self.plot.getAxis("left").setTickSpacing(1, .1)
         self.plot.setMenuEnabled(False)
-        self.plot.showGrid(x=True, y=True, alpha=0.8)
+        self.plot.showGrid(x=True, y=True, alpha=0.5)
 
         # Set font and styling to match main plot
         font = QtWidgets.QApplication.font()
@@ -82,13 +82,23 @@ class ZoomWindow(QtWidgets.QWidget):
         # Create view-only trigger lines (non-movable)
         self.trigger_lines = {}
         dashedpen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
+        runtpen = pg.mkPen(color=(255, 165, 0), width=1.0, style=QtCore.Qt.DashLine)  # Orange for runt threshold
         self.trigger_lines['vline'] = pg.InfiniteLine(pos=0.0, angle=90, movable=False, pen=dashedpen)
         self.trigger_lines['hline'] = pg.InfiniteLine(pos=0.0, angle=0, movable=False, pen=dashedpen)
+        self.trigger_lines['hline_delta'] = pg.InfiniteLine(pos=0.0, angle=0, movable=False, pen=dashedpen)  # First threshold (hline+delta)
+        self.trigger_lines['hline_runt'] = pg.InfiniteLine(pos=0.0, angle=0, movable=False, pen=runtpen)  # Runt threshold
+        self.trigger_lines['vline_tot'] = pg.InfiniteLine(pos=0.0, angle=90, movable=False, pen=runtpen)  # TOT line
         self.plot.addItem(self.trigger_lines['vline'])
         self.plot.addItem(self.trigger_lines['hline'])
+        self.plot.addItem(self.trigger_lines['hline_delta'])
+        self.plot.addItem(self.trigger_lines['hline_runt'])
+        self.plot.addItem(self.trigger_lines['vline_tot'])
         # Initially hidden - will be shown when main plot shows them
         self.trigger_lines['vline'].setVisible(False)
         self.trigger_lines['hline'].setVisible(False)
+        self.trigger_lines['hline_delta'].setVisible(False)
+        self.trigger_lines['hline_runt'].setVisible(False)
+        self.trigger_lines['vline_tot'].setVisible(False)
 
         # Create view-only cursor lines (non-movable)
         self.cursor_lines = {}
@@ -507,7 +517,7 @@ class ZoomWindow(QtWidgets.QWidget):
         if not main_plot_manager:
             return
 
-        # Update trigger lines (vline, hline)
+        # Update trigger lines (vline, hline, hline_delta, hline_runt, vline_tot)
         if hasattr(main_plot_manager, 'otherlines'):
             if 'vline' in main_plot_manager.otherlines:
                 vline = main_plot_manager.otherlines['vline']
@@ -518,6 +528,21 @@ class ZoomWindow(QtWidgets.QWidget):
                 hline = main_plot_manager.otherlines['hline']
                 self.trigger_lines['hline'].setPos(hline.value())
                 self.trigger_lines['hline'].setVisible(hline.isVisible())
+
+            if 'hline_delta' in main_plot_manager.otherlines:
+                hline_delta = main_plot_manager.otherlines['hline_delta']
+                self.trigger_lines['hline_delta'].setPos(hline_delta.value())
+                self.trigger_lines['hline_delta'].setVisible(hline_delta.isVisible())
+
+            if 'hline_runt' in main_plot_manager.otherlines:
+                hline_runt = main_plot_manager.otherlines['hline_runt']
+                self.trigger_lines['hline_runt'].setPos(hline_runt.value())
+                self.trigger_lines['hline_runt'].setVisible(hline_runt.isVisible())
+
+            if 'vline_tot' in main_plot_manager.otherlines:
+                vline_tot = main_plot_manager.otherlines['vline_tot']
+                self.trigger_lines['vline_tot'].setPos(vline_tot.value())
+                self.trigger_lines['vline_tot'].setVisible(vline_tot.isVisible())
 
         # Update cursor lines (t1, t2, v1, v2)
         if hasattr(main_plot_manager, 'cursor_manager') and main_plot_manager.cursor_manager:

@@ -379,6 +379,8 @@ class MainWindow(TemplateBaseClass):
         # Plot manager signals
         self.plot_manager.vline_dragged_signal.connect(self.on_vline_dragged)
         self.plot_manager.hline_dragged_signal.connect(self.on_hline_dragged)
+        self.plot_manager.hline_runt_dragged_signal.connect(self.on_hline_runt_dragged)
+        self.plot_manager.vline_tot_dragged_signal.connect(self.on_vline_tot_dragged)
         self.plot_manager.curve_clicked_signal.connect(self.on_curve_clicked)
         self.plot_manager.math_curve_clicked_signal.connect(self.on_math_curve_clicked)
 
@@ -2050,6 +2052,58 @@ class MainWindow(TemplateBaseClass):
         t = value / (self.state.yscale * 256) + 127
         self.ui.threshold.setValue(int(t))
 
+    def on_hline_runt_dragged(self, value):
+        """Handle dragging of the runt threshold line."""
+        state = self.state
+        active_board = state.activeboard
+        hline_pos = (state.triggerlevel - 127) * state.yscale * 256
+
+        # Calculate delta2 from the difference between runt line and hline
+        runt_pos = value
+        delta = state.triggerdelta[active_board]
+
+        if state.fallingedge[active_board]:
+            # For falling edge, runt line is below hline
+            delta2 = int((hline_pos - runt_pos) / (state.yscale * 256)) - delta
+        else:
+            # For rising edge, runt line is above hline
+            delta2 = int((runt_pos - hline_pos) / (state.yscale * 256)) - delta
+
+        # Block signals to prevent feedback loop, then update state and hardware directly
+        self.ui.thresholdDelta_2.blockSignals(True)
+        self.ui.thresholdDelta_2.setValue(delta2)
+        self.ui.thresholdDelta_2.blockSignals(False)
+
+        # Update state and send to hardware
+        if 0<=delta2<=128:
+            state.triggerdelta2[active_board] = delta2
+            self.controller.send_trigger_info(active_board)
+
+    def on_vline_tot_dragged(self, value):
+        """Handle dragging of the TOT (time over threshold) line."""
+        state = self.state
+        active_board = state.activeboard
+
+        # Calculate vline position
+        vline_pos = 4 * 10 * (state.triggerpos + 1.0) * (state.downsamplefactor / state.nsunits / state.samplerate)
+
+        # Calculate TOT from the difference between vline_tot and vline
+        # tot is in units of samples
+        tot_pos = value
+        tot_time_diff = tot_pos - vline_pos
+
+        # Convert time difference back to samples
+        tot_samples = int(tot_time_diff / (4 * 10 * (state.downsamplefactor / state.nsunits / state.samplerate)))
+
+        # Block signals to prevent feedback loop, then update state and hardware directly
+        self.ui.totBox.blockSignals(True)
+        self.ui.totBox.setValue(tot_samples)
+        self.ui.totBox.blockSignals(False)
+
+        # Update state and send to hardware
+        state.triggertimethresh[active_board] = tot_samples
+        self.controller.send_trigger_info(active_board)
+
     def resamp_changed(self, value):
         """Handle resamp value changes from the UI."""
         s = self.state
@@ -3229,12 +3283,16 @@ class MainWindow(TemplateBaseClass):
         board = self.state.activeboard
         self.state.triggerdelta[board] = value
         self.controller.send_trigger_info(board)
+        # Update the visual delta threshold line
+        self.plot_manager.draw_trigger_lines()
 
     def trigger_delta2_changed(self, value):
         """Handle changes to trigger delta 2 spinbox (runt pulse threshold)."""
         board = self.state.activeboard
         self.state.triggerdelta2[board] = value
         self.controller.send_trigger_info(board)
+        # Update the visual runt threshold line
+        self.plot_manager.draw_trigger_lines()
 
     def rising_falling_changed(self, index):
         s = self.state
@@ -3320,6 +3378,8 @@ class MainWindow(TemplateBaseClass):
         self.state.triggertimethresh[board] = value
         self.controller.send_trigger_info(board)
         self.update_trigger_spinbox_tooltip(self.ui.totBox, "Time over threshold required to trigger")
+        # Update the visual TOT line
+        self.plot_manager.draw_trigger_lines()
 
     def trigger_delay_changed(self, value):
         """Handle changes to trigger delay spinbox."""
