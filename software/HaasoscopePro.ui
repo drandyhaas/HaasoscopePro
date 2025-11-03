@@ -1776,6 +1776,21 @@ Outlined if triggering on this channel</string>
           <string>400 MHz</string>
          </property>
         </item>
+        <item>
+         <property name="text">
+          <string>700 MHz</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>1400 MHz</string>
+         </property>
+        </item>
+        <item>
+         <property name="text">
+          <string>2500 MHz</string>
+         </property>
+        </item>
        </widget>
        <widget class="QLabel" name="label_24">
         <property name="geometry">
@@ -2999,7 +3014,7 @@ Outlined if triggering on this channel</string>
   </action>
   <action name="actionMeasure_10_MHz_square_FIR">
    <property name="text">
-    <string>Measure 10 MHz square FIR</string>
+    <string>Measure FIR corrections</string>
    </property>
   </action>
   <action name="actionApply_FIR_corrections">
@@ -3015,12 +3030,12 @@ Outlined if triggering on this channel</string>
   </action>
   <action name="actionSave_FIR_filter">
    <property name="text">
-    <string>Save FIR filter</string>
+    <string>Save FIR filters</string>
    </property>
   </action>
   <action name="actionLoad_FIR_filter">
    <property name="text">
-    <string>Load FIR filter</string>
+    <string>Load FIR filters</string>
    </property>
   </action>
   <action name="actionPolynomial_filtering">

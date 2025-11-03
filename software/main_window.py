@@ -1,6 +1,6 @@
 # main_window.py
 
-import time, math, sys
+import time, math, sys, os
 from datetime import datetime
 from collections import deque
 import numpy as np
@@ -215,6 +215,13 @@ class MainWindow(TemplateBaseClass):
         self.update_checker = UpdateChecker(self.state.softwareversion)
         self.update_checker.update_available.connect(self._show_update_notification)
         self.update_checker.check_for_updates()
+
+        # Load default FIR calibration file at startup (if it exists)
+        default_fir_path = os.path.join(os.path.dirname(__file__), "haasoscope.fir")
+        if os.path.exists(default_fir_path) and self.state.num_board>0:
+            # Load without enabling corrections and without showing dialogs
+            load_fir_filter(self, self.state, self.ui, filename=default_fir_path,
+                          enable_corrections=False, show_dialogs=False)
 
     def _sync_initial_ui_state(self):
         """A one-time function to sync the UI's visual state after the window has loaded."""
@@ -1195,7 +1202,10 @@ class MainWindow(TemplateBaseClass):
                         if s.polyphase_upsampling_enabled:
                             # Use polyphase to reduce ringing
                             y_resampled = resample_poly(y_data, doresamp_factor, 1)
-                            x_resampled = np.linspace(x_data[0], x_data[-1], len(y_resampled))
+                            # Reconstruct time axis with proper spacing to avoid time shift
+                            dt_orig = (x_data[-1] - x_data[0]) / (len(x_data) - 1)
+                            dt_new = dt_orig / doresamp_factor
+                            x_resampled = x_data[0] + np.arange(len(y_resampled)) * dt_new
                         else:
                             # Use FFT-based resampling
                             y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_factor, t=x_data)
@@ -1505,7 +1515,10 @@ class MainWindow(TemplateBaseClass):
                     if s.polyphase_upsampling_enabled:
                         # Use polyphase resampling to reduce ringing artifacts
                         y_resampled = resample_poly(y_data, doresamp_to_use, 1)
-                        x_resampled = np.linspace(x_data[0], x_data[-1], len(y_resampled))
+                        # Reconstruct time axis with proper spacing to avoid time shift
+                        dt_orig = (x_data[-1] - x_data[0]) / (len(x_data) - 1)
+                        dt_new = dt_orig / doresamp_to_use
+                        x_resampled = x_data[0] + np.arange(len(y_resampled)) * dt_new
                     else:
                         # Use FFT-based resampling
                         y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)

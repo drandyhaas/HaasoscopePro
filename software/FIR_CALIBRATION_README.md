@@ -17,6 +17,7 @@ This feature corrects for the non-flat frequency response of the Haasoscope Pro 
 - **Robust to imperfect signals**: Measures actual duty cycle, frequency, and removes DC offset
 - **SNR-based harmonic selection**: Uses 100x noise floor threshold for reliable measurements
 - **Over-correction prevention**: Limits to ±6 dB magnitude and ±25° phase corrections
+- **Hardware LPF aware**: Respects hardware anti-alias filter cutoffs (700/1400/2500 MHz depending on mode)
 
 ## Pipeline Integration
 
@@ -173,6 +174,24 @@ The FIR calibration system automatically detects the current operating mode and 
 - **Important**: If you change base sample rates, you should re-run calibration
 - Can be used at different downsample settings (with reduced accuracy)
 
+### Hardware LPF Cutoff Limits
+The hardware has different anti-alias low-pass filters in each mode. The calibration automatically detects the mode and only corrects frequencies below the hardware cutoff:
+
+| Mode | Sample Rate | Hardware LPF Cutoff | Max Correction Frequency |
+|------|-------------|---------------------|--------------------------|
+| Two-channel | 1.6 GHz | 700 MHz | 700 MHz |
+| Normal | 3.2 GHz | 1400 MHz | 1400 MHz |
+| Oversampling/Interleaved | 3.2/6.4 GHz | 2500 MHz | 2500 MHz |
+
+**Why this matters**:
+- Frequencies above the hardware cutoff are already attenuated by the anti-alias filter
+- Attempting to correct them would just amplify noise in those bands
+- The calibration prints the detected mode and max correction frequency during operation
+- For a 10 MHz square wave:
+  - Two-channel: Uses harmonics up to 700 MHz (70th harmonic)
+  - Normal: Uses harmonics up to 1400 MHz (140th harmonic)
+  - Oversampling/Interleaved: Uses harmonics up to 2500 MHz (250th harmonic)
+
 ### Depth (Sample Count) and Windowing
 - **Automatic depth optimization during calibration**: Software temporarily sets depth to 640 samples
   - Chosen so 10 MHz harmonics land exactly on FFT bin centers (avoids spectral leakage)
@@ -212,7 +231,13 @@ The FIR calibration system automatically detects the current operating mode and 
   - Applies median filtering (window size 10) to remove outlier corrections
   - Limits magnitude correction to ±6 dB and phase correction to ±25 degrees
   - Typical result: 100-250 valid harmonics measured (depending on signal quality)
-- **Hardware LPF cutoff**: No longer enforced - harmonics are selected purely by SNR
+- **Hardware LPF cutoff limits**:
+  - Calibration respects hardware anti-alias filter cutoffs for each mode
+  - **Two-channel mode (1.6 GHz)**: Corrects up to **700 MHz** (hardware has 700 MHz LPF)
+  - **Normal mode (3.2 GHz)**: Corrects up to **1400 MHz** (hardware has 1400 MHz LPF)
+  - **Oversampling/Interleaved mode (6.4 GHz)**: Corrects up to **2500 MHz** (hardware has 2500 MHz LPF)
+  - Frequencies above the hardware cutoff are already attenuated by the anti-alias filter
+  - No point correcting frequencies that the hardware has already filtered out
 - The FIR filter interpolates smoothly between measured harmonics
 - This provides correction across the usable hardware bandwidth
 
