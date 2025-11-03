@@ -567,7 +567,7 @@
           </font>
          </property>
          <property name="toolTip">
-          <string>Amount over threshold to reject trigger (x16 ADC values)</string>
+          <string>Amount over threshold (plus delta) to reject trigger (x16 ADC values)</string>
          </property>
          <property name="frame">
           <bool>false</bool>
