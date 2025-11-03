@@ -196,6 +196,7 @@ class PlotManager(pg.QtCore.QObject):
         self.otherlines['vline'].sigPositionChangeFinished.connect(self.on_vline_drag_finished)
         self.otherlines['hline'].sigPositionChanged.connect(self.on_hline_dragged)
         self.otherlines['hline_runt'].sigPositionChanged.connect(self.on_hline_runt_dragged)
+        self.otherlines['hline_runt'].sigPositionChangeFinished.connect(self.on_hline_runt_drag_finished)
         self.otherlines['vline_tot'].sigPositionChanged.connect(self.on_vline_tot_dragged)
         self.otherlines['vline_tot'].sigPositionChangeFinished.connect(self.on_vline_tot_drag_finished)
 
@@ -1321,6 +1322,12 @@ class PlotManager(pg.QtCore.QObject):
     def on_hline_runt_dragged(self, line):
         """Handle dragging of the runt threshold line - emit signal to MainWindow."""
         self.hline_runt_dragged_signal.emit(line.value())
+
+    def on_hline_runt_drag_finished(self, line):
+        """Called when runt line dragging is finished - snap to valid position."""
+        # After the drag is done and delta2 is updated, redraw the trigger lines
+        # to snap the runt line to the exact position based on the clamped delta2 value
+        self.draw_trigger_lines()
 
     def on_vline_tot_dragged(self, line):
         """Handle dragging of the TOT (time over threshold) line - emit signal to MainWindow."""
