@@ -2069,15 +2069,18 @@ class MainWindow(TemplateBaseClass):
             # For rising edge, runt line is above hline
             delta2 = int((runt_pos - hline_pos) / (state.yscale * 256)) - delta
 
+        # Don't let runt line go below (above) the first threshold for rising (falling) trigger
+        # This means delta2 must be >= 0
+        delta2 = max(0, delta2)
+
         # Block signals to prevent feedback loop, then update state and hardware directly
         self.ui.thresholdDelta_2.blockSignals(True)
         self.ui.thresholdDelta_2.setValue(delta2)
         self.ui.thresholdDelta_2.blockSignals(False)
 
         # Update state and send to hardware
-        if 0<=delta2<=128:
-            state.triggerdelta2[active_board] = delta2
-            self.controller.send_trigger_info(active_board)
+        state.triggerdelta2[active_board] = delta2
+        self.controller.send_trigger_info(active_board)
 
     def on_vline_tot_dragged(self, value):
         """Handle dragging of the TOT (time over threshold) line."""
@@ -3325,6 +3328,9 @@ class MainWindow(TemplateBaseClass):
 
             # Send trigger info to hardware
             self.controller.send_trigger_info(active_board)
+
+            # Update trigger lines (including runt line which depends on rising/falling edge)
+            self.plot_manager.draw_trigger_lines()
 
             # Swap Risetime/Falltime measurements if edge direction changed
             if self.measurements:
