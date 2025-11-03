@@ -1202,7 +1202,10 @@ class MainWindow(TemplateBaseClass):
                         if s.polyphase_upsampling_enabled:
                             # Use polyphase to reduce ringing
                             y_resampled = resample_poly(y_data, doresamp_factor, 1)
-                            x_resampled = np.linspace(x_data[0], x_data[-1], len(y_resampled))
+                            # Reconstruct time axis with proper spacing to avoid time shift
+                            dt_orig = (x_data[-1] - x_data[0]) / (len(x_data) - 1)
+                            dt_new = dt_orig / doresamp_factor
+                            x_resampled = x_data[0] + np.arange(len(y_resampled)) * dt_new
                         else:
                             # Use FFT-based resampling
                             y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_factor, t=x_data)
@@ -1512,7 +1515,10 @@ class MainWindow(TemplateBaseClass):
                     if s.polyphase_upsampling_enabled:
                         # Use polyphase resampling to reduce ringing artifacts
                         y_resampled = resample_poly(y_data, doresamp_to_use, 1)
-                        x_resampled = np.linspace(x_data[0], x_data[-1], len(y_resampled))
+                        # Reconstruct time axis with proper spacing to avoid time shift
+                        dt_orig = (x_data[-1] - x_data[0]) / (len(x_data) - 1)
+                        dt_new = dt_orig / doresamp_to_use
+                        x_resampled = x_data[0] + np.arange(len(y_resampled)) * dt_new
                     else:
                         # Use FFT-based resampling
                         y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)

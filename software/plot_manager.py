@@ -346,8 +346,11 @@ class PlotManager(pg.QtCore.QObject):
                 if s.polyphase_upsampling_enabled:
                     # Use polyphase resampling to reduce ringing artifacts on sharp edges
                     ydatanew = resample_poly(ydatanew, s.doresamp[li], 1)
-                    # Reconstruct time axis with finer spacing
-                    xdatanew = np.linspace(xdatanew[0], xdatanew[-1], len(ydatanew))
+                    # Reconstruct time axis with proper spacing to avoid time shift
+                    # Calculate the original sample spacing, then divide by upsampling factor
+                    dt_orig = (xdatanew[-1] - xdatanew[0]) / (len(xdatanew) - 1)
+                    dt_new = dt_orig / s.doresamp[li]
+                    xdatanew = xdatanew[0] + np.arange(len(ydatanew)) * dt_new
                 else:
                     # Use FFT-based resampling (faster, but with ringing on sharp edges)
                     ydatanew, xdatanew = resample(ydatanew, len(xdatanew) * s.doresamp[li], t=xdatanew)
@@ -759,7 +762,10 @@ class PlotManager(pg.QtCore.QObject):
                 if self.state.polyphase_upsampling_enabled:
                     # Use polyphase resampling to reduce ringing artifacts
                     y_resampled = resample_poly(y_data, doresamp_to_use, 1)
-                    x_resampled = np.linspace(x_data[0], x_data[-1], len(y_resampled))
+                    # Reconstruct time axis with proper spacing to avoid time shift
+                    dt_orig = (x_data[-1] - x_data[0]) / (len(x_data) - 1)
+                    dt_new = dt_orig / doresamp_to_use
+                    x_resampled = x_data[0] + np.arange(len(y_resampled)) * dt_new
                 else:
                     # Use FFT-based resampling
                     y_resampled, x_resampled = resample(y_data, len(x_data) * doresamp_to_use, t=x_data)
