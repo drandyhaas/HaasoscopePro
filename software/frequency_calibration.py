@@ -226,12 +226,30 @@ class FrequencyCalibration:
         nyquist_freq = sample_rate_hz / 2
         df = sample_rate_hz / len(measured)  # Bin spacing in Hz
 
-        # Find bins for ALL harmonics of measured fundamental frequency up to Nyquist
+        # Determine hardware LPF cutoff based on sample rate
+        # Two-channel mode (1.6 GHz): 700 MHz LPF
+        # Normal mode (3.2 GHz): 1400 MHz LPF
+        # Oversampling/Interleaved mode (6.4 GHz): 2500 MHz LPF
+        sample_rate_ghz = sample_rate_hz / 1e9
+        if sample_rate_ghz < 2.0:
+            hardware_lpf_cutoff = 700e6  # Two-channel mode
+            mode_name = "Two-channel"
+        elif sample_rate_ghz < 4.5:
+            hardware_lpf_cutoff = 1400e6  # Normal mode
+            mode_name = "Normal"
+        else:
+            hardware_lpf_cutoff = 2500e6  # Oversampling/Interleaved mode
+            mode_name = "Oversampling/Interleaved"
+
+        # Don't correct above hardware LPF cutoff
+        max_correction_freq = min(nyquist_freq, hardware_lpf_cutoff)
+
+        # Find bins for ALL harmonics of measured fundamental frequency up to hardware LPF cutoff
         harmonic_freqs = []
         harmonic_bins = []
         for n in range(1, 1000):  # Large upper limit
             freq = fundamental_freq * n  # All harmonics: f, 2f, 3f, 4f...
-            if freq > nyquist_freq:
+            if freq > max_correction_freq:
                 break
             bin_idx = int(round(freq / df))
             if bin_idx < len(freqs):
@@ -289,6 +307,9 @@ class FrequencyCalibration:
 
         # Diagnostic output
         print(f"Frequency response measurement:")
+        print(f"  - Mode: {mode_name} ({sample_rate_hz/1e9:.2f} GHz)")
+        print(f"  - Hardware LPF cutoff: {hardware_lpf_cutoff/1e6:.0f} MHz")
+        print(f"  - Max correction frequency: {max_correction_freq/1e6:.0f} MHz")
         print(f"  - Number of harmonic bins found: {len(harmonic_bins)}")
         print(f"  - Number of harmonic bins used (SNR > 10x): {num_bins_used} / {len(freqs)}")
         print(f"  - SNR threshold: {snr_threshold:.1f}x")
