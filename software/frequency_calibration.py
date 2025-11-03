@@ -781,7 +781,7 @@ def save_fir_filter(parent_window, state):
         return False
 
 
-def load_fir_filter(parent_window, state, ui):
+def load_fir_filter(parent_window, state, ui, filename=None, enable_corrections=True, show_dialogs=True):
     """
     Load FIR calibration from a file.
 
@@ -790,25 +790,33 @@ def load_fir_filter(parent_window, state, ui):
         state: ScopeState object to store loaded calibration
         ui: UI object for checkbox updates
 
+        filename: Optional filename to load (if None, shows file dialog)
+        enable_corrections: Whether to enable FIR corrections after loading (default: True)
+        show_dialogs: Whether to show dialog boxes (default: True)
+
     Returns:
         True if load successful, False otherwise
     """
-    # Open file dialog
-    options = QFileDialog.Options()
-    if sys.platform.startswith('linux'):
-        options |= QFileDialog.DontUseNativeDialog
-    filename, _ = QFileDialog.getOpenFileName(
-        parent_window, "Load FIR Filter", "", "FIR Filter Files (*.fir);;All Files (*)", options=options
-    )
-    if not filename:
-        return False
+    # Open file dialog if no filename provided
+    if filename is None:
+        options = QFileDialog.Options()
+        if sys.platform.startswith('linux'):
+            options |= QFileDialog.DontUseNativeDialog
+        filename, _ = QFileDialog.getOpenFileName(
+            parent_window, "Load FIR Filter", "", "FIR Filter Files (*.fir);;All Files (*)", options=options
+        )
+        if not filename:
+            return False
 
     # Load from file
     try:
         with open(filename, 'r') as f:
             fir_data = json.load(f)
     except Exception as e:
-        QMessageBox.critical(parent_window, "Load Failed", f"Failed to load FIR filter:\n{e}")
+        if show_dialogs:
+            QMessageBox.critical(parent_window, "Load Failed", f"Failed to load FIR filter:\n{e}")
+        else:
+            print(f"Warning: Failed to load FIR filter from {filename}: {e}")
         return False
 
     # Check which calibrations are present in the file
@@ -819,7 +827,10 @@ def load_fir_filter(parent_window, state, ui):
     has_twochannel_in_file = 'fir_coefficients_twochannel' in fir_data and fir_data['fir_coefficients_twochannel'] is not None
 
     if not has_normal_in_file and not has_oversample_in_file and not has_interleaved_in_file and not has_twochannel_in_file:
-        QMessageBox.warning(parent_window, "Load Failed", "Invalid FIR filter file: missing coefficients.")
+        if show_dialogs:
+            QMessageBox.warning(parent_window, "Load Failed", "Invalid FIR filter file: missing coefficients.")
+        else:
+            print(f"Warning: Invalid FIR filter file {filename}: missing coefficients")
         return False
 
     current_samplerate_hz = state.samplerate * 1e9
@@ -841,18 +852,21 @@ def load_fir_filter(parent_window, state, ui):
         # Check sample rate match
         if state.fir_calibration_samplerate is not None:
             if abs(current_samplerate_hz - state.fir_calibration_samplerate) > 1e6:  # 1 MHz tolerance
-                reply = QMessageBox.question(
+                if show_dialogs:
+                    reply = QMessageBox.question(
                     parent_window, "Sample Rate Mismatch",
                     f"Normal FIR calibration was performed at {state.fir_calibration_samplerate/1e9:.3f} GS/s,\n"
                     f"but current base sample rate is {current_samplerate_hz/1e9:.3f} GS/s.\n\n"
                     f"The correction may not be accurate. Continue anyway?",
                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No
                 )
-                if reply == QMessageBox.No:
-                    state.fir_coefficients = None
-                    state.fir_calibration_samplerate = None
-                    state.fir_freq_response = None
-                    return False
+                    if reply == QMessageBox.No:
+                        state.fir_coefficients = None
+                        state.fir_calibration_samplerate = None
+                        state.fir_freq_response = None
+                        return False
+                else:
+                    print(f"Warning: Normal FIR calibration sample rate mismatch (continuing anyway)")
 
     # Load oversampling mode calibration if present
     if has_oversample_in_file:
@@ -878,18 +892,21 @@ def load_fir_filter(parent_window, state, ui):
         # Check sample rate match (check board 0)
         if state.fir_calibration_samplerate_oversample[0] is not None:
             if abs(current_samplerate_hz - state.fir_calibration_samplerate_oversample[0]) > 1e6:
-                reply = QMessageBox.question(
+                if show_dialogs:
+                    reply = QMessageBox.question(
                     parent_window, "Sample Rate Mismatch",
                     f"Oversampling FIR calibration was performed at {state.fir_calibration_samplerate_oversample[0]/1e9:.3f} GS/s,\n"
                     f"but current base sample rate is {current_samplerate_hz/1e9:.3f} GS/s.\n\n"
                     f"The correction may not be accurate. Continue anyway?",
                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No
                 )
-                if reply == QMessageBox.No:
-                    state.fir_coefficients_oversample = [None, None]
-                    state.fir_calibration_samplerate_oversample = [None, None]
-                    state.fir_freq_response_oversample = [None, None]
-                    # Don't return False here - other modes might still be loaded
+                    if reply == QMessageBox.No:
+                        state.fir_coefficients_oversample = [None, None]
+                        state.fir_calibration_samplerate_oversample = [None, None]
+                        state.fir_freq_response_oversample = [None, None]
+                        # Don't return False here - other modes might still be loaded
+                else:
+                    print(f"Warning: Oversampling FIR calibration sample rate mismatch (continuing anyway)")
                     if not has_normal_in_file and not has_interleaved_in_file:
                         return False
 
@@ -910,18 +927,21 @@ def load_fir_filter(parent_window, state, ui):
         if state.fir_calibration_samplerate_interleaved is not None:
             expected_interleaved_rate = current_samplerate_hz * 2  # 6.4 GHz
             if abs(expected_interleaved_rate - state.fir_calibration_samplerate_interleaved) > 1e6:
-                reply = QMessageBox.question(
+                if show_dialogs:
+                    reply = QMessageBox.question(
                     parent_window, "Sample Rate Mismatch",
                     f"Interleaved FIR calibration was performed at {state.fir_calibration_samplerate_interleaved/1e9:.3f} GS/s,\n"
                     f"but current interleaved sample rate is {expected_interleaved_rate/1e9:.3f} GS/s.\n\n"
                     f"The correction may not be accurate. Continue anyway?",
                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No
                 )
-                if reply == QMessageBox.No:
-                    state.fir_coefficients_interleaved = None
-                    state.fir_calibration_samplerate_interleaved = None
-                    state.fir_freq_response_interleaved = None
-                    # Don't return False here - other modes might still be loaded
+                    if reply == QMessageBox.No:
+                        state.fir_coefficients_interleaved = None
+                        state.fir_calibration_samplerate_interleaved = None
+                        state.fir_freq_response_interleaved = None
+                        # Don't return False here - other modes might still be loaded
+                else:
+                    print(f"Warning: Interleaved FIR calibration sample rate mismatch (continuing anyway)")
                     if not has_normal_in_file and not has_oversample_in_file and not has_twochannel_in_file:
                         return False
 
@@ -942,23 +962,27 @@ def load_fir_filter(parent_window, state, ui):
         if state.fir_calibration_samplerate_twochannel is not None:
             expected_twochannel_rate = current_samplerate_hz / 2  # 1.6 GHz
             if abs(expected_twochannel_rate - state.fir_calibration_samplerate_twochannel) > 1e6:
-                reply = QMessageBox.question(
+                if show_dialogs:
+                    reply = QMessageBox.question(
                     parent_window, "Sample Rate Mismatch",
                     f"Two-channel FIR calibration was performed at {state.fir_calibration_samplerate_twochannel/1e9:.3f} GS/s,\n"
                     f"but current two-channel sample rate is {expected_twochannel_rate/1e9:.3f} GS/s.\n\n"
                     f"The correction may not be accurate. Continue anyway?",
                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No
                 )
-                if reply == QMessageBox.No:
-                    state.fir_coefficients_twochannel = None
-                    state.fir_calibration_samplerate_twochannel = None
-                    state.fir_freq_response_twochannel = None
-                    # Don't return False here - other modes might still be loaded
+                    if reply == QMessageBox.No:
+                        state.fir_coefficients_twochannel = None
+                        state.fir_calibration_samplerate_twochannel = None
+                        state.fir_freq_response_twochannel = None
+                        # Don't return False here - other modes might still be loaded
+                else:
+                    print(f"Warning: Two-channel FIR calibration sample rate mismatch (continuing anyway)")
                     if not has_normal_in_file and not has_oversample_in_file and not has_interleaved_in_file:
                         return False
 
-    # Enable correction
-    state.fir_correction_enabled = True
+    # Enable correction (only if requested)
+    if enable_corrections:
+        state.fir_correction_enabled = True
 
     # Build success message based on what was loaded
     loaded_modes = []
@@ -971,19 +995,26 @@ def load_fir_filter(parent_window, state, ui):
     if has_twochannel_in_file and state.fir_coefficients_twochannel is not None:
         loaded_modes.append("Two-channel")
 
-    mode_text = ", ".join(loaded_modes)
-    print(f"FIR filter ({mode_text}) loaded from {filename}")
-
     # Update checkbox state to reflect availability for current mode
+    # Always call this to enable the menu item when corrections are loaded
     if hasattr(parent_window, 'update_fir_checkbox_state'):
         parent_window.update_fir_checkbox_state()
-    else:
-        # Fallback if update method doesn't exist
+    elif enable_corrections:
+        # Fallback if update method doesn't exist and corrections should be enabled
+        ui.actionApply_FIR_corrections.setEnabled(True)
         ui.actionApply_FIR_corrections.setChecked(True)
 
-    # Show success message
-    QMessageBox.information(parent_window, "FIR Filter Loaded",
-                          f"{mode_text} FIR filter loaded successfully from:\n{filename}\n\n"
-                          f"Correction will be enabled for modes with available calibration data.")
+    # Show success message (only if show_dialogs is True)
+    mode_text = ", ".join(loaded_modes)
+    if show_dialogs:
+        if enable_corrections:
+            message_suffix = "Correction will be enabled for modes with available calibration data."
+        else:
+            message_suffix = "Corrections loaded but not enabled."
+        QMessageBox.information(parent_window, "FIR Filter Loaded",
+                              f"{mode_text} FIR filter loaded successfully from:\n{filename}\n\n{message_suffix}")
+
+    status = "enabled" if enable_corrections else "not enabled"
+    print(f"FIR filter ({mode_text}) loaded from {filename} (corrections {status})")
 
     return True
