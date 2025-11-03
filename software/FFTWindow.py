@@ -320,7 +320,7 @@ class FFTWindow(FFTTemplateBaseClass):
             self.yrange_min = max(ydatamin, 1e-10)
 
             if self.dolog:
-                self.plot.setYRange(log(self.yrange_min, 10), log(self.yrange_max, 10))
+                if self.yrange_min>0 and self.yrange_max>0: self.plot.setYRange(log(self.yrange_min, 10), log(self.yrange_max, 10))
             else:
                 self.plot.setYRange(0, self.yrange_max)
 
