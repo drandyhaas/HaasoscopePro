@@ -88,17 +88,20 @@ class ZoomWindow(QtWidgets.QWidget):
         self.trigger_lines['hline_delta'] = pg.InfiniteLine(pos=0.0, angle=0, movable=False, pen=dashedpen)  # First threshold (hline+delta)
         self.trigger_lines['hline_runt'] = pg.InfiniteLine(pos=0.0, angle=0, movable=False, pen=runtpen)  # Runt threshold
         self.trigger_lines['vline_tot'] = pg.InfiniteLine(pos=0.0, angle=90, movable=False, pen=runtpen)  # TOT line
+        self.trigger_lines['vline_holdoff'] = pg.InfiniteLine(pos=0.0, angle=90, movable=False, pen=runtpen)  # Holdoff line
         self.plot.addItem(self.trigger_lines['vline'])
         self.plot.addItem(self.trigger_lines['hline'])
         self.plot.addItem(self.trigger_lines['hline_delta'])
         self.plot.addItem(self.trigger_lines['hline_runt'])
         self.plot.addItem(self.trigger_lines['vline_tot'])
+        self.plot.addItem(self.trigger_lines['vline_holdoff'])
         # Initially hidden - will be shown when main plot shows them
         self.trigger_lines['vline'].setVisible(False)
         self.trigger_lines['hline'].setVisible(False)
         self.trigger_lines['hline_delta'].setVisible(False)
         self.trigger_lines['hline_runt'].setVisible(False)
         self.trigger_lines['vline_tot'].setVisible(False)
+        self.trigger_lines['vline_holdoff'].setVisible(False)
 
         # Create view-only cursor lines (non-movable)
         self.cursor_lines = {}
@@ -543,6 +546,11 @@ class ZoomWindow(QtWidgets.QWidget):
                 vline_tot = main_plot_manager.otherlines['vline_tot']
                 self.trigger_lines['vline_tot'].setPos(vline_tot.value())
                 self.trigger_lines['vline_tot'].setVisible(vline_tot.isVisible())
+
+            if 'vline_holdoff' in main_plot_manager.otherlines:
+                vline_holdoff = main_plot_manager.otherlines['vline_holdoff']
+                self.trigger_lines['vline_holdoff'].setPos(vline_holdoff.value())
+                self.trigger_lines['vline_holdoff'].setVisible(vline_holdoff.isVisible())
 
         # Update cursor lines (t1, t2, v1, v2)
         if hasattr(main_plot_manager, 'cursor_manager') and main_plot_manager.cursor_manager:
