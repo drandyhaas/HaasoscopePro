@@ -381,6 +381,7 @@ class MainWindow(TemplateBaseClass):
         self.plot_manager.hline_dragged_signal.connect(self.on_hline_dragged)
         self.plot_manager.hline_runt_dragged_signal.connect(self.on_hline_runt_dragged)
         self.plot_manager.vline_tot_dragged_signal.connect(self.on_vline_tot_dragged)
+        self.plot_manager.vline_holdoff_dragged_signal.connect(self.on_vline_holdoff_dragged)
         self.plot_manager.curve_clicked_signal.connect(self.on_curve_clicked)
         self.plot_manager.math_curve_clicked_signal.connect(self.on_math_curve_clicked)
 
@@ -2107,6 +2108,34 @@ class MainWindow(TemplateBaseClass):
         state.triggertimethresh[active_board] = tot_samples
         self.controller.send_trigger_info(active_board)
 
+    def on_vline_holdoff_dragged(self, value):
+        """Handle dragging of the holdoff line."""
+        state = self.state
+        active_board = state.activeboard
+
+        # Calculate vline position
+        vline_pos = 4 * 10 * (state.triggerpos + 1.0) * (state.downsamplefactor / state.nsunits / state.samplerate)
+
+        # Calculate holdoff from the difference between vline and vline_holdoff
+        # holdoff is in units of samples
+        holdoff_pos = value
+        holdoff_time_diff = vline_pos - holdoff_pos
+
+        # Convert time difference back to samples
+        holdoff_samples = int(holdoff_time_diff / (4 * 10 * (state.downsamplefactor / state.nsunits / state.samplerate)))
+
+        # Don't allow negative holdoff
+        holdoff_samples = max(0, holdoff_samples)
+
+        # Block signals to prevent feedback loop, then update state and hardware directly
+        self.ui.trigger_holdoff_box.blockSignals(True)
+        self.ui.trigger_holdoff_box.setValue(holdoff_samples)
+        self.ui.trigger_holdoff_box.blockSignals(False)
+
+        # Update state and send to hardware
+        state.trigger_holdoff[active_board] = holdoff_samples
+        self.controller.send_trigger_delay(active_board)
+
     def resamp_changed(self, value):
         """Handle resamp value changes from the UI."""
         s = self.state
@@ -3404,6 +3433,8 @@ class MainWindow(TemplateBaseClass):
         self.state.trigger_holdoff[board] = value
         self.controller.send_trigger_delay(board)
         self.update_trigger_spinbox_tooltip(self.ui.trigger_holdoff_box, "Time needed failing threshold before passing threshold")
+        # Update the visual holdoff line
+        self.plot_manager.draw_trigger_lines()
 
     def update_trigger_spinbox_tooltip(self, spinbox, base_text):
         """Update tooltip for trigger-related spinboxes to show time duration.

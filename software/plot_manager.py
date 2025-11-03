@@ -73,6 +73,7 @@ class PlotManager(pg.QtCore.QObject):
     hline_dragged_signal = pg.QtCore.Signal(float)
     hline_runt_dragged_signal = pg.QtCore.Signal(float)  # Emits runt threshold position
     vline_tot_dragged_signal = pg.QtCore.Signal(float)  # Emits TOT line position
+    vline_holdoff_dragged_signal = pg.QtCore.Signal(float)  # Emits holdoff line position
     curve_clicked_signal = pg.QtCore.Signal(int)
     math_curve_clicked_signal = pg.QtCore.Signal(str)  # Emits math channel name
     zoom_region_changed_signal = pg.QtCore.Signal(tuple, tuple)  # Emits (x_range, y_range)
@@ -187,11 +188,13 @@ class PlotManager(pg.QtCore.QObject):
         # Allow runt line to be dragged beyond visible plot area (no bounds restriction)
         self.otherlines['hline_runt'] = pg.InfiniteLine(pos=0.0, angle=0, movable=True, pen=runtpen, hoverPen=runt_hoverpen, bounds=None)
         self.otherlines['vline_tot'] = pg.InfiniteLine(pos=0.0, angle=90, movable=True, pen=runtpen, hoverPen=runt_hoverpen)  # TOT (time over threshold) line
+        self.otherlines['vline_holdoff'] = pg.InfiniteLine(pos=0.0, angle=90, movable=True, pen=runtpen, hoverPen=runt_hoverpen)  # Holdoff line
         self.plot.addItem(self.otherlines['vline'])
         self.plot.addItem(self.otherlines['hline'])
         self.plot.addItem(self.otherlines['hline_delta'])
         self.plot.addItem(self.otherlines['hline_runt'])
         self.plot.addItem(self.otherlines['vline_tot'])
+        self.plot.addItem(self.otherlines['vline_holdoff'])
         self.otherlines['vline'].sigDragged.connect(self.on_vline_dragged)
         self.otherlines['vline'].sigPositionChangeFinished.connect(self.on_vline_drag_finished)
         self.otherlines['hline'].sigPositionChanged.connect(self.on_hline_dragged)
@@ -199,6 +202,8 @@ class PlotManager(pg.QtCore.QObject):
         self.otherlines['hline_runt'].sigPositionChangeFinished.connect(self.on_hline_runt_drag_finished)
         self.otherlines['vline_tot'].sigPositionChanged.connect(self.on_vline_tot_dragged)
         self.otherlines['vline_tot'].sigPositionChangeFinished.connect(self.on_vline_tot_drag_finished)
+        self.otherlines['vline_holdoff'].sigPositionChanged.connect(self.on_vline_holdoff_dragged)
+        self.otherlines['vline_holdoff'].sigPositionChangeFinished.connect(self.on_vline_holdoff_drag_finished)
 
         # Create triangle markers for trigger lines
         self._create_trigger_arrows()
@@ -207,6 +212,7 @@ class PlotManager(pg.QtCore.QObject):
         self.otherlines['hline'].sigPositionChanged.connect(lambda: self._update_trigger_arrows('hline'))
         self.otherlines['hline_runt'].sigPositionChanged.connect(lambda: self._update_trigger_arrows('hline_runt'))
         self.otherlines['vline_tot'].sigPositionChanged.connect(lambda: self._update_trigger_arrows('vline_tot'))
+        self.otherlines['vline_holdoff'].sigPositionChanged.connect(lambda: self._update_trigger_arrows('vline_holdoff'))
         # Update arrow positions when view changes (pan/zoom)
         self.plot.getViewBox().sigRangeChanged.connect(self._update_all_trigger_arrows)
 
@@ -216,6 +222,7 @@ class PlotManager(pg.QtCore.QObject):
         self.otherlines['hline_delta'].setVisible(False)
         self.otherlines['hline_runt'].setVisible(False)
         self.otherlines['vline_tot'].setVisible(False)
+        self.otherlines['vline_holdoff'].setVisible(False)
         for arrow in self.trigger_arrows.values():
             arrow.setVisible(False)
 
@@ -909,6 +916,27 @@ class PlotManager(pg.QtCore.QObject):
             self.trigger_arrows['vline_tot_top'].setVisible(False)
             self.trigger_arrows['vline_tot_bottom'].setVisible(False)
 
+        # Update holdoff line (trigger holdoff)
+        holdoff = state.trigger_holdoff[active_board]
+        if holdoff > 0:
+            # Calculate vline_holdoff position (to the left of vline)
+            # holdoff is in units of samples, convert to time units
+            vline_holdoff_pos = vline_pos - (4 * 10 * holdoff * (state.downsamplefactor / state.nsunits / state.samplerate))
+            # Block signals to prevent feedback loop when programmatically setting position
+            self.otherlines['vline_holdoff'].blockSignals(True)
+            self.otherlines['vline_holdoff'].setValue(vline_holdoff_pos)
+            self.otherlines['vline_holdoff'].blockSignals(False)
+            self.otherlines['vline_holdoff'].setVisible(True)
+            # Show holdoff arrows
+            self.trigger_arrows['vline_holdoff_top'].setVisible(True)
+            self.trigger_arrows['vline_holdoff_bottom'].setVisible(True)
+            self._update_trigger_arrows('vline_holdoff')
+        else:
+            self.otherlines['vline_holdoff'].setVisible(False)
+            # Hide holdoff arrows
+            self.trigger_arrows['vline_holdoff_top'].setVisible(False)
+            self.trigger_arrows['vline_holdoff_bottom'].setVisible(False)
+
         self.current_vline_pos = vline_pos
 
     # Persistence Methods
@@ -1339,6 +1367,16 @@ class PlotManager(pg.QtCore.QObject):
         # to snap the TOT line to the exact quantized position based on the integer TOT value
         self.draw_trigger_lines()
 
+    def on_vline_holdoff_dragged(self, line):
+        """Handle dragging of the holdoff line - emit signal to MainWindow."""
+        self.vline_holdoff_dragged_signal.emit(line.value())
+
+    def on_vline_holdoff_drag_finished(self, line):
+        """Called when holdoff line dragging is finished - snap to quantized position."""
+        # After the drag is done and the spinbox is updated, redraw the trigger lines
+        # to snap the holdoff line to the exact quantized position based on the integer holdoff value
+        self.draw_trigger_lines()
+
     def on_zoom_roi_changed(self):
         """Called when zoom ROI is moved or resized."""
         if self.zoom_roi and self.zoom_roi.isVisible():
@@ -1611,11 +1649,24 @@ class PlotManager(pg.QtCore.QObject):
         self.plot.addItem(self.trigger_arrows['vline_tot_top'])
         self.plot.addItem(self.trigger_arrows['vline_tot_bottom'])
 
+        # vline_holdoff (holdoff line) needs orange top and bottom triangles
+        self.trigger_arrows['vline_holdoff_top'] = pg.ScatterPlotItem(
+            size=12, brush=pg.mkBrush(runt_color), pen=None,
+            symbol='t'  # Triangle pointing up
+        )
+        self.trigger_arrows['vline_holdoff_bottom'] = pg.ScatterPlotItem(
+            size=12, brush=pg.mkBrush(runt_color), pen=None,
+            symbol='t1'  # Triangle pointing down
+        )
+        self.plot.addItem(self.trigger_arrows['vline_holdoff_top'])
+        self.plot.addItem(self.trigger_arrows['vline_holdoff_bottom'])
+
         # Initialize positions
         self._update_trigger_arrows('vline')
         self._update_trigger_arrows('hline')
         self._update_trigger_arrows('hline_runt')
         self._update_trigger_arrows('vline_tot')
+        self._update_trigger_arrows('vline_holdoff')
 
     def _update_all_trigger_arrows(self):
         """Update all trigger arrows (called on view range changes)."""
@@ -1623,6 +1674,7 @@ class PlotManager(pg.QtCore.QObject):
         self._update_trigger_arrows('hline')
         self._update_trigger_arrows('hline_runt')
         self._update_trigger_arrows('vline_tot')
+        self._update_trigger_arrows('vline_holdoff')
 
     def _update_trigger_arrows(self, line_name):
         """Update the position of arrow markers for trigger lines.
@@ -1692,6 +1744,17 @@ class PlotManager(pg.QtCore.QObject):
             # TOT (time over threshold) line - update orange top and bottom arrows
             top_arrow = self.trigger_arrows.get('vline_tot_top')
             bottom_arrow = self.trigger_arrows.get('vline_tot_bottom')
+
+            if top_arrow and bottom_arrow:
+                # Position at top and bottom of visible view area
+                # Move slightly inward so they're visible (3 pixels inside the boundary)
+                top_arrow.setData([pos], [max_y - y_offset])
+                bottom_arrow.setData([pos], [min_y + y_offset])
+
+        elif line_name == 'vline_holdoff':
+            # Holdoff line - update orange top and bottom arrows
+            top_arrow = self.trigger_arrows.get('vline_holdoff_top')
+            bottom_arrow = self.trigger_arrows.get('vline_holdoff_bottom')
 
             if top_arrow and bottom_arrow:
                 # Position at top and bottom of visible view area
