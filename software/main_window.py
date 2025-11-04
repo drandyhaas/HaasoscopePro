@@ -2071,8 +2071,8 @@ class MainWindow(TemplateBaseClass):
             delta2 = int((runt_pos - hline_pos) / (state.yscale * 256)) - delta
 
         # Don't let runt line go below (above) the first threshold for rising (falling) trigger
-        # This means delta2 must be >= 0
-        delta2 = max(0, delta2)
+        # This means delta2 must be >= 1
+        delta2 = max(1, delta2)
 
         # Block signals to prevent feedback loop, then update state and hardware directly
         self.ui.thresholdDelta_2.blockSignals(True)
@@ -2098,6 +2098,9 @@ class MainWindow(TemplateBaseClass):
 
         # Convert time difference back to samples
         tot_samples = int(tot_time_diff / (4 * 10 * (state.downsamplefactor / state.nsunits / state.samplerate)))
+
+        # abort if tot_samples is invalid
+        if tot_samples<0 or tot_samples>255: return
 
         # Block signals to prevent feedback loop, then update state and hardware directly
         self.ui.totBox.blockSignals(True)
