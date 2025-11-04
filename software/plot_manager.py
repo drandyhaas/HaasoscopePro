@@ -293,8 +293,9 @@ class PlotManager(pg.QtCore.QObject):
         self.plot.addItem(self.legend_text)
         self.legend_text.setPos(1.0, 1.0)  # Will be updated to actual position
 
-        # Secondary Y-Axis
         if self.state.num_board > 0:
+            
+            # Secondary Y-Axis
             self.right_axis = add_secondary_axis(
                 plot_item=self.plot,
                 conversion_func=lambda val: val * self.state.VperD[self.state.activexychannel],
@@ -302,7 +303,8 @@ class PlotManager(pg.QtCore.QObject):
             )
             self.right_axis.setWidth(w=40)
             self.right_axis.setVisible(True)
-        self.time_changed()
+
+            self.time_changed()
 
     def update_plots(self, xy_data, xydatainterleaved):
         """Updates all visible waveform plots with new data."""
