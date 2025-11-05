@@ -1,8 +1,8 @@
 rm -rf build
 rm -rf dist
 
-/usr/bin/python3 -m PyInstaller HaasoscopeProQt.py
-/usr/bin/python3 -m PyInstaller dummy_scope/dummy_server.py
+python3 -m PyInstaller HaasoscopeProQt.py
+python3 -m PyInstaller dummy_scope/dummy_server.py
 
 rm -rf ../../HaasoscopePro_Mac
 mkdir ../../HaasoscopePro_Mac
