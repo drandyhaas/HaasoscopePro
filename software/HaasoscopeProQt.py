@@ -35,8 +35,7 @@ if __name__ == '__main__':
     try:
         # --- Hardware Discovery and Initial Setup ---
         print("Searching for Haasoscope Pro boards...")
-        max_devices = args.max_devices
-        usbs = connectdevices(max_devices)
+        usbs = connectdevices(100)
 
         # Try to use dummy server if requested via --socket or if no hardware found
         socket_addresses = args.socket if args.socket else None
@@ -74,6 +73,11 @@ if __name__ == '__main__':
 
         time.sleep(0.1)  # Wait for clocks to lock after configuration
         usbs = orderusbs(usbs)
+
+        # just use the first max_devices number of devices
+        max_devices = args.max_devices
+        if max_devices<len(usbs): usbs = usbs[:max_devices]
+
         if len(usbs) > 1:
             tellfirstandlast(usbs)
             clkout_ena(usbs[len(usbs)-1], len(usbs)-1, False, False) # now can turn off clkout on the truly last board, now that we know the ordering
