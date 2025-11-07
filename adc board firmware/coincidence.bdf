@@ -2063,15 +2063,15 @@ https://fpgasoftware.intel.com/eula.
 	(port
 		(pt 0 128)
 		(input)
-		(text "lowerthresh[11..0]" (rect 0 0 87 12)(font "Arial" ))
-		(text "lowerthresh[11..0]" (rect 21 123 108 135)(font "Arial" ))
+		(text "lowerthresh[23..0]" (rect 0 0 87 12)(font "Arial" ))
+		(text "lowerthresh[23..0]" (rect 21 123 108 135)(font "Arial" ))
 		(line (pt 0 128)(pt 16 128)(line_width 3))
 	)
 	(port
 		(pt 0 144)
 		(input)
-		(text "upperthresh[11..0]" (rect 0 0 89 12)(font "Arial" ))
-		(text "upperthresh[11..0]" (rect 21 139 110 151)(font "Arial" ))
+		(text "upperthresh[23..0]" (rect 0 0 89 12)(font "Arial" ))
+		(text "upperthresh[23..0]" (rect 21 139 110 151)(font "Arial" ))
 		(line (pt 0 144)(pt 16 144)(line_width 3))
 	)
 	(port
@@ -2743,15 +2743,15 @@ https://fpgasoftware.intel.com/eula.
 	(port
 		(pt 368 544)
 		(output)
-		(text "lowerthresh[11..0]" (rect 0 0 87 12)(font "Arial" ))
-		(text "lowerthresh[11..0]" (rect 274 539 347 551)(font "Arial" ))
+		(text "lowerthresh[23..0]" (rect 0 0 87 12)(font "Arial" ))
+		(text "lowerthresh[23..0]" (rect 274 539 347 551)(font "Arial" ))
 		(line (pt 368 544)(pt 352 544)(line_width 3))
 	)
 	(port
 		(pt 368 560)
 		(output)
-		(text "upperthresh[11..0]" (rect 0 0 89 12)(font "Arial" ))
-		(text "upperthresh[11..0]" (rect 272 555 347 567)(font "Arial" ))
+		(text "upperthresh[23..0]" (rect 0 0 89 12)(font "Arial" ))
+		(text "upperthresh[23..0]" (rect 272 555 347 567)(font "Arial" ))
 		(line (pt 368 560)(pt 352 560)(line_width 3))
 	)
 	(port

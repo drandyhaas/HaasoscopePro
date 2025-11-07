@@ -45,6 +45,7 @@ def save_setup(main_window):
         # Trigger settings (per-board arrays)
         'triggerlevel': s.triggerlevel,
         'triggerdelta': s.triggerdelta,
+        'triggerdelta2': s.triggerdelta2,
         'triggerpos': s.triggerpos,
         'triggerchan': s.triggerchan,
         'fallingedge': s.fallingedge,
@@ -156,6 +157,7 @@ def save_setup(main_window):
         'pan_and_zoom': main_window.ui.actionPan_and_zoom.isChecked(),
         'peak_detect_per_channel': main_window.plot_manager.peak_detect_enabled,  # Per-channel dict
         'channel_name_legend': main_window.ui.actionChannel_name_legend.isChecked(),
+        'zoom_window_crosshairs': main_window.ui.actionZoom_window_crosshairs.isChecked(),
 
         # Cursor menu states
         'cursors_visible': main_window.ui.actionCursors.isChecked(),
@@ -308,6 +310,9 @@ def load_setup(main_window):
     if 'triggerdelta' in setup:
         s.triggerdelta = setup['triggerdelta']
         main_window.ui.thresholdDelta.setValue(s.triggerdelta[s.activeboard])
+    if 'triggerdelta2' in setup:
+        s.triggerdelta2 = setup['triggerdelta2']
+        main_window.ui.thresholdDelta_2.setValue(s.triggerdelta2[s.activeboard])
     if 'triggerpos' in setup:
         s.triggerpos = setup['triggerpos']
         # Calculate slider value from triggerpos
@@ -519,6 +524,11 @@ def load_setup(main_window):
     if 'pan_and_zoom' in setup:
         main_window.ui.actionPan_and_zoom.setChecked(setup['pan_and_zoom'])
         main_window.plot_manager.set_pan_and_zoom(setup['pan_and_zoom'])
+    if 'zoom_window_crosshairs' in setup:
+        main_window.ui.actionZoom_window_crosshairs.setChecked(setup['zoom_window_crosshairs'])
+        main_window.plot_manager.set_crosshairs_enabled(setup['zoom_window_crosshairs'])
+        if main_window.zoom_window is not None:
+            main_window.zoom_window.set_crosshairs_enabled(setup['zoom_window_crosshairs'])
 
     # Handle both old (single boolean) and new (per-channel dict) peak detect settings
     if 'peak_detect_per_channel' in setup:

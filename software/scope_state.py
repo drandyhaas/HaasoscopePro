@@ -5,7 +5,7 @@ class ScopeState:
 
     def __init__(self, num_boards, num_chan_per_board):
         # General and Hardware Configuration
-        self.softwareversion = 31.09
+        self.softwareversion = 32.00
         self.num_board = num_boards
         self.num_chan_per_board = num_chan_per_board
         self.samplerate = 3.2  # GHz
@@ -63,6 +63,7 @@ class ScopeState:
         # Triggering Parameters
         self.triggerlevel = 127
         self.triggerdelta = [2] * self.num_board  # Per-board trigger delta
+        self.triggerdelta2 = [128] * self.num_board  # Per-board runt pulse second threshold delta (max ~127 to avoid overflow)
         self.triggerpos = 50
         self.triggershift = 2
         self.triggertimethresh = [0] * self.num_board  # Per-board time over threshold

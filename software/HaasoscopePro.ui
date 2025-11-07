@@ -283,9 +283,9 @@
         <property name="geometry">
          <rect>
           <x>10</x>
-          <y>106</y>
-          <width>141</width>
-          <height>211</height>
+          <y>110</y>
+          <width>151</width>
+          <height>201</height>
          </rect>
         </property>
         <property name="font">
@@ -334,7 +334,7 @@
           <rect>
            <x>70</x>
            <y>85</y>
-           <width>51</width>
+           <width>61</width>
            <height>16</height>
           </rect>
          </property>
@@ -362,7 +362,7 @@
           </font>
          </property>
          <property name="toolTip">
-          <string>Amount needed over threshold to trigger (ADC values)</string>
+          <string>Amount needed over threshold to trigger (x16 ADC values)</string>
          </property>
          <property name="frame">
           <bool>false</bool>
@@ -385,7 +385,7 @@
           <rect>
            <x>70</x>
            <y>60</y>
-           <width>51</width>
+           <width>61</width>
            <height>16</height>
           </rect>
          </property>
@@ -454,8 +454,8 @@
          <property name="geometry">
           <rect>
            <x>70</x>
-           <y>110</y>
-           <width>51</width>
+           <y>140</y>
+           <width>61</width>
            <height>16</height>
           </rect>
          </property>
@@ -472,7 +472,7 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>110</y>
+           <y>140</y>
            <width>51</width>
            <height>22</height>
           </rect>
@@ -505,7 +505,7 @@
          <property name="geometry">
           <rect>
            <x>10</x>
-           <y>135</y>
+           <y>165</y>
            <width>51</width>
            <height>22</height>
           </rect>
@@ -538,8 +538,8 @@
          <property name="geometry">
           <rect>
            <x>70</x>
-           <y>135</y>
-           <width>51</width>
+           <y>165</y>
+           <width>61</width>
            <height>16</height>
           </rect>
          </property>
@@ -550,6 +550,57 @@
          </property>
          <property name="text">
           <string>Holdoff</string>
+         </property>
+        </widget>
+        <widget class="QSpinBox" name="thresholdDelta_2">
+         <property name="geometry">
+          <rect>
+           <x>10</x>
+           <y>110</y>
+           <width>51</width>
+           <height>22</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <family>Arial</family>
+          </font>
+         </property>
+         <property name="toolTip">
+          <string>Amount over threshold (plus delta) to reject trigger (x16 ADC values)</string>
+         </property>
+         <property name="frame">
+          <bool>false</bool>
+         </property>
+         <property name="accelerated">
+          <bool>true</bool>
+         </property>
+         <property name="minimum">
+          <number>1</number>
+         </property>
+         <property name="maximum">
+          <number>128</number>
+         </property>
+         <property name="value">
+          <number>128</number>
+         </property>
+        </widget>
+        <widget class="QLabel" name="label_16">
+         <property name="geometry">
+          <rect>
+           <x>70</x>
+           <y>110</y>
+           <width>71</width>
+           <height>16</height>
+          </rect>
+         </property>
+         <property name="font">
+          <font>
+           <family>Arial</family>
+          </font>
+         </property>
+         <property name="text">
+          <string>Runt delta</string>
          </property>
         </widget>
        </widget>
@@ -2477,6 +2528,8 @@ Outlined if triggering on this channel</string>
     <addaction name="actionCursors"/>
     <addaction name="actionTime_relative"/>
     <addaction name="actionSnap_to_waveform"/>
+    <addaction name="separator"/>
+    <addaction name="actionZoom_window_crosshairs"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
@@ -3055,6 +3108,17 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Polyphase upsampling</string>
+   </property>
+  </action>
+  <action name="actionZoom_window_crosshairs">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Zoom window crosshairs</string>
    </property>
   </action>
  </widget>

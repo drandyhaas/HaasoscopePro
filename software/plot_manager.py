@@ -71,6 +71,9 @@ class PlotManager(pg.QtCore.QObject):
     # Signals to notify MainWindow of user interaction with the plot
     vline_dragged_signal = pg.QtCore.Signal(float)
     hline_dragged_signal = pg.QtCore.Signal(float)
+    hline_runt_dragged_signal = pg.QtCore.Signal(float)  # Emits runt threshold position
+    vline_tot_dragged_signal = pg.QtCore.Signal(float)  # Emits TOT line position
+    vline_holdoff_dragged_signal = pg.QtCore.Signal(float)  # Emits holdoff line position
     curve_clicked_signal = pg.QtCore.Signal(int)
     math_curve_clicked_signal = pg.QtCore.Signal(str)  # Emits math channel name
     zoom_region_changed_signal = pg.QtCore.Signal(tuple, tuple)  # Emits (x_range, y_range)
@@ -177,25 +180,49 @@ class PlotManager(pg.QtCore.QObject):
         # Trigger and fit lines
         dashedpen = pg.mkPen(color="w", width=1.0, style=QtCore.Qt.DashLine)
         hoverpen = pg.mkPen(color="w", width=2.0, style=QtCore.Qt.DashLine)
+        runtpen = pg.mkPen(color=(255, 165, 0), width=1.0, style=QtCore.Qt.DashLine)  # Orange for runt threshold
+        runt_hoverpen = pg.mkPen(color=(255, 165, 0), width=2.0, style=QtCore.Qt.DashLine)
         self.otherlines['vline'] = pg.InfiniteLine(pos=0.0, angle=90, movable=True, pen=dashedpen, hoverPen=hoverpen)
         self.otherlines['hline'] = pg.InfiniteLine(pos=0.0, angle=0, movable=True, pen=dashedpen, hoverPen=hoverpen)
+        self.otherlines['hline_delta'] = pg.InfiniteLine(pos=0.0, angle=0, movable=False, pen=dashedpen, hoverPen=None)  # First threshold (hline+delta)
+        # Allow runt line to be dragged beyond visible plot area (no bounds restriction)
+        self.otherlines['hline_runt'] = pg.InfiniteLine(pos=0.0, angle=0, movable=True, pen=runtpen, hoverPen=runt_hoverpen, bounds=None)
+        self.otherlines['vline_tot'] = pg.InfiniteLine(pos=0.0, angle=90, movable=True, pen=runtpen, hoverPen=runt_hoverpen)  # TOT (time over threshold) line
+        self.otherlines['vline_holdoff'] = pg.InfiniteLine(pos=0.0, angle=90, movable=True, pen=runtpen, hoverPen=runt_hoverpen)  # Holdoff line
         self.plot.addItem(self.otherlines['vline'])
         self.plot.addItem(self.otherlines['hline'])
+        self.plot.addItem(self.otherlines['hline_delta'])
+        self.plot.addItem(self.otherlines['hline_runt'])
+        self.plot.addItem(self.otherlines['vline_tot'])
+        self.plot.addItem(self.otherlines['vline_holdoff'])
         self.otherlines['vline'].sigDragged.connect(self.on_vline_dragged)
         self.otherlines['vline'].sigPositionChangeFinished.connect(self.on_vline_drag_finished)
         self.otherlines['hline'].sigPositionChanged.connect(self.on_hline_dragged)
+        self.otherlines['hline_runt'].sigPositionChanged.connect(self.on_hline_runt_dragged)
+        self.otherlines['hline_runt'].sigPositionChangeFinished.connect(self.on_hline_runt_drag_finished)
+        self.otherlines['vline_tot'].sigPositionChanged.connect(self.on_vline_tot_dragged)
+        self.otherlines['vline_tot'].sigPositionChangeFinished.connect(self.on_vline_tot_drag_finished)
+        self.otherlines['vline_holdoff'].sigPositionChanged.connect(self.on_vline_holdoff_dragged)
+        self.otherlines['vline_holdoff'].sigPositionChangeFinished.connect(self.on_vline_holdoff_drag_finished)
 
         # Create triangle markers for trigger lines
         self._create_trigger_arrows()
         # Update arrow positions when trigger lines move
         self.otherlines['vline'].sigPositionChanged.connect(lambda: self._update_trigger_arrows('vline'))
         self.otherlines['hline'].sigPositionChanged.connect(lambda: self._update_trigger_arrows('hline'))
+        self.otherlines['hline_runt'].sigPositionChanged.connect(lambda: self._update_trigger_arrows('hline_runt'))
+        self.otherlines['vline_tot'].sigPositionChanged.connect(lambda: self._update_trigger_arrows('vline_tot'))
+        self.otherlines['vline_holdoff'].sigPositionChanged.connect(lambda: self._update_trigger_arrows('vline_holdoff'))
         # Update arrow positions when view changes (pan/zoom)
         self.plot.getViewBox().sigRangeChanged.connect(self._update_all_trigger_arrows)
 
         # Hide trigger lines and arrows initially (will be shown after PLL calibration)
         self.otherlines['vline'].setVisible(False)
         self.otherlines['hline'].setVisible(False)
+        self.otherlines['hline_delta'].setVisible(False)
+        self.otherlines['hline_runt'].setVisible(False)
+        self.otherlines['vline_tot'].setVisible(False)
+        self.otherlines['vline_holdoff'].setVisible(False)
         for arrow in self.trigger_arrows.values():
             arrow.setVisible(False)
 
@@ -250,6 +277,23 @@ class PlotManager(pg.QtCore.QObject):
         self.zoom_roi.setVisible(False)
         # Connect signal to notify when ROI changes
         self.zoom_roi.sigRegionChanged.connect(self.on_zoom_roi_changed)
+
+        # Create mouse pointer indicator (small crosshair - 20 pixels total)
+        pointer_pen = pg.mkPen(color=QColor(255, 255, 0, 180), width=2, style=QtCore.Qt.SolidLine)  # Semi-transparent yellow
+        self.mouse_pointer_vline = self.plot.plot(pen=pointer_pen, skipFiniteCheck=True)
+        self.mouse_pointer_hline = self.plot.plot(pen=pointer_pen, skipFiniteCheck=True)
+        self.mouse_pointer_vline.setVisible(False)
+        self.mouse_pointer_hline.setVisible(False)
+        self.mouse_pointer_x = 0.0
+        self.mouse_pointer_y = 0.0
+
+        # Reference to zoom window for cross-window pointer
+        self.zoom_window = None
+        self.zoom_window_active = False  # Track if mouse is over zoom window
+        self.crosshairs_enabled = False  # Track if crosshairs should be shown
+
+        # Enable mouse tracking for cross-window pointer
+        self.plot.scene().sigMouseMoved.connect(self.on_mouse_moved)
         self.zoom_roi.sigRegionChanged.connect(self._update_zoom_roi_fill)
 
         # Persistence average lines (created per-channel on demand)
@@ -266,8 +310,9 @@ class PlotManager(pg.QtCore.QObject):
         self.plot.addItem(self.legend_text)
         self.legend_text.setPos(1.0, 1.0)  # Will be updated to actual position
 
-        # Secondary Y-Axis
         if self.state.num_board > 0:
+            
+            # Secondary Y-Axis
             self.right_axis = add_secondary_axis(
                 plot_item=self.plot,
                 conversion_func=lambda val: val * self.state.VperD[self.state.activexychannel],
@@ -275,7 +320,8 @@ class PlotManager(pg.QtCore.QObject):
             )
             self.right_axis.setWidth(w=40)
             self.right_axis.setVisible(True)
-        self.time_changed()
+
+            self.time_changed()
 
     def update_plots(self, xy_data, xydatainterleaved):
         """Updates all visible waveform plots with new data."""
@@ -826,6 +872,90 @@ class PlotManager(pg.QtCore.QObject):
         self.otherlines['vline'].setValue(vline_pos)
         hline_pos = (state.triggerlevel - 127) * state.yscale * 256
         self.otherlines['hline'].setValue(hline_pos)
+
+        # Update hline_delta (first threshold = hline + triggerdelta)
+        active_board = state.activeboard
+        delta = state.triggerdelta[active_board]
+        delta2 = state.triggerdelta2[active_board]
+
+        # Calculate hline_delta position
+        if state.fallingedge[active_board]:
+            hline_delta_pos = hline_pos - delta * state.yscale * 256
+        else:
+            hline_delta_pos = hline_pos + delta * state.yscale * 256
+        self.otherlines['hline_delta'].setValue(hline_delta_pos)
+        # Show hline_delta only if delta > 0
+        self.otherlines['hline_delta'].setVisible(delta > 0)
+
+        # Update runt threshold line
+        # Show runt line only if runt rejection is active (delta + delta2 < 128)
+        # hardware_controller sends delta2=128 to firmware when delta+delta2 >= 128
+        if delta + delta2 < 128:
+            # Calculate runt threshold position
+            # For rising edge: hline_runt = hline_pos + (delta + delta2) * yscale * 256
+            # For falling edge: hline_runt = hline_pos - (delta + delta2) * yscale * 256
+            if state.fallingedge[active_board]:
+                hline_runt_pos = hline_pos - (delta + delta2) * state.yscale * 256
+            else:
+                hline_runt_pos = hline_pos + (delta + delta2) * state.yscale * 256
+
+            # Block signals to prevent feedback loop when programmatically setting position
+            self.otherlines['hline_runt'].blockSignals(True)
+            self.otherlines['hline_runt'].setValue(hline_runt_pos)
+            self.otherlines['hline_runt'].blockSignals(False)
+            self.otherlines['hline_runt'].setVisible(True)
+            # Show runt arrows
+            self.trigger_arrows['hline_runt_left'].setVisible(True)
+            self.trigger_arrows['hline_runt_right'].setVisible(True)
+            self._update_trigger_arrows('hline_runt')
+        else:
+            self.otherlines['hline_runt'].setVisible(False)
+            # Hide runt arrows
+            self.trigger_arrows['hline_runt_left'].setVisible(False)
+            self.trigger_arrows['hline_runt_right'].setVisible(False)
+
+        # Update TOT line (time over threshold)
+        tot = state.triggertimethresh[active_board]
+        if tot > 0:
+            # Calculate vline_tot position (to the right of vline)
+            # tot is in units of samples, convert to time units
+            vline_tot_pos = vline_pos + (4 * 10 * tot * (state.downsamplefactor / state.nsunits / state.samplerate))
+            # Block signals to prevent feedback loop when programmatically setting position
+            self.otherlines['vline_tot'].blockSignals(True)
+            self.otherlines['vline_tot'].setValue(vline_tot_pos)
+            self.otherlines['vline_tot'].blockSignals(False)
+            self.otherlines['vline_tot'].setVisible(True)
+            # Show TOT arrows
+            self.trigger_arrows['vline_tot_top'].setVisible(True)
+            self.trigger_arrows['vline_tot_bottom'].setVisible(True)
+            self._update_trigger_arrows('vline_tot')
+        else:
+            self.otherlines['vline_tot'].setVisible(False)
+            # Hide TOT arrows
+            self.trigger_arrows['vline_tot_top'].setVisible(False)
+            self.trigger_arrows['vline_tot_bottom'].setVisible(False)
+
+        # Update holdoff line (trigger holdoff)
+        holdoff = state.trigger_holdoff[active_board]
+        if holdoff > 0:
+            # Calculate vline_holdoff position (to the left of vline)
+            # holdoff is in units of samples, convert to time units
+            vline_holdoff_pos = vline_pos - (4 * 10 * holdoff * (state.downsamplefactor / state.nsunits / state.samplerate))
+            # Block signals to prevent feedback loop when programmatically setting position
+            self.otherlines['vline_holdoff'].blockSignals(True)
+            self.otherlines['vline_holdoff'].setValue(vline_holdoff_pos)
+            self.otherlines['vline_holdoff'].blockSignals(False)
+            self.otherlines['vline_holdoff'].setVisible(True)
+            # Show holdoff arrows
+            self.trigger_arrows['vline_holdoff_top'].setVisible(True)
+            self.trigger_arrows['vline_holdoff_bottom'].setVisible(True)
+            self._update_trigger_arrows('vline_holdoff')
+        else:
+            self.otherlines['vline_holdoff'].setVisible(False)
+            # Hide holdoff arrows
+            self.trigger_arrows['vline_holdoff_top'].setVisible(False)
+            self.trigger_arrows['vline_holdoff_bottom'].setVisible(False)
+
         self.current_vline_pos = vline_pos
 
     # Persistence Methods
@@ -1201,8 +1331,12 @@ class PlotManager(pg.QtCore.QObject):
         """Show trigger lines and arrows after PLL calibration is complete."""
         self.otherlines['vline'].setVisible(True)
         self.otherlines['hline'].setVisible(True)
-        for arrow in self.trigger_arrows.values():
-            arrow.setVisible(True)
+        # Only show the main trigger line arrows (white), not runt/TOT arrows (orange)
+        self.trigger_arrows['vline_top'].setVisible(True)
+        self.trigger_arrows['vline_bottom'].setVisible(True)
+        self.trigger_arrows['hline_left'].setVisible(True)
+        self.trigger_arrows['hline_right'].setVisible(True)
+        # Runt and TOT arrows will be shown by draw_trigger_lines() when appropriate
 
     def set_pan_and_zoom(self, is_checked):
         self.plot.setMouseEnabled(x=is_checked, y=is_checked)
@@ -1231,6 +1365,36 @@ class PlotManager(pg.QtCore.QObject):
         # Update trigger threshold text if it's enabled
         if self.cursor_manager:
             self.cursor_manager.update_trigger_threshold_text()
+
+    def on_hline_runt_dragged(self, line):
+        """Handle dragging of the runt threshold line - emit signal to MainWindow."""
+        self.hline_runt_dragged_signal.emit(line.value())
+
+    def on_hline_runt_drag_finished(self, line):
+        """Called when runt line dragging is finished - snap to valid position."""
+        # After the drag is done and delta2 is updated, redraw the trigger lines
+        # to snap the runt line to the exact position based on the clamped delta2 value
+        self.draw_trigger_lines()
+
+    def on_vline_tot_dragged(self, line):
+        """Handle dragging of the TOT (time over threshold) line - emit signal to MainWindow."""
+        self.vline_tot_dragged_signal.emit(line.value())
+
+    def on_vline_tot_drag_finished(self, line):
+        """Called when TOT line dragging is finished - snap to quantized position."""
+        # After the drag is done and the spinbox is updated, redraw the trigger lines
+        # to snap the TOT line to the exact quantized position based on the integer TOT value
+        self.draw_trigger_lines()
+
+    def on_vline_holdoff_dragged(self, line):
+        """Handle dragging of the holdoff line - emit signal to MainWindow."""
+        self.vline_holdoff_dragged_signal.emit(line.value())
+
+    def on_vline_holdoff_drag_finished(self, line):
+        """Called when holdoff line dragging is finished - snap to quantized position."""
+        # After the drag is done and the spinbox is updated, redraw the trigger lines
+        # to snap the holdoff line to the exact quantized position based on the integer holdoff value
+        self.draw_trigger_lines()
 
     def on_zoom_roi_changed(self):
         """Called when zoom ROI is moved or resized."""
@@ -1450,6 +1614,7 @@ class PlotManager(pg.QtCore.QObject):
     def _create_trigger_arrows(self):
         """Create triangular arrow markers at the ends of trigger lines."""
         trigger_color = QColor('white')
+        runt_color = QColor(255, 165, 0)  # Orange for runt threshold and TOT
 
         # vline (vertical trigger line) needs top and bottom triangles
         # Top triangle (pointing up)
@@ -1479,20 +1644,62 @@ class PlotManager(pg.QtCore.QObject):
         self.plot.addItem(self.trigger_arrows['hline_left'])
         self.plot.addItem(self.trigger_arrows['hline_right'])
 
+        # hline_runt (runt threshold line) needs orange left and right triangles
+        self.trigger_arrows['hline_runt_left'] = pg.ScatterPlotItem(
+            size=12, brush=pg.mkBrush(runt_color), pen=None,
+            symbol='t2'  # Triangle pointing left
+        )
+        self.trigger_arrows['hline_runt_right'] = pg.ScatterPlotItem(
+            size=12, brush=pg.mkBrush(runt_color), pen=None,
+            symbol='t3'  # Triangle pointing right
+        )
+        self.plot.addItem(self.trigger_arrows['hline_runt_left'])
+        self.plot.addItem(self.trigger_arrows['hline_runt_right'])
+
+        # vline_tot (TOT line) needs orange top and bottom triangles
+        self.trigger_arrows['vline_tot_top'] = pg.ScatterPlotItem(
+            size=12, brush=pg.mkBrush(runt_color), pen=None,
+            symbol='t'  # Triangle pointing up
+        )
+        self.trigger_arrows['vline_tot_bottom'] = pg.ScatterPlotItem(
+            size=12, brush=pg.mkBrush(runt_color), pen=None,
+            symbol='t1'  # Triangle pointing down
+        )
+        self.plot.addItem(self.trigger_arrows['vline_tot_top'])
+        self.plot.addItem(self.trigger_arrows['vline_tot_bottom'])
+
+        # vline_holdoff (holdoff line) needs orange top and bottom triangles
+        self.trigger_arrows['vline_holdoff_top'] = pg.ScatterPlotItem(
+            size=12, brush=pg.mkBrush(runt_color), pen=None,
+            symbol='t'  # Triangle pointing up
+        )
+        self.trigger_arrows['vline_holdoff_bottom'] = pg.ScatterPlotItem(
+            size=12, brush=pg.mkBrush(runt_color), pen=None,
+            symbol='t1'  # Triangle pointing down
+        )
+        self.plot.addItem(self.trigger_arrows['vline_holdoff_top'])
+        self.plot.addItem(self.trigger_arrows['vline_holdoff_bottom'])
+
         # Initialize positions
         self._update_trigger_arrows('vline')
         self._update_trigger_arrows('hline')
+        self._update_trigger_arrows('hline_runt')
+        self._update_trigger_arrows('vline_tot')
+        self._update_trigger_arrows('vline_holdoff')
 
     def _update_all_trigger_arrows(self):
         """Update all trigger arrows (called on view range changes)."""
         self._update_trigger_arrows('vline')
         self._update_trigger_arrows('hline')
+        self._update_trigger_arrows('hline_runt')
+        self._update_trigger_arrows('vline_tot')
+        self._update_trigger_arrows('vline_holdoff')
 
     def _update_trigger_arrows(self, line_name):
         """Update the position of arrow markers for trigger lines.
 
         Args:
-            line_name: Name of the line ('vline' or 'hline')
+            line_name: Name of the line ('vline', 'hline', 'hline_runt', or 'vline_tot')
         """
         if line_name not in self.otherlines:
             return
@@ -1540,6 +1747,39 @@ class PlotManager(pg.QtCore.QObject):
                 # Move slightly inward so they're visible (3 pixels inside the boundary)
                 left_arrow.setData([min_x + x_offset], [pos])
                 right_arrow.setData([max_x - x_offset], [pos])
+
+        elif line_name == 'hline_runt':
+            # Runt threshold line - update orange left and right arrows
+            left_arrow = self.trigger_arrows.get('hline_runt_left')
+            right_arrow = self.trigger_arrows.get('hline_runt_right')
+
+            if left_arrow and right_arrow:
+                # Position at left and right of visible view area
+                # Move slightly inward so they're visible (3 pixels inside the boundary)
+                left_arrow.setData([min_x + x_offset], [pos])
+                right_arrow.setData([max_x - x_offset], [pos])
+
+        elif line_name == 'vline_tot':
+            # TOT (time over threshold) line - update orange top and bottom arrows
+            top_arrow = self.trigger_arrows.get('vline_tot_top')
+            bottom_arrow = self.trigger_arrows.get('vline_tot_bottom')
+
+            if top_arrow and bottom_arrow:
+                # Position at top and bottom of visible view area
+                # Move slightly inward so they're visible (3 pixels inside the boundary)
+                top_arrow.setData([pos], [max_y - y_offset])
+                bottom_arrow.setData([pos], [min_y + y_offset])
+
+        elif line_name == 'vline_holdoff':
+            # Holdoff line - update orange top and bottom arrows
+            top_arrow = self.trigger_arrows.get('vline_holdoff_top')
+            bottom_arrow = self.trigger_arrows.get('vline_holdoff_bottom')
+
+            if top_arrow and bottom_arrow:
+                # Position at top and bottom of visible view area
+                # Move slightly inward so they're visible (3 pixels inside the boundary)
+                top_arrow.setData([pos], [max_y - y_offset])
+                bottom_arrow.setData([pos], [min_y + y_offset])
 
     def show_cursors(self, visible):
         """Show or hide cursor lines and labels."""
@@ -1649,4 +1889,128 @@ class PlotManager(pg.QtCore.QObject):
         except (KeyError, IndexError):
             # Fail silently if the fit_results dictionary is malformed
             pass
+
+    def set_zoom_window(self, zoom_window):
+        """Set reference to the zoom window for cross-window mouse pointer.
+
+        Args:
+            zoom_window: The ZoomWindow instance
+        """
+        self.zoom_window = zoom_window
+
+    def set_zoom_window_active(self, active):
+        """Set whether the zoom window is currently active (mouse is over it).
+
+        Args:
+            active: True if mouse is over zoom window, False otherwise
+        """
+        self.zoom_window_active = active
+
+    def set_crosshairs_enabled(self, enabled):
+        """Set whether crosshairs should be shown.
+
+        Args:
+            enabled: True to show crosshairs, False to hide them
+        """
+        self.crosshairs_enabled = enabled
+        # If disabling, immediately hide the crosshair
+        if not enabled:
+            self.mouse_pointer_vline.setVisible(False)
+            self.mouse_pointer_hline.setVisible(False)
+
+    def on_mouse_moved(self, pos):
+        """Handle mouse movement in main plot - update crosshair if zoom window is not active."""
+        if not self.zoom_window or not self.zoom_window.isVisible():
+            return
+
+        # Only update if zoom window is not active (main window controls the crosshair)
+        if self.zoom_window_active:
+            return
+
+        # Map scene position to view coordinates
+        view_pos = self.plot.getViewBox().mapSceneToView(pos)
+        x_main = view_pos.x()
+        y_main = view_pos.y()
+
+        # Get main plot bounds
+        view_range = self.plot.getViewBox().viewRange()
+        x_min, x_max = view_range[0]
+        y_min, y_max = view_range[1]
+
+        # Check if mouse is within plot bounds
+        if x_min <= x_main <= x_max and y_min <= y_main <= y_max:
+            # Check if mouse is within ROI bounds
+            if self.zoom_roi and self.zoom_roi.isVisible():
+                roi_pos = self.zoom_roi.pos()
+                roi_size = self.zoom_roi.size()
+                roi_x_min = roi_pos[0]
+                roi_x_max = roi_pos[0] + roi_size[0]
+                roi_y_min = roi_pos[1]
+                roi_y_max = roi_pos[1] + roi_size[1]
+
+                within_roi = (roi_x_min <= x_main <= roi_x_max and
+                             roi_y_min <= y_main <= roi_y_max)
+
+                # Always update zoom window crosshair
+                if hasattr(self.zoom_window, 'update_crosshair_position'):
+                    self.zoom_window.update_crosshair_position(x_main, y_main, True)
+
+                # Only update main window crosshair if within ROI
+                self.update_crosshair_position(x_main, y_main, within_roi)
+            else:
+                # No ROI visible, show crosshair in both windows
+                self.update_crosshair_position(x_main, y_main, True)
+                if hasattr(self.zoom_window, 'update_crosshair_position'):
+                    self.zoom_window.update_crosshair_position(x_main, y_main, True)
+            return
+
+        # Mouse is outside plot bounds - hide crosshair in both windows
+        self.update_crosshair_position(0, 0, False)
+        if hasattr(self.zoom_window, 'update_crosshair_position'):
+            self.zoom_window.update_crosshair_position(0, 0, False)
+
+    def update_crosshair_position(self, x_pos, y_pos, visible):
+        """Update the crosshair position (20 pixels long).
+
+        Args:
+            x_pos: X position in plot coordinates
+            y_pos: Y position in plot coordinates
+            visible: Whether the crosshair should be visible
+        """
+        self.mouse_pointer_x = x_pos
+        self.mouse_pointer_y = y_pos
+
+        # Only show if both visible flag is True AND crosshairs are enabled
+        if visible and self.crosshairs_enabled:
+            # Calculate 20 pixels in data coordinates (10 pixels each direction)
+            view_range = self.plot.getViewBox().viewRange()
+            view_rect = self.plot.getViewBox().sceneBoundingRect()
+
+            if view_rect.width() > 0 and view_rect.height() > 0:
+                # Pixels to data units
+                x_range = view_range[0][1] - view_range[0][0]
+                y_range = view_range[1][1] - view_range[1][0]
+                pixels_to_x = x_range / view_rect.width()
+                pixels_to_y = y_range / view_rect.height()
+
+                # 10 pixels in each direction
+                half_cross_x = 10 * pixels_to_x
+                half_cross_y = 10 * pixels_to_y
+
+                # Vertical line (constant x, varying y)
+                self.mouse_pointer_vline.setData(
+                    x=[x_pos, x_pos],
+                    y=[y_pos - half_cross_y, y_pos + half_cross_y],
+                    skipFiniteCheck=True
+                )
+
+                # Horizontal line (varying x, constant y)
+                self.mouse_pointer_hline.setData(
+                    x=[x_pos - half_cross_x, x_pos + half_cross_x],
+                    y=[y_pos, y_pos],
+                    skipFiniteCheck=True
+                )
+
+        self.mouse_pointer_vline.setVisible(visible and self.crosshairs_enabled)
+        self.mouse_pointer_hline.setVisible(visible and self.crosshairs_enabled)
 

@@ -28,7 +28,7 @@ module pwm_generator (
             counter <= 8'd0;
         end else begin
             // Increment the counter, it will automatically wrap from 255 to 0
-            counter <= counter + 1;
+            counter <= counter + 8'd1;
         end
     end
 

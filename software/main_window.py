@@ -284,6 +284,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.thresholdPos.valueChanged.connect(self.trigger_pos_changed)
         self.ui.thresholdPosLabel.clicked.connect(self.trigger_pos_reset)
         self.ui.thresholdDelta.valueChanged.connect(self.trigger_delta_changed)
+        self.ui.thresholdDelta_2.valueChanged.connect(self.trigger_delta2_changed)
         self.ui.risingfalling_comboBox.currentIndexChanged.connect(self.rising_falling_changed)
         self.ui.totBox.valueChanged.connect(self.tot_changed)
         self.ui.trigger_delay_box.valueChanged.connect(self.trigger_delay_changed)
@@ -378,6 +379,9 @@ class MainWindow(TemplateBaseClass):
         # Plot manager signals
         self.plot_manager.vline_dragged_signal.connect(self.on_vline_dragged)
         self.plot_manager.hline_dragged_signal.connect(self.on_hline_dragged)
+        self.plot_manager.hline_runt_dragged_signal.connect(self.on_hline_runt_dragged)
+        self.plot_manager.vline_tot_dragged_signal.connect(self.on_vline_tot_dragged)
+        self.plot_manager.vline_holdoff_dragged_signal.connect(self.on_vline_holdoff_dragged)
         self.plot_manager.curve_clicked_signal.connect(self.on_curve_clicked)
         self.plot_manager.math_curve_clicked_signal.connect(self.on_math_curve_clicked)
 
@@ -391,6 +395,7 @@ class MainWindow(TemplateBaseClass):
         # View menu actions
         self.ui.actionXY_Plot.triggered.connect(self.toggle_xy_view_slot)
         self.ui.actionZoom_window.triggered.connect(self.toggle_zoom_window_slot)
+        self.ui.actionZoom_window_crosshairs.triggered.connect(self.toggle_zoom_window_crosshairs_slot)
         self.ui.actionMath_channels.triggered.connect(self.open_math_channels)
         self.ui.actionHistory_window.triggered.connect(self.open_history_window)
 
@@ -1841,7 +1846,13 @@ class MainWindow(TemplateBaseClass):
         self.ui.trigger_delay_box.setValue(s.trigger_delay[s.activeboard])
         self.ui.trigger_holdoff_box.setValue(s.trigger_holdoff[s.activeboard])
         self.ui.thresholdDelta.setValue(s.triggerdelta[s.activeboard])
+        self.ui.thresholdDelta_2.setValue(s.triggerdelta2[s.activeboard])
         self.ui.totBox.setValue(s.triggertimethresh[s.activeboard])
+
+        # Enable/disable runt pulse threshold based on minimum firmware version of all boards
+        min_firmware_version = min(s.firmwareversion) if s.firmwareversion else -1
+        firmware_supports_runt = min_firmware_version >= 32
+        self.ui.thresholdDelta_2.setEnabled(firmware_supports_runt)
 
         # Update the consolidated trigger combo box
         # Index mapping: 0=Rising Ch0, 1=Falling Ch0, 2=Rising Ch1, 3=Falling Ch1, 4=Other boards, 5=External SMA
@@ -2042,6 +2053,92 @@ class MainWindow(TemplateBaseClass):
     def on_hline_dragged(self, value):
         t = value / (self.state.yscale * 256) + 127
         self.ui.threshold.setValue(int(t))
+
+    def on_hline_runt_dragged(self, value):
+        """Handle dragging of the runt threshold line."""
+        state = self.state
+        active_board = state.activeboard
+        hline_pos = (state.triggerlevel - 127) * state.yscale * 256
+
+        # Calculate delta2 from the difference between runt line and hline
+        runt_pos = value
+        delta = state.triggerdelta[active_board]
+
+        if state.fallingedge[active_board]:
+            # For falling edge, runt line is below hline
+            delta2 = int((hline_pos - runt_pos) / (state.yscale * 256)) - delta
+        else:
+            # For rising edge, runt line is above hline
+            delta2 = int((runt_pos - hline_pos) / (state.yscale * 256)) - delta
+
+        # Don't let runt line go below (above) the first threshold for rising (falling) trigger
+        # This means delta2 must be >= 1
+        delta2 = max(1, delta2)
+
+        # Block signals to prevent feedback loop, then update state and hardware directly
+        self.ui.thresholdDelta_2.blockSignals(True)
+        self.ui.thresholdDelta_2.setValue(delta2)
+        self.ui.thresholdDelta_2.blockSignals(False)
+
+        # Update state and send to hardware
+        state.triggerdelta2[active_board] = delta2
+        self.controller.send_trigger_info(active_board)
+
+    def on_vline_tot_dragged(self, value):
+        """Handle dragging of the TOT (time over threshold) line."""
+        state = self.state
+        active_board = state.activeboard
+
+        # Calculate vline position
+        vline_pos = 4 * 10 * (state.triggerpos + 1.0) * (state.downsamplefactor / state.nsunits / state.samplerate)
+
+        # Calculate TOT from the difference between vline_tot and vline
+        # tot is in units of samples
+        tot_pos = value
+        tot_time_diff = tot_pos - vline_pos
+
+        # Convert time difference back to samples
+        tot_samples = int(tot_time_diff / (4 * 10 * (state.downsamplefactor / state.nsunits / state.samplerate)))
+
+        # abort if tot_samples is invalid
+        if tot_samples<0 or tot_samples>255: return
+
+        # Block signals to prevent feedback loop, then update state and hardware directly
+        self.ui.totBox.blockSignals(True)
+        self.ui.totBox.setValue(tot_samples)
+        self.ui.totBox.blockSignals(False)
+
+        # Update state and send to hardware
+        state.triggertimethresh[active_board] = tot_samples
+        self.controller.send_trigger_info(active_board)
+
+    def on_vline_holdoff_dragged(self, value):
+        """Handle dragging of the holdoff line."""
+        state = self.state
+        active_board = state.activeboard
+
+        # Calculate vline position
+        vline_pos = 4 * 10 * (state.triggerpos + 1.0) * (state.downsamplefactor / state.nsunits / state.samplerate)
+
+        # Calculate holdoff from the difference between vline and vline_holdoff
+        # holdoff is in units of samples
+        holdoff_pos = value
+        holdoff_time_diff = vline_pos - holdoff_pos
+
+        # Convert time difference back to samples
+        holdoff_samples = int(holdoff_time_diff / (4 * 10 * (state.downsamplefactor / state.nsunits / state.samplerate)))
+
+        # Don't allow negative holdoff
+        holdoff_samples = max(0, holdoff_samples)
+
+        # Block signals to prevent feedback loop, then update state and hardware directly
+        self.ui.trigger_holdoff_box.blockSignals(True)
+        self.ui.trigger_holdoff_box.setValue(holdoff_samples)
+        self.ui.trigger_holdoff_box.blockSignals(False)
+
+        # Update state and send to hardware
+        state.trigger_holdoff[active_board] = holdoff_samples
+        self.controller.send_trigger_delay(active_board)
 
     def resamp_changed(self, value):
         """Handle resamp value changes from the UI."""
@@ -2511,6 +2608,8 @@ class MainWindow(TemplateBaseClass):
                 self.zoom_window = ZoomWindow(self, self.state, self.plot_manager)
                 # Connect signal to handle window closing
                 self.zoom_window.window_closed.connect(self.on_zoom_window_closed)
+                # Set zoom window reference in plot manager for cross-window mouse pointer
+                self.plot_manager.set_zoom_window(self.zoom_window)
                 # Position to the right of main window with tops aligned
                 self.zoom_window.position_relative_to_main(self)
 
@@ -2524,6 +2623,11 @@ class MainWindow(TemplateBaseClass):
             # Sync marker state to zoom window
             if self.ui.actionMarkers.isChecked():
                 self.zoom_window.set_markers(True)
+
+            # Sync crosshair state to both windows
+            if self.ui.actionZoom_window_crosshairs.isChecked():
+                self.plot_manager.set_crosshairs_enabled(True)
+                self.zoom_window.set_crosshairs_enabled(True)
         else:
             # Hide zoom window and ROI
             if self.zoom_window is not None:
@@ -2542,6 +2646,15 @@ class MainWindow(TemplateBaseClass):
         if self.zoom_window and self.zoom_window.isVisible():
             # Update the zoom window's view range
             self.zoom_window.set_zoom_region(x_range, y_range)
+
+    def toggle_zoom_window_crosshairs_slot(self, checked):
+        """Slot for the 'Zoom Window Crosshairs' menu action."""
+        # Update crosshair enabled state in plot manager
+        self.plot_manager.set_crosshairs_enabled(checked)
+
+        # Update crosshair enabled state in zoom window if it exists
+        if self.zoom_window is not None:
+            self.zoom_window.set_crosshairs_enabled(checked)
 
     def open_math_channels(self):
         """Slot for the 'Math Channels' menu action."""
@@ -3222,6 +3335,16 @@ class MainWindow(TemplateBaseClass):
         board = self.state.activeboard
         self.state.triggerdelta[board] = value
         self.controller.send_trigger_info(board)
+        # Update the visual delta threshold line
+        self.plot_manager.draw_trigger_lines()
+
+    def trigger_delta2_changed(self, value):
+        """Handle changes to trigger delta 2 spinbox (runt pulse threshold)."""
+        board = self.state.activeboard
+        self.state.triggerdelta2[board] = value
+        self.controller.send_trigger_info(board)
+        # Update the visual runt threshold line
+        self.plot_manager.draw_trigger_lines()
 
     def rising_falling_changed(self, index):
         s = self.state
@@ -3254,6 +3377,9 @@ class MainWindow(TemplateBaseClass):
 
             # Send trigger info to hardware
             self.controller.send_trigger_info(active_board)
+
+            # Update trigger lines (including runt line which depends on rising/falling edge)
+            self.plot_manager.draw_trigger_lines()
 
             # Swap Risetime/Falltime measurements if edge direction changed
             if self.measurements:
@@ -3307,6 +3433,8 @@ class MainWindow(TemplateBaseClass):
         self.state.triggertimethresh[board] = value
         self.controller.send_trigger_info(board)
         self.update_trigger_spinbox_tooltip(self.ui.totBox, "Time over threshold required to trigger")
+        # Update the visual TOT line
+        self.plot_manager.draw_trigger_lines()
 
     def trigger_delay_changed(self, value):
         """Handle changes to trigger delay spinbox."""
@@ -3325,6 +3453,8 @@ class MainWindow(TemplateBaseClass):
         self.state.trigger_holdoff[board] = value
         self.controller.send_trigger_delay(board)
         self.update_trigger_spinbox_tooltip(self.ui.trigger_holdoff_box, "Time needed failing threshold before passing threshold")
+        # Update the visual holdoff line
+        self.plot_manager.draw_trigger_lines()
 
     def update_trigger_spinbox_tooltip(self, spinbox, base_text):
         """Update tooltip for trigger-related spinboxes to show time duration.
