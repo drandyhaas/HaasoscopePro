@@ -665,7 +665,7 @@ def load_setup(main_window):
     # Polynomial filtering settings
     if 'polynomial_filtering_enabled' in setup:
         s.polynomial_filtering_enabled = setup['polynomial_filtering_enabled']
-        main_window.ui.actionApply_polynomial_filtering.setChecked(s.polynomial_filtering_enabled)
+        main_window.ui.actionPolynomial_filtering.setChecked(s.polynomial_filtering_enabled)
     if 'savgol_window_length' in setup:
         s.savgol_window_length = setup['savgol_window_length']
     if 'savgol_polyorder' in setup:
