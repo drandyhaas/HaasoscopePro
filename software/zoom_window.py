@@ -66,6 +66,14 @@ class ZoomWindow(QtWidgets.QWidget):
         # Hide the autoscale button (accessed through PlotItem)
         self.plot.hideButtons()
 
+        # Enable mouse tracking for cross-window pointer (but keep mouse enabled=False to prevent pan/zoom)
+        self.plot_widget.setMouseTracking(True)
+        self.plot.scene().sigMouseMoved.connect(self.on_mouse_moved)
+
+        # Track window activation state
+        self.is_active_window = False
+        self.crosshairs_enabled = False  # Track if crosshairs should be shown
+
         # Add secondary Y-axis for voltage display
         self.right_axis = None
         if state and state.num_board > 0:
@@ -113,6 +121,15 @@ class ZoomWindow(QtWidgets.QWidget):
         for cursor in self.cursor_lines.values():
             self.plot.addItem(cursor)
             cursor.setVisible(False)  # Initially hidden
+
+        # Create mouse pointer indicator (small crosshair - 20 pixels total)
+        pointer_pen = pg.mkPen(color=QColor(255, 255, 0, 180), width=2, style=QtCore.Qt.SolidLine)  # Semi-transparent yellow
+        self.mouse_pointer_vline = self.plot.plot(pen=pointer_pen, skipFiniteCheck=True)
+        self.mouse_pointer_hline = self.plot.plot(pen=pointer_pen, skipFiniteCheck=True)
+        self.mouse_pointer_vline.setVisible(False)
+        self.mouse_pointer_hline.setVisible(False)
+        self.mouse_pointer_x = 0.0
+        self.mouse_pointer_y = 0.0
 
         # Create plot lines for each channel (will be created dynamically)
         self.channel_lines = {}  # {channel_index: plot_line}
@@ -814,3 +831,111 @@ class ZoomWindow(QtWidgets.QWidget):
         """Called when window is closed - emit signal and update state."""
         self.window_closed.emit()
         super().closeEvent(event)
+
+    def on_mouse_moved(self, pos):
+        """Handle mouse movement in zoom window - update crosshair if this window is active."""
+        if not self.is_active_window or not self.plot_manager:
+            return
+
+        # Map scene position to view coordinates
+        view_pos = self.plot.getViewBox().mapSceneToView(pos)
+        x_zoom = view_pos.x()
+        y_zoom = view_pos.y()
+
+        # Get the zoom window's full view bounds (not just the ROI)
+        view_range = self.plot.getViewBox().viewRange()
+        view_x_min, view_x_max = view_range[0]
+        view_y_min, view_y_max = view_range[1]
+
+        # Check if mouse is within the zoom window's visible area
+        if view_x_min <= x_zoom <= view_x_max and view_y_min <= y_zoom <= view_y_max:
+            # Always update crosshair in zoom window
+            self.update_crosshair_position(x_zoom, y_zoom, True)
+
+            # Only update main window crosshair if within ROI bounds
+            if self.zoom_x_range and self.zoom_y_range:
+                x_min, x_max = self.zoom_x_range
+                y_min, y_max = self.zoom_y_range
+                within_roi = x_min <= x_zoom <= x_max and y_min <= y_zoom <= y_max
+
+                if hasattr(self.plot_manager, 'update_crosshair_position'):
+                    self.plot_manager.update_crosshair_position(x_zoom, y_zoom, within_roi)
+            return
+
+        # Mouse is outside zoom window view - hide crosshair in both windows
+        self.update_crosshair_position(0, 0, False)
+        if hasattr(self.plot_manager, 'update_crosshair_position'):
+            self.plot_manager.update_crosshair_position(0, 0, False)
+
+    def update_crosshair_position(self, x_pos, y_pos, visible):
+        """Update the crosshair position (20 pixels long).
+
+        Args:
+            x_pos: X position in plot coordinates
+            y_pos: Y position in plot coordinates
+            visible: Whether the crosshair should be visible
+        """
+        self.mouse_pointer_x = x_pos
+        self.mouse_pointer_y = y_pos
+
+        # Only show if both visible flag is True AND crosshairs are enabled
+        if visible and self.crosshairs_enabled:
+            # Calculate 20 pixels in data coordinates (10 pixels each direction)
+            view_range = self.plot.getViewBox().viewRange()
+            view_rect = self.plot.getViewBox().sceneBoundingRect()
+
+            if view_rect.width() > 0 and view_rect.height() > 0:
+                # Pixels to data units
+                x_range = view_range[0][1] - view_range[0][0]
+                y_range = view_range[1][1] - view_range[1][0]
+                pixels_to_x = x_range / view_rect.width()
+                pixels_to_y = y_range / view_rect.height()
+
+                # 10 pixels in each direction
+                half_cross_x = 10 * pixels_to_x
+                half_cross_y = 10 * pixels_to_y
+
+                # Vertical line (constant x, varying y)
+                self.mouse_pointer_vline.setData(
+                    x=[x_pos, x_pos],
+                    y=[y_pos - half_cross_y, y_pos + half_cross_y],
+                    skipFiniteCheck=True
+                )
+
+                # Horizontal line (varying x, constant y)
+                self.mouse_pointer_hline.setData(
+                    x=[x_pos - half_cross_x, x_pos + half_cross_x],
+                    y=[y_pos, y_pos],
+                    skipFiniteCheck=True
+                )
+
+        self.mouse_pointer_vline.setVisible(visible and self.crosshairs_enabled)
+        self.mouse_pointer_hline.setVisible(visible and self.crosshairs_enabled)
+
+    def set_crosshairs_enabled(self, enabled):
+        """Set whether crosshairs should be shown.
+
+        Args:
+            enabled: True to show crosshairs, False to hide them
+        """
+        self.crosshairs_enabled = enabled
+        # If disabling, immediately hide the crosshair
+        if not enabled:
+            self.mouse_pointer_vline.setVisible(False)
+            self.mouse_pointer_hline.setVisible(False)
+
+    def enterEvent(self, event):
+        """Called when mouse enters the zoom window."""
+        self.is_active_window = True
+        # Also notify plot manager that zoom window is now active
+        if self.plot_manager and hasattr(self.plot_manager, 'set_zoom_window_active'):
+            self.plot_manager.set_zoom_window_active(True)
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        """Called when mouse leaves the zoom window."""
+        self.is_active_window = False
+        # Notify plot manager that zoom window is no longer active
+        if self.plot_manager and hasattr(self.plot_manager, 'set_zoom_window_active'):
+            self.plot_manager.set_zoom_window_active(False)
+        super().leaveEvent(event)

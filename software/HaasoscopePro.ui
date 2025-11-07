@@ -2528,6 +2528,8 @@ Outlined if triggering on this channel</string>
     <addaction name="actionCursors"/>
     <addaction name="actionTime_relative"/>
     <addaction name="actionSnap_to_waveform"/>
+    <addaction name="separator"/>
+    <addaction name="actionZoom_window_crosshairs"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuCalibration"/>
@@ -3106,6 +3108,17 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Polyphase upsampling</string>
+   </property>
+  </action>
+  <action name="actionZoom_window_crosshairs">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="checked">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Zoom window crosshairs</string>
    </property>
   </action>
  </widget>

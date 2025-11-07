@@ -276,6 +276,7 @@ graph TD
 - Region of Interest (ROI) selection on main plot
 - Secondary Y-axis for voltage display
 - Non-interactive view (pan/zoom controlled by ROI on main plot)
+- Cross-window mouse pointer (20-pixel crosshair visible only within ROI)
 - Accessed via View menu → Zoom Window
 
 **`histogram_window.py`** - Histogram display

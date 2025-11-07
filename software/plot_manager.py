@@ -277,6 +277,23 @@ class PlotManager(pg.QtCore.QObject):
         self.zoom_roi.setVisible(False)
         # Connect signal to notify when ROI changes
         self.zoom_roi.sigRegionChanged.connect(self.on_zoom_roi_changed)
+
+        # Create mouse pointer indicator (small crosshair - 20 pixels total)
+        pointer_pen = pg.mkPen(color=QColor(255, 255, 0, 180), width=2, style=QtCore.Qt.SolidLine)  # Semi-transparent yellow
+        self.mouse_pointer_vline = self.plot.plot(pen=pointer_pen, skipFiniteCheck=True)
+        self.mouse_pointer_hline = self.plot.plot(pen=pointer_pen, skipFiniteCheck=True)
+        self.mouse_pointer_vline.setVisible(False)
+        self.mouse_pointer_hline.setVisible(False)
+        self.mouse_pointer_x = 0.0
+        self.mouse_pointer_y = 0.0
+
+        # Reference to zoom window for cross-window pointer
+        self.zoom_window = None
+        self.zoom_window_active = False  # Track if mouse is over zoom window
+        self.crosshairs_enabled = False  # Track if crosshairs should be shown
+
+        # Enable mouse tracking for cross-window pointer
+        self.plot.scene().sigMouseMoved.connect(self.on_mouse_moved)
         self.zoom_roi.sigRegionChanged.connect(self._update_zoom_roi_fill)
 
         # Persistence average lines (created per-channel on demand)
@@ -1872,4 +1889,128 @@ class PlotManager(pg.QtCore.QObject):
         except (KeyError, IndexError):
             # Fail silently if the fit_results dictionary is malformed
             pass
+
+    def set_zoom_window(self, zoom_window):
+        """Set reference to the zoom window for cross-window mouse pointer.
+
+        Args:
+            zoom_window: The ZoomWindow instance
+        """
+        self.zoom_window = zoom_window
+
+    def set_zoom_window_active(self, active):
+        """Set whether the zoom window is currently active (mouse is over it).
+
+        Args:
+            active: True if mouse is over zoom window, False otherwise
+        """
+        self.zoom_window_active = active
+
+    def set_crosshairs_enabled(self, enabled):
+        """Set whether crosshairs should be shown.
+
+        Args:
+            enabled: True to show crosshairs, False to hide them
+        """
+        self.crosshairs_enabled = enabled
+        # If disabling, immediately hide the crosshair
+        if not enabled:
+            self.mouse_pointer_vline.setVisible(False)
+            self.mouse_pointer_hline.setVisible(False)
+
+    def on_mouse_moved(self, pos):
+        """Handle mouse movement in main plot - update crosshair if zoom window is not active."""
+        if not self.zoom_window or not self.zoom_window.isVisible():
+            return
+
+        # Only update if zoom window is not active (main window controls the crosshair)
+        if self.zoom_window_active:
+            return
+
+        # Map scene position to view coordinates
+        view_pos = self.plot.getViewBox().mapSceneToView(pos)
+        x_main = view_pos.x()
+        y_main = view_pos.y()
+
+        # Get main plot bounds
+        view_range = self.plot.getViewBox().viewRange()
+        x_min, x_max = view_range[0]
+        y_min, y_max = view_range[1]
+
+        # Check if mouse is within plot bounds
+        if x_min <= x_main <= x_max and y_min <= y_main <= y_max:
+            # Check if mouse is within ROI bounds
+            if self.zoom_roi and self.zoom_roi.isVisible():
+                roi_pos = self.zoom_roi.pos()
+                roi_size = self.zoom_roi.size()
+                roi_x_min = roi_pos[0]
+                roi_x_max = roi_pos[0] + roi_size[0]
+                roi_y_min = roi_pos[1]
+                roi_y_max = roi_pos[1] + roi_size[1]
+
+                within_roi = (roi_x_min <= x_main <= roi_x_max and
+                             roi_y_min <= y_main <= roi_y_max)
+
+                # Always update zoom window crosshair
+                if hasattr(self.zoom_window, 'update_crosshair_position'):
+                    self.zoom_window.update_crosshair_position(x_main, y_main, True)
+
+                # Only update main window crosshair if within ROI
+                self.update_crosshair_position(x_main, y_main, within_roi)
+            else:
+                # No ROI visible, show crosshair in both windows
+                self.update_crosshair_position(x_main, y_main, True)
+                if hasattr(self.zoom_window, 'update_crosshair_position'):
+                    self.zoom_window.update_crosshair_position(x_main, y_main, True)
+            return
+
+        # Mouse is outside plot bounds - hide crosshair in both windows
+        self.update_crosshair_position(0, 0, False)
+        if hasattr(self.zoom_window, 'update_crosshair_position'):
+            self.zoom_window.update_crosshair_position(0, 0, False)
+
+    def update_crosshair_position(self, x_pos, y_pos, visible):
+        """Update the crosshair position (20 pixels long).
+
+        Args:
+            x_pos: X position in plot coordinates
+            y_pos: Y position in plot coordinates
+            visible: Whether the crosshair should be visible
+        """
+        self.mouse_pointer_x = x_pos
+        self.mouse_pointer_y = y_pos
+
+        # Only show if both visible flag is True AND crosshairs are enabled
+        if visible and self.crosshairs_enabled:
+            # Calculate 20 pixels in data coordinates (10 pixels each direction)
+            view_range = self.plot.getViewBox().viewRange()
+            view_rect = self.plot.getViewBox().sceneBoundingRect()
+
+            if view_rect.width() > 0 and view_rect.height() > 0:
+                # Pixels to data units
+                x_range = view_range[0][1] - view_range[0][0]
+                y_range = view_range[1][1] - view_range[1][0]
+                pixels_to_x = x_range / view_rect.width()
+                pixels_to_y = y_range / view_rect.height()
+
+                # 10 pixels in each direction
+                half_cross_x = 10 * pixels_to_x
+                half_cross_y = 10 * pixels_to_y
+
+                # Vertical line (constant x, varying y)
+                self.mouse_pointer_vline.setData(
+                    x=[x_pos, x_pos],
+                    y=[y_pos - half_cross_y, y_pos + half_cross_y],
+                    skipFiniteCheck=True
+                )
+
+                # Horizontal line (varying x, constant y)
+                self.mouse_pointer_hline.setData(
+                    x=[x_pos - half_cross_x, x_pos + half_cross_x],
+                    y=[y_pos, y_pos],
+                    skipFiniteCheck=True
+                )
+
+        self.mouse_pointer_vline.setVisible(visible and self.crosshairs_enabled)
+        self.mouse_pointer_hline.setVisible(visible and self.crosshairs_enabled)
 

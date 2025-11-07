@@ -395,6 +395,7 @@ class MainWindow(TemplateBaseClass):
         # View menu actions
         self.ui.actionXY_Plot.triggered.connect(self.toggle_xy_view_slot)
         self.ui.actionZoom_window.triggered.connect(self.toggle_zoom_window_slot)
+        self.ui.actionZoom_window_crosshairs.triggered.connect(self.toggle_zoom_window_crosshairs_slot)
         self.ui.actionMath_channels.triggered.connect(self.open_math_channels)
         self.ui.actionHistory_window.triggered.connect(self.open_history_window)
 
@@ -2607,6 +2608,8 @@ class MainWindow(TemplateBaseClass):
                 self.zoom_window = ZoomWindow(self, self.state, self.plot_manager)
                 # Connect signal to handle window closing
                 self.zoom_window.window_closed.connect(self.on_zoom_window_closed)
+                # Set zoom window reference in plot manager for cross-window mouse pointer
+                self.plot_manager.set_zoom_window(self.zoom_window)
                 # Position to the right of main window with tops aligned
                 self.zoom_window.position_relative_to_main(self)
 
@@ -2620,6 +2623,11 @@ class MainWindow(TemplateBaseClass):
             # Sync marker state to zoom window
             if self.ui.actionMarkers.isChecked():
                 self.zoom_window.set_markers(True)
+
+            # Sync crosshair state to both windows
+            if self.ui.actionZoom_window_crosshairs.isChecked():
+                self.plot_manager.set_crosshairs_enabled(True)
+                self.zoom_window.set_crosshairs_enabled(True)
         else:
             # Hide zoom window and ROI
             if self.zoom_window is not None:
@@ -2638,6 +2646,15 @@ class MainWindow(TemplateBaseClass):
         if self.zoom_window and self.zoom_window.isVisible():
             # Update the zoom window's view range
             self.zoom_window.set_zoom_region(x_range, y_range)
+
+    def toggle_zoom_window_crosshairs_slot(self, checked):
+        """Slot for the 'Zoom Window Crosshairs' menu action."""
+        # Update crosshair enabled state in plot manager
+        self.plot_manager.set_crosshairs_enabled(checked)
+
+        # Update crosshair enabled state in zoom window if it exists
+        if self.zoom_window is not None:
+            self.zoom_window.set_crosshairs_enabled(checked)
 
     def open_math_channels(self):
         """Slot for the 'Math Channels' menu action."""
