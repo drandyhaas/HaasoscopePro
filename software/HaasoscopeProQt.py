@@ -62,8 +62,8 @@ if __name__ == '__main__':
                 oldbytes(usbs[b])
 
                 # Turn on lvdsout_clk for multi-board setups
-                if len(usbs)>1 and b<len(usbs)-1:
-                    clkout_ena(usbs[b], b, True, True)
+                if len(usbs)>1: # for all boards, including the "last" one, since we don't know the ordering yet
+                    clkout_ena(usbs[b], b, True, False)
 
                 # Check for special beta device serial numbers
                 usbs[b].beta = 0.0  # Assign default
@@ -76,6 +76,7 @@ if __name__ == '__main__':
         usbs = orderusbs(usbs)
         if len(usbs) > 1:
             tellfirstandlast(usbs)
+            clkout_ena(usbs[len(usbs)-1], len(usbs)-1, False, False) # now can turn off clkout on the truly last board, now that we know the ordering
 
     except (RuntimeError, IndexError) as e:
         print(f"An unexpected error occurred: {e}")
