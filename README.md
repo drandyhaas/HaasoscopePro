@@ -24,7 +24,7 @@ See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiK
 
 ## Software and firmware versions
 
-- "main" branch currently has v32 firmware which adds fan PWM control, runt trigger, and more software features
+- "main" branch currently has v32 firmware and software
 - "v32_test" branch: new development is happening here
 - old: "v29" branch has v29 firmware and adds more software features
 - old: "v27" branch has v27 firmware that shipped with the first round of units
