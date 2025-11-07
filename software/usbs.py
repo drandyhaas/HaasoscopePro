@@ -151,7 +151,7 @@ def orderusbs(usbs: List[UsbFt232hSync245mode]) -> List[UsbFt232hSync245mode]:
         # The first board in the chain has no external clock, so this bit will be high.
         if getbit(res[1], 3):
             if first_board_idx != -1:
-                raise RuntimeError("Board ordering failed: Found two boards with no external clock. Check sync cables.")
+                raise RuntimeError(f"Board ordering failed: Also found board {i} with no external clock. Check sync cables.")
             first_board_idx = i
             print(f"Identified board index {i} (Serial: {usb.serial.decode()}) as the first in the chain.")
 
