@@ -61,7 +61,7 @@ class UsbFt232hSync245mode:
 
         self.serial = serial
         self.device_name = device_name
-        self._recv_timeout = 250  # ms
+        self._recv_timeout = 1000  # ms
         self._send_timeout = 2000  # ms
         self._chunk = 65536  # 64kB chunks for sending/receiving
 
