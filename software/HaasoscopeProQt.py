@@ -63,7 +63,7 @@ if __name__ == '__main__':
         max_devices = args.max_devices
         if max_devices<len(usbs): usbs = usbs[:max_devices]
 
-        if len(usbs) > 1:
+        if len(usbs) > 0:
             tellfirstandlast(usbs)
             clkout_ena(usbs[len(usbs)-1], len(usbs)-1, False, False) # now can turn off clkout on the truly last board, now that we know the ordering
 

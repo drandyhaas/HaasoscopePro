@@ -470,6 +470,7 @@ class HardwareController:
 
         starttime = time.time()
         for i in reversed(range(self.num_board)): clkout_ena(self.usbs[i], i, False)
+        time.sleep(.1)
 
         if not verify_only:
             if progress_callback:
