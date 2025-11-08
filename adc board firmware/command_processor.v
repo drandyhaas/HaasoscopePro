@@ -106,7 +106,7 @@ module command_processor (
 
 );
 
-integer version = 32; // firmware version
+integer version = 32, version_minor = 1; // firmware versions
 
 // these first 10 debugout's go to LEDs on the board
 assign debugout[0] = clkswitch;
@@ -135,6 +135,9 @@ assign debugout[11]= fanon; // the cooling fan (could be PWM'ed for finer contro
 localparam [3:0] INIT=4'd0, RX=4'd1, PROCESS=4'd2, TX_DATA_CONST=4'd3, TX_DATA1=4'd4, TX_DATA2=4'd5, TX_DATA3=4'd6, TX_DATA4=4'd7, PLLCLOCK=4'd8, BOOTUP=4'd9;
 reg [ 3:0]  state = INIT;
 reg         didbootup = 0;
+integer     watchdog_counter = 0;
+integer     watchdog_timer = 0; // counts up to WATCHDOG_LIMIT
+localparam  WATCHDOG_LIMIT = 500_000_000; // 10 seconds at 50 MHz
 reg [ 3:0]  rx_counter = 0;
 reg [ 7:0]  rx_data[7:0];
 integer     length = 0;
@@ -178,7 +181,7 @@ reg [15:0]   phase_diff_b_sync = 0, phase_diff_b_sync1 = 0;
 
 integer i;
 always @ (posedge clk) begin
-   
+
    acqstate_sync <= acqstate;
    eventcounter_sync <= eventcounter;
    ram_address_triggered_sync <= ram_address_triggered;
@@ -196,12 +199,28 @@ always @ (posedge clk) begin
    phase_diff_b_sync <= phase_diff_b_sync1;
    boardin_sync <= boardin;
    for (i=0;i<4;i=i+1) if (overrange[i]) overrange_counter[i] <= overrange_counter[i] + 1;
-      
+
    if (probecompcounter==16'd25000) begin
       boardout[3] <= ~boardout[3]; // for probe compensation, 1kHz
       probecompcounter <= 0;
    end
    else probecompcounter <= probecompcounter + 16'd1;
+
+   // Watchdog timer: increment when not in RX state, check for timeout
+   if (state == RX) begin
+      watchdog_timer <= 0; // reset timer when in RX state
+   end
+   else if (state != INIT && state != BOOTUP) begin
+      if (watchdog_timer >= WATCHDOG_LIMIT) begin
+         // Watchdog timeout! Force return to INIT
+         watchdog_counter <= watchdog_counter + 1;
+         watchdog_timer <= 0;
+         // Will be handled in the default case of state machine
+      end
+      else begin
+         watchdog_timer <= watchdog_timer + 30'd1;
+      end
+   end
 
    case (state)
    INIT : begin
@@ -304,6 +323,7 @@ always @ (posedge clk) begin
             fanpwm <= rx_data[2];
             o_tdata <= {24'd0,fanpwm};
          end
+         22: o_tdata <= watchdog_counter;
          default: o_tdata <= 0;
          endcase
          `SEND_STD_USB_RESPONSE
@@ -465,11 +485,13 @@ always @ (posedge clk) begin
          `SEND_STD_USB_RESPONSE
       end
 
-      12 : begin // not used yet
+      12 : begin // minor firmware version
+         o_tdata <= version_minor;
+         `SEND_STD_USB_RESPONSE
       end
 
-      13 : begin // not used yet
-         
+      13 : begin // test watchdog timer - doesn't return!
+         //
       end
 
       14 : begin // read-register function
@@ -480,7 +502,7 @@ always @ (posedge clk) begin
             2 : o_tdata <= {28'd0, spistate};
             // ...
             13: o_tdata <= {31'd0, flash_busy}; // actually using this one
-            default: o_tdata <= 0;
+            default: o_tdata <= 123_456_789;
          endcase
          `SEND_STD_USB_RESPONSE
       end
@@ -598,8 +620,11 @@ always @ (posedge clk) begin
          endcase
       end
 
-      default: // some command we didn't know
-      state <= RX;
+      default : begin // some command we didn't know, don't send anything back, just return
+         length <= 0;
+         o_tvalid <= 1'b0;
+         state <= INIT;
+      end
 
       endcase
    end
@@ -750,6 +775,12 @@ always @ (posedge clk) begin
 
    default : state <= INIT;
    endcase
+
+   // Watchdog timeout handler: force return to INIT if timeout occurred
+   if (watchdog_timer >= WATCHDOG_LIMIT && state != RX && state != INIT && state != BOOTUP) begin
+      o_tvalid <= 1'b0;
+      state <= INIT;
+   end
 end
 
 // fan PWM control
