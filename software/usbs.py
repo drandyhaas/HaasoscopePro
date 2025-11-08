@@ -29,7 +29,7 @@ def version(usb: UsbFt232hSync245mode, quiet: bool = True) -> int:
 
 def version_minor(usb: UsbFt232hSync245mode, quiet: bool = True) -> int:
     """Reads the firmware minor version from a connected board."""
-    usb.send(bytes([2, 12, 100, 100, 100, 100, 100, 100]))
+    usb.send(bytes([14, 3, 100, 100, 100, 100, 100, 100]))
     res = usb.recv(4)
     if len(res) < 4:
         print("Failed to get firmware minor version!")
