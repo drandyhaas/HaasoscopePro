@@ -36,21 +36,6 @@ if __name__ == '__main__':
         # --- Hardware Discovery and Initial Setup ---
         print("Searching for Haasoscope Pro boards...")
         usbs = connectdevices(100)
-
-        # Try to use dummy server if requested via --socket or if no hardware found
-        socket_addresses = args.socket if args.socket else None
-
-        if socket_addresses:
-            # User specified --socket argument(s), connect to those
-            print(f"Connecting to socket device(s): {socket_addresses}")
-            socket_usbs = connect_socket_devices(socket_addresses)
-            usbs.extend(socket_usbs)
-        elif len(usbs) < 1:
-            # No hardware found and no --socket specified, try default dummy server
-            print("No hardware found. Looking for dummy scope at localhost:9998...")
-            socket_usbs = connect_socket_devices(["localhost:9998"])
-            usbs.extend(socket_usbs)
-
         if usbs:
             for b in range(len(usbs)):
 
@@ -81,6 +66,19 @@ if __name__ == '__main__':
         if len(usbs) > 1:
             tellfirstandlast(usbs)
             clkout_ena(usbs[len(usbs)-1], len(usbs)-1, False, False) # now can turn off clkout on the truly last board, now that we know the ordering
+
+        # Try to use dummy server if requested via --socket or if no hardware found
+        socket_addresses = args.socket if args.socket else None
+        if socket_addresses:
+            # User specified --socket argument(s), connect to those
+            print(f"Connecting to socket device(s): {socket_addresses}")
+            socket_usbs = connect_socket_devices(socket_addresses)
+            usbs.extend(socket_usbs)
+        elif len(usbs) < 1:
+            # No hardware found and no --socket specified, try default dummy server
+            print("No hardware found. Looking for dummy scope at localhost:9998...")
+            socket_usbs = connect_socket_devices(["localhost:9998"])
+            usbs.extend(socket_usbs)
 
     except (RuntimeError, IndexError) as e:
         print(f"An unexpected error occurred: {e}")
