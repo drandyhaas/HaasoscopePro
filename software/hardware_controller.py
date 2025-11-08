@@ -472,6 +472,8 @@ class HardwareController:
                 return False, "Firmware file not found."
 
         starttime = time.time()
+
+        # disable clkout on all boards
         for i in reversed(range(self.num_board)): clkout_ena(self.usbs[i], i, False)
         time.sleep(.1)
 
@@ -521,7 +523,8 @@ class HardwareController:
 
         readbytes = flash_readall(self.usbs[board_idx], progress_callback=verify_progress)
 
-        for i in range(self.num_board): clkout_ena(self.usbs[i], i, self.num_board > 1)
+        # reanable clkout for all but the last board
+        for i in range(self.num_board): clkout_ena(self.usbs[i], i, i<(self.num_board-1) )
 
         if writtenbytes == readbytes:
             print("Verified!")

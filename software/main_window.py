@@ -2359,6 +2359,31 @@ class MainWindow(TemplateBaseClass):
         """Load scope setup from a JSON file and restore the state."""
         load_setup(self)
 
+    def _prepare_boards_for_firmware_operation(self):
+        """
+        Prepare all boards for firmware update/verify by disabling trigger signal generation.
+        Sets rolling mode off and all boards to external trigger to prevent lvdsout_trig signals.
+        Updates UI to reflect the changes.
+        """
+        # Disable rolling mode
+        if self.state.isrolling:
+            self.state.isrolling = False
+            self.controller.set_rolling(False)
+            # Update rolling button UI
+            self.ui.rollingButton.setText("Normal")
+            self.ui.rollingButton.setChecked(False)
+
+        # Set all boards to external trigger mode
+        for i in range(self.state.num_board):
+            if not self.state.doexttrig[i]:
+                self.state.doexttrig[i] = True
+                self.state.doextsmatrig[i] = False
+                self.controller.set_exttrig(i, True)
+
+        # Update UI to reflect trigger mode changes
+        # This updates the trigger combo box for the active board
+        self.select_channel()
+
     def update_firmware(self):
         from PyQt5.QtWidgets import QProgressDialog
         from PyQt5.QtCore import Qt
@@ -2368,6 +2393,9 @@ class MainWindow(TemplateBaseClass):
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.No: return
         if not self.state.paused: self.dostartstop()  # Pause
+
+        # Prepare boards: disable rolling and set all to external trigger to prevent lvdsout_trig generation
+        self._prepare_boards_for_firmware_operation()
 
         # Create progress dialog
         progress = QProgressDialog("Starting firmware update...", None, 0, 100, self)
@@ -2397,6 +2425,9 @@ class MainWindow(TemplateBaseClass):
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.No: return
         if not self.state.paused: self.dostartstop()  # Pause
+
+        # Prepare boards: disable rolling and set all to external trigger to prevent lvdsout_trig generation
+        self._prepare_boards_for_firmware_operation()
 
         # Create progress dialog
         progress = QProgressDialog("Starting firmware verification...", None, 0, 100, self)
