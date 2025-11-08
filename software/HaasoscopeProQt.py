@@ -56,11 +56,12 @@ if __name__ == '__main__':
                     usbs[b].beta = float(str(usbs[b].serial)[index + 2:index + 6])
                     print(f"Board {b} is a special beta device: v{usbs[b].beta}")
 
-        time.sleep(0.1)  # Wait for clocks to lock after configuration
-        usbs = orderusbs(usbs)
+        max_devices = args.max_devices
+        if len(usbs)>1 and max_devices>1:
+            time.sleep(0.1)  # Wait for clocks to lock after configuration
+            usbs = orderusbs(usbs)
 
         # just use the first max_devices number of devices
-        max_devices = args.max_devices
         if max_devices<len(usbs): usbs = usbs[:max_devices]
 
         if len(usbs) > 0:
