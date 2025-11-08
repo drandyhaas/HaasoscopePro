@@ -485,8 +485,8 @@ always @ (posedge clk) begin
          `SEND_STD_USB_RESPONSE
       end
 
-      12 : begin // minor firmware version
-         o_tdata <= version_minor;
+      12 : begin // not used yet
+         o_tdata <= 0;
          `SEND_STD_USB_RESPONSE
       end
 
@@ -500,6 +500,10 @@ always @ (posedge clk) begin
             0 : o_tdata <= {22'd0, ram_preoffset};
             1 : o_tdata <= {22'd0, ram_address_triggered_sync};
             2 : o_tdata <= {28'd0, spistate};
+            3 : begin
+               o_tdata <= version_minor;
+               `SEND_STD_USB_RESPONSE
+            end
             // ...
             13: o_tdata <= {31'd0, flash_busy}; // actually using this one
             default: o_tdata <= 123_456_789;
