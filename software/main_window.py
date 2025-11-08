@@ -2445,6 +2445,15 @@ class MainWindow(TemplateBaseClass):
         for i in range(11):
             time.sleep(1)
             print(f"  {i+1} seconds...")
+            if i==5:
+                print("\nTry reading watchdog counter early ...")
+                usb.send(bytes([2, 22, 0, 0, 0, 0, 0, 0]))
+                res = usb.recv(4)
+                if len(res) < 4:
+                    print("Timed out reading watchdog counter (as expected)")
+                    continue
+                early_count = int.from_bytes(res, "little")
+                print(f"Read watchdog counter early?! : {early_count}")
 
         # Step 4: Clear any stale data from USB buffer
         print("\nStep 4: Clearing USB buffer...")
