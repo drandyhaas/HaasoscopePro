@@ -356,6 +356,10 @@ class MainWindow(TemplateBaseClass):
             self.ui.actionConfigure_dummy_scope.triggered.connect(self.open_dummy_server_config)
             self.ui.actionConfigure_dummy_scope.setEnabled(True)
 
+        # Enable watchdog test only in testing mode
+        if self.testing_mode:
+            self.ui.actionTest_watchdog.setEnabled(True)
+
         # Menu actions
         self.ui.actionAbout.triggered.connect(self.about_dialog)
         self.ui.actionTake_screenshot.triggered.connect(self.take_screenshot)
@@ -369,6 +373,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionToggle_trig_stabilizer.triggered.connect(self.trig_stabilizer_toggled)
         self.ui.actionToggle_extra_trig_stabilizer.triggered.connect(self.extra_trig_stabilizer_toggled)
         self.ui.actionPulse_stabilizer.triggered.connect(self.pulse_stabilizer_toggled)
+        self.ui.actionTest_watchdog.triggered.connect(self.test_watchdog)
         self.ui.actionMeasure_10_MHz_square_FIR.triggered.connect(self.measure_fir_calibration)
         self.ui.actionApply_FIR_corrections.triggered.connect(self.fir_correction_toggled)
         self.ui.actionSave_FIR_filter.triggered.connect(self.save_fir_filter)
@@ -2410,6 +2415,74 @@ class MainWindow(TemplateBaseClass):
 
         progress.close()
         QMessageBox.information(self, "Firmware Verify", message)
+
+    def test_watchdog(self):
+        """Test the firmware watchdog timer by deliberately freezing the firmware."""
+        board = self.state.activeboard
+        usb = self.usbs[board]
+
+        print("\n=== Watchdog Timer Test ===")
+
+        # Step 1: Read initial watchdog counter (command 2, subcommand 22)
+        print("Step 1: Reading initial watchdog counter...")
+        usb.send(bytes([2, 22, 0, 0, 0, 0, 0, 0]))
+        res = usb.recv(4)
+        if len(res) < 4:
+            print("ERROR: Failed to read watchdog counter!")
+            return
+        initial_count = int.from_bytes(res, "little")
+        print(f"  Initial watchdog counter: {initial_count}")
+
+        # Step 2: Trigger frozen firmware by sending command 13
+        # Command 13 has an empty handler, so firmware will sit in PROCESS state forever
+        print("\nStep 2: Sending command 13 to freeze firmware...")
+        print("  (Command 13 is unimplemented - firmware will sit in PROCESS state forever)")
+        usb.send(bytes([13, 0, 0, 0, 0, 0, 0, 0]))
+
+        # Step 3: Wait for watchdog to trigger (>10 seconds)
+        print("\nStep 3: Waiting 11 seconds for watchdog to trigger...")
+        import time
+        for i in range(11):
+            time.sleep(1)
+            print(f"  {i+1} seconds...")
+            if i==5:
+                print("\nTry reading watchdog counter early ...")
+                usb.send(bytes([2, 22, 0, 0, 0, 0, 0, 0]))
+                res = usb.recv(4)
+                if len(res) < 4:
+                    print("Timed out reading watchdog counter (as expected)")
+                    continue
+                early_count = int.from_bytes(res, "little")
+                print(f"Read watchdog counter early?! : {early_count}")
+
+        # Step 4: Clear any stale data from USB buffer
+        print("\nStep 4: Clearing USB buffer...")
+        from utils import oldbytes
+        cleared_bytes = oldbytes(usb)
+        print(f"  Cleared {cleared_bytes} stale bytes from USB buffer")
+
+        # Step 5: Read watchdog counter again
+        print("\nStep 5: Reading watchdog counter after timeout...")
+        usb.send(bytes([2, 22, 0, 0, 0, 0, 0, 0]))
+        res = usb.recv(4)
+        if len(res) < 4:
+            print("ERROR: Failed to read watchdog counter after timeout!")
+            return
+        final_count = int.from_bytes(res, "little")
+        print(f"  Final watchdog counter: {final_count}")
+
+        # Step 6: Check results
+        print("\n=== Test Results ===")
+        if final_count > initial_count:
+            print(f"✓ SUCCESS: Watchdog triggered! Counter incremented from {initial_count} to {final_count}")
+            print(f"  The watchdog recovered the firmware {final_count - initial_count} time(s)")
+        else:
+            print(f"✗ FAILURE: Watchdog did not trigger. Counter remained at {final_count}")
+
+        QMessageBox.information(self, "Watchdog Test Complete",
+                              f"Initial counter: {initial_count}\n"
+                              f"Final counter: {final_count}\n\n"
+                              f"Result: {'SUCCESS - Watchdog triggered!' if final_count > initial_count else 'FAILURE - Watchdog did not trigger'}")
 
     def set_channel_frame(self):
         s = self.state

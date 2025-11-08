@@ -48,6 +48,9 @@ class HardwareController:
             print("Warning - this board has older firmware than another being used:",max(self.state.firmwareversion))
         if ver > min(self.state.firmwareversion) > -1:
             print("Warning - this board has newer firmware than another being used:",min(self.state.firmwareversion))
+        if 32 <= ver < 1000000:
+            ver_minor = version_minor(usb, False)
+            self.state.firmwareversion_minor = ver_minor
         if not self.adfreset(board_idx):
             return False
         if not setupboard(usb, self.state.dopattern, self.state.dotwochannel[board_idx], self.state.dooverrange, self.state.basevoltage == 200):
@@ -470,6 +473,7 @@ class HardwareController:
 
         starttime = time.time()
         for i in reversed(range(self.num_board)): clkout_ena(self.usbs[i], i, False)
+        time.sleep(.1)
 
         if not verify_only:
             if progress_callback:

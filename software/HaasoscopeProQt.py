@@ -35,23 +35,7 @@ if __name__ == '__main__':
     try:
         # --- Hardware Discovery and Initial Setup ---
         print("Searching for Haasoscope Pro boards...")
-        max_devices = args.max_devices
-        usbs = connectdevices(max_devices)
-
-        # Try to use dummy server if requested via --socket or if no hardware found
-        socket_addresses = args.socket if args.socket else None
-
-        if socket_addresses:
-            # User specified --socket argument(s), connect to those
-            print(f"Connecting to socket device(s): {socket_addresses}")
-            socket_usbs = connect_socket_devices(socket_addresses)
-            usbs.extend(socket_usbs)
-        elif len(usbs) < 1:
-            # No hardware found and no --socket specified, try default dummy server
-            print("No hardware found. Looking for dummy scope at localhost:9998...")
-            socket_usbs = connect_socket_devices(["localhost:9998"])
-            usbs.extend(socket_usbs)
-
+        usbs = connectdevices(100)
         if usbs:
             for b in range(len(usbs)):
 
@@ -72,11 +56,30 @@ if __name__ == '__main__':
                     usbs[b].beta = float(str(usbs[b].serial)[index + 2:index + 6])
                     print(f"Board {b} is a special beta device: v{usbs[b].beta}")
 
-        time.sleep(0.1)  # Wait for clocks to lock after configuration
-        usbs = orderusbs(usbs)
-        if len(usbs) > 1:
+        max_devices = args.max_devices
+        if len(usbs)>1 and max_devices>1:
+            time.sleep(0.1)  # Wait for clocks to lock after configuration
+            usbs = orderusbs(usbs)
+
+        # just use the first max_devices number of devices
+        if max_devices<len(usbs): usbs = usbs[:max_devices]
+
+        if len(usbs) > 0:
             tellfirstandlast(usbs)
             clkout_ena(usbs[len(usbs)-1], len(usbs)-1, False, False) # now can turn off clkout on the truly last board, now that we know the ordering
+
+        # Try to use dummy server if requested via --socket or if no hardware found
+        socket_addresses = args.socket if args.socket else None
+        if socket_addresses:
+            # User specified --socket argument(s), connect to those
+            print(f"Connecting to socket device(s): {socket_addresses}")
+            socket_usbs = connect_socket_devices(socket_addresses)
+            usbs.extend(socket_usbs)
+        elif len(usbs) < 1:
+            # No hardware found and no --socket specified, try default dummy server
+            print("No hardware found. Looking for dummy scope at localhost:9998...")
+            socket_usbs = connect_socket_devices(["localhost:9998"])
+            usbs.extend(socket_usbs)
 
     except (RuntimeError, IndexError) as e:
         print(f"An unexpected error occurred: {e}")

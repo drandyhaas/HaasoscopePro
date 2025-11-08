@@ -463,6 +463,7 @@ def gettemps(usb) -> list[float]:
 def cleanup(usb):
     """Powers down the board safely."""
     set_spi_mode(usb, 0)
-    spicommand(usb, "DEVICE_CONFIG", 0x00, 0x02, 0x03, False)
-    setfan(usb, False)
-    send_leds(usb, 50, 35, 50, 50, 35, 50)
+    spicommand(usb, "DEVICE_CONFIG", 0x00, 0x02, 0x03, False) # turn off ADC
+    setfan(usb, False) # turn off fan
+    clkout_ena(usb, -1, False, False) # disable clock out
+    send_leds(usb, 50, 35, 50, 50, 35, 50)  # set LED's back to white

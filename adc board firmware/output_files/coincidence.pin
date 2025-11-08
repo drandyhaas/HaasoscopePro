@@ -109,7 +109,7 @@ lvds4in[10]                  : AA15      : input  : LVDS              :         
 lvds4in[9]                   : AA16      : input  : LVDS              :         : 4         : Y              
 lvds4in[8]                   : AA17      : input  : LVDS              :         : 4         : Y              
 RESERVED_INPUT_WITH_WEAK_PULLUP : AA18      :        :                   :         : 4         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : AA19      :        :                   :         : 4         :                
+boardin[4]                   : AA19      : input  : 2.5 V             :         : 4         : N              
 lvds4in[7]                   : AA20      : input  : LVDS              :         : 4         : Y              
 RESERVED_INPUT_WITH_WEAK_PULLUP : AA21      :        :                   :         : 5         :                
 GND                          : AA22      : gnd    :                   :         :           :                
@@ -156,7 +156,7 @@ boardout[1]                  : B18       : output : 2.5 V             :         
 boardout[2]                  : B19       : output : 2.5 V             :         : 7         : Y              
 boardout[3]                  : B20       : output : 2.5 V             :         : 7         : Y              
 RESERVED_INPUT_WITH_WEAK_PULLUP : B21       :        :                   :         : 6         :                
-boardin[4]                   : B22       : input  : 2.5 V             :         : 6         : N              
+RESERVED_INPUT_WITH_WEAK_PULLUP : B22       :        :                   :         : 6         :                
 overrange[1]                 : C1        : input  : 2.5 V             :         : 1         : Y              
 overrange[0]                 : C2        : input  : 2.5 V             :         : 1         : Y              
 ftdi_data[7]                 : C3        : bidir  : 3.3-V LVTTL       :         : 8         : Y              
@@ -211,9 +211,9 @@ RESERVED_INPUT_WITH_WEAK_PULLUP : E7        :        :                   :      
 VCCIO8                       : E8        : power  :                   : 3.3V    : 8         :                
 spimisos[6]                  : E9        : input  : 3.3-V LVTTL       :         : 8         : Y              
 spiclk                       : E10       : output : 3.3-V LVTTL       :         : 8         : Y              
-spimisos[4]                  : E11       : input  : 3.3-V LVTTL       :         : 7         : N              
+spimisos[5]                  : E11       : input  : 3.3-V LVTTL       :         : 7         : N              
 boardin[6]                   : E12       : input  : 2.5 V             :         : 7         : Y              
-spimisos[7]                  : E13       : input  : 3.3-V LVTTL       :         : 7         : N              
+spimisos[4]                  : E13       : input  : 3.3-V LVTTL       :         : 7         : N              
 boardin[7]                   : E14       : input  : 2.5 V             :         : 7         : Y              
 boardin[5]                   : E15       : input  : 2.5 V             :         : 7         : Y              
 exttrigin                    : E16       : input  : 2.5 V             :         : 7         : Y              
@@ -233,7 +233,7 @@ spimosi                      : F7        : output : 3.3-V LVTTL       :         
 spics[0]                     : F8        : output : 3.3-V LVTTL       :         : 8         : Y              
 RESERVED_INPUT_WITH_WEAK_PULLUP : F9        :        :                   :         : 8         :                
 spimisos[0]                  : F10       : input  : 3.3-V LVTTL       :         : 8         : Y              
-spimisos[5]                  : F11       : input  : 3.3-V LVTTL       :         : 7         : N              
+spimisos[7]                  : F11       : input  : 3.3-V LVTTL       :         : 7         : N              
 GND                          : F12       : gnd    :                   :         :           :                
 boardout[4]                  : F13       : output : 2.5 V             :         : 7         : Y              
 boardout[5]                  : F14       : output : 2.5 V             :         : 7         : Y              
@@ -257,7 +257,7 @@ spics[4]                     : G9        : output : 3.3-V LVTTL       :         
 ftdi_data[0]                 : G10       : bidir  : 3.3-V LVTTL       :         : 8         : Y              
 spics[3]                     : G11       : output : 3.3-V LVTTL       :         : 8         : Y              
 VCCINT                       : G12       : power  :                   : 1.2V    :           :                
-debugout[10]                 : G13       : output : 2.5 V             :         : 7         : N              
+RESERVED_INPUT_WITH_WEAK_PULLUP : G13       :        :                   :         : 7         :                
 RESERVED_INPUT_WITH_WEAK_PULLUP : G14       :        :                   :         : 7         :                
 RESERVED_INPUT_WITH_WEAK_PULLUP : G15       :        :                   :         : 7         :                
 RESERVED_INPUT_WITH_WEAK_PULLUP : G16       :        :                   :         : 7         :                
@@ -435,7 +435,7 @@ GND                          : R11       : gnd    :                   :         
 VCCINT                       : R12       : power  :                   : 1.2V    :           :                
 GND                          : R13       : gnd    :                   :         :           :                
 RESERVED_INPUT_WITH_WEAK_PULLUP : R14       :        :                   :         : 4         :                
-RESERVED_INPUT_WITH_WEAK_PULLUP : R15       :        :                   :         : 4         :                
+debugout[10]                 : R15       : output : 2.5 V             :         : 4         : N              
 RESERVED_INPUT_WITH_WEAK_PULLUP : R16       :        :                   :         : 4         :                
 RESERVED_INPUT_WITH_WEAK_PULLUP : R17       :        :                   :         : 5         :                
 lvds2in[9](n)                : R18       : input  : LVDS              :         : 5         : Y              

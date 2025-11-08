@@ -13,6 +13,7 @@ class ScopeState:
         self.expect_samples_extra = 5
         self.depth_before_pllreset = 100
         self.firmwareversion = [-1] * num_boards  # Per-board firmware version
+        self.firmwareversion_minor = [-1] * num_boards  # Per-board firmware version minor
         self.basevoltage = 200
 
         # Application State

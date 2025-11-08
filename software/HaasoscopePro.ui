@@ -2438,6 +2438,7 @@ Outlined if triggering on this channel</string>
     <addaction name="actionClock_reset"/>
     <addaction name="actionToggle_PLL_controls"/>
     <addaction name="actionOversampling_controls"/>
+    <addaction name="actionTest_watchdog"/>
     <addaction name="separator"/>
     <addaction name="actionToggle_trig_stabilizer"/>
     <addaction name="actionToggle_extra_trig_stabilizer"/>
@@ -3119,6 +3120,14 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Zoom window crosshairs</string>
+   </property>
+  </action>
+  <action name="actionTest_watchdog">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="text">
+    <string>Test watchdog</string>
    </property>
   </action>
  </widget>
