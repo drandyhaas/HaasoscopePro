@@ -512,7 +512,7 @@ class HardwareController:
                             state.doexttrigecho[next_board] = True
                             state.lastlvdstrigdelay[next_board] = -999
                             state.lvds_calibration_cycles = 0
-                            print(f"Calibrating Board {next_board}...")
+                            #print(f"Calibrating Board {next_board}...")
                         else:
                             # All boards calibrated - finish up
                             self._finish_lvds_calibration()
@@ -606,7 +606,7 @@ class HardwareController:
         if not ext_trig_boards:
             return (False, "Error: No boards in external trigger mode.\nAt least one board must use external trigger for calibration.")
 
-        print(f"Other boards to calibrate: {ext_trig_boards}")
+        #print(f"Other boards to calibrate: {ext_trig_boards}")
 
         # Clear all previous echo modes and reset state
         state.doexttrigecho = [False] * self.num_board
@@ -623,7 +623,7 @@ class HardwareController:
         first_board = state.lvds_calibration_boards[0]
         state.doexttrigecho[first_board] = True
         state.lastlvdstrigdelay[first_board] = -999  # Invalid value to force measurement
-        print(f"Calibrating Board {first_board}...")
+        #print(f"Calibrating Board {first_board}...")
 
         return (True, "Calibration started...")
 
@@ -640,11 +640,11 @@ class HardwareController:
         # for result in state.lvds_calibration_results:
         #     print(f"  {result}")
 
-        print("Applying board offset correction...")
+        #print("Applying board offset correction...")
         for board in range(self.num_board):
             if state.doexttrig[board]:
                 state.lvdstrigdelay[board] -= 16 / 2.5
-                print(f"  Board {board}: adjusted delay = {state.lvdstrigdelay[board]:.2f} cycles")
+                #print(f"  Board {board}: adjusted delay = {state.lvdstrigdelay[board]:.2f} cycles")
 
         # Save this calibration set for the current trigger source board
         trigger_board = [i for i in range(self.num_board) if not state.doexttrig[i]][0]
@@ -652,7 +652,7 @@ class HardwareController:
         for board in range(self.num_board):
             if state.doexttrig[board]:
                 state.lvds_calibration_sets[trigger_board][board] = state.lvdstrigdelay[board]
-        print(f"Saved LVDS calibration for trigger source board {trigger_board}")
+        #print(f"Saved LVDS calibration for trigger source board {trigger_board}")
 
         # Update trigger info for all ext-trig boards since lvdstrigdelay values changed
         #print("Updating firmware trigger positions...")
@@ -685,7 +685,7 @@ class HardwareController:
         for board in saved_calibration.keys():
             self.send_trigger_info(board)
 
-        print(f"Restored LVDS calibration for trigger source board {trigger_board}")
+        #print(f"Restored LVDS calibration for trigger source board {trigger_board}")
         for board, delay in saved_calibration.items():
             print(f"  Board {board}: {delay:.2f} cycles")
 
