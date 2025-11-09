@@ -439,7 +439,7 @@ controller.ensure_boards_locked()
 
 ## Version History
 
-- **v32**: Event-driven calibration, firmware/software split compensation, saved calibrations per trigger board, automatic calibration on startup and when switching trigger sources
+- **v32**: Event-driven calibration, firmware/software split compensation, saved calibrations per trigger board, automatic calibration on startup and when switching trigger sources, fixed board processing order for distcorr stabilization
 - **v31**: Menu-based calibration only (removed automatic calibration)
 - **v30**: Multi-board systematic calibration
 - **v29**: Initial doexttrigecho implementation
