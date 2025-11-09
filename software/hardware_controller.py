@@ -298,6 +298,10 @@ class HardwareController:
         usb.send(bytes([9, ds, highres, state.downsamplemerging, 100, 100, 100, 100]))
         usb.recv(4)
 
+        # Update trigger info since downsamplefactor changed (affects triggerpos calculation for ext-trig boards)
+        if state.doexttrig[board]:
+            self.send_trigger_info(board)
+
     def set_channel_gain(self, board_idx, chan_idx, value):
         setgain(self.usbs[board_idx], chan_idx, value, self.state.dooversample[board_idx])
 
@@ -668,6 +672,12 @@ class HardwareController:
         print("Measured delays:")
         for result in state.lvds_calibration_results:
             print(f"  {result}")
+
+        # Update trigger info for all ext-trig boards since lvdstrigdelay values changed
+        print("Updating firmware trigger positions...")
+        for board in range(self.num_board):
+            if state.doexttrig[board]:
+                self.send_trigger_info(board)
 
     def update_firmware(self, board_idx, verify_only=False, progress_callback=None):
         print(f"Starting firmware update on board {board_idx}...")
