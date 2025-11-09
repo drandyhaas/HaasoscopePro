@@ -91,7 +91,10 @@ The GUI supports keyboard shortcuts for quick control adjustments:
 | **Alt + Arrow Keys** | |
 | `Alt+Up` / `Alt+Down` | Increase / Decrease trigger delta |
 | **Other Keys** | |
-| `R` | Toggle run/stop |
+| `Space` | Toggle run/pause |
+| `R` | Set rising edge trigger on current channel |
+| `F` | Set falling edge trigger on current channel |
+| `0` - `9` | Select board 0-9 |
 
 **Tips:**
 - Arrow keys provide quick navigation without reaching for the mouse

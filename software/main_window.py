@@ -1665,7 +1665,30 @@ class MainWindow(TemplateBaseClass):
                 self.ui.thresholdPos.setValue(self.ui.thresholdPos.value() + 100)
             else:
                 self.time_fast()
-        if event.key() == QtCore.Qt.Key_R: self.dostartstop()
+
+        # Space: Toggle run/pause
+        if event.key() == QtCore.Qt.Key_Space:
+            self.dostartstop()
+
+        # R: Set rising edge trigger on current channel
+        if event.key() == QtCore.Qt.Key_R:
+            # Index 0: Rising Ch0, Index 2: Rising Ch1
+            trigger_chan = self.state.triggerchan[self.state.activeboard]
+            rising_index = 0 if trigger_chan == 0 else 2
+            self.ui.risingfalling_comboBox.setCurrentIndex(rising_index)
+
+        # F: Set falling edge trigger on current channel
+        if event.key() == QtCore.Qt.Key_F:
+            # Index 1: Falling Ch0, Index 3: Falling Ch1
+            trigger_chan = self.state.triggerchan[self.state.activeboard]
+            falling_index = 1 if trigger_chan == 0 else 3
+            self.ui.risingfalling_comboBox.setCurrentIndex(falling_index)
+
+        # Number keys 0-9: Select board
+        if event.key() >= QtCore.Qt.Key_0 and event.key() <= QtCore.Qt.Key_9:
+            board_num = event.key() - QtCore.Qt.Key_0
+            if board_num < self.state.num_board:
+                self.ui.boardBox.setCurrentIndex(board_num)
 
     def eventFilter(self, obj, event):
         """Event filter to make chanColor clickable."""
