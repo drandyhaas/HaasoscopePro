@@ -3510,6 +3510,9 @@ class MainWindow(TemplateBaseClass):
                     s.doextsmatrig[board_idx] = False
                     self.controller.set_exttrig(board_idx, True)
 
+            # Try to restore previously saved LVDS calibration for this trigger board
+            self.controller.restore_lvds_calibration(active_board)
+
         # For channel-based triggers (indices 0-3)
         if index < 4:
             # Determine channel: 0-1 are Ch0, 2-3 are Ch1

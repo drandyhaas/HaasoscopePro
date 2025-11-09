@@ -646,11 +646,50 @@ class HardwareController:
                 state.lvdstrigdelay[board] -= 16 / 2.5
                 print(f"  Board {board}: adjusted delay = {state.lvdstrigdelay[board]:.2f} cycles")
 
+        # Save this calibration set for the current trigger source board
+        trigger_board = [i for i in range(self.num_board) if not state.doexttrig[i]][0]
+        state.lvds_calibration_sets[trigger_board] = {}
+        for board in range(self.num_board):
+            if state.doexttrig[board]:
+                state.lvds_calibration_sets[trigger_board][board] = state.lvdstrigdelay[board]
+        print(f"Saved LVDS calibration for trigger source board {trigger_board}")
+
         # Update trigger info for all ext-trig boards since lvdstrigdelay values changed
         #print("Updating firmware trigger positions...")
         for board in range(self.num_board):
             if state.doexttrig[board]:
                 self.send_trigger_info(board)
+
+    def restore_lvds_calibration(self, trigger_board):
+        """
+        Restore previously saved LVDS calibration for a specific trigger source board.
+
+        Args:
+            trigger_board: The board index that will be the trigger source
+
+        Returns:
+            bool: True if calibration was restored, False if no saved calibration exists
+        """
+        state = self.state
+
+        if trigger_board not in state.lvds_calibration_sets:
+            return False
+
+        saved_calibration = state.lvds_calibration_sets[trigger_board]
+
+        # Restore the saved delays
+        for board, delay in saved_calibration.items():
+            state.lvdstrigdelay[board] = delay
+
+        # Update trigger info for all boards with restored delays
+        for board in saved_calibration.keys():
+            self.send_trigger_info(board)
+
+        print(f"Restored LVDS calibration for trigger source board {trigger_board}")
+        for board, delay in saved_calibration.items():
+            print(f"  Board {board}: {delay:.2f} cycles")
+
+        return True
 
     def update_firmware(self, board_idx, verify_only=False, progress_callback=None):
         print(f"Starting firmware update on board {board_idx}...")

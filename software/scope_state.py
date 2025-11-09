@@ -109,6 +109,7 @@ class ScopeState:
         self.lvds_calibration_cycles = 0  # Number of acquisition cycles for current board
         self.lvds_calibration_max_cycles = 50  # Maximum cycles to wait for stable measurement
         self.lvds_calibration_results = []  # Accumulated results for completed boards
+        self.lvds_calibration_sets = {}  # Saved calibrations per trigger-source board: {trigger_board: {board: delay, ...}}
 
         # PLL reset and phase variables
         self.plljustreset = [-10] * self.num_board
