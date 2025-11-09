@@ -3543,7 +3543,17 @@ class MainWindow(TemplateBaseClass):
                     self.controller.set_exttrig(board_idx, True)
 
             # Try to restore previously saved LVDS calibration for this trigger board
-            self.controller.restore_lvds_calibration(active_board)
+            calibration_restored = self.controller.restore_lvds_calibration(active_board)
+
+            # If no saved calibration exists and we have multiple boards, automatically calibrate
+            if not calibration_restored and s.num_board >= 2:
+                if not s.paused:
+                    print(f"No LVDS calibration found for trigger board {active_board}. Starting automatic calibration...")
+                    success, message = self.controller.calibrate_lvds_delays()
+                    if not success:
+                        print(f"Auto-calibration failed: {message}")
+                else:
+                    print(f"No LVDS calibration found for trigger board {active_board}. Start acquisition to enable auto-calibration.")
 
         # For channel-based triggers (indices 0-3)
         if index < 4:

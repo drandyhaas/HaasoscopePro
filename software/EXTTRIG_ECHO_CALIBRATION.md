@@ -8,20 +8,29 @@ The **LVDS delay calibration** mechanism automatically measures and compensates 
 
 ## Quick Start
 
-**To calibrate delays for a multi-board system:**
+**Automatic Calibration (Recommended):**
 
-1. Ensure acquisition is **running** (not paused)
-2. Configure **exactly one** board as the trigger source (channel-based trigger)
-3. All other boards will be automatically set to external trigger mode
-4. Go to **Calibration → Board LVDS delays** menu
-5. Wait for calibration to complete (~5-50 acquisition cycles per board)
-6. Calibration is automatically saved and restored when switching trigger sources
+The system automatically performs LVDS calibration in these scenarios:
+
+1. **Initial Setup**: After PLL reset completes during startup, calibration runs automatically for the initial trigger board
+2. **Switching Trigger Sources**: When you set a different board to channel-based trigger (Rising/Falling Ch0 or Ch1), calibration runs automatically if no saved calibration exists for that trigger board
+3. **Restoring Saved Calibrations**: When switching to a trigger board with existing calibration, the saved values are restored automatically
+
+**To use:**
+1. Start the application (PLL reset happens automatically)
+2. Wait for initial LVDS calibration to complete (~5-50 acquisition cycles per board)
+3. Switch trigger sources as needed - calibration is automatic!
+
+**Manual Calibration:**
+
+You can also manually trigger calibration via **Calibration → Board LVDS delays** menu.
 
 **Important Notes:**
 - Only one board can be self-triggering at a time (enforced automatically)
 - Calibration runs asynchronously in the event loop (UI remains responsive)
 - Each trigger source board has its own saved calibration set
 - PLL resets are blocked during calibration to prevent interference
+- Automatic calibration requires acquisition to be running (not paused)
 
 ## Architecture
 
@@ -360,9 +369,10 @@ When switching which board generates triggers:
 3. System automatically:
    - Sets all other boards to external trigger
    - Restores saved calibration for that trigger board (if exists)
+   - **Starts automatic calibration** if no saved calibration exists (requires acquisition running)
    - Updates firmware trigger positions
 
-If no saved calibration exists, run **Calibration → Board LVDS delays** to measure.
+You can also manually trigger calibration via **Calibration → Board LVDS delays** menu.
 
 ## Implementation Details
 
@@ -429,7 +439,7 @@ controller.ensure_exttrig_boards_locked()
 
 ## Version History
 
-- **v32**: Event-driven calibration, firmware/software split compensation, saved calibrations per trigger board
+- **v32**: Event-driven calibration, firmware/software split compensation, saved calibrations per trigger board, automatic calibration on startup and when switching trigger sources
 - **v31**: Menu-based calibration only (removed automatic calibration)
 - **v30**: Multi-board systematic calibration
 - **v29**: Initial doexttrigecho implementation

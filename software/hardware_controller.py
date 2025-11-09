@@ -224,6 +224,22 @@ class HardwareController:
                 # Sync the Depth box UI with the state, in case it was changed by a PLL reset
                 main_window.sync_depth_ui_from_state()
 
+                # Automatically run LVDS calibration after initial PLL reset if multi-board system
+                if self.num_board >= 2:
+                    # Find the self-triggering board
+                    trigger_board = None
+                    for b in range(self.num_board):
+                        if not s.doexttrig[b]:
+                            trigger_board = b
+                            break
+
+                    # If we have a self-triggering board and no saved calibration exists, run calibration
+                    if trigger_board is not None and trigger_board not in s.lvds_calibration_sets:
+                        #print(f"Initial setup complete. Starting automatic LVDS calibration for trigger board {trigger_board}...")
+                        success, message = self.calibrate_lvds_delays()
+                        if not success:
+                            print(f"Auto-calibration failed: {message}")
+
     def update_fan(self, fan_override=-1):
         """Sets the fan PWM duty cycle on all boards."""
         for board_idx in range(self.num_board):
