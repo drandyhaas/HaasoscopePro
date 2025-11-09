@@ -2519,30 +2519,21 @@ class MainWindow(TemplateBaseClass):
     def calibrate_lvds_delays(self):
         """Calibrate LVDS trigger propagation delays for all boards."""
         if self.state.num_board < 2:
-            QMessageBox.warning(self, "LVDS Delay Calibration",
-                              "LVDS delay calibration requires at least 2 boards.")
+            print("LVDS delay calibration requires at least 2 boards.")
             return
 
-        # Pause acquisition if running
-        was_paused = self.paused
-        if not was_paused:
-            self.dostartstop()
+        # Acquisition must be running for calibration to work
+        if self.state.paused:
+            print("Calibration requires acquisition to be running. Please start acquisition and try again.")
+            return
 
-        try:
-            success, message = self.controller.calibrate_lvds_delays()
+        # Start calibration (runs asynchronously via event loop)
+        # Results will be printed to console as they complete
+        success, message = self.controller.calibrate_lvds_delays()
 
-            if success:
-                # Show results
-                result_text = "LVDS Delay Calibration Complete\n\n"
-                result_text += message
-                QMessageBox.information(self, "LVDS Delay Calibration", result_text)
-            else:
-                QMessageBox.critical(self, "LVDS Delay Calibration Failed", message)
-
-        finally:
-            # Resume acquisition if it was running
-            if not was_paused:
-                self.dostartstop()
+        if not success:
+            # Immediate validation error
+            print(f"LVDS Delay Calibration Failed: {message}")
 
     def set_channel_frame(self):
         s = self.state

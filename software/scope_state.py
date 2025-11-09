@@ -101,6 +101,14 @@ class ScopeState:
         self.noextboard = -1
         self.lvdstrigdelay = [0] * self.num_board
         self.lastlvdstrigdelay = [0] * self.num_board
+
+        # LVDS calibration state tracking
+        self.lvds_calibration_active = False  # Whether calibration is currently running
+        self.lvds_calibration_boards = []  # List of board indices to calibrate
+        self.lvds_calibration_current_idx = 0  # Index into lvds_calibration_boards list
+        self.lvds_calibration_cycles = 0  # Number of acquisition cycles for current board
+        self.lvds_calibration_max_cycles = 50  # Maximum cycles to wait for stable measurement
+        self.lvds_calibration_results = []  # Accumulated results for completed boards
         self.plljustreset = [-10] * self.num_board
         self.plljustresetdir = [0] * self.num_board
         self.phasenbad = [[0] * 12] * self.num_board

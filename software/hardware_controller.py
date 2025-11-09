@@ -444,6 +444,28 @@ class HardwareController:
 
             assert echoboard != board_idx, "Echo board should not be current board"
 
+            # Track calibration cycles and handle timeout
+            if state.lvds_calibration_active:
+                state.lvds_calibration_cycles += 1
+                if state.lvds_calibration_cycles >= state.lvds_calibration_max_cycles:
+                    # Timeout - record error and move to next board or finish
+                    error_msg = f"Board {echoboard}: Calibration timed out after {state.lvds_calibration_max_cycles} cycles"
+                    print(f"  ✗ {error_msg}")
+                    state.lvds_calibration_results.append(error_msg)
+                    state.doexttrigecho[echoboard] = False
+
+                    # Move to next board or finish
+                    state.lvds_calibration_current_idx += 1
+                    if state.lvds_calibration_current_idx < len(state.lvds_calibration_boards):
+                        next_board = state.lvds_calibration_boards[state.lvds_calibration_current_idx]
+                        state.doexttrigecho[next_board] = True
+                        state.lastlvdstrigdelay[next_board] = -999
+                        state.lvds_calibration_cycles = 0
+                        print(f"\nCalibrating Board {next_board}...")
+                    else:
+                        self._finish_lvds_calibration()
+                    return  # Skip normal echo processing after timeout
+
             # Get the trigger delay measurement from firmware
             if echoboard > board_idx:
                 # Forward echo: use Command 2, Subcommand 12 (phase_diff)
@@ -468,6 +490,26 @@ class HardwareController:
                     # Delay is stable, turn off echo mode
                     print(f"lvdstrigdelay from board {board_idx} to echoboard {echoboard} is {lvdstrigdelay}")
                     state.doexttrigecho[echoboard] = False
+
+                    # If calibration is active, record result and move to next board
+                    if state.lvds_calibration_active:
+                        direction = "backward" if echoboard < board_idx else "forward"
+                        result_str = f"Board {echoboard}: {lvdstrigdelay:.2f} cycles ({direction})"
+                        state.lvds_calibration_results.append(result_str)
+                        print(f"  ✓ Board {echoboard} calibrated: {lvdstrigdelay:.2f} LVDS cycles ({direction})")
+
+                        # Move to next board
+                        state.lvds_calibration_current_idx += 1
+                        if state.lvds_calibration_current_idx < len(state.lvds_calibration_boards):
+                            # Start calibrating next board
+                            next_board = state.lvds_calibration_boards[state.lvds_calibration_current_idx]
+                            state.doexttrigecho[next_board] = True
+                            state.lastlvdstrigdelay[next_board] = -999
+                            state.lvds_calibration_cycles = 0
+                            print(f"\nCalibrating Board {next_board}...")
+                        else:
+                            # All boards calibrated - finish up
+                            self._finish_lvds_calibration()
 
                 state.lastlvdstrigdelay[echoboard] = lvdstrigdelay
             else:
@@ -530,14 +572,13 @@ class HardwareController:
         """
         Systematically calibrate LVDS trigger propagation delays for all boards.
 
-        This function:
-        1. Validates that exactly one board is self-triggering (all others use ext trig)
-        2. Iterates through each ext-trig board
-        3. Enables echo mode and measures the delay
-        4. Waits for stable measurement before moving to next board
+        This function sets up the calibration state and returns immediately. The actual
+        calibration runs asynchronously in the main event loop via _get_predata().
+
+        Results are printed to console as each board completes.
 
         Returns:
-            (success: bool, message: str)
+            (success: bool, message: str) - immediate validation result
         """
         state = self.state
 
@@ -561,58 +602,40 @@ class HardwareController:
 
         print(f"Boards to calibrate: {ext_trig_boards}")
 
-        # Clear all previous echo modes
+        # Clear all previous echo modes and reset state
         state.doexttrigecho = [False] * self.num_board
         state.lastlvdstrigdelay = [0] * self.num_board
 
-        results = []
-        max_cycles = 50  # Maximum acquisition cycles to wait for stable measurement
+        # Set up calibration state for event-driven progression
+        state.lvds_calibration_active = True
+        state.lvds_calibration_boards = ext_trig_boards.copy()
+        state.lvds_calibration_current_idx = 0
+        state.lvds_calibration_cycles = 0
+        state.lvds_calibration_results = []
 
-        # Calibrate each ext-trig board
-        for board_idx in ext_trig_boards:
-            print(f"\nCalibrating Board {board_idx}...")
+        # Enable echo mode for the first board
+        first_board = state.lvds_calibration_boards[0]
+        state.doexttrigecho[first_board] = True
+        state.lastlvdstrigdelay[first_board] = -999  # Invalid value to force measurement
+        print(f"\nCalibrating Board {first_board}...")
 
-            # Enable echo mode for this board
-            state.doexttrigecho[board_idx] = True
-            state.lastlvdstrigdelay[board_idx] = -999  # Invalid value to force measurement
+        return (True, "Calibration started...")
 
-            # Run acquisition cycles until delay is measured
-            cycles = 0
-            while state.doexttrigecho[board_idx] and cycles < max_cycles:
-                # Trigger one acquisition cycle
-                # The _get_predata() method will measure the delay and disable echo mode when stable
-                try:
-                    # Get trigger status
-                    if self._get_channels(trigger_board):
-                        self._get_predata(trigger_board)
+    def _finish_lvds_calibration(self):
+        """
+        Finalize LVDS calibration and print results.
+        Called from _get_predata() when all boards have been calibrated.
+        """
+        state = self.state
 
-                    cycles += 1
+        # Mark calibration as complete
+        state.lvds_calibration_active = False
 
-                    # Check if calibration completed
-                    if not state.doexttrigecho[board_idx]:
-                        delay = state.lvdstrigdelay[board_idx]
-                        direction = "backward" if board_idx < trigger_board else "forward"
-                        print(f"  ✓ Board {board_idx} calibrated: {delay:.2f} LVDS cycles ({direction})")
-                        results.append(f"Board {board_idx}: {delay:.2f} cycles ({direction})")
-                        break
-
-                except Exception as e:
-                    print(f"  Error during calibration cycle {cycles}: {e}")
-                    continue
-
-            # Check if calibration timed out
-            if state.doexttrigecho[board_idx]:
-                state.doexttrigecho[board_idx] = False
-                error_msg = f"Board {board_idx}: Calibration timed out after {max_cycles} cycles"
-                print(f"  ✗ {error_msg}")
-                results.append(error_msg)
-
-        # All done
+        # Print final results
         print("\n=== Calibration Complete ===")
-        result_message = "Measured delays:\n" + "\n".join(results)
-        print(result_message)
-
-        return (True, result_message)
+        print("Measured delays:")
+        for result in state.lvds_calibration_results:
+            print(f"  {result}")
 
     def update_firmware(self, board_idx, verify_only=False, progress_callback=None):
         print(f"Starting firmware update on board {board_idx}...")
