@@ -122,6 +122,9 @@ class HardwareController:
         s.phasenbad[board_idx] = [0] * 12
         s.expect_samples = 1000
         s.dodrawing = False
+        # Enable trigger echo mode for multi-board external trigger calibration
+        if self.num_board > 1 and s.doexttrig[board_idx]:
+            s.doexttrigecho[board_idx] = True
 
         # Only do real pllreset for real boards. It breaks the dummy server!
         s.plljustreset[board_idx] = -2 if hasattr(usb,"socket_addr") else 0 # CRITICAL: This starts the calibration
@@ -294,13 +297,37 @@ class HardwareController:
         is_rolling = self.state.isrolling and not is_ext
         self.usbs[board_idx].send(bytes([2, 8, is_rolling, 0, 100, 100, 100, 100]))
         self.usbs[board_idx].recv(4)
-        self.state.doexttrigecho = [False] * self.num_board
         if is_ext:
+            # Turn off doexttrigecho for all other boards, turn on for this one
+            self.state.doexttrigecho = [False] * self.num_board
             self.state.doexttrigecho[board_idx] = True
+        else:
+            # Turn off doexttrigecho for this board since it's not doing exttrig anymore
+            self.state.doexttrigecho[board_idx] = False
         self.send_trigger_info(board_idx)
 
     def set_auxout(self, board_idx, value):
         auxoutselector(self.usbs[board_idx], value)
+
+    def dophase(self, board_idx, plloutnum, updown, pllnum=0, quiet=False):
+        """Adjust PLL phase for clock alignment.
+
+        Args:
+            board_idx: Board index
+            plloutnum: PLL output number (0=clklvds, 1=clklvdsout, etc.)
+            updown: 1 for up (increase phase), 0 for down (decrease phase)
+            pllnum: PLL number (default 0)
+            quiet: Suppress print output
+        """
+        # Command 6: clock phase adjustment
+        # 3rd byte: counter select: 000:all 001:M 010=2:C0 011=3:C1 100=4:C2 101=5:C3 110=6:C4
+        # 4th byte: 1=up, 0=down
+        self.usbs[board_idx].send(bytes([6, pllnum, int(plloutnum + 2), updown, 100, 100, 100, 100]))
+        # Note: Response is ignored in v29, so we read and discard
+        self.usbs[board_idx].recv(4)
+        if not quiet:
+            direction = "up" if updown else "down"
+            print(f"Adjusted phase {direction} for PLL{pllnum} output {plloutnum} on board {board_idx}")
 
     def set_rolling(self, is_rolling):
         for i, usb in enumerate(self.usbs):
@@ -413,6 +440,53 @@ class HardwareController:
         if state.downsamplemergingcounter[board_idx] == state.downsamplemerging and not state.doexttrig[board_idx]:
             state.downsamplemergingcounter[board_idx] = 0
         state.triggerphase[board_idx] = res[1]
+
+        # Handle external trigger echo delay calculation
+        if not state.doexttrig[board_idx] and any(state.doexttrigecho):
+            assert state.doexttrigecho.count(True) == 1, "Should only have one echoing board"
+
+            # Find the board we're echoing from
+            echoboard = -1
+            for theb in range(self.num_board):
+                if state.doexttrigecho[theb]:
+                    assert echoboard == -1, "Should only have one echoing board"
+                    echoboard = theb
+
+            assert echoboard != board_idx, "Echo board should not be current board"
+
+            # Get the trigger delay measurement from firmware
+            if echoboard > board_idx:
+                # Forward echo: use Command 2, Subcommand 12 (phase_diff)
+                self.usbs[board_idx].send(bytes([2, 12, 100, 100, 100, 100, 100, 100]))
+                res = self.usbs[board_idx].recv(4)
+            else:
+                # Backward echo: use Command 2, Subcommand 13 (phase_diff_b)
+                self.usbs[board_idx].send(bytes([2, 13, 100, 100, 100, 100, 100, 100]))
+                res = self.usbs[board_idx].recv(4)
+
+            # Check if phase measurements are consistent
+            if res[0] == res[1]:
+                # Calculate delay in LVDS clock cycles
+                lvdstrigdelay = (res[0] + res[1]) / 4
+                if echoboard < board_idx:
+                    # Backward echo needs tuning adjustment - this has to be tuned a little experimentally
+                    lvdstrigdelay += round(lvdstrigdelay / 11.5, 1)
+
+                # Check if delay is consistent with last measurement
+                if lvdstrigdelay == state.lastlvdstrigdelay[echoboard]:
+                    state.lvdstrigdelay[echoboard] = lvdstrigdelay
+                    # Delay is stable, turn off echo mode
+                    print(f"lvdstrigdelay from board {board_idx} to echoboard {echoboard} is {lvdstrigdelay}")
+                    state.doexttrigecho[echoboard] = False
+
+                state.lastlvdstrigdelay[echoboard] = lvdstrigdelay
+            else:
+                # Phase measurements don't match - need to adjust phase alignment
+                # Only adjust phases after PLL calibration is complete to avoid interfering with ADC sampling phase calibration
+                if all(item <= -10 for item in state.plljustreset):
+                    # Adjust both clklvds (0) and clklvdsout (1) to align trigger signals
+                    self.dophase(board_idx, plloutnum=0, updown=1, quiet=True)
+                    self.dophase(board_idx, plloutnum=1, updown=1, quiet=True)
 
     def _get_data(self, usb):
         expect_len = (self.state.expect_samples + self.state.expect_samples_extra) * 2 * 50
