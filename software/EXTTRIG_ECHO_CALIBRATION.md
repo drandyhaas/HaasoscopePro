@@ -4,19 +4,97 @@
 
 The Haasoscope Pro supports daisy-chaining multiple boards via LVDS connections. When multiple boards are synchronized, one board can generate triggers that propagate to other boards through the LVDS chain. However, LVDS signal propagation introduces delays that vary based on cable length and board position in the chain.
 
-The **doexttrigecho** mechanism automatically measures and compensates for these trigger propagation delays, ensuring that trigger timing is accurately known at each board.
+The **LVDS delay calibration** mechanism automatically measures and compensates for these trigger propagation delays, ensuring that waveforms from all boards are correctly time-aligned.
 
 ## Quick Start
 
 **To calibrate delays for a multi-board system:**
 
-1. Configure one board as the trigger source (disable external trigger)
-2. Configure all other boards to use external trigger
-3. Go to **Calibration → Board LVDS delays** menu
-4. Wait for calibration to complete (~5-50 acquisition cycles per board)
-5. Results are displayed showing measured delays for each board
+1. Ensure acquisition is **running** (not paused)
+2. Configure **exactly one** board as the trigger source (channel-based trigger)
+3. All other boards will be automatically set to external trigger mode
+4. Go to **Calibration → Board LVDS delays** menu
+5. Wait for calibration to complete (~5-50 acquisition cycles per board)
+6. Calibration is automatically saved and restored when switching trigger sources
 
-**Note**: This is the only way to calibrate LVDS delays. The `calibrate_lvds_delays()` function systematically measures all boards and validates the configuration.
+**Important Notes:**
+- Only one board can be self-triggering at a time (enforced automatically)
+- Calibration runs asynchronously in the event loop (UI remains responsive)
+- Each trigger source board has its own saved calibration set
+- PLL resets are blocked during calibration to prevent interference
+
+## Architecture
+
+### Event-Driven Calibration
+
+The calibration system is **non-blocking** and runs asynchronously:
+
+1. `calibrate_lvds_delays()` validates configuration and sets up state
+2. Returns immediately to the UI
+3. Calibration progresses in background via `_get_predata()` during normal acquisition
+4. Each board is calibrated sequentially
+5. Results are saved and firmware is updated when complete
+
+State tracking in `scope_state.py`:
+```python
+self.lvds_calibration_active = False          # Whether calibration is running
+self.lvds_calibration_boards = []             # Boards to calibrate
+self.lvds_calibration_current_idx = 0         # Current board index
+self.lvds_calibration_cycles = 0              # Cycles spent on current board
+self.lvds_calibration_max_cycles = 50         # Timeout threshold
+self.lvds_calibration_results = []            # Accumulated results
+self.lvds_calibration_sets = {}               # Saved calibrations per trigger board
+```
+
+### Delay Compensation Split
+
+Delay compensation is split between **firmware** and **software** for optimal precision:
+
+**Firmware (send_trigger_info)** - Coarse 40-sample quantization:
+```python
+triggerpos += int(8 * lvdstrigdelay[board] / 40 / downsamplefactor / factor)
+```
+- Adjusts trigger position in 40-sample chunks
+- Applied when trigger threshold/mode changes
+- Limited precision but faster hardware response
+
+**Software (data_processor.py)** - Fine sample-level residual:
+```python
+# Total correction needed
+total_lvds_correction = 8 * lvdstrigdelay[board] / downsamplefactor
+
+# What firmware already applied
+fw_lvds_correction = 40 * factor * int(8 * lvdstrigdelay[board] / 40 / downsamplefactor / factor)
+
+# Software applies the residual
+offset -= int(total_lvds_correction - fw_lvds_correction)
+```
+- Corrects for firmware quantization error
+- Sample-level precision for perfect alignment
+- Applied during waveform data processing
+
+**Why split?**
+- Firmware operates in fixed 40-sample windows
+- Software can adjust per-sample for fine alignment
+- Combined approach gives best of both: fast firmware response + precise software correction
+
+### Saved Calibrations
+
+Calibrations are **saved per trigger source board**:
+
+```python
+state.lvds_calibration_sets = {
+    0: {1: 4.5, 2: 9.2, 3: 13.8},  # When Board 0 is trigger source
+    1: {0: 3.8, 2: 4.6, 3: 9.1},   # When Board 1 is trigger source
+    2: {0: 8.9, 1: 4.2, 3: 4.7},   # When Board 2 is trigger source
+}
+```
+
+When you switch trigger sources (by setting a different board to channel-based triggering):
+1. All other boards are automatically set to external trigger
+2. Previously saved calibration for that trigger board is restored
+3. If no saved calibration exists, current delays are used
+4. Firmware trigger positions are updated
 
 ## Hardware Topology
 
@@ -33,467 +111,325 @@ Key signals transmitted over LVDS between boards:
 
 The trigger signals can propagate in both directions:
 - **Forward**: From lower-indexed board to higher-indexed board
-- **Backward**: From higher-indexed board to lower-indexed board
+- **Backward**: From higher-indexed board to lower-indexed board (includes tuning factor)
 
 ## Firmware Components
 
 ### Phase Difference Registers
 
-The firmware tracks trigger signal timing using phase counters connected to the LVDS trigger inputs:
+The firmware tracks trigger signal timing using phase counters:
 
 - **`phase_diff`** (16-bit): Measures timing of forward trigger signal (lvdsin_trig)
 - **`phase_diff_b`** (16-bit): Measures timing of backward trigger signal (lvdsin_trig_b)
 
-These are read via:
-- **Command 2, Subcommand 12**: Returns `phase_diff` as a 32-bit value
-- **Command 2, Subcommand 13**: Returns `phase_diff_b` as a 32-bit value
+Read via commands in `command_processor.v`:
+- **Command 2, Subcommand 12**: Returns `phase_diff`
+- **Command 2, Subcommand 13**: Returns `phase_diff_b`
 
-The firmware returns the phase measurement in bytes `res[0]` and `res[1]` of the 4-byte response. Consistent values (res[0] == res[1]) indicate stable phase alignment.
+The firmware returns the phase measurement in bytes `res[0]` and `res[1]`. Consistent values (res[0] == res[1]) indicate stable phase alignment.
 
 ### Trigger Types
 
-When a board receives Command 1 (set trigger and get status), the trigger type determines behavior:
-
 - **Type 3**: External trigger mode - board waits for LVDS trigger input
-- **Type 30**: External trigger **echo** mode - board uses external trigger AND measures phase timing
-
-During calibration, the echoing board uses Type 30 to enable phase measurement.
-
-### Command Processor
-
-Located in `command_processor.v`, lines 303-304:
-
-```verilog
-12: o_tdata <= {16'd0, phase_diff_sync};
-13: o_tdata <= {16'd0, phase_diff_b_sync};
-```
-
-These subcommands of Command 2 provide the raw phase difference measurements from the triggerer module.
+- **Type 30**: External trigger **echo** mode - enables phase measurement during calibration
 
 ## Software Components
 
-### State Variables
-
-In `scope_state.py`:
-
-```python
-self.doexttrigecho = [False] * self.num_board  # Which board is echoing triggers
-self.lvdstrigdelay = [0] * self.num_board      # Measured delay for each board
-self.lastlvdstrigdelay = [0] * self.num_board  # Previous measurement for stability check
-```
-
 ### Key Functions
 
-In `hardware_controller.py`:
+**`calibrate_lvds_delays()`** (`hardware_controller.py:571-658`)
+- Validates exactly one self-triggering board
+- Sets up calibration state and enables echo mode for first board
+- Returns immediately (non-blocking)
+- Calibration proceeds asynchronously in event loop
 
-#### `set_exttrig(board_idx, is_ext)`
-Enables/disables external trigger mode for a board. This sets the board's trigger configuration but does not trigger delay calibration. Calibration must be run separately via `calibrate_lvds_delays()`.
+**`_get_predata(board_idx)`** (`hardware_controller.py:451-557`)
+- Called during each acquisition cycle
+- Contains echo delay measurement logic
+- Progresses through calibration boards sequentially
+- Handles timeout and completion
 
-#### `calibrate_lvds_delays()`
-The main calibration function (lines 539-625). Systematically measures all boards in sequence.
+**`_finish_lvds_calibration()`** (`hardware_controller.py:630-661`)
+- Applies ~16ns board offset correction
+- Saves calibration set indexed by trigger source board
+- Updates firmware trigger positions
 
-#### `_get_predata(board_idx)`
-Called during data acquisition for each board. Contains the echo delay measurement logic (lines 441-489) that is used by `calibrate_lvds_delays()`.
+**`restore_lvds_calibration(trigger_board)`** (`hardware_controller.py:663-692`)
+- Restores previously saved calibration
+- Called automatically when switching trigger sources
+- Updates firmware if calibration exists
 
 ## Calibration Algorithm
 
-### Single Board (N=1)
+### Two Boards Example
 
-**No calibration needed.**
+**Configuration**: Board 0 generates triggers → Board 1 receives triggers
 
-- Only one board exists
-- No LVDS trigger propagation
-- `doexttrigecho[0] = False`
-- `lvdstrigdelay[0] = 0`
-
-### Two Boards (N=2)
-
-**Scenario**: Board 0 generates triggers → Board 1 receives triggers
-
-#### Configuration
 ```
 Board 0 (self-triggering)     Board 1 (ext trigger)
 doexttrig[0] = False           doexttrig[1] = True
-triggertype = 0-2              triggertype = 3 (ext trig)
+triggertype = 0-2              triggertype = 30 (during calibration)
 ```
 
-#### Calibration Process
+**Process:**
 
-User selects **Calibration → Board LVDS delays** menu:
-
-1. **`calibrate_lvds_delays()` validates**:
-   - Board 0 is self-triggering ✓
-   - Board 1 needs calibration
-
-2. **Enable echo mode for Board 1**: `doexttrigecho[1] = True`, sets `triggertype = 30`
-
-3. **Board 0** runs acquisition and calls `_get_predata(0)`:
-   - Detects that `doexttrigecho[1] == True`
-   - Echoboard = 1
-   - Since echoboard (1) > board (0): **Forward echo**
-   - Sends Command `[2, 12, ...]` to read `phase_diff`
-
-4. **Firmware on Board 0** returns phase measurement:
-   - `res[0]` and `res[1]` contain phase counts
-   - These measure the delay of trigger signal traveling from Board 1 to Board 0
-
-5. **Software calculates delay**:
+1. User selects **Calibration → Board LVDS delays**
+2. `calibrate_lvds_delays()` validates and enables echo mode for Board 1
+3. During acquisition, `_get_predata(0)` on Board 0:
+   - Detects `doexttrigecho[1] == True`
+   - Since Board 1 > Board 0: **Forward echo**
+   - Sends Command `[2, 12]` to read `phase_diff`
+4. Firmware returns phase measurement in `res[0]` and `res[1]`
+5. Calculate delay:
    ```python
    if res[0] == res[1]:  # Phase is stable
-       lvdstrigdelay = (res[0] + res[1]) / 4  # Convert to LVDS clock cycles
-       # No adjustment needed for forward echo
+       lvdstrigdelay = (res[0] + res[1]) / 4  # LVDS cycles
    ```
+6. Stability check - if consistent with last measurement:
+   - Store `lvdstrigdelay[1]`
+   - Disable echo mode
+   - Apply ~16ns offset: `lvdstrigdelay[1] -= 16/2.5`
+7. Save calibration set for trigger Board 0
+8. Update firmware trigger positions
 
-6. **Stability check**:
-   - If `lvdstrigdelay == lastlvdstrigdelay[1]`: measurement is stable
-   - Store final value: `state.lvdstrigdelay[1] = lvdstrigdelay`
-   - Disable echo mode: `state.doexttrigecho[1] = False`
-   - Print: `"lvdstrigdelay from board 0 to echoboard 1 is X.X"`
+### Three Boards Example
 
-7. **If phase unstable** (res[0] != res[1]):
-   - Only after PLL calibration completes, adjust clock phases on Board 0:
-   ```python
-   if all(item <= -10 for item in state.plljustreset):
-       self.dophase(0, plloutnum=0, updown=1, quiet=True)  # Adjust clklvds
-       self.dophase(0, plloutnum=1, updown=1, quiet=True)  # Adjust clklvdsout
-   ```
-   - Retry on next acquisition cycle
-
-8. **Calibration complete**: Function returns with result
-
-#### Physical Interpretation
-
-The delay represents LVDS cable propagation time:
-- Measured in LVDS clock cycles (typically 400 MHz = 2.5 ns per cycle)
-- Example: `lvdstrigdelay = 4.5` means 11.25 ns propagation delay
-- Used to correct trigger timestamp when processing data from Board 1
-
-### Three Boards (N=3)
-
-**Scenario**: Board 1 generates triggers → Board 0 and Board 2 receive triggers
-
-#### Configuration
-```
-Board 0 (ext trigger)          Board 1 (self-triggering)      Board 2 (ext trigger)
-doexttrig[0] = True            doexttrig[1] = False            doexttrig[2] = True
-triggertype = 3                triggertype = 0-2               triggertype = 3
-```
-
-#### Calibration Process
-
-User selects **Calibration → Board LVDS delays** menu:
-
-1. **`calibrate_lvds_delays()` validates**:
-   - Board 1 is self-triggering ✓
-   - Boards 0 and 2 need calibration
-
-2. **Calibrate Board 0 (Backward Echo)**:
-   - Enable echo mode: `doexttrigecho[0] = True`, sets `triggertype = 30`
-   - Board 1 runs `_get_predata(1)`:
-     * Detects `doexttrigecho[0] == True`
-     * Echoboard = 0
-     * Since echoboard (0) < board (1): **Backward echo**
-     * Sends Command `[2, 13, ...]` to read `phase_diff_b`
-   - Delay calculation:
-     ```python
-     if res[0] == res[1]:
-         lvdstrigdelay = (res[0] + res[1]) / 4
-         # Backward echo needs tuning adjustment - this has to be tuned a little experimentally
-         lvdstrigdelay += round(lvdstrigdelay / 11.5, 1)
-     ```
-   - Once stable, store and disable echo mode
-   - **Note**: The tuning factor (`/11.5`) accounts for asymmetries in backward signal path timing
-
-3. **Calibrate Board 2 (Forward Echo)**:
-   - Enable echo mode: `doexttrigecho[2] = True`, sets `triggertype = 30`
-   - Board 1 runs `_get_predata(1)`:
-     * Detects `doexttrigecho[2] == True`
-     * Echoboard = 2
-     * Since echoboard (2) > board (1): **Forward echo**
-     * Sends Command `[2, 12, ...]` to read `phase_diff`
-   - Delay calculation:
-     ```python
-     if res[0] == res[1]:
-         lvdstrigdelay = (res[0] + res[1]) / 4
-         # No tuning factor for forward echo
-     ```
-   - Once stable, store and disable echo mode
-
-4. **Calibration complete**: Function returns with both delays
-
-### N Boards (General Case)
-
-#### Principles
-
-1. **Single Echo Source**: Only one board has `doexttrigecho[i] = True` at a time
-2. **Self-Triggering Board**: The board with `doexttrig[i] = False` generates triggers
-3. **All Others Use Ext Trig**: All other boards have `doexttrig[i] = True`
-
-#### Topology
+**Configuration**: Board 1 generates triggers → Boards 0 and 2 receive triggers
 
 ```
-Board 0 <---> Board 1 <---> ... <---> Board k <---> ... <---> Board N-1
-(ext trig)    (ext trig)             (SELF-TRIG)              (ext trig)
+Board 0 (ext trig)    Board 1 (self-trig)    Board 2 (ext trig)
+doexttrig[0] = True   doexttrig[1] = False   doexttrig[2] = True
 ```
 
-Board k is the self-triggering board that generates triggers for all others.
+**Calibration sequence:**
 
-#### Systematic Calibration (Recommended Method)
+1. **Board 0 (Backward echo)**:
+   - Enable `doexttrigecho[0] = True`
+   - Board 1 sends Command `[2, 13]` to read `phase_diff_b`
+   - Calculate: `lvdstrigdelay = (res[0] + res[1]) / 4`
+   - **Apply backward tuning**: `lvdstrigdelay += round(lvdstrigdelay / 11.5, 1)`
+   - Apply offset correction
 
-When `calibrate_lvds_delays()` is called from the menu:
+2. **Board 2 (Forward echo)**:
+   - Enable `doexttrigecho[2] = True`
+   - Board 1 sends Command `[2, 12]` to read `phase_diff`
+   - Calculate: `lvdstrigdelay = (res[0] + res[1]) / 4`
+   - No backward tuning needed
+   - Apply offset correction
 
-**Step 1: Validation**
+3. Save both delays under trigger source Board 1
+
+### Multi-Hop Delays
+
+The echo signal physically travels through all intermediate boards:
+
+**Example**: 4 boards with Board 1 as trigger source
+
+```
+Board 0 ← Board 1 → Board 2 → Board 3
+```
+
+- **Board 0 delay**: 1-hop backward through cable
+- **Board 2 delay**: 1-hop forward through cable
+- **Board 3 delay**: 2-hop forward (Board 1 → Board 2 → Board 3)
+  - Includes Board 2 internal routing + both cables
+  - Approximately 2× single-hop delay
+
+The `phase_diff` measurement captures the **total multi-hop echo time**.
+
+## Board Offset Correction
+
+A ~16ns (~6.4 LVDS cycles) correction is applied to all ext-trig boards:
+
 ```python
-# Find exactly one self-triggering board
-self_trig_boards = [i for i in range(num_board) if not doexttrig[i]]
-assert len(self_trig_boards) == 1, "Must have exactly one self-triggering board"
-trigger_board = self_trig_boards[0]
-
-# Get list of boards to calibrate
-ext_trig_boards = [i for i in range(num_board) if doexttrig[i]]
+for board in range(num_board):
+    if doexttrig[board]:
+        lvdstrigdelay[board] -= 16 / 2.5  # 16ns / 2.5ns per cycle
 ```
 
-**Step 2: Iterate Through Each Board**
+This compensates for systematic timing offsets in the trigger path.
+
+## Physical Interpretation
+
+Delays are measured in **LVDS clock cycles** (400 MHz = 2.5 ns/cycle):
+
+| LVDS Cycles | Time (ns) | Samples @ 3.2 GHz |
+|-------------|-----------|-------------------|
+| 1.0         | 2.5       | 8                 |
+| 4.5         | 11.25     | 36                |
+| 6.4         | 16.0      | 51                |
+| 10.0        | 25.0      | 80                |
+
+**Conversion factor**: 8 samples per LVDS cycle (3.2 GHz / 400 MHz = 8)
+
+## Safety Features
+
+### Single Self-Triggering Board
+
+The system enforces **exactly one self-triggering board**:
+
 ```python
-for board_idx in ext_trig_boards:
-    # Enable echo mode for this board only
-    doexttrigecho[board_idx] = True
-    lastlvdstrigdelay[board_idx] = -999  # Force fresh measurement
+# In rising_falling_changed() - main_window.py:3504-3514
+if not is_other_boards and not is_external_sma:
+    for board_idx in range(num_board):
+        if board_idx != active_board and not doexttrig[board_idx]:
+            doexttrig[board_idx] = True  # Force to ext trigger
+            set_exttrig(board_idx, True)
 
-    # Run acquisition cycles until measurement is stable
-    cycles = 0
-    while doexttrigecho[board_idx] and cycles < 50:
-        # _get_channels(trigger_board) sends trigger command
-        # _get_predata(trigger_board) measures delay and auto-disables echo when stable
-        if _get_channels(trigger_board):
-            _get_predata(trigger_board)
-        cycles += 1
-
-    # Echo mode is now disabled, delay is stored in lvdstrigdelay[board_idx]
-    print(f"Board {board_idx}: {lvdstrigdelay[board_idx]:.2f} cycles")
+    # Restore saved calibration for this trigger board
+    restore_lvds_calibration(active_board)
 ```
 
-**Step 3: Measurement Details**
+When you set a board to channel-based triggering, all other boards are automatically switched to external trigger mode.
 
-The self-triggering board k runs `_get_predata(k)` and:
+### PLL Reset Prevention
 
-1. Detects which board is in echo mode (should only be one)
-2. Determines direction:
-   - If echoboard > k: **Forward echo** → Use Command 2,12 (phase_diff)
-   - If echoboard < k: **Backward echo** → Use Command 2,13 (phase_diff_b)
+Automatic PLL resets are blocked during calibration:
 
-3. Measures delay:
-   ```python
-   lvdstrigdelay = (res[0] + res[1]) / 4
-   if echoboard < k:
-       # Backward echo needs tuning adjustment - this has to be tuned a little experimentally
-       lvdstrigdelay += round(lvdstrigdelay / 11.5, 1)
-   ```
-
-4. Waits for stable measurement (two consecutive identical values)
-5. Stores delay and disables echo mode: `doexttrigecho[echoboard] = False`
-6. Returns to Step 2 for next board
-
-#### Example: 4 Boards, Board 1 Self-Triggering
-
-```
-Initial config:
-  Board 0: ext trig, delay=unknown
-  Board 1: SELF-TRIG
-  Board 2: ext trig, delay=unknown
-  Board 3: ext trig, delay=unknown
-
-Calibration sequence:
-  1. Enable echo on Board 0 → measure echo return (1 hop backward) → disable echo
-  2. Enable echo on Board 2 → measure echo return (1 hop backward) → disable echo
-  3. Enable echo on Board 3 → measure echo return (2 hops backward) → disable echo
-
-Final state:
-  Board 0: ext trig, delay=4.2 (backward, 1 hop)
-  Board 1: SELF-TRIG
-  Board 2: ext trig, delay=3.8 (backward, 1 hop)
-  Board 3: ext trig, delay=7.5 (backward, 2 hops - total echo path)
-```
-
-**Note**: Board 3's delay of 7.5 reflects the **total 2-hop echo path** (Board 3 → Board 2 → Board 1), which is roughly double the single-hop delays of Boards 0 and 2.
-
-#### Propagation Distance and Multi-Hop Delays
-
-The measured delay reflects the **total echo propagation path** from the echo board back to the self-triggering board, including all intermediate boards.
-
-For example, with 4 boards where Board 1 is self-triggering:
-```
-Board 0 <---> Board 1 <---> Board 2 <---> Board 3
-              (SELF)
-```
-
-**Measured delays:**
-- `lvdstrigdelay[0]`: Board 0 → Board 1 (backward, 1 hop)
-  - Typical: ~3-5 LVDS cycles (7.5-12.5 ns)
-- `lvdstrigdelay[2]`: Board 2 → Board 1 (backward through Board 2's internal routing)
-  - Typical: ~3-5 LVDS cycles (7.5-12.5 ns)
-- `lvdstrigdelay[3]`: Board 3 → Board 2 → Board 1 (backward, 2 hops)
-  - Typical: ~6-10 LVDS cycles (15-25 ns)
-  - This is the **total 2-hop delay**, not just the last hop!
-
-**Signal path for Board 3 calibration:**
-1. Board 1 generates trigger
-2. Trigger propagates forward: Board 1 → Board 2 → Board 3
-3. Board 3 (in echo mode) sends echo back via lvdsout_trig_b
-4. Echo propagates backward: Board 3 → Board 2 → Board 1
-5. Board 1's phase_diff measures the total echo return time
-
-The echo signal physically travels through all intermediate boards, so the measurement includes:
-- Cable delays (both hops)
-- Internal FPGA routing delays (Board 2)
-- LVDS driver/receiver delays
-
-**Key insight**: Delays scale roughly linearly with number of hops, but each hop adds cable delay + board internal delay (typically 2-5 ns per hop).
-
-## Delay Compensation in Data Processing
-
-Once calibrated, the delays are used in `data_processor.py` and `hardware_controller.py`:
-
-### Trigger Position Adjustment
-
-From `hardware_controller.py:223`:
 ```python
-triggerpos += int(8 * state.lvdstrigdelay[board_idx] / 40 / state.downsamplefactor / factor)
+# In update_plot_event() - main_window.py:1132-1134
+elif s.lvds_calibration_active:
+    # Don't trigger PLL resets during LVDS calibration
+    pass
 ```
 
-This adjusts the trigger position in the captured waveform to account for the LVDS propagation delay.
+This prevents interruption of the calibration process by transient clock issues.
 
-### Phase Correction
+### External Clock Lock Verification
 
-From `data_processor.py:243`:
+After PLL reset completes, all ext-trig boards are verified to be locked to external clock:
+
 ```python
-8 * state.lvdstrigdelay[board_idx] / state.downsamplefactor / factor) % 40
+# In adjustclocks() - hardware_controller.py:209-212
+if all(x == -10 for x in plljustreset):
+    ensure_exttrig_boards_locked()  # Check sequentially board 0→N
 ```
 
-Applied to align waveform samples across boards accounting for trigger arrival time differences.
+## Timing Behavior
 
-## Calibration Timing
+### Calibration Duration
 
-Calibration must be triggered explicitly by the user via the **Calibration → Board LVDS delays** menu:
+- **Per board**: 5-50 acquisition cycles (typically ~10 cycles)
+- **4 boards**: ~30-150 total cycles
+- **At 1 kHz trigger rate**: 30-150 ms total
+
+### Firmware Update Timing
+
+Firmware trigger positions are updated:
+1. After LVDS calibration completes
+2. When downsample factor changes
+3. When trigger mode changes
+
+Call to `send_trigger_info()` updates the hardware immediately.
+
+## Troubleshooting
+
+### Calibration Times Out
+
+**Symptoms**: "Board X: Calibration timed out after 50 cycles"
+
+**Causes**:
+- Phase measurements not stabilizing (res[0] != res[1])
+- LVDS clock phase misalignment
+- Cable connection issues
+
+**Solutions**:
+- Check LVDS cable connections
+- Run PLL calibration first
+- Verify external clock lock on all boards
+
+### Waveforms Not Aligned After Calibration
+
+**Check**:
+1. Calibration completed successfully (no timeout messages)
+2. Trigger threshold is stable (not changing during measurement)
+3. Firmware trigger positions updated (check console for "Updating firmware trigger positions")
+4. Downsample factor hasn't changed since calibration
+
+**Debug**:
+- Re-run calibration
+- Check `lvdstrigdelay` values in state
+- Verify both firmware and software compensation are active
+
+### Switching Trigger Sources
+
+When switching which board generates triggers:
+
+1. Select the new trigger board in UI
+2. Set it to channel-based trigger (Rising/Falling Ch0 or Ch1)
+3. System automatically:
+   - Sets all other boards to external trigger
+   - Restores saved calibration for that trigger board (if exists)
+   - Updates firmware trigger positions
+
+If no saved calibration exists, run **Calibration → Board LVDS delays** to measure.
+
+## Implementation Details
+
+### Conversion Constants
+
+```python
+LVDS_FREQ = 400e6          # 400 MHz LVDS clock
+ADC_FREQ = 3.2e9           # 3.2 GHz ADC sampling
+SAMPLES_PER_LVDS = 8       # ADC_FREQ / LVDS_FREQ
+NS_PER_LVDS = 2.5          # 1/LVDS_FREQ * 1e9
+```
+
+### Firmware Trigger Position Quantization
+
+Firmware operates in **40-sample windows**:
+```python
+triggerpos_increment = int(8 * lvdstrigdelay / 40 / downsamplefactor / factor)
+actual_samples = triggerpos_increment * 40 * factor
+```
+
+Residual correction in software ensures sample-level precision.
+
+### Backward Echo Tuning Factor
+
+The `11.5` tuning factor for backward echo:
+```python
+if echoboard < board_idx:  # Backward direction
+    lvdstrigdelay += round(lvdstrigdelay / 11.5, 1)
+```
+
+This empirical correction accounts for asymmetries in the backward signal path timing. The exact value may need adjustment for different hardware configurations.
+
+## API Reference
+
+### State Variables
+
+```python
+state.doexttrig[board]              # True if board uses external trigger
+state.doexttrigecho[board]          # True if board is in echo mode (calibration)
+state.lvdstrigdelay[board]          # Measured delay in LVDS cycles
+state.lvds_calibration_active       # True during active calibration
+state.lvds_calibration_sets[trig_board][board]  # Saved delays per trigger source
+```
+
+### Functions
 
 ```python
 controller.calibrate_lvds_delays()
+    # Start LVDS calibration (non-blocking)
+    # Returns: (success: bool, message: str)
+
+controller.restore_lvds_calibration(trigger_board)
+    # Restore saved calibration for trigger_board
+    # Returns: bool (True if calibration restored)
+
+controller.send_trigger_info(board)
+    # Update firmware trigger position for board
+    # Includes LVDS delay compensation
+
+controller.ensure_exttrig_boards_locked()
+    # Verify all ext-trig boards locked to external clock
+    # Called after PLL reset
 ```
 
-This function:
-1. **Validates configuration**: Exactly one board must be self-triggering, all others must use external trigger
-2. **Systematically iterates** through all external trigger boards
-3. **Enables echo mode** for one board at a time: `doexttrigecho[board_idx] = True`
-4. **Runs acquisition cycles** until stable measurement obtained
-5. **Disables echo mode** once delay is locked in
-6. **Moves to next board** and repeats
+## Version History
 
-**Characteristics**:
-- Works reliably for any number of boards (N ≥ 2)
-- Can be re-run at any time to verify/update delays
-- Validates configuration before starting
-- Provides clear progress and results
-- Maximum 50 cycles per board (typically completes in 5-10 cycles)
-- Phase alignment adjustments only occur after PLL calibration completes (when `all(plljustreset <= -10)`)
-
-**Important**: The PLL calibration guard prevents trigger clock phase adjustments from interfering with ADC sampling clock phase calibration, which could cause bad signal capture and incorrect timing measurements.
-
-## Error Handling
-
-### Phase Instability
-
-If `res[0] != res[1]`:
-- Indicates clock phase misalignment between boards
-- **Only after PLL calibration completes** (`all(plljustreset <= -10)`), system automatically adjusts PLL phases:
-  - `dophase(board, plloutnum=0, updown=1)` - Adjust data clock
-  - `dophase(board, plloutnum=1, updown=1)` - Adjust trigger clock
-- This guard prevents interference with ADC sampling phase calibration
-- If PLL calibration is still running, phase adjustment is deferred to next cycle
-- Retries measurement on next cycle
-
-### Measurement Inconsistency
-
-If `lvdstrigdelay != lastlvdstrigdelay`:
-- Current measurement doesn't match previous
-- Possible causes: noise, thermal drift, cable movement
-- System continues measuring until two consecutive identical values
-- Once stable, delay is locked in and echo mode disabled
-
-### Assertion Failures
-
-The code includes safety checks:
-- `assert doexttrigecho.count(True) == 1`: Only one echo source
-- `assert echoboard != board_idx`: Not echoing from self
-- These catch configuration errors during development
-
-## Performance Considerations
-
-### Calibration Time
-
-- Single measurement: 1 acquisition cycle (~10-100 ms depending on sample depth)
-- Stability requirement: 2 consecutive identical measurements
-- Typical total time: 20-200 ms per board
-- Phase adjustment adds 1-5 extra cycles if needed
-
-### Accuracy
-
-- Phase counters: 16-bit resolution
-- LVDS clock: 400 MHz (2.5 ns period)
-- Theoretical resolution: 2.5 ns / 65536 ≈ 38 femtoseconds
-- Practical accuracy: ±1 LVDS cycle (±2.5 ns) due to jitter and measurement noise
-
-### Stability
-
-- Delay is measured during every acquisition while in echo mode
-- Once stable, echo mode is disabled and delay is fixed
-- Remains valid until:
-  - PLL reset occurs
-  - External trigger configuration changes
-  - Cables are disconnected/reconnected
-
-## Debugging
-
-### Verbose Output
-
-When calibration completes, the system prints:
-```
-lvdstrigdelay from board X to echoboard Y is Z.Z
-```
-
-This confirms successful calibration.
-
-### Manual Phase Adjustment
-
-The `dophase()` function can be called manually for debugging:
-```python
-controller.dophase(board_idx, plloutnum=0, updown=1, quiet=False)
-```
-
-This prints: `"Adjusted phase up for PLL0 output 0 on board X"`
-
-### Checking Current State
-
-Monitor these state variables:
-```python
-state.doexttrigecho      # Which board is currently echoing
-state.lvdstrigdelay      # Measured delays for each board
-state.lastlvdstrigdelay  # Previous measurements for comparison
-```
-
-## Limitations
-
-1. **Single Echo Source**: Only one board can echo at a time
-2. **Adjacent Measurement Only**: Phase detectors measure next-hop delay, not total propagation
-3. **Calibration Required**: Must run after PLL reset or trigger config change
-4. **No Real-Time Update**: Delay fixed after calibration; doesn't track dynamic changes
-5. **Backward Tuning Factor**: The `/11.5` factor is empirically derived and may need adjustment for different hardware revisions or cable types
-6. **PLL Calibration Dependency**: Phase alignment adjustments only occur after PLL calibration completes to avoid interfering with ADC sampling phase calibration
-
-## Future Enhancements
-
-Potential improvements:
-- **Multi-hop delay accumulation**: Calculate total delays for non-adjacent boards
-- **Continuous calibration**: Monitor and update delays during acquisition
-- **Automatic tuning factor**: Self-calibrate the backward echo adjustment
-- **Temperature compensation**: Adjust delays based on board temperature
-- **Cable length estimation**: Report physical cable length from delay measurements
+- **v32**: Event-driven calibration, firmware/software split compensation, saved calibrations per trigger board
+- **v31**: Menu-based calibration only (removed automatic calibration)
+- **v30**: Multi-board systematic calibration
+- **v29**: Initial doexttrigecho implementation
