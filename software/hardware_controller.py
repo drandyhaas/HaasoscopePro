@@ -495,9 +495,6 @@ class HardwareController:
             if res[0] == res[1]:
                 # Calculate delay in LVDS clock cycles
                 lvdstrigdelay = (res[0] + res[1]) / 4
-                if echoboard < board_idx:
-                    # Backward echo needs tuning adjustment - this has to be tuned a little experimentally
-                    lvdstrigdelay += round(lvdstrigdelay / 11.5, 1)
 
                 # Check if delay is consistent with last measurement
                 if lvdstrigdelay == state.lastlvdstrigdelay[echoboard]:
@@ -653,6 +650,10 @@ class HardwareController:
         for board in range(self.num_board):
             if state.doexttrig[board]:
                 state.lvdstrigdelay[board] -= 16 / 2.5
+                if board < state.noextboard:
+                    # Backward echo needs tuning adjustment - this has to be tuned a little experimentally
+                    state.lvdstrigdelay[board] += state.lvdstrigdelay[board] / 11.5
+                    state.lvdstrigdelay[board] += 4 / 2.5 # ns to shift
                 #print(f"  Board {board}: adjusted delay = {state.lvdstrigdelay[board]:.2f} cycles")
 
         # Save this calibration set for the current trigger source board
