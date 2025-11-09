@@ -290,7 +290,7 @@ class DataProcessor:
             for i in range(s.num_chan_per_board):
                 xy_data_array[board_idx * s.num_chan_per_board + i][0] += s.totdistcorr[board_idx]
             s.totdistcorr[board_idx] = 0
-            #print("totdistcorr cleared")
+            #print("board",board_idx,"totdistcorr cleared")
 
         distcorrtemp = None
         if s.doexttrig[board_idx]:
@@ -315,14 +315,14 @@ class DataProcessor:
 
                 if xc.size > 1:
                     distcorrtemp = find_crossing_distance(yc, threshold_to_use, vline_time, xc[0], xc[1] - xc[0])
-                    #print("distcorrtemp", distcorrtemp)
+                    #print("board",board_idx,"distcorrtemp", distcorrtemp)
 
         if distcorrtemp is not None and abs(distcorrtemp) < s.distcorrtol * s.downsamplefactor:
             s.distcorr[board_idx] = distcorrtemp
             for i in range(s.num_chan_per_board):
                 xy_data_array[board_idx * s.num_chan_per_board + i][0] -= s.distcorr[board_idx]
             s.totdistcorr[board_idx] += s.distcorr[board_idx]
-            #print("totdistcorr", s.totdistcorr)
+            #print("board",board_idx,"totdistcorr", s.totdistcorr[board_idx])
 
     def _calculate_pulse_width(self, x_data, y_data, vline, threshold):
         """Calculate the width of the pulse nearest to the trigger point (vline).

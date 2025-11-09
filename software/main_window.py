@@ -776,8 +776,15 @@ class MainWindow(TemplateBaseClass):
                     if not raw_data_map:
                         continue
 
-                    # Process all boards
-                    for b_idx in range(self.state.num_board):
+                    # Process all boards, with self-triggering board first to ensure distcorr is calculated
+                    # before ext-trig boards need to use it
+                    board_indices = list(range(self.state.num_board))
+                    if self.state.noextboard != -1 and self.state.noextboard in board_indices:
+                        # Move self-triggering board to front
+                        board_indices.remove(self.state.noextboard)
+                        board_indices.insert(0, self.state.noextboard)
+
+                    for b_idx in board_indices:
                         if b_idx in raw_data_map:
                             self.processor.process_board_data(
                                 raw_data_map[b_idx],
@@ -825,8 +832,15 @@ class MainWindow(TemplateBaseClass):
                     if not raw_data_map:
                         continue
 
-                    # Process all boards
-                    for b_idx in range(self.state.num_board):
+                    # Process all boards, with self-triggering board first to ensure distcorr is calculated
+                    # before ext-trig boards need to use it
+                    board_indices = list(range(self.state.num_board))
+                    if self.state.noextboard != -1 and self.state.noextboard in board_indices:
+                        # Move self-triggering board to front
+                        board_indices.remove(self.state.noextboard)
+                        board_indices.insert(0, self.state.noextboard)
+
+                    for b_idx in board_indices:
                         if b_idx in raw_data_map:
                             self.processor.process_board_data(
                                 raw_data_map[b_idx],
@@ -1118,7 +1132,17 @@ class MainWindow(TemplateBaseClass):
         # Creates the xydata, xydatainterleaved arrays or resizes if needed, filled next by the processor
         self.allocate_xy_data()
 
-        for board_idx, raw_data in raw_data_map.items():
+        # Process boards in correct order: self-triggering board first, then all others
+        board_indices = list(range(s.num_board))
+        if s.noextboard != -1 and s.noextboard in board_indices:
+            # Move self-triggering board to front
+            board_indices.remove(s.noextboard)
+            board_indices.insert(0, s.noextboard)
+
+        for board_idx in board_indices:
+            if board_idx not in raw_data_map:
+                continue
+            raw_data = raw_data_map[board_idx]
             expect_len = (self.state.expect_samples + self.state.expect_samples_extra) * 2 * 50
             if len(raw_data) < expect_len:
                 print("Not enough data length in event, not processing.")
