@@ -335,26 +335,6 @@ class HardwareController:
     def set_auxout(self, board_idx, value):
         auxoutselector(self.usbs[board_idx], value)
 
-    def dophase(self, board_idx, plloutnum, updown, pllnum=0, quiet=False):
-        """Adjust PLL phase for clock alignment.
-
-        Args:
-            board_idx: Board index
-            plloutnum: PLL output number (0=clklvds, 1=clklvdsout, etc.)
-            updown: 1 for up (increase phase), 0 for down (decrease phase)
-            pllnum: PLL number (default 0)
-            quiet: Suppress print output
-        """
-        # Command 6: clock phase adjustment
-        # 3rd byte: counter select: 000:all 001:M 010=2:C0 011=3:C1 100=4:C2 101=5:C3 110=6:C4
-        # 4th byte: 1=up, 0=down
-        self.usbs[board_idx].send(bytes([6, pllnum, int(plloutnum + 2), updown, 100, 100, 100, 100]))
-        # Note: Response is ignored in v29, so we read and discard
-        self.usbs[board_idx].recv(4)
-        if not quiet:
-            direction = "up" if updown else "down"
-            print(f"Adjusted phase {direction} for PLL{pllnum} output {plloutnum} on board {board_idx}")
-
     def set_rolling(self, is_rolling):
         for i, usb in enumerate(self.usbs):
             r = is_rolling
@@ -543,8 +523,8 @@ class HardwareController:
                 # Only adjust phases after PLL calibration is complete to avoid interfering with ADC sampling phase calibration
                 if all(item <= -10 for item in state.plljustreset):
                     # Adjust both clklvds (0) and clklvdsout (1) to align trigger signals
-                    self.dophase(board_idx, plloutnum=0, updown=1, quiet=True)
-                    self.dophase(board_idx, plloutnum=1, updown=1, quiet=True)
+                    self.do_phase(board_idx, plloutnum=0, updown=1, pllnum=0, quiet=True)
+                    self.do_phase(board_idx, plloutnum=1, updown=1, pllnum=0, quiet=True)
 
     def _get_data(self, usb):
         expect_len = (self.state.expect_samples + self.state.expect_samples_extra) * 2 * 50

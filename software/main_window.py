@@ -1129,6 +1129,9 @@ class MainWindow(TemplateBaseClass):
             elif s.pll_reset_grace_period > 0:
                 # If in the grace period, ignore any bad clock signals.
                 pass
+            elif s.lvds_calibration_active:
+                # Don't trigger PLL resets during LVDS calibration
+                pass
             elif (nbadA + nbadB + nbadC + nbadD + nbadS) > 0:
                 # If not in a reset and not in grace period, trigger a new reset on error.
                 print(f"Bad clock/strobe detected on board {board_idx}. Triggering PLL reset.")
