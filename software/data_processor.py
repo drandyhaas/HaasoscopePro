@@ -239,8 +239,9 @@ class DataProcessor:
 
         if state.doexttrig[board_idx]:
             factor = 2 if state.dotwochannel[board_idx] else 1
-            offset -= int(state.toff[board_idx] / state.downsamplefactor / factor) + int(
-                8 * state.lvdstrigdelay[board_idx] / state.downsamplefactor / factor)
+            offset -= int(state.toff[board_idx] / state.downsamplefactor / factor)
+            # LVDS delay compensation is done in firmware (send_trigger_info) instead
+            # offset -= int(8 * state.lvdstrigdelay[board_idx] / state.downsamplefactor) # The "8" converts LVDS cycles to ADC samples (400 MHz vs 3200 MHz)
 
         return int(offset)
 
