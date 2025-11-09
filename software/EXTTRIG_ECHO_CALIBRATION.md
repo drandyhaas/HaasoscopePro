@@ -421,20 +421,20 @@ state.lvds_calibration_sets[trig_board][board]  # Saved delays per trigger sourc
 
 ```python
 controller.calibrate_lvds_delays()
-    # Start LVDS calibration (non-blocking)
-    # Returns: (success: bool, message: str)
+# Start LVDS calibration (non-blocking)
+# Returns: (success: bool, message: str)
 
 controller.restore_lvds_calibration(trigger_board)
-    # Restore saved calibration for trigger_board
-    # Returns: bool (True if calibration restored)
+# Restore saved calibration for trigger_board
+# Returns: bool (True if calibration restored)
 
 controller.send_trigger_info(board)
-    # Update firmware trigger position for board
-    # Includes LVDS delay compensation
+# Update firmware trigger position for board
+# Includes LVDS delay compensation
 
-controller.ensure_exttrig_boards_locked()
-    # Verify all ext-trig boards locked to external clock
-    # Called after PLL reset
+controller.ensure_boards_locked()
+# Verify all ext-trig boards locked to external clock
+# Called after PLL reset
 ```
 
 ## Version History
