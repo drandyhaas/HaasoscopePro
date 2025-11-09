@@ -124,10 +124,10 @@ class HardwareController:
             if not clockused(usb, board, quiet=True):
                 # Not locked - force switch to external
                 print(f"Board {board} not locked to external clock after PLL reset....")
+                self.use_external_clock[board] = False # update to the truth first
                 if not self.force_switch_clocks(board):
                     print(f"  WARNING: Failed to lock board {board} to external clock!")
-                else:
-                    print(f"  Board {board} successfully locked to external clock")
+                #else: print(f"  Board {board} successfully locked to external clock")
 
     def pllreset(self, board_idx):
         """Sends PLL reset and correctly updates the state to start the adjustclocks sequence."""
@@ -786,8 +786,8 @@ class HardwareController:
     def force_switch_clocks(self, board_idx):
         """Directly commands a clock switch."""
         clock_wanted = not self.use_external_clock[board_idx]
-        if clock_wanted: print(f"Trying to switch board {board_idx} to external clock")
-        else: print(f"Trying to switch board {board_idx} to internal clock")
+        #if clock_wanted: print(f"Trying to switch board {board_idx} to external clock")
+        #else: print(f"Trying to switch board {board_idx} to internal clock")
         if switchclock(self.usbs[board_idx], board_idx, clock_wanted):
             self.use_external_clock[board_idx] = clock_wanted
             if self.use_external_clock[board_idx]: print(f"Board {board_idx} now locked to external clock")
