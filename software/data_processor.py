@@ -239,8 +239,8 @@ class DataProcessor:
 
         if state.doexttrig[board_idx]:
             factor = 2 if state.dotwochannel[board_idx] else 1
-            offset -= int(state.toff / state.downsamplefactor / factor) + int(
-                8 * state.lvdstrigdelay[board_idx] / state.downsamplefactor / factor) % 40
+            offset -= int(state.toff[board_idx] / state.downsamplefactor / factor) + int(
+                8 * state.lvdstrigdelay[board_idx] / state.downsamplefactor / factor)
 
         return int(offset)
 

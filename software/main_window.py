@@ -141,7 +141,7 @@ class MainWindow(TemplateBaseClass):
                 setup_good = False
             if setup_good:
                 self.controller.send_trigger_info_all()
-                self.ui.ToffBox.setValue(self.state.toff)
+                self.ui.ToffBox.setValue(self.state.toff[self.state.activeboard])
                 #self.ui.resampBox.setValue(self.state.doresamp)
                 self.allocate_xy_data()
                 self.controller.set_rolling(self.state.isrolling)
@@ -335,7 +335,7 @@ class MainWindow(TemplateBaseClass):
         # Advanced/Hardware controls
         self.ui.pllresetButton.clicked.connect(self.dopllreset)
         self.ui.tadBox.valueChanged.connect(self.tad_changed)
-        self.ui.ToffBox.valueChanged.connect(lambda val: setattr(self.state, 'toff', val))
+        self.ui.ToffBox.valueChanged.connect(self.toff_changed)
         self.ui.Auxout_comboBox.currentIndexChanged.connect(self.auxout_changed)
         self.ui.actionToggle_PLL_controls.triggered.connect(self.toggle_pll_controls)
         self.ui.actionOversampling_controls.triggered.connect(self.toggle_oversampling_controls)
@@ -1844,6 +1844,11 @@ class MainWindow(TemplateBaseClass):
         self.ui.tenxCheck.setChecked(s.tenx[s.activexychannel] == 10)
         self.ui.chanonCheck.setChecked(s.channel_enabled[s.activexychannel])
         self.ui.tadBox.setValue(s.tad[s.activeboard])
+
+        # Update per-board timing controls
+        self.ui.ToffBox.blockSignals(True)
+        self.ui.ToffBox.setValue(s.toff[s.activeboard])
+        self.ui.ToffBox.blockSignals(False)
 
         # Update persistence UI controls to reflect active channel's settings
         self.sync_persistence_ui()
@@ -3386,10 +3391,11 @@ class MainWindow(TemplateBaseClass):
             # When disabling oversampling, re-enable the odd board's ch0
             s.channel_enabled[ch0_board2] = True
             self.update_channel_visibility(ch0_board2)
-            # Reset toff to default value of 100
-            s.toff = 100
+            # Reset toff to default value of 100 for both boards in the oversampling pair
+            s.toff[board] = 100
+            s.toff[board + 1] = 100
             self.ui.ToffBox.blockSignals(True)
-            self.ui.ToffBox.setValue(100)
+            self.ui.ToffBox.setValue(s.toff[s.activeboard])
             self.ui.ToffBox.blockSignals(False)
             # Note: board+1 stays in external trigger mode for multi-board synchronization
 
@@ -3453,6 +3459,10 @@ class MainWindow(TemplateBaseClass):
     def tad_changed(self, value):
         self.state.tad[self.state.activeboard] = value
         self.controller.set_tad(self.state.activeboard, value)
+
+    def toff_changed(self, value):
+        """Handle changes to trigger offset (toff) spinbox."""
+        self.state.toff[self.state.activeboard] = value
 
     def trigger_delta_changed(self, value):
         """Handle changes to trigger delta spinbox."""

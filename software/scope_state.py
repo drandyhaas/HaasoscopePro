@@ -68,7 +68,7 @@ class ScopeState:
         self.triggerpos = 50
         self.triggershift = 2
         self.triggertimethresh = [0] * self.num_board  # Per-board time over threshold
-        self.toff = 100
+        self.toff = [100] * self.num_board  # Per-board trigger time offset
         self.trigger_delay = [0] * self.num_board
         self.trigger_holdoff = [0] * self.num_board
 
@@ -109,11 +109,15 @@ class ScopeState:
         self.lvds_calibration_cycles = 0  # Number of acquisition cycles for current board
         self.lvds_calibration_max_cycles = 50  # Maximum cycles to wait for stable measurement
         self.lvds_calibration_results = []  # Accumulated results for completed boards
+
+        # PLL reset and phase variables
         self.plljustreset = [-10] * self.num_board
         self.plljustresetdir = [0] * self.num_board
         self.phasenbad = [[0] * 12] * self.num_board
         self.phasecs = [[([0] * 5) for _ in range(4)] for _ in range(self.num_board)]
         self.extraphasefortad = [0] * self.num_board
+
+        # Calibration variables
         self.triggerautocalibration = [False] * self.num_board
         self.extrigboardstdcorrection = [1] * self.num_board
         self.extrigboardmeancorrection = [0] * self.num_board
