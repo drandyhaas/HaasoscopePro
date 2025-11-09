@@ -122,9 +122,6 @@ class HardwareController:
         s.phasenbad[board_idx] = [0] * 12
         s.expect_samples = 1000
         s.dodrawing = False
-        # Enable trigger echo mode for multi-board external trigger calibration
-        if self.num_board > 1 and s.doexttrig[board_idx]:
-            s.doexttrigecho[board_idx] = True
 
         # Only do real pllreset for real boards. It breaks the dummy server!
         s.plljustreset[board_idx] = -2 if hasattr(usb,"socket_addr") else 0 # CRITICAL: This starts the calibration
@@ -297,13 +294,6 @@ class HardwareController:
         is_rolling = self.state.isrolling and not is_ext
         self.usbs[board_idx].send(bytes([2, 8, is_rolling, 0, 100, 100, 100, 100]))
         self.usbs[board_idx].recv(4)
-        if is_ext:
-            # Turn off doexttrigecho for all other boards, turn on for this one
-            self.state.doexttrigecho = [False] * self.num_board
-            self.state.doexttrigecho[board_idx] = True
-        else:
-            # Turn off doexttrigecho for this board since it's not doing exttrig anymore
-            self.state.doexttrigecho[board_idx] = False
         self.send_trigger_info(board_idx)
 
     def set_auxout(self, board_idx, value):
@@ -535,6 +525,94 @@ class HardwareController:
             self.state.phasecs[board][pllnum][plloutnum] -= 1
         if not quiet: print(
             f"phase for pllnum {pllnum} plloutnum {plloutnum} on board {board} now {self.state.phasecs[board][pllnum][plloutnum]}")
+
+    def calibrate_lvds_delays(self):
+        """
+        Systematically calibrate LVDS trigger propagation delays for all boards.
+
+        This function:
+        1. Validates that exactly one board is self-triggering (all others use ext trig)
+        2. Iterates through each ext-trig board
+        3. Enables echo mode and measures the delay
+        4. Waits for stable measurement before moving to next board
+
+        Returns:
+            (success: bool, message: str)
+        """
+        state = self.state
+
+        # Validate configuration: exactly one board should be self-triggering
+        self_trig_boards = [i for i in range(self.num_board) if not state.doexttrig[i]]
+
+        if len(self_trig_boards) == 0:
+            return (False, "Error: All boards are in external trigger mode.\nOne board must be self-triggering.")
+        elif len(self_trig_boards) > 1:
+            board_list = ", ".join(str(b) for b in self_trig_boards)
+            return (False, f"Error: Multiple boards are self-triggering: {board_list}\nOnly one board should generate triggers.")
+
+        trigger_board = self_trig_boards[0]
+        print(f"\n=== LVDS Delay Calibration ===")
+        print(f"Trigger source board: {trigger_board}")
+
+        # Get list of boards to calibrate
+        ext_trig_boards = [i for i in range(self.num_board) if state.doexttrig[i]]
+        if not ext_trig_boards:
+            return (False, "Error: No boards in external trigger mode.\nAt least one board must use external trigger for calibration.")
+
+        print(f"Boards to calibrate: {ext_trig_boards}")
+
+        # Clear all previous echo modes
+        state.doexttrigecho = [False] * self.num_board
+        state.lastlvdstrigdelay = [0] * self.num_board
+
+        results = []
+        max_cycles = 50  # Maximum acquisition cycles to wait for stable measurement
+
+        # Calibrate each ext-trig board
+        for board_idx in ext_trig_boards:
+            print(f"\nCalibrating Board {board_idx}...")
+
+            # Enable echo mode for this board
+            state.doexttrigecho[board_idx] = True
+            state.lastlvdstrigdelay[board_idx] = -999  # Invalid value to force measurement
+
+            # Run acquisition cycles until delay is measured
+            cycles = 0
+            while state.doexttrigecho[board_idx] and cycles < max_cycles:
+                # Trigger one acquisition cycle
+                # The _get_predata() method will measure the delay and disable echo mode when stable
+                try:
+                    # Get trigger status
+                    if self._get_channels(trigger_board):
+                        self._get_predata(trigger_board)
+
+                    cycles += 1
+
+                    # Check if calibration completed
+                    if not state.doexttrigecho[board_idx]:
+                        delay = state.lvdstrigdelay[board_idx]
+                        direction = "backward" if board_idx < trigger_board else "forward"
+                        print(f"  ✓ Board {board_idx} calibrated: {delay:.2f} LVDS cycles ({direction})")
+                        results.append(f"Board {board_idx}: {delay:.2f} cycles ({direction})")
+                        break
+
+                except Exception as e:
+                    print(f"  Error during calibration cycle {cycles}: {e}")
+                    continue
+
+            # Check if calibration timed out
+            if state.doexttrigecho[board_idx]:
+                state.doexttrigecho[board_idx] = False
+                error_msg = f"Board {board_idx}: Calibration timed out after {max_cycles} cycles"
+                print(f"  ✗ {error_msg}")
+                results.append(error_msg)
+
+        # All done
+        print("\n=== Calibration Complete ===")
+        result_message = "Measured delays:\n" + "\n".join(results)
+        print(result_message)
+
+        return (True, result_message)
 
     def update_firmware(self, board_idx, verify_only=False, progress_callback=None):
         print(f"Starting firmware update on board {board_idx}...")

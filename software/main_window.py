@@ -368,6 +368,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionLoad_setup.triggered.connect(self.load_setup)
         self.ui.actionVerify_firmware.triggered.connect(self.verify_firmware)
         self.ui.actionUpdate_firmware.triggered.connect(self.update_firmware)
+        self.ui.actionBoard_LVDS_delays.triggered.connect(self.calibrate_lvds_delays)
         self.ui.actionDo_autocalibration.triggered.connect(lambda: autocalibration(self))
         self.ui.actionOversampling_mean_and_RMS.triggered.connect(lambda: do_meanrms_calibration(self))
         self.ui.actionToggle_trig_stabilizer.triggered.connect(self.trig_stabilizer_toggled)
@@ -2514,6 +2515,34 @@ class MainWindow(TemplateBaseClass):
                               f"Initial counter: {initial_count}\n"
                               f"Final counter: {final_count}\n\n"
                               f"Result: {'SUCCESS - Watchdog triggered!' if final_count > initial_count else 'FAILURE - Watchdog did not trigger'}")
+
+    def calibrate_lvds_delays(self):
+        """Calibrate LVDS trigger propagation delays for all boards."""
+        if self.state.num_board < 2:
+            QMessageBox.warning(self, "LVDS Delay Calibration",
+                              "LVDS delay calibration requires at least 2 boards.")
+            return
+
+        # Pause acquisition if running
+        was_paused = self.paused
+        if not was_paused:
+            self.dostartstop()
+
+        try:
+            success, message = self.controller.calibrate_lvds_delays()
+
+            if success:
+                # Show results
+                result_text = "LVDS Delay Calibration Complete\n\n"
+                result_text += message
+                QMessageBox.information(self, "LVDS Delay Calibration", result_text)
+            else:
+                QMessageBox.critical(self, "LVDS Delay Calibration Failed", message)
+
+        finally:
+            # Resume acquisition if it was running
+            if not was_paused:
+                self.dostartstop()
 
     def set_channel_frame(self):
         s = self.state
