@@ -2390,7 +2390,7 @@ class MainWindow(TemplateBaseClass):
         from PyQt5.QtCore import Qt
 
         board = self.state.activeboard
-        reply = QMessageBox.question(self, 'Confirmation', f'Update firmware on board {board} with firmware {self.state.firmwareversion[board]}\nto the one in this software?',
+        reply = QMessageBox.question(self, 'Confirmation', f'Update firmware on board {board} with firmware {self.state.firmwareversion[board]}.{self.state.firmwareversion_minor[board]}\nto the one in this software?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.No: return
         if not self.state.paused: self.dostartstop()  # Pause

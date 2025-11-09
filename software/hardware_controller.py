@@ -50,7 +50,7 @@ class HardwareController:
             print("Warning - this board has newer firmware than another being used:",min(self.state.firmwareversion))
         if 32 <= ver < 1000000:
             ver_minor = version_minor(usb, False)
-            self.state.firmwareversion_minor = ver_minor
+            self.state.firmwareversion_minor[board_idx] = ver_minor
         if not self.adfreset(board_idx):
             return False
         if not setupboard(usb, self.state.dopattern, self.state.dotwochannel[board_idx], self.state.dooverrange, self.state.basevoltage == 200):
