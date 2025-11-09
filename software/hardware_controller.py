@@ -673,6 +673,13 @@ class HardwareController:
         for result in state.lvds_calibration_results:
             print(f"  {result}")
 
+        # Apply ~16ns (51 samples = 6.375 LVDS cycles) offset to boards > 0
+        print("Applying board offset correction...")
+        for board in range(self.num_board):
+            if state.doexttrig[board]:
+                state.lvdstrigdelay[board] -= 6.375
+                print(f"  Board {board}: adjusted delay = {state.lvdstrigdelay[board]:.2f} cycles")
+
         # Update trigger info for all ext-trig boards since lvdstrigdelay values changed
         print("Updating firmware trigger positions...")
         for board in range(self.num_board):
