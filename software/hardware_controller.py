@@ -685,9 +685,9 @@ class HardwareController:
         for board in saved_calibration.keys():
             self.send_trigger_info(board)
 
-        #print(f"Restored LVDS calibration for trigger source board {trigger_board}")
-        for board, delay in saved_calibration.items():
-            print(f"  Board {board}: {delay:.2f} cycles")
+        # print(f"Restored LVDS calibration for trigger source board {trigger_board}")
+        # for board, delay in saved_calibration.items():
+        #     print(f"  Board {board}: {delay:.2f} cycles")
 
         return True
 
