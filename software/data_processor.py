@@ -242,12 +242,12 @@ class DataProcessor:
             offset -= int(state.toff[board_idx] / state.downsamplefactor / factor)
 
             # Residual LVDS delay compensation (firmware does coarse correction in 40-sample chunks)
-            # Total correction needed (in downsampled samples, accounting for two-channel mode)
-            total_lvds_correction = 8 * state.lvdstrigdelay[board_idx] / state.downsamplefactor / factor
-            # What firmware already applied (converted to downsampled samples)
+            # Total correction needed (in full-rate ADC samples)
+            total_lvds_correction = 8 * state.lvdstrigdelay[board_idx] / state.downsamplefactor
+            # What firmware already applied (in full-rate ADC samples, accounting for quantization and two-channel mode)
             fw_lvds_correction = 40 * factor * int(8 * state.lvdstrigdelay[board_idx] / 40 / state.downsamplefactor / factor)
-            # Software applies the fine residual
-            offset -= int(total_lvds_correction - fw_lvds_correction)
+            # Software applies the fine residual (in per-channel samples for two-channel mode)
+            offset -= int((total_lvds_correction - fw_lvds_correction) / factor)
 
         return int(offset)
 
