@@ -109,6 +109,33 @@ class HardwareController:
             print(f"Adf pll locked for board {board_idx}")
             return True
 
+    def ensure_exttrig_boards_locked(self):
+        """
+        Ensure all boards using external trigger are locked to external clock.
+        Called after PLL reset to verify clock synchronization.
+        Checks boards sequentially from 0 to N.
+        """
+        state = self.state
+        for board in range(self.num_board):
+            if not state.doexttrig[board]:
+                continue  # Skip non-ext-trig boards
+
+            usb = self.usbs[board]
+
+            # Skip dummy boards
+            if isinstance(usb, UsbSocketAdapter):
+                continue
+
+            # Check if already locked to external clock
+            if not clockused(usb, board, quiet=True):
+                # Not locked - force switch to external
+                print(f"Board {board} not locked to external clock after PLL reset....")
+                if not self.force_switch_clocks(board):
+                    print(f"  WARNING: Failed to lock board {board} to external clock!")
+                else:
+                    print(f"  Board {board} successfully locked to external clock")
+            # else: already locked, no message needed
+
     def pllreset(self, board_idx):
         """Sends PLL reset and correctly updates the state to start the adjustclocks sequence."""
         usb = self.usbs[board_idx]
@@ -178,6 +205,11 @@ class HardwareController:
             # Mark this board as finished
             s.plljustreset[board] = -10
             #print(f"PLL calibration for board {board} is complete.")
+
+            # After PLL reset completes, ensure all ext-trig boards are locked to external clock
+            # Only do this check once, when all boards have completed PLL calibration
+            if all(x == -10 for x in s.plljustreset):
+                self.ensure_exttrig_boards_locked()
 
             # Check if ALL boards have finished their calibration sequences.
             all_calibrations_finished = all(status == -10 for status in s.plljustreset)
