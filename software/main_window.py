@@ -3501,6 +3501,15 @@ class MainWindow(TemplateBaseClass):
         s.doexttrig[active_board] = is_other_boards
         s.doextsmatrig[active_board] = is_external_sma
 
+        # If setting this board to self-triggering, set all other boards to external triggering
+        if not is_other_boards and not is_external_sma:
+            for board_idx in range(s.num_board):
+                if board_idx != active_board and not s.doexttrig[board_idx]:
+                    #print(f"Setting board {board_idx} to external trigger (only one self-triggering board allowed)")
+                    s.doexttrig[board_idx] = True
+                    s.doextsmatrig[board_idx] = False
+                    self.controller.set_exttrig(board_idx, True)
+
         # For channel-based triggers (indices 0-3)
         if index < 4:
             # Determine channel: 0-1 are Ch0, 2-3 are Ch1
