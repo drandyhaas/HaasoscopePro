@@ -239,8 +239,15 @@ class DataProcessor:
 
         if state.doexttrig[board_idx]:
             factor = 2 if state.dotwochannel[board_idx] else 1
-            offset -= int(state.toff / state.downsamplefactor / factor) + int(
-                8 * state.lvdstrigdelay[board_idx] / state.downsamplefactor / factor) % 40
+            offset -= int(state.toff[board_idx] / state.downsamplefactor / factor)
+
+            # Residual LVDS delay compensation (firmware does coarse correction in 40-sample chunks)
+            # Total correction needed (in full-rate ADC samples)
+            total_lvds_correction = 8 * state.lvdstrigdelay[board_idx] / state.downsamplefactor
+            # What firmware already applied (in full-rate ADC samples, accounting for quantization and two-channel mode)
+            fw_lvds_correction = 40 * factor * int(8 * state.lvdstrigdelay[board_idx] / 40 / state.downsamplefactor / factor)
+            # Software applies the fine residual (in per-channel samples for two-channel mode)
+            offset -= int((total_lvds_correction - fw_lvds_correction) / factor)
 
         return int(offset)
 
@@ -283,7 +290,7 @@ class DataProcessor:
             for i in range(s.num_chan_per_board):
                 xy_data_array[board_idx * s.num_chan_per_board + i][0] += s.totdistcorr[board_idx]
             s.totdistcorr[board_idx] = 0
-            #print("totdistcorr cleared")
+            #print("board",board_idx,"totdistcorr cleared")
 
         distcorrtemp = None
         if s.doexttrig[board_idx]:
@@ -308,14 +315,14 @@ class DataProcessor:
 
                 if xc.size > 1:
                     distcorrtemp = find_crossing_distance(yc, threshold_to_use, vline_time, xc[0], xc[1] - xc[0])
-                    #print("distcorrtemp", distcorrtemp)
+                    #print("board",board_idx,"distcorrtemp", distcorrtemp)
 
         if distcorrtemp is not None and abs(distcorrtemp) < s.distcorrtol * s.downsamplefactor:
             s.distcorr[board_idx] = distcorrtemp
             for i in range(s.num_chan_per_board):
                 xy_data_array[board_idx * s.num_chan_per_board + i][0] -= s.distcorr[board_idx]
             s.totdistcorr[board_idx] += s.distcorr[board_idx]
-            #print("totdistcorr", s.totdistcorr)
+            #print("board",board_idx,"totdistcorr", s.totdistcorr[board_idx])
 
     def _calculate_pulse_width(self, x_data, y_data, vline, threshold):
         """Calculate the width of the pulse nearest to the trigger point (vline).

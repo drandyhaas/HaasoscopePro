@@ -5,7 +5,7 @@ class ScopeState:
 
     def __init__(self, num_boards, num_chan_per_board):
         # General and Hardware Configuration
-        self.softwareversion = 32.01
+        self.softwareversion = 32.02
         self.num_board = num_boards
         self.num_chan_per_board = num_chan_per_board
         self.samplerate = 3.2  # GHz
@@ -68,7 +68,7 @@ class ScopeState:
         self.triggerpos = 50
         self.triggershift = 2
         self.triggertimethresh = [0] * self.num_board  # Per-board time over threshold
-        self.toff = 100
+        self.toff = [100] * self.num_board  # Per-board trigger time offset
         self.trigger_delay = [0] * self.num_board
         self.trigger_holdoff = [0] * self.num_board
 
@@ -101,11 +101,24 @@ class ScopeState:
         self.noextboard = -1
         self.lvdstrigdelay = [0] * self.num_board
         self.lastlvdstrigdelay = [0] * self.num_board
+
+        # LVDS calibration state tracking
+        self.lvds_calibration_active = False  # Whether calibration is currently running
+        self.lvds_calibration_boards = []  # List of board indices to calibrate
+        self.lvds_calibration_current_idx = 0  # Index into lvds_calibration_boards list
+        self.lvds_calibration_cycles = 0  # Number of acquisition cycles for current board
+        self.lvds_calibration_max_cycles = 50  # Maximum cycles to wait for stable measurement
+        self.lvds_calibration_results = []  # Accumulated results for completed boards
+        self.lvds_calibration_sets = {}  # Saved calibrations per trigger-source board: {trigger_board: {board: delay, ...}}
+
+        # PLL reset and phase variables
         self.plljustreset = [-10] * self.num_board
         self.plljustresetdir = [0] * self.num_board
         self.phasenbad = [[0] * 12] * self.num_board
         self.phasecs = [[([0] * 5) for _ in range(4)] for _ in range(self.num_board)]
         self.extraphasefortad = [0] * self.num_board
+
+        # Calibration variables
         self.triggerautocalibration = [False] * self.num_board
         self.extrigboardstdcorrection = [1] * self.num_board
         self.extrigboardmeancorrection = [0] * self.num_board

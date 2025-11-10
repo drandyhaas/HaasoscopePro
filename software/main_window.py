@@ -141,7 +141,7 @@ class MainWindow(TemplateBaseClass):
                 setup_good = False
             if setup_good:
                 self.controller.send_trigger_info_all()
-                self.ui.ToffBox.setValue(self.state.toff)
+                self.ui.ToffBox.setValue(self.state.toff[self.state.activeboard])
                 #self.ui.resampBox.setValue(self.state.doresamp)
                 self.allocate_xy_data()
                 self.controller.set_rolling(self.state.isrolling)
@@ -302,7 +302,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.ohmCheck.stateChanged.connect(self.mohm_changed)
         self.ui.attCheck.stateChanged.connect(self.att_changed)
         self.ui.tenxCheck.stateChanged.connect(self.tenx_changed)
-        self.ui.twochanCheck.clicked.connect(self.twochan_changed)
+        self.ui.twochanCheck.stateChanged.connect(self.twochan_changed)
         self.ui.oversampCheck.stateChanged.connect(self.oversamp_changed)
         self.ui.interleavedCheck.stateChanged.connect(self.interleave_changed)
         # Make chanColor clickable to change channel color
@@ -335,7 +335,7 @@ class MainWindow(TemplateBaseClass):
         # Advanced/Hardware controls
         self.ui.pllresetButton.clicked.connect(self.dopllreset)
         self.ui.tadBox.valueChanged.connect(self.tad_changed)
-        self.ui.ToffBox.valueChanged.connect(lambda val: setattr(self.state, 'toff', val))
+        self.ui.ToffBox.valueChanged.connect(self.toff_changed)
         self.ui.Auxout_comboBox.currentIndexChanged.connect(self.auxout_changed)
         self.ui.actionToggle_PLL_controls.triggered.connect(self.toggle_pll_controls)
         self.ui.actionOversampling_controls.triggered.connect(self.toggle_oversampling_controls)
@@ -368,6 +368,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.actionLoad_setup.triggered.connect(self.load_setup)
         self.ui.actionVerify_firmware.triggered.connect(self.verify_firmware)
         self.ui.actionUpdate_firmware.triggered.connect(self.update_firmware)
+        self.ui.actionBoard_LVDS_delays.triggered.connect(self.calibrate_lvds_delays)
         self.ui.actionDo_autocalibration.triggered.connect(lambda: autocalibration(self))
         self.ui.actionOversampling_mean_and_RMS.triggered.connect(lambda: do_meanrms_calibration(self))
         self.ui.actionToggle_trig_stabilizer.triggered.connect(self.trig_stabilizer_toggled)
@@ -727,8 +728,17 @@ class MainWindow(TemplateBaseClass):
                 if not raw_data_map:
                     continue
 
-                # Process all boards
-                for b_idx in range(self.state.num_board):
+                # Process all boards, with self-triggering board first to ensure distcorr is calculated
+                # before ext-trig boards need to use it
+                board_indices = list(range(self.state.num_board))
+
+                # If there's a self-triggering board, process it first
+                if self.state.noextboard != -1 and self.state.noextboard in board_indices:
+                    # Move self-triggering board to front
+                    board_indices.remove(self.state.noextboard)
+                    board_indices.insert(0, self.state.noextboard)
+
+                for b_idx in board_indices:
                     if b_idx in raw_data_map:
                         self.processor.process_board_data(
                             raw_data_map[b_idx],
@@ -766,8 +776,15 @@ class MainWindow(TemplateBaseClass):
                     if not raw_data_map:
                         continue
 
-                    # Process all boards
-                    for b_idx in range(self.state.num_board):
+                    # Process all boards, with self-triggering board first to ensure distcorr is calculated
+                    # before ext-trig boards need to use it
+                    board_indices = list(range(self.state.num_board))
+                    if self.state.noextboard != -1 and self.state.noextboard in board_indices:
+                        # Move self-triggering board to front
+                        board_indices.remove(self.state.noextboard)
+                        board_indices.insert(0, self.state.noextboard)
+
+                    for b_idx in board_indices:
                         if b_idx in raw_data_map:
                             self.processor.process_board_data(
                                 raw_data_map[b_idx],
@@ -815,8 +832,15 @@ class MainWindow(TemplateBaseClass):
                     if not raw_data_map:
                         continue
 
-                    # Process all boards
-                    for b_idx in range(self.state.num_board):
+                    # Process all boards, with self-triggering board first to ensure distcorr is calculated
+                    # before ext-trig boards need to use it
+                    board_indices = list(range(self.state.num_board))
+                    if self.state.noextboard != -1 and self.state.noextboard in board_indices:
+                        # Move self-triggering board to front
+                        board_indices.remove(self.state.noextboard)
+                        board_indices.insert(0, self.state.noextboard)
+
+                    for b_idx in board_indices:
                         if b_idx in raw_data_map:
                             self.processor.process_board_data(
                                 raw_data_map[b_idx],
@@ -1108,7 +1132,17 @@ class MainWindow(TemplateBaseClass):
         # Creates the xydata, xydatainterleaved arrays or resizes if needed, filled next by the processor
         self.allocate_xy_data()
 
-        for board_idx, raw_data in raw_data_map.items():
+        # Process boards in correct order: self-triggering board first, then all others
+        board_indices = list(range(s.num_board))
+        if s.noextboard != -1 and s.noextboard in board_indices:
+            # Move self-triggering board to front
+            board_indices.remove(s.noextboard)
+            board_indices.insert(0, s.noextboard)
+
+        for board_idx in board_indices:
+            if board_idx not in raw_data_map:
+                continue
+            raw_data = raw_data_map[board_idx]
             expect_len = (self.state.expect_samples + self.state.expect_samples_extra) * 2 * 50
             if len(raw_data) < expect_len:
                 print("Not enough data length in event, not processing.")
@@ -1127,6 +1161,9 @@ class MainWindow(TemplateBaseClass):
                 self.controller.adjustclocks(board_idx, nbadA, nbadB, nbadC, nbadD, nbadS, self)
             elif s.pll_reset_grace_period > 0:
                 # If in the grace period, ignore any bad clock signals.
+                pass
+            elif s.lvds_calibration_active:
+                # Don't trigger PLL resets during LVDS calibration
                 pass
             elif (nbadA + nbadB + nbadC + nbadD + nbadS) > 0:
                 # If not in a reset and not in grace period, trigger a new reset on error.
@@ -1652,7 +1689,42 @@ class MainWindow(TemplateBaseClass):
                 self.ui.thresholdPos.setValue(self.ui.thresholdPos.value() + 100)
             else:
                 self.time_fast()
-        if event.key() == QtCore.Qt.Key_R: self.dostartstop()
+
+        # Space: Toggle run/pause
+        if event.key() == QtCore.Qt.Key_Space:
+            self.dostartstop()
+
+        # R: Set rising edge trigger on current channel
+        if event.key() == QtCore.Qt.Key_R:
+            # Index 0: Rising Ch0, Index 2: Rising Ch1
+            trigger_chan = self.state.triggerchan[self.state.activeboard]
+            rising_index = 0 if trigger_chan == 0 else 2
+            self.ui.risingfalling_comboBox.setCurrentIndex(rising_index)
+
+        # F: Set falling edge trigger on current channel
+        if event.key() == QtCore.Qt.Key_F:
+            # Index 1: Falling Ch0, Index 3: Falling Ch1
+            trigger_chan = self.state.triggerchan[self.state.activeboard]
+            falling_index = 1 if trigger_chan == 0 else 3
+            self.ui.risingfalling_comboBox.setCurrentIndex(falling_index)
+
+        # Number keys 0-9: Select board
+        if event.key() >= QtCore.Qt.Key_0 and event.key() <= QtCore.Qt.Key_9:
+            board_num = event.key() - QtCore.Qt.Key_0
+            if board_num < self.state.num_board:
+                self.ui.boardBox.setCurrentIndex(board_num)
+
+        # T: Toggle two-channel mode
+        if event.key() == QtCore.Qt.Key_T:
+            self.ui.twochanCheck.setChecked(not self.ui.twochanCheck.isChecked())
+
+        # C: Toggle between channel 0 and 1 (in two-channel mode)
+        if event.key() == QtCore.Qt.Key_C:
+            if self.state.dotwochannel[self.state.activeboard]:
+                # Toggle between channel 0 and 1
+                current_chan = self.ui.chanBox.currentIndex()
+                new_chan = 1 if current_chan == 0 else 0
+                self.ui.chanBox.setCurrentIndex(new_chan)
 
     def eventFilter(self, obj, event):
         """Event filter to make chanColor clickable."""
@@ -1843,6 +1915,11 @@ class MainWindow(TemplateBaseClass):
         self.ui.tenxCheck.setChecked(s.tenx[s.activexychannel] == 10)
         self.ui.chanonCheck.setChecked(s.channel_enabled[s.activexychannel])
         self.ui.tadBox.setValue(s.tad[s.activeboard])
+
+        # Update per-board timing controls
+        self.ui.ToffBox.blockSignals(True)
+        self.ui.ToffBox.setValue(s.toff[s.activeboard])
+        self.ui.ToffBox.blockSignals(False)
 
         # Update persistence UI controls to reflect active channel's settings
         self.sync_persistence_ui()
@@ -2389,7 +2466,7 @@ class MainWindow(TemplateBaseClass):
         from PyQt5.QtCore import Qt
 
         board = self.state.activeboard
-        reply = QMessageBox.question(self, 'Confirmation', f'Update firmware on board {board} with firmware {self.state.firmwareversion[board]}\nto the one in this software?',
+        reply = QMessageBox.question(self, 'Confirmation', f'Update firmware on board {board} with firmware {self.state.firmwareversion[board]}.{self.state.firmwareversion_minor[board]}\nto the one in this software?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.No: return
         if not self.state.paused: self.dostartstop()  # Pause
@@ -2421,7 +2498,7 @@ class MainWindow(TemplateBaseClass):
         from PyQt5.QtCore import Qt
 
         board = self.state.activeboard
-        reply = QMessageBox.question(self, 'Confirmation', f'Verify firmware on board {board} with firmware {self.state.firmwareversion[board]}\nmatches the one in this software?',
+        reply = QMessageBox.question(self, 'Confirmation', f'Verify firmware on board {board} with firmware {self.state.firmwareversion[board]}.{self.state.firmwareversion_minor[board]}\nmatches the one in this software?',
                                      QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
         if reply == QMessageBox.No: return
         if not self.state.paused: self.dostartstop()  # Pause
@@ -2514,6 +2591,25 @@ class MainWindow(TemplateBaseClass):
                               f"Initial counter: {initial_count}\n"
                               f"Final counter: {final_count}\n\n"
                               f"Result: {'SUCCESS - Watchdog triggered!' if final_count > initial_count else 'FAILURE - Watchdog did not trigger'}")
+
+    def calibrate_lvds_delays(self):
+        """Calibrate LVDS trigger propagation delays for all boards."""
+        if self.state.num_board < 2:
+            print("LVDS delay calibration requires at least 2 boards.")
+            return
+
+        # Acquisition must be running for calibration to work
+        if self.state.paused:
+            print("Calibration requires acquisition to be running. Please start acquisition and try again.")
+            return
+
+        # Start calibration (runs asynchronously via event loop)
+        # Results will be printed to console as they complete
+        success, message = self.controller.calibrate_lvds_delays()
+
+        if not success:
+            # Immediate validation error
+            print(f"LVDS Delay Calibration Failed: {message}")
 
     def set_channel_frame(self):
         s = self.state
@@ -3366,10 +3462,11 @@ class MainWindow(TemplateBaseClass):
             # When disabling oversampling, re-enable the odd board's ch0
             s.channel_enabled[ch0_board2] = True
             self.update_channel_visibility(ch0_board2)
-            # Reset toff to default value of 100
-            s.toff = 100
+            # Reset toff to default value of 100 for both boards in the oversampling pair
+            s.toff[board] = 100
+            s.toff[board + 1] = 100
             self.ui.ToffBox.blockSignals(True)
-            self.ui.ToffBox.setValue(100)
+            self.ui.ToffBox.setValue(s.toff[s.activeboard])
             self.ui.ToffBox.blockSignals(False)
             # Note: board+1 stays in external trigger mode for multi-board synchronization
 
@@ -3434,6 +3531,10 @@ class MainWindow(TemplateBaseClass):
         self.state.tad[self.state.activeboard] = value
         self.controller.set_tad(self.state.activeboard, value)
 
+    def toff_changed(self, value):
+        """Handle changes to trigger offset (toff) spinbox."""
+        self.state.toff[self.state.activeboard] = value
+
     def trigger_delta_changed(self, value):
         """Handle changes to trigger delta spinbox."""
         board = self.state.activeboard
@@ -3467,6 +3568,28 @@ class MainWindow(TemplateBaseClass):
         old_doexttrig = s.doexttrig[active_board]
         s.doexttrig[active_board] = is_other_boards
         s.doextsmatrig[active_board] = is_external_sma
+
+        # If setting this board to self-triggering, set all other boards to external triggering
+        if not is_other_boards and not is_external_sma:
+            for board_idx in range(s.num_board):
+                if board_idx != active_board and not s.doexttrig[board_idx]:
+                    #print(f"Setting board {board_idx} to external trigger (only one self-triggering board allowed)")
+                    s.doexttrig[board_idx] = True
+                    s.doextsmatrig[board_idx] = False
+                    self.controller.set_exttrig(board_idx, True)
+
+            # Try to restore previously saved LVDS calibration for this trigger board
+            calibration_restored = self.controller.restore_lvds_calibration(active_board)
+
+            # If no saved calibration exists and we have multiple boards, automatically calibrate
+            if not calibration_restored and s.num_board >= 2:
+                if not s.paused:
+                    print(f"No LVDS calibration found for trigger board {active_board}. Starting automatic calibration...")
+                    success, message = self.controller.calibrate_lvds_delays()
+                    if not success:
+                        print(f"Auto-calibration failed: {message}")
+                else:
+                    print(f"No LVDS calibration found for trigger board {active_board}. Start acquisition to enable auto-calibration.")
 
         # For channel-based triggers (indices 0-3)
         if index < 4:

@@ -91,12 +91,52 @@ The GUI supports keyboard shortcuts for quick control adjustments:
 | **Alt + Arrow Keys** | |
 | `Alt+Up` / `Alt+Down` | Increase / Decrease trigger delta |
 | **Other Keys** | |
-| `R` | Toggle run/stop |
+| `Space` | Toggle run/pause |
+| `R` | Set rising edge trigger on current channel |
+| `F` | Set falling edge trigger on current channel |
+| `T` | Toggle two-channel mode for current board |
+| `C` | Toggle between channel 0 and 1 (two-channel mode) |
+| `0` - `9` | Select board 0-9 |
 
 **Tips:**
 - Arrow keys provide quick navigation without reaching for the mouse
 - Modifier keys (Shift/Ctrl/Alt) access additional functions on the same arrow keys
 - All shortcuts work when the main window has focus
+
+## Multi-Board Features
+
+The Haasoscope Pro supports daisy-chaining multiple boards via LVDS for synchronized operation.
+
+### Automatic LVDS Delay Calibration
+
+When multiple boards are connected, the system automatically calibrates and compensates for trigger signal propagation delays:
+
+- **Initial Setup**: After PLL reset during startup, LVDS calibration runs automatically for the initial trigger board
+- **Switching Trigger Sources**: When you set a different board to channel-based trigger (using `R` or `F` keys, or via UI), calibration runs automatically if no saved calibration exists
+- **Saved Calibrations**: Each trigger source board has its own calibration set that is automatically restored when switching back
+
+**To use:**
+1. Start the application (PLL reset and LVDS calibration happen automatically)
+2. Switch trigger sources as needed using keyboard shortcuts or UI - calibration is fully automatic!
+
+**Manual calibration** is also available via **Calibration → Board LVDS delays** menu.
+
+For detailed technical information, see [EXTTRIG_ECHO_CALIBRATION.md](EXTTRIG_ECHO_CALIBRATION.md).
+
+### Trigger Source Management
+
+- Only one board can be self-triggering at a time (enforced automatically)
+- When setting a board to channel-based trigger, all other boards are automatically set to external trigger mode
+- Keyboard shortcuts make it easy to switch trigger boards:
+  - `0`-`9`: Select board
+  - `R`: Set rising edge trigger on current board
+  - `F`: Set falling edge trigger on current board
+
+### Board Synchronization
+
+- **Board Stabilizer**: Corrects for trigger jitter on the self-triggering board
+- **Extra Trigger Stabilizer**: Fine-grained per-frame stabilization applied across all boards
+- **LVDS Compensation**: Firmware (coarse) + software (fine) dual-layer delay compensation for sample-level precision
 
 ## Code Architecture
 

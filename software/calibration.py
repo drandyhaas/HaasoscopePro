@@ -90,8 +90,10 @@ class AutocalibrationCollector:
         #print(f"  Fine delay: {tadshiftround}")
 
         # Apply the averaged corrections
-        self.s.toff += sample_offset
-        self.main_window.ui.ToffBox.setValue(self.s.toff)
+        assert(self.s.activeboard%2==0) # we should be an even board
+        assert(self.s.activeboard<(self.s.num_board-1)) # we should not be the last board
+        self.s.toff[self.s.activeboard+1] += sample_offset # apply to other board of pair
+        #self.main_window.ui.ToffBox.setValue(self.s.toff[self.s.activeboard])
         if dotad:
             if tadshiftround > 255:
                 print("Required TAD shift is too large. Adjusting PLL a step down on other board.")

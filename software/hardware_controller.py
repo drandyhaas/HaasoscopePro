@@ -50,7 +50,7 @@ class HardwareController:
             print("Warning - this board has newer firmware than another being used:",min(self.state.firmwareversion))
         if 32 <= ver < 1000000:
             ver_minor = version_minor(usb, False)
-            self.state.firmwareversion_minor = ver_minor
+            self.state.firmwareversion_minor[board_idx] = ver_minor
         if not self.adfreset(board_idx):
             return False
         if not setupboard(usb, self.state.dopattern, self.state.dotwochannel[board_idx], self.state.dooverrange, self.state.basevoltage == 200):
@@ -108,6 +108,26 @@ class HardwareController:
         else:
             print(f"Adf pll locked for board {board_idx}")
             return True
+
+    def ensure_boards_locked(self):
+        """
+        Ensure all boards except 0 are locked to external clock.
+        Called after PLL reset to verify clock synchronization.
+        Checks boards sequentially from 1 to N.
+        """
+        state = self.state
+        for board in range(1, self.num_board):
+            usb = self.usbs[board]
+            if isinstance(usb, UsbSocketAdapter): continue # Skip dummy boards
+
+            # Check if already locked to external clock
+            if not clockused(usb, board, quiet=True):
+                # Not locked - force switch to external
+                print(f"Board {board} not locked to external clock after PLL reset....")
+                self.use_external_clock[board] = False # update to the truth first
+                if not self.force_switch_clocks(board):
+                    print(f"  WARNING: Failed to lock board {board} to external clock!")
+                #else: print(f"  Board {board} successfully locked to external clock")
 
     def pllreset(self, board_idx):
         """Sends PLL reset and correctly updates the state to start the adjustclocks sequence."""
@@ -179,6 +199,11 @@ class HardwareController:
             s.plljustreset[board] = -10
             #print(f"PLL calibration for board {board} is complete.")
 
+            # After PLL reset completes, ensure all ext-trig boards are locked to external clock
+            # Only do this check once, when all boards have completed PLL calibration
+            if all(x == -10 for x in s.plljustreset):
+                self.ensure_boards_locked()
+
             # Check if ALL boards have finished their calibration sequences.
             all_calibrations_finished = all(status == -10 for status in s.plljustreset)
 
@@ -191,6 +216,22 @@ class HardwareController:
 
                 # Sync the Depth box UI with the state, in case it was changed by a PLL reset
                 main_window.sync_depth_ui_from_state()
+
+                # Automatically run LVDS calibration after initial PLL reset if multi-board system
+                if self.num_board >= 2:
+                    # Find the self-triggering board
+                    trigger_board = None
+                    for b in range(self.num_board):
+                        if not s.doexttrig[b]:
+                            trigger_board = b
+                            break
+
+                    # If we have a self-triggering board and no saved calibration exists, run calibration
+                    if trigger_board is not None and trigger_board not in s.lvds_calibration_sets:
+                        #print(f"Initial setup complete. Starting automatic LVDS calibration for trigger board {trigger_board}...")
+                        success, message = self.calibrate_lvds_delays()
+                        if not success:
+                            print(f"Auto-calibration failed: {message}")
 
     def update_fan(self, fan_override=-1):
         """Sets the fan PWM duty cycle on all boards."""
@@ -219,7 +260,7 @@ class HardwareController:
         state = self.state
         triggerpos = state.triggerpos + state.triggershift
         if state.doexttrig[board_idx]:
-            factor = 2 if state.dotwochannel[board_idx] else 1
+            factor = 1 # 2 if state.dotwochannel[board_idx] else 1 # correct?
             triggerpos += int(8 * state.lvdstrigdelay[board_idx] / 40 / state.downsamplefactor / factor)
 
         delta2 = state.triggerdelta2[board_idx]
@@ -266,6 +307,10 @@ class HardwareController:
         usb.send(bytes([9, ds, highres, state.downsamplemerging, 100, 100, 100, 100]))
         usb.recv(4)
 
+        # Update trigger info since downsamplefactor changed (affects triggerpos calculation for ext-trig boards)
+        if state.doexttrig[board]:
+            self.send_trigger_info(board)
+
     def set_channel_gain(self, board_idx, chan_idx, value):
         setgain(self.usbs[board_idx], chan_idx, value, self.state.dooversample[board_idx])
 
@@ -294,9 +339,6 @@ class HardwareController:
         is_rolling = self.state.isrolling and not is_ext
         self.usbs[board_idx].send(bytes([2, 8, is_rolling, 0, 100, 100, 100, 100]))
         self.usbs[board_idx].recv(4)
-        self.state.doexttrigecho = [False] * self.num_board
-        if is_ext:
-            self.state.doexttrigecho[board_idx] = True
         self.send_trigger_info(board_idx)
 
     def set_auxout(self, board_idx, value):
@@ -414,6 +456,83 @@ class HardwareController:
             state.downsamplemergingcounter[board_idx] = 0
         state.triggerphase[board_idx] = res[1]
 
+        # Handle external trigger echo delay calculation
+        if not state.doexttrig[board_idx] and any(state.doexttrigecho):
+            assert state.doexttrigecho.count(True) == 1, "Should only have one echoing board"
+
+            # Find the board we're echoing from
+            echoboard = -1
+            for theb in range(self.num_board):
+                if state.doexttrigecho[theb]:
+                    assert echoboard == -1, "Should only have one echoing board"
+                    echoboard = theb
+
+            assert echoboard != board_idx, "Echo board should not be current board"
+
+            # Track calibration cycles and handle timeout
+            if state.lvds_calibration_active:
+                state.lvds_calibration_cycles += 1
+                if state.lvds_calibration_cycles >= state.lvds_calibration_max_cycles:
+                    # Timeout - record error and move to next board or finish
+                    error_msg = f"Board {echoboard}: Calibration timed out after {state.lvds_calibration_max_cycles} cycles"
+                    print(f"  ✗ {error_msg}")
+                    state.lvds_calibration_results.append(error_msg)
+                    state.doexttrigecho[echoboard] = False
+                    self._finish_lvds_calibration()
+                    return  # Skip normal echo processing after timeout
+
+            # Get the trigger delay measurement from firmware
+            if echoboard > board_idx:
+                # Forward echo: use Command 2, Subcommand 12 (phase_diff)
+                self.usbs[board_idx].send(bytes([2, 12, 100, 100, 100, 100, 100, 100]))
+                res = self.usbs[board_idx].recv(4)
+            else:
+                # Backward echo: use Command 2, Subcommand 13 (phase_diff_b)
+                self.usbs[board_idx].send(bytes([2, 13, 100, 100, 100, 100, 100, 100]))
+                res = self.usbs[board_idx].recv(4)
+
+            # Check if phase measurements are consistent
+            dont_demand_matching_lvdsphase = True
+            if res[0] == res[1] or dont_demand_matching_lvdsphase:
+                # Calculate delay in LVDS clock cycles
+                lvdstrigdelay = (res[0] + res[1]) / 4
+
+                # Check if delay is consistent with last measurement
+                if lvdstrigdelay == state.lastlvdstrigdelay[echoboard]:
+                    state.lvdstrigdelay[echoboard] = lvdstrigdelay
+                    # Delay is stable, turn off echo mode
+                    #print(f"lvdstrigdelay from board {board_idx} to echoboard {echoboard} is {lvdstrigdelay}")
+                    state.doexttrigecho[echoboard] = False
+
+                    # If calibration is active, record result and move to next board
+                    if state.lvds_calibration_active:
+                        direction = "backward" if echoboard < board_idx else "forward"
+                        result_str = f"Board {echoboard}: {lvdstrigdelay:.2f} cycles ({direction})"
+                        state.lvds_calibration_results.append(result_str)
+                        print(f"  ✓ Board {echoboard} calibrated: {lvdstrigdelay:.2f} LVDS cycles ({direction})")
+
+                        # Move to next board
+                        state.lvds_calibration_current_idx += 1
+                        if state.lvds_calibration_current_idx < len(state.lvds_calibration_boards):
+                            # Start calibrating next board
+                            next_board = state.lvds_calibration_boards[state.lvds_calibration_current_idx]
+                            state.doexttrigecho[next_board] = True
+                            state.lastlvdstrigdelay[next_board] = -999
+                            state.lvds_calibration_cycles = 0
+                            #print(f"Calibrating Board {next_board}...")
+                        else:
+                            # All boards calibrated - finish up
+                            self._finish_lvds_calibration()
+
+                state.lastlvdstrigdelay[echoboard] = lvdstrigdelay
+            else:
+                # Phase measurements don't match - need to adjust phase alignment
+                # Only adjust phases after PLL calibration is complete to avoid interfering with ADC sampling phase calibration
+                if all(item <= -10 for item in state.plljustreset):
+                    # Adjust both clklvds (0) and clklvdsout (1) to align trigger signals
+                    self.do_phase(board_idx, plloutnum=0, updown=1, pllnum=0, quiet=True)
+                    self.do_phase(board_idx, plloutnum=1, updown=1, pllnum=0, quiet=True)
+
     def _get_data(self, usb):
         expect_len = (self.state.expect_samples + self.state.expect_samples_extra) * 2 * 50
         usb.send(bytes([0, 99, 99, 99] + inttobytes(expect_len)))
@@ -461,6 +580,123 @@ class HardwareController:
             self.state.phasecs[board][pllnum][plloutnum] -= 1
         if not quiet: print(
             f"phase for pllnum {pllnum} plloutnum {plloutnum} on board {board} now {self.state.phasecs[board][pllnum][plloutnum]}")
+
+    def calibrate_lvds_delays(self):
+        """
+        Systematically calibrate LVDS trigger propagation delays for all boards.
+
+        This function sets up the calibration state and returns immediately. The actual
+        calibration runs asynchronously in the main event loop via _get_predata().
+
+        Results are printed to console as each board completes.
+
+        Returns:
+            (success: bool, message: str) - immediate validation result
+        """
+        state = self.state
+
+        # Validate configuration: exactly one board should be self-triggering
+        self_trig_boards = [i for i in range(self.num_board) if not state.doexttrig[i]]
+
+        if len(self_trig_boards) == 0:
+            return (False, "Error: All boards are in external trigger mode.\nOne board must be self-triggering.")
+        elif len(self_trig_boards) > 1:
+            board_list = ", ".join(str(b) for b in self_trig_boards)
+            return (False, f"Error: Multiple boards are self-triggering: {board_list}\nOnly one board should generate triggers.")
+
+        trigger_board = self_trig_boards[0]
+        print(f"=== LVDS Delay Calibration ===")
+        print(f"Trigger source board: {trigger_board}")
+
+        # Get list of boards to calibrate
+        ext_trig_boards = [i for i in range(self.num_board) if state.doexttrig[i]]
+        if not ext_trig_boards:
+            return (False, "Error: No boards in external trigger mode.\nAt least one board must use external trigger for calibration.")
+
+        #print(f"Other boards to calibrate: {ext_trig_boards}")
+
+        # Clear all previous echo modes and reset state
+        state.doexttrigecho = [False] * self.num_board
+        state.lastlvdstrigdelay = [0] * self.num_board
+
+        # Set up calibration state for event-driven progression
+        state.lvds_calibration_active = True
+        state.lvds_calibration_boards = ext_trig_boards.copy()
+        state.lvds_calibration_current_idx = 0
+        state.lvds_calibration_cycles = 0
+        state.lvds_calibration_results = []
+
+        # Enable echo mode for the first board
+        first_board = state.lvds_calibration_boards[0]
+        state.doexttrigecho[first_board] = True
+        state.lastlvdstrigdelay[first_board] = -999  # Invalid value to force measurement
+        #print(f"Calibrating Board {first_board}...")
+
+        return (True, "Calibration started...")
+
+    def _finish_lvds_calibration(self):
+        """
+        Finalize LVDS calibration and print results.
+        Called from _get_predata() when all boards have been calibrated.
+        """
+        state = self.state
+        state.lvds_calibration_active = False
+
+        print("=== Calibration Complete ===")
+        # print("Measured delays:")
+        # for result in state.lvds_calibration_results:
+        #     print(f"  {result}")
+
+        #print("Applying board offset correction...")
+        for board in range(self.num_board):
+            if state.doexttrig[board]:
+                state.lvdstrigdelay[board] -= 16 / 2.5
+                #print(f"  Board {board}: adjusted delay = {state.lvdstrigdelay[board]:.2f} cycles")
+
+        # Save this calibration set for the current trigger source board
+        trigger_board = [i for i in range(self.num_board) if not state.doexttrig[i]][0]
+        state.lvds_calibration_sets[trigger_board] = {}
+        for board in range(self.num_board):
+            if state.doexttrig[board]:
+                state.lvds_calibration_sets[trigger_board][board] = state.lvdstrigdelay[board]
+        #print(f"Saved LVDS calibration for trigger source board {trigger_board}")
+
+        # Update trigger info for all ext-trig boards since lvdstrigdelay values changed
+        #print("Updating firmware trigger positions...")
+        for board in range(self.num_board):
+            if state.doexttrig[board]:
+                self.send_trigger_info(board)
+
+    def restore_lvds_calibration(self, trigger_board):
+        """
+        Restore previously saved LVDS calibration for a specific trigger source board.
+
+        Args:
+            trigger_board: The board index that will be the trigger source
+
+        Returns:
+            bool: True if calibration was restored, False if no saved calibration exists
+        """
+        state = self.state
+
+        if trigger_board not in state.lvds_calibration_sets:
+            return False
+
+        saved_calibration = state.lvds_calibration_sets[trigger_board]
+
+        # Restore the saved delays
+        for board, delay in saved_calibration.items():
+            state.lvdstrigdelay[board] = delay
+
+        # Update trigger info for all boards with restored delays
+        for board in saved_calibration.keys():
+            self.send_trigger_info(board)
+
+        # print(f"Restored LVDS calibration for trigger source board {trigger_board}")
+        # for board, delay in saved_calibration.items():
+        #     print(f"  Board {board}: {delay:.2f} cycles")
+
+        return True
 
     def update_firmware(self, board_idx, verify_only=False, progress_callback=None):
         print(f"Starting firmware update on board {board_idx}...")
@@ -548,8 +784,8 @@ class HardwareController:
     def force_switch_clocks(self, board_idx):
         """Directly commands a clock switch."""
         clock_wanted = not self.use_external_clock[board_idx]
-        if clock_wanted: print(f"Trying to switch board {board_idx} to external clock")
-        else: print(f"Trying to switch board {board_idx} to internal clock")
+        #if clock_wanted: print(f"Trying to switch board {board_idx} to external clock")
+        #else: print(f"Trying to switch board {board_idx} to internal clock")
         if switchclock(self.usbs[board_idx], board_idx, clock_wanted):
             self.use_external_clock[board_idx] = clock_wanted
             if self.use_external_clock[board_idx]: print(f"Board {board_idx} now locked to external clock")

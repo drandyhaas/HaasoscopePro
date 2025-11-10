@@ -2424,6 +2424,8 @@ Outlined if triggering on this channel</string>
     <addaction name="actionMeasure_10_MHz_square_FIR"/>
     <addaction name="actionSave_FIR_filter"/>
     <addaction name="actionLoad_FIR_filter"/>
+    <addaction name="separator"/>
+    <addaction name="actionBoard_LVDS_delays"/>
    </widget>
    <widget class="QMenu" name="menuAdvanced">
     <property name="title">
@@ -3128,6 +3130,11 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Test watchdog</string>
+   </property>
+  </action>
+  <action name="actionBoard_LVDS_delays">
+   <property name="text">
+    <string>Board LVDS delays</string>
    </property>
   </action>
  </widget>

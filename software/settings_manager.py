@@ -373,8 +373,14 @@ def load_setup(main_window):
     if 'tad' in setup:
         s.tad = setup['tad']
     if 'toff' in setup:
-        s.toff = setup['toff']
-        main_window.ui.ToffBox.setValue(s.toff)
+        # Handle backward compatibility: old settings have single value, new settings have per-board list
+        loaded_toff = setup['toff']
+        if isinstance(loaded_toff, list):
+            s.toff = loaded_toff
+        else:
+            # Old single-value format: apply to all boards
+            s.toff = [loaded_toff] * s.num_board
+        main_window.ui.ToffBox.setValue(s.toff[s.activeboard])
     if 'auxoutval' in setup:
         s.auxoutval = setup['auxoutval']
 
