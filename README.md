@@ -24,10 +24,8 @@ See this [YouTube Playlist](https://www.youtube.com/playlist?list=PLB1iz3MRh5DiK
 
 ## Software and firmware versions
 
-- "main" branch currently has v31 firmware which adds fan PWM control and more software features
-- "v31_test" branch: new development is happening here
-- old: "v30" branch has v30 firmware which adds trigger delay and holdoff options and more software features
-- old: "v29_cleanup" branch has a beta version of the software with yet more features
+- "main" branch currently has v32 firmware and software
+- "v32_test" branch: new development is happening here
 - old: "v29" branch has v29 firmware and adds more software features
 - old: "v27" branch has v27 firmware that shipped with the first round of units
 
@@ -35,7 +33,7 @@ To use a different branch, do <code>git pull && git checkout "branchname"</code>
 For v30+ you can [download a release](https://github.com/drandyhaas/HaasoscopePro/releases) zip file for your platform (Windows, Mac, Linux).
 Then run the new software, update the firmware (if needed) on your board from that new software, and power cycle the board (automatic firmware reload for boards with v29+ firmware).
 
-## Quick start for Windows / Mac (M1+ chip) / Linux
+## Quick start for Windows / Mac (M1+) / Linux (Ubuntu)
 
 1) [Download a release](https://github.com/drandyhaas/HaasoscopePro/releases) zip file for your OS
 2) Install [FTDI D2xx driver](https://ftdichip.com/drivers/d2xx-drivers/) for your OS:
@@ -62,6 +60,11 @@ Then run the new software, update the firmware (if needed) on your board from th
 - If you get security issues on Mac, do: <code>xattr -cr Mac_HaasoscopeProQt</code>
 - If the board is not found on Linux, use this udev rule and then plug it in: <code>sudo cp ft245.rules /etc/udev/rules.d/</code>
 - If you get an error like "qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found", try: <code>sudo apt install libxcb-xinerama0</code>
+
+## Support
+
+- Ask a question in the [discussions forum](https://github.com/drandyhaas/HaasoscopePro/discussions)
+- Post bugs or requests in the [issues section](https://github.com/drandyhaas/HaasoscopePro/issues)
 
 ## Repository structure
 
