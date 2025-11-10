@@ -69,15 +69,16 @@ triggerpos += int(8 * lvdstrigdelay[board] / 40 / downsamplefactor / factor)
 
 **Software (data_processor.py)** - Fine sample-level residual:
 ```python
-# Total correction needed
+# Total correction needed (in full-rate ADC samples)
 total_lvds_correction = 8 * lvdstrigdelay[board] / downsamplefactor
 
-# What firmware already applied
+# What firmware already applied (in full-rate ADC samples, accounting for quantization and two-channel mode)
 fw_lvds_correction = 40 * factor * int(8 * lvdstrigdelay[board] / 40 / downsamplefactor / factor)
 
-# Software applies the residual
-offset -= int(total_lvds_correction - fw_lvds_correction)
+# Software applies the fine residual (converted to per-channel samples for two-channel mode)
+offset -= int((total_lvds_correction - fw_lvds_correction) / factor)
 ```
+- `factor = 2` in two-channel mode (1.6 GHz per channel), `factor = 1` otherwise (3.2 GHz)
 - Corrects for firmware quantization error
 - Sample-level precision for perfect alignment
 - Applied during waveform data processing
@@ -102,7 +103,7 @@ state.lvds_calibration_sets = {
 When you switch trigger sources (by setting a different board to channel-based triggering):
 1. All other boards are automatically set to external trigger
 2. Previously saved calibration for that trigger board is restored
-3. If no saved calibration exists, current delays are used
+3. If no saved calibration exists, automatic calibration starts (if acquisition is running)
 4. Firmware trigger positions are updated
 
 ## Hardware Topology
@@ -311,7 +312,7 @@ After PLL reset completes, all ext-trig boards are verified to be locked to exte
 ```python
 # In adjustclocks() - hardware_controller.py:209-212
 if all(x == -10 for x in plljustreset):
-    ensure_exttrig_boards_locked()  # Check sequentially board 0→N
+    ensure_boards_locked()  # Check sequentially board 1→N
 ```
 
 ## Timing Behavior
