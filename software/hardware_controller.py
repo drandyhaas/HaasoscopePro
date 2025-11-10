@@ -492,7 +492,8 @@ class HardwareController:
                 res = self.usbs[board_idx].recv(4)
 
             # Check if phase measurements are consistent
-            if res[0] == res[1]:
+            dont_demand_matching_lvdsphase = True
+            if res[0] == res[1] or dont_demand_matching_lvdsphase:
                 # Calculate delay in LVDS clock cycles
                 lvdstrigdelay = (res[0] + res[1]) / 4
 
