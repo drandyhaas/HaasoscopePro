@@ -1714,6 +1714,9 @@ class MainWindow(TemplateBaseClass):
             if board_num < self.state.num_board:
                 self.ui.boardBox.setCurrentIndex(board_num)
 
+        if event.key() == QtCore.Qt.Key_QuoteLeft: # the ` key, next to the 1, also mapped to 0
+            self.ui.boardBox.setCurrentIndex(0)
+
         # T: Toggle two-channel mode
         if event.key() == QtCore.Qt.Key_T:
             self.ui.twochanCheck.setChecked(not self.ui.twochanCheck.isChecked())
