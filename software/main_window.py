@@ -1714,6 +1714,18 @@ class MainWindow(TemplateBaseClass):
             if board_num < self.state.num_board:
                 self.ui.boardBox.setCurrentIndex(board_num)
 
+        # T: Toggle two-channel mode
+        if event.key() == QtCore.Qt.Key_T:
+            self.ui.twochanCheck.setChecked(not self.ui.twochanCheck.isChecked())
+
+        # C: Toggle between channel 0 and 1 (in two-channel mode)
+        if event.key() == QtCore.Qt.Key_C:
+            if self.state.dotwochannel[self.state.activeboard]:
+                # Toggle between channel 0 and 1
+                current_chan = self.ui.chanBox.currentIndex()
+                new_chan = 1 if current_chan == 0 else 0
+                self.ui.chanBox.setCurrentIndex(new_chan)
+
     def eventFilter(self, obj, event):
         """Event filter to make chanColor clickable."""
         if (obj == self.ui.chanColor or obj == self.ui.chanColor.viewport()) and \

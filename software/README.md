@@ -94,6 +94,8 @@ The GUI supports keyboard shortcuts for quick control adjustments:
 | `Space` | Toggle run/pause |
 | `R` | Set rising edge trigger on current channel |
 | `F` | Set falling edge trigger on current channel |
+| `T` | Toggle two-channel mode for current board |
+| `C` | Toggle between channel 0 and 1 (two-channel mode) |
 | `0` - `9` | Select board 0-9 |
 
 **Tips:**
