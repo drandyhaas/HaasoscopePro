@@ -302,7 +302,7 @@ class MainWindow(TemplateBaseClass):
         self.ui.ohmCheck.stateChanged.connect(self.mohm_changed)
         self.ui.attCheck.stateChanged.connect(self.att_changed)
         self.ui.tenxCheck.stateChanged.connect(self.tenx_changed)
-        self.ui.twochanCheck.clicked.connect(self.twochan_changed)
+        self.ui.twochanCheck.stateChanged.connect(self.twochan_changed)
         self.ui.oversampCheck.stateChanged.connect(self.oversamp_changed)
         self.ui.interleavedCheck.stateChanged.connect(self.interleave_changed)
         # Make chanColor clickable to change channel color
