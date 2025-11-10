@@ -233,10 +233,9 @@ class MainWindow(TemplateBaseClass):
         self.fan_timer.start(10031) # every 10 seconds or so afterwares
         self.ui.actionPan_and_zoom.setChecked(False)
         self.plot_manager.set_pan_and_zoom(False)
-        # Initialize line width from state
         self.ui.linewidthBox.setValue(self.state.line_width)
         self.line_width_changed(self.state.line_width)
-        # Initialize persistence UI controls from state
+        self.ui.actionBoard_LVDS_delays.setEnabled(self.state.num_board>1)
         self.sync_persistence_ui()
 
     def _sync_board_settings_to_hardware(self, board_idx):
