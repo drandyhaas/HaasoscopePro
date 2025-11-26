@@ -1,199 +1,71 @@
 # The Development History of the Haasoscope Pro
 
-## A Historical Essay on the Evolution of an Open-Source High-Speed Oscilloscope
+## A Story of Building a High-Speed Scientific Instrument
 
-### Origins: July 2024
+### The Beginning
 
-The Haasoscope Pro project began on July 25, 2024, with an initial commit that would mark the start of an ambitious endeavor: creating a high-performance, multi-gigasample oscilloscope from the ground up. The project was primarily developed by Andy Haas (with later contributions from Dmitri Priimak), building on experience from earlier Haasoscope projects.
+On July 25, 2024, the first lines of code were committed to what would become the Haasoscope Pro project. This marked the beginning of an ambitious sixteen-month journey to create a professional-grade oscilloscope—an instrument that captures and displays electrical signals—capable of measuring phenomena occurring billions of times per second. The project was the work of Andy Haas, building on experience from earlier oscilloscope designs.
 
-The very first days focused on establishing USB communication using the FT232H chip from FTDI. By July 26, the foundational work was underway—implementing FIFO buffers and achieving working loopback communication. The commit message "ft232h working loopback and mass sending" marked the first successful data transfer milestone.
+The earliest days were spent establishing the fundamental communication between a computer and the custom circuit board. By the end of July, the system could reliably send and receive data through a high-speed USB connection. This may seem like a modest achievement, but it represented the critical foundation upon which everything else would be built. Without reliable communication, no amount of sophisticated signal processing would matter.
 
-### Phase I: Foundation and ADC Bring-up (July-August 2024)
+### First Light
 
-The initial architecture took shape rapidly. By July 28, a command processor was operational, capable of sending back version information and clock switching data. SPI communication was implemented the same day, essential for configuring the ADC and other peripherals.
+The first real breakthrough came on July 31, 2024, when the system successfully captured an analog signal at 500 million samples per second. This moment—when the oscilloscope first "saw" a real electrical waveform—is sometimes called "first light," borrowing terminology from telescope builders who use the phrase to describe the first time a new instrument captures an image of the sky.
 
-July 29 saw the introduction of LVDS (Low-Voltage Differential Signaling), the high-speed interface that would connect the ADC to the FPGA. The pin assignments for a 14-channel LVDS input (including clock and strobe) were mapped to the ADC board.
+Within a week, a graphical display was operational, allowing the captured waveforms to be visualized on a computer screen. The ability to see the signals in real time transformed the development process. Debugging became dramatically easier when problems could be observed directly rather than inferred from numerical data.
 
-The first analog success came on July 31: "analog input B works at 500 MHz." This was a pivotal moment—the system could now digitize real signals at high speed.
+Throughout August 2024, the sample rate climbed steadily higher. Each increase brought new challenges: signals traveling through circuit traces at these speeds behave less like simple electrical currents and more like radio waves, requiring careful attention to the physical layout of the circuit board. By mid-August, the system was capturing signals at 800 million samples per second. By the end of the month, it reached 1.4 billion samples per second in single-channel mode.
 
-August 1-2 brought working FIFO implementation with stability improvements. The commit "Working analog - turn on 1.1V _before_ 1.9V" reveals the careful attention to power sequencing required for high-speed ADCs. By August 2, LVDS was running at 400 MHz with proper timing closure.
+### The Hardware Takes Shape
 
-August 6 marked the birth of the Qt-based graphical user interface: "initial port of Qt display" followed by "Qt display running with sample data, and can shift clock phase." The ability to visualize waveforms and adjust clock phase interactively was crucial for debugging the high-speed data path.
+While the electronic capture system was being refined, the physical design evolved through several iterations. The first complete circuit boards were ordered in mid-August 2024. These early prototypes revealed the inevitable gap between simulation and reality—some things worked better than expected, others required modification.
 
-### Phase II: Pushing Performance Boundaries (August-September 2024)
+The oscilloscope's architecture emerged as a modular design with several specialized circuit boards working together. A power supply board converted the incoming electricity to the various voltages required by different components. An input conditioning board prepared incoming signals, allowing the user to select between different sensitivity ranges and coupling modes. A clock generator board produced the precise timing signals needed to coordinate the entire system. And at the heart of the design, a main board combined a high-speed analog-to-digital converter with a programmable logic chip that could be reconfigured to implement different signal processing algorithms.
 
-The sample rate climbed rapidly through August 2024:
-- **600 MHz** (August 12): "600 MHz sample rate (LVDS at 300 MHz, lvdsclk at 150 MHz)"
-- **800 MHz** (August 14): "LVDS at 800 MHz (lvdsclk at 400, and clk at 1600)"
-- **1.4 GHz** (August 31): "1400 MHz (700 Mbps per lvds link) (2.8 Gsps single-channel)"
-- **2.9 GHz** (September 11): "2.9 GHz again"
-- **3.2 Gsps** (September 17): "3.2 Gsps, spimode needed"
+September 2024 brought continued performance improvements. The sample rate reached 2.9 billion samples per second, then 3.2 billion—fast enough to capture radio signals, examine the fine details of high-speed digital communications, or observe phenomena that occur in mere nanoseconds.
 
-The hardware evolved in parallel. The first board revision (v1.10/v1.11) was ordered on August 18. Sub-boards were developed separately:
-- **Power board** (v1.11): USB-C power delivery with +0.1V adjustment options
-- **Input board** (v1.1): DAC offset control
-- **Clock board**: ADF4350-based synthesizer for precise frequency generation
+### Integration
 
-August 13 introduced the rudimentary trigger system with low/high thresholds—a fundamental oscilloscope feature. Trigger types were expanded throughout August, with rising edge and pattern-based triggering added.
+By late September 2024, the separate prototype boards were being consolidated into a single, unified design. This integration phase required solving countless small problems: ensuring that heat from one component didn't affect another, routing hundreds of electrical connections without creating interference, and fitting everything into a practical enclosure.
 
-### Phase III: The Integrated Design (September-October 2024)
+The full board design was completed in early October 2024. This represented a significant milestone—the transition from a collection of development boards into something that could eventually become a product.
 
-September and October 2024 saw the consolidation from prototype boards into a unified design. The "full board" development started September 30, combining all sub-boards onto a single PCB. The routing process was documented through numerous commits:
-- "add all other boards" (October 1)
-- "placed everything but power board" (October 2)
-- "fully routed" (October 4)
-- "v1.00" (October 7)
+October also brought important advances in the instrument's triggering system. An oscilloscope's trigger determines when to begin capturing a waveform, and sophisticated triggering is essential for observing specific events within a continuous stream of signals. The Haasoscope Pro gained the ability to trigger on rising or falling edges, on signals that stayed above a threshold for a specified time, and on various other conditions that help isolate signals of interest from background noise.
 
-The firmware underwent significant architectural changes. October 8 brought a crucial improvement: "Use dual-port RAM buffer instead of FIFO"—enabling more sophisticated trigger position control and memory management.
+### Expanding Capabilities
 
-October saw the implementation of many essential oscilloscope features:
-- **Trigger position control** (October 9)
-- **Rising edge trigger** (October 9)
-- **Adjustable gain** (October 9)
-- **Time over Threshold (ToT) trigger** (October 10)
-- **Downsampling** (October 11-12): Supporting factors of 2, 4, 8, 20, and 40
+In late October 2024, a significant architectural expansion enabled multiple Haasoscope Pro units to work together as a synchronized system. By connecting two or more instruments with a cable, users could effectively multiply their channel count while maintaining precise timing alignment between all channels. This capability is essential for applications like debugging complex digital systems where many signals must be observed simultaneously.
 
-### Phase IV: Multi-Board Support (October-November 2024)
+The software continued to mature through early 2025. January brought an analysis window for examining the frequency content of signals—a mathematical transformation that reveals which frequencies are present in a waveform. The display gained the ability to show measurements in familiar units like volts per division, matching the conventions of traditional oscilloscopes.
 
-A major architectural expansion came in late October: multi-board synchronization. The commits "Open list of USBs" and "Use multiple usb devices" (October 29) enabled connecting multiple Haasoscope Pro units together.
+The user interface became increasingly sophisticated. Rolling display modes showed continuously updating waveforms. Automatic triggering ensured the display remained active even when no specific trigger event occurred. Keyboard shortcuts allowed rapid adjustment of common settings.
 
-External triggering between boards was implemented November 1: "ext trig synced." This capability allowed synchronized acquisition across multiple units, effectively multiplying channel count.
+### Reaching Outward
 
-The board design continued refinement through version 1.10 (November 1), with careful attention to signal integrity, thermal management, and manufacturing constraints.
+May 2025 marked the addition of a network interface that allowed other software to control the oscilloscope remotely. This opened the Haasoscope Pro to integration with existing laboratory automation systems and third-party analysis software. An instrument that can be controlled programmatically becomes far more powerful than one requiring manual operation.
 
-### Phase V: Software Maturation (January-April 2025)
+The multi-instrument synchronization system was refined throughout this period. Precise measurements of signal propagation delays between connected units allowed the software to compensate for timing differences, ensuring that waveforms from different instruments aligned correctly.
 
-The new year brought extensive software improvements. January 2025 introduced:
-- **FFT plot** (January 2)
-- **Neopixel LED control** (January 2)
-- **Dynamic two-channel mode** (January 3-12)
-- **Volts per division** display (January 7)
-- **Rolling/auto trigger** modes (January 23)
+### Refinement
 
-February and March focused on stability, documentation, and community contributions. Dmitri Priimak began contributing code cleanup and new features through pull requests:
-- Force arm trigger functionality
-- Register read functions
-- Code style improvements
+The autumn of 2025 brought a major reorganization of the software. The original code, written rapidly during the prototype phase, was restructured into clearly separated components with well-defined responsibilities. This made the system easier to maintain and extend, enabling faster development of new features.
 
-April 2025 brought flash programming capabilities, allowing firmware updates without a JTAG programmer. The data processing was optimized significantly: "Add direct processing of data using arrays... Getting about 75 Hz on my Windows desktop with no drawing and 1000 mem-depth, about 8 MB/s" (April 12).
+New capabilities emerged rapidly from this improved foundation. A persistence display mode accumulated multiple waveforms into a single image, revealing signal variations that would be invisible in a single capture. Mathematical operations allowed users to add, subtract, or otherwise combine channels to create derived measurements. Cursor tools enabled precise measurement of time intervals and voltage differences directly on the displayed waveforms.
 
-### Phase VI: External Interfaces and Protocol Support (May-June 2025)
+November 2025 added a specialized trigger mode for detecting "runt" pulses—signals that partially transition between voltage levels but fail to complete the transition. This capability is particularly valuable for identifying marginal signals that might cause intermittent failures in digital systems.
 
-May 2025 introduced SCPI (Standard Commands for Programmable Instruments) socket support, enabling integration with external software like ngscopeclient. This opened the Haasoscope Pro to the broader test and measurement ecosystem.
+The most recent developments have focused on increasing the data transfer rate between the instrument and the host computer, enabling deeper memory captures and faster screen updates.
 
-Multi-board synchronization was refined with LVDS trigger echo timing, allowing precise delay measurement and compensation between boards.
+### The Instrument Today
 
-### Phase VII: The Great Refactoring (September-October 2025)
+The Haasoscope Pro that exists today bears little resemblance to the first prototype from July 2024. What began as a basic data capture system has evolved into a sophisticated measurement instrument capable of capturing signals at 3.2 billion samples per second, triggering on complex signal conditions, synchronizing multiple units for expanded channel counts, and presenting results through a polished graphical interface.
 
-September 2025 marked a significant software reorganization. The monolithic codebase was split into modular components:
-- `fft_window.py`: FFT analysis
-- `scpi_socket.py`: Network protocol handling
-- `spi.py`: Hardware communication
-- `board.py`: Board abstraction
-- `measurements.py`: Signal measurements
+The development history, preserved in over 1,700 individual code commits, tells a story of incremental progress punctuated by occasional breakthroughs. Some commits represent days of work; others capture small fixes made in minutes. Together, they document the gradual accumulation of capability that transforms an idea into a working instrument.
 
-This refactoring, culminating in version 29, made the code more maintainable and enabled rapid feature development.
+The project demonstrates what has become possible in the modern era of electronic design. High-speed analog-to-digital converters that once cost thousands of dollars are now available for modest sums. Programmable logic devices provide the processing power to handle billions of samples per second. Open-source software tools enable a single developer to create sophisticated graphical interfaces. And online manufacturing services can produce professional-quality circuit boards from design files in days rather than weeks.
 
-New features appeared rapidly:
-- **Persistence display with heatmap** (October 26)
-- **Math channels** with operations like addition, subtraction, FFT (October 5)
-- **Cursor measurements** (October 5)
-- **Reference waveforms** (September 28)
-- **Histogram measurements** (September 30)
-- **Peak detection** (October 9)
-- **FIR filters** for signal correction (October-November)
-
-### Phase VIII: Runt Trigger and Advanced Features (November 2025)
-
-Firmware version 32 (November 3, 2025) added runt trigger capability—detecting pulses that cross one threshold but not another. This specialized trigger mode is essential for catching signal integrity problems.
-
-The LVDS calibration system was enhanced for multi-board setups, automatically measuring and correcting timing delays between boards.
-
-The most recent developments include:
-- **USB3 support** for increased data transfer bandwidth (November 25-26, 2025)
-- Per-board FIR filter calibration
-- Keyboard shortcuts for efficient operation
+The Haasoscope Pro stands as evidence that significant scientific instruments can emerge from individual effort and open development practices. The work continues, with each update adding new capabilities to an instrument that grows more powerful with time.
 
 ---
 
-## Hardware Architecture
-
-The Haasoscope Pro hardware consists of several integrated components:
-
-### ADC Board
-Features the ADC12DL2500, a dual-channel 12-bit ADC capable of 2.5 Gsps per channel or 5 Gsps interleaved. The ADC connects to the FPGA via 14 LVDS pairs.
-
-### FPGA
-An Intel (Altera) Cyclone IV EP4CE30F23C6N processes the incoming data, implements triggering logic, and manages data transfer to the host.
-
-### Clock System
-ADF4350 synthesizer generates the sample clock, locked to a 50 MHz reference. The system supports external clock input for multi-board synchronization.
-
-### Input Conditioning
-Relay-switched attenuation, AC/DC coupling, and 50Ω/1MΩ input impedance selection.
-
-### USB Interface
-FT232H provides high-speed USB 2.0 communication. USB3 support is under development for higher bandwidth.
-
----
-
-## Firmware Evolution
-
-The FPGA firmware progressed through 32+ versions, each adding capabilities:
-
-| Version Range | Key Features |
-|---------------|--------------|
-| v1-v10 | Basic ADC interfacing and data transfer |
-| v11-v20 | Trigger improvements, downsampling, multi-board support |
-| v21-v25 | Flash programming, phase calibration |
-| v26-v30 | Trigger stability, timing refinement |
-| v31-v32 | FIR correction, runt trigger, LVDS calibration improvements |
-
-### Key Firmware Modules
-
-- `command_processor.v`: USB command handling
-- `triggerer.v`: Trigger detection logic (~26K lines)
-- `downsampler.v`: Sample rate reduction with averaging
-- `rambuffer.v`: Dual-port acquisition memory
-- `SPI_Master.v`: Peripheral communication
-
----
-
-## Software Stack
-
-The Python-based software evolved from a simple Qt display into a full-featured oscilloscope application:
-
-### Technologies
-- **PyQt5** for the GUI
-- **pyqtgraph** for real-time waveform display
-- **NumPy** for signal processing
-- **SciPy** for curve fitting and filtering
-
-### Capabilities
-- Up to 8+ synchronized boards
-- Real-time FFT analysis
-- Math channels with arbitrary operations
-- Persistence display with heatmap
-- SCPI remote control
-- Settings save/load
-- Screenshot capture
-
----
-
-## Contributors
-
-The project was primarily developed by **Andy Haas**, with over 1,700 commits spanning 16 months. **Dmitri Priimak** contributed code cleanup, the force-arm trigger feature, and various improvements through pull requests beginning in March 2025.
-
----
-
-## Conclusion
-
-The Haasoscope Pro represents a remarkable open-source achievement: a 3.2 Gsps oscilloscope developed from initial concept to production-ready design in approximately 16 months. The git history reveals the iterative nature of hardware/firmware/software co-development, with continuous refinement driven by real-world testing.
-
-From the first "ft232h working loopback" message to the latest USB3 enhancements, the project demonstrates how modern open-source tools, affordable FPGAs, and high-speed ADCs enable individual developers to create instruments that rival commercial offerings at a fraction of the cost.
-
-The development continues, with USB3 support, advanced trigger modes, and improved calibration expanding the capabilities of this remarkable instrument.
-
----
-
-*This essay was compiled from analysis of 1,730 git commits spanning July 25, 2024 to November 26, 2025.*
+*This account was written by Claude, an AI assistant developed by Anthropic, based on analysis of the project's git repository containing over 1,700 commits spanning July 25, 2024 through November 26, 2025.*
