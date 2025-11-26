@@ -1163,7 +1163,7 @@ class MainWindow(TemplateBaseClass):
             elif s.lvds_calibration_active:
                 # Don't trigger PLL resets during LVDS calibration
                 pass
-            elif (nbadA + nbadB + nbadC + nbadD + nbadS) > 0:
+            elif (nbadA + nbadB + nbadC + nbadD + nbadS) > 0 and not self.state.using_usb3:
                 # If not in a reset and not in grace period, trigger a new reset on error.
                 print(f"Bad clock/strobe detected on board {board_idx}. Triggering PLL reset.")
                 self.controller.pllreset(board_idx)
