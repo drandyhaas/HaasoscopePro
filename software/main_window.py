@@ -43,11 +43,8 @@ print(f"Current dir is {pwd}")
 
 WindowTemplate, TemplateBaseClass = loadUiType(pwd + "/HaasoscopePro.ui")
 class MainWindow(TemplateBaseClass):
-    def __init__(self, usbs, testing_mode=False):
+    def __init__(self, usbs, testing_mode=False, using_usb3=False):
         super().__init__()
-
-        # Testing mode flag (disables dynamic status bar updates)
-        self.testing_mode = testing_mode
 
         # Check for dummy scope
         self.usbs = usbs
@@ -59,6 +56,8 @@ class MainWindow(TemplateBaseClass):
 
         # 1. Initialize core components
         self.state = ScopeState(num_boards=len(usbs), num_chan_per_board=2)
+        self.state.testing_mode = testing_mode
+        self.state.using_usb3 = using_usb3
         print(f"Haasoscope Pro Software Version: {self.state.softwareversion:.2f}")
         self.controller = HardwareController(usbs, self.state)
         self.processor = DataProcessor(self.state)
@@ -356,7 +355,7 @@ class MainWindow(TemplateBaseClass):
             self.ui.actionConfigure_dummy_scope.setEnabled(True)
 
         # Enable watchdog test only in testing mode
-        if self.testing_mode:
+        if self.state.testing_mode:
             self.ui.actionTest_watchdog.setEnabled(True)
 
         # Menu actions
@@ -1403,7 +1402,7 @@ class MainWindow(TemplateBaseClass):
         downsample_text = f"{s.downsamplefactor}x averaging, " if s.downsamplefactor > 1 else ""
 
         # In testing mode, show only sample rate (skip dynamic fps, events, Hz, MB/s)
-        if self.testing_mode:
+        if self.state.testing_mode:
             status_text = f"{format_freq(effective_sr, 'S/s')}, {downsample_text}".rstrip(", ")
         else:
             status_text = (f"{format_freq(effective_sr, 'S/s')}, {downsample_text}{self.fps:.2f} fps, "

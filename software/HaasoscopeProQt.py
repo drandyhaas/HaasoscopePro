@@ -120,7 +120,7 @@ if __name__ == '__main__':
     try:
         # MainWindow.__init__ now handles all setup. If it fails, it will
         # set the `setup_successful` flag to False.
-        win = MainWindow(usbs, testing_mode=args.testing)
+        win = MainWindow(usbs, testing_mode=args.testing, using_usb3=args.usb3)
         win.setWindowTitle('Haasoscope Pro Qt')
         if args.testing:
             print("Testing mode enabled: Status bar dynamic updates disabled")

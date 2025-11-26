@@ -28,6 +28,8 @@ class ScopeState:
         self.dorecordtofile = False
         self.outf = None
         self.numrecordeventsperfile = 1000
+        self.testing_mode = False
+        self.using_usb3 = False
 
         # Board/Channel Specific States
         self.activeboard = 0

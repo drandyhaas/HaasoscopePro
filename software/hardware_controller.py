@@ -52,9 +52,9 @@ class HardwareController:
             ver_minor = version_minor(usb, False)
             self.state.firmwareversion_minor[board_idx] = ver_minor
         if not self.adfreset(board_idx):
-            return False
+            if not self.state.using_usb3: return False
         if not setupboard(usb, self.state.dopattern, self.state.dotwochannel[board_idx], self.state.dooverrange, self.state.basevoltage == 200):
-            return False
+            if not self.state.using_usb3: return False
         for c in range(self.state.num_chan_per_board):
             setchanacdc(usb, c, False, self.state.dooversample[board_idx])
             setchanimpedance(usb, c, False, self.state.dooversample[board_idx])
