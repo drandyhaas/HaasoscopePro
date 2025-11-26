@@ -67,6 +67,10 @@ class MainWindow(TemplateBaseClass):
         self.ui = WindowTemplate()
         self.ui.setupUi(self)
 
+        # Allow larger memory depth for USB3
+        if using_usb3:
+            self.ui.depthBox.setMaximum(1_000_000)
+
         # 3. Initialize UI/Plot manager
         self.plot_manager = PlotManager(self.ui, self.state)
         self.plot_manager.setup_plots()
@@ -1031,7 +1035,10 @@ class MainWindow(TemplateBaseClass):
             time.sleep(0.001) # for sync with ngscopeclient thread
             return
 
+        # Some options for testing performance
         profile_event_loop = False
+        just_read_data = False
+
         if profile_event_loop:
             print("\nStarting profile for event")
             start_time = time.perf_counter()
@@ -1059,7 +1066,7 @@ class MainWindow(TemplateBaseClass):
                 s.lastrate = round(s.tinterval / elapsedtime, 2)
             s.oldnevents = s.nevents
 
-        self.update_plot_process_event(raw_data_map)
+        if not just_read_data: self.update_plot_process_event(raw_data_map)
 
         if profile_event_loop:
             end_time2 = time.perf_counter()
@@ -1069,7 +1076,7 @@ class MainWindow(TemplateBaseClass):
         else: end_time2 = None
 
         # Use data for plot, FFT, math, etc.
-        self.update_plot_data()
+        if not just_read_data: self.update_plot_data()
 
         if profile_event_loop:
             end_time3 = time.perf_counter()
