@@ -28,6 +28,8 @@ if __name__ == '__main__':
                         help='Maximum number of devices to connect (default: 100)')
     parser.add_argument('--testing', action='store_true',
                         help='Enable testing mode (disables dynamic status bar updates for stable screenshots)')
+    parser.add_argument('--usb3', action='store_true',
+                        help='Use USB3 devices (Pro Max) instead of USB2')
     args = parser.parse_args()
 
     print("Python version", sys.version)
@@ -35,7 +37,15 @@ if __name__ == '__main__':
     try:
         # --- Hardware Discovery and Initial Setup ---
         print("Searching for Haasoscope Pro boards...")
-        usbs = connectdevices(100)
+        if args.usb3:
+            from USB_FTX232H_FT60X import USB_FTX232H_FT60X_sync245mode
+            usb = USB_FTX232H_FT60X_sync245mode(device_to_open_list=(
+                ('FT60X', 'Haasoscope USB3'),
+                ('FT60X', 'FTDI SuperSpeed-FIFO Bridge')))
+            usbs = [usb]
+        else:
+            usbs = connectdevices(100)
+
         if usbs:
             for b in range(len(usbs)):
 
