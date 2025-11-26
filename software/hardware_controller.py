@@ -178,10 +178,10 @@ class HardwareController:
                                  "This is often a hardware or power supply issue. "
                                  "Please check all connections and restart the application.")
                 # Emit the signal to notify the main window
-                if not self.state.using_usb3: self.signals.critical_error_occurred.emit(error_title, error_message)
-
-                s.plljustreset[board] = -10  # End calibration
-                return
+                if not self.state.using_usb3:
+                    self.signals.critical_error_occurred.emit(error_title, error_message)
+                    s.plljustreset[board] = -10  # End calibration
+                    return
 
             # Go to the middle of the good range
             n_steps = start + length // 2 + 1
