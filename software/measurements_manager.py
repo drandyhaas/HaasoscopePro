@@ -159,6 +159,8 @@ class MeasurementsManager:
             (self.ui.actionVpp, "Vpp"),
             (self.ui.actionFreq, "Freq"),
             (self.ui.actionPeriod, "Period"),
+            (self.ui.actionFreq_trig_xs, "Freq (trig xs)"),
+            (self.ui.actionPeriod_trig_xs, "Period (trig xs)"),
             (self.ui.actionDuty_cycle, "Duty cycle"),
             (self.ui.actionPulse_width, "Pulse width"),
             (self.ui.actionRisetime, "Risetime"),  # Special: also handles Falltime
@@ -272,7 +274,7 @@ class MeasurementsManager:
     def add_all_measurements_for_channel(self):
         """Add all available measurements for the current channel."""
         # Manually add each measurement (setting checkbox doesn't trigger the signal)
-        measurement_types = ["Mean", "RMS", "Min", "Max", "Vpp", "Freq", "Period", "Duty cycle", "Pulse width",
+        measurement_types = ["Mean", "RMS", "Min", "Max", "Vpp", "Freq", "Period", "Freq (trig xs)", "Period (trig xs)", "Duty cycle", "Pulse width",
                              "Risetime", "Risetime error", "Persist lines"]
 
         for measurement_name in measurement_types:
@@ -343,6 +345,8 @@ class MeasurementsManager:
         self.ui.actionVpp.setChecked((("Vpp", channel_key) in self.active_measurements))
         self.ui.actionFreq.setChecked((("Freq", channel_key) in self.active_measurements))
         self.ui.actionPeriod.setChecked((("Period", channel_key) in self.active_measurements))
+        self.ui.actionPeriod_trig_xs.setChecked((("Period (trig xs)", channel_key) in self.active_measurements))
+        self.ui.actionFreq_trig_xs.setChecked((("Freq (trig xs)", channel_key) in self.active_measurements))
         self.ui.actionDuty_cycle.setChecked((("Duty cycle", channel_key) in self.active_measurements))
         self.ui.actionPulse_width.setChecked((("Pulse width", channel_key) in self.active_measurements))
         self.ui.actionRisetime.setChecked((("Risetime", channel_key) in self.active_measurements or ("Falltime",
@@ -739,6 +743,17 @@ class MeasurementsManager:
                 freq = measurements.get('Freq', 0)
                 if freq > 0:
                     period_ns = 1e9 / freq  # Convert frequency (Hz) to period (ns)
+                    period, unit = format_period(period_ns, "s", False)
+                    _set_measurement(measurement_key, period, unit)
+                else:
+                    _set_measurement(measurement_key, 0, "ns")
+            elif measurement_name == "Freq (trig xs)":
+                freq = measurements.get('Freq (trig xs)', 0)
+                freq, unit = format_freq(freq, "Hz", False)
+                _set_measurement(measurement_key, freq, unit)
+            elif measurement_name == "Period (trig xs)":
+                period_ns = measurements.get('Period (trig xs)', 0)
+                if period_ns > 0:
                     period, unit = format_period(period_ns, "s", False)
                     _set_measurement(measurement_key, period, unit)
                 else:

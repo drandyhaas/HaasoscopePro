@@ -2477,6 +2477,8 @@ Outlined if triggering on this channel</string>
     <addaction name="actionVpp"/>
     <addaction name="actionFreq"/>
     <addaction name="actionPeriod"/>
+    <addaction name="actionFreq_trig_xs"/>
+    <addaction name="actionPeriod_trig_xs"/>
     <addaction name="actionDuty_cycle"/>
     <addaction name="actionPulse_width"/>
     <addaction name="actionRisetime"/>
@@ -2991,6 +2993,22 @@ Outlined if triggering on this channel</string>
    </property>
    <property name="text">
     <string>Period</string>
+   </property>
+  </action>
+  <action name="actionFreq_trig_xs">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Freq (trig xs)</string>
+   </property>
+  </action>
+  <action name="actionPeriod_trig_xs">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Period (trig xs)</string>
    </property>
   </action>
   <action name="actionOversampling_controls">

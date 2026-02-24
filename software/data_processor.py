@@ -396,6 +396,46 @@ class DataProcessor:
 
         return pulse_width_ns
 
+    def _calculate_period_trig_crossings(self, x_data, y_data, channel_index):
+        """Calculate period by averaging time between same-direction trigger threshold crossings."""
+        if len(y_data) < 2:
+            return 0.0
+
+        state = self.state
+        board_idx = channel_index // state.num_chan_per_board
+
+        # Get trigger threshold in y_data units (same formula as _apply_board_stabilizer)
+        hline_pos = (state.triggerlevel - 127) * state.yscale * 256
+        hline_threshold = hline_pos + state.triggerdelta[board_idx] * state.yscale * 256
+
+        # Find all threshold crossings
+        crossings_idx = np.where(np.diff(np.sign(y_data - hline_threshold)))[0]
+        if len(crossings_idx) < 2:
+            return 0.0
+
+        # Filter to same-direction crossings matching the trigger edge setting
+        matching_crossings = []
+        for idx in crossings_idx:
+            if idx + 1 < len(y_data):
+                is_rising = y_data[idx + 1] > y_data[idx]
+                if (not state.fallingedge[board_idx] and is_rising) or \
+                   (state.fallingedge[board_idx] and not is_rising):
+                    # Interpolate exact crossing time
+                    y1, y2 = y_data[idx], y_data[idx + 1]
+                    x1, x2 = x_data[idx], x_data[idx + 1]
+                    if abs(y2 - y1) > 1e-10:
+                        frac = (hline_threshold - y1) / (y2 - y1)
+                        matching_crossings.append(x1 + frac * (x2 - x1))
+                    else:
+                        matching_crossings.append(x1)
+
+        if len(matching_crossings) < 2:
+            return 0.0
+
+        # Average time between consecutive same-direction crossings = period in ns
+        periods = np.diff(matching_crossings)
+        return float(np.mean(periods))
+
     def calculate_fft(self, y_data, board_idx):
         """Calculates the FFT for a given channel's y-data."""
         n = len(y_data)
@@ -478,6 +518,11 @@ class DataProcessor:
         # Calculate pulse width (width of pulse nearest to trigger point)
         pulse_width = self._calculate_pulse_width(x_data, y_data, vline, threshold)
         measurements["Pulse width"] = pulse_width
+
+        # Calculate period and frequency from trigger threshold crossings
+        period_trig_xs = self._calculate_period_trig_crossings(x_data, y_data, channel_index)
+        measurements["Period (trig xs)"] = period_trig_xs
+        measurements["Freq (trig xs)"] = 1e9 / period_trig_xs if period_trig_xs > 0 else 0.0
 
         # Initialize fit results to None
         fit_results = None
