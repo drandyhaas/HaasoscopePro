@@ -265,7 +265,7 @@ graph TD
 **`data_processor.py`** - Signal processing
 - Processes raw ADC data into calibrated waveforms
 - Calculates FFT spectra
-- Computes measurements (Vpp, RMS, frequency, duty cycle, rise time)
+- Computes measurements (Vpp, RMS, frequency, duty cycle, rise time, trigger-crossing frequency/period)
 - Applies calibration corrections
 
 **`plot_manager.py`** - Display and visualization
