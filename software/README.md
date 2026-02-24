@@ -56,6 +56,9 @@ python HaasoscopeProQt.py --socket localhost:9999
 # Limit maximum number of devices to connect (default: 100)
 python HaasoscopeProQt.py --max-devices 4
 
+# USB3 mode for HaasoscopePro Max (uses FT60X instead of FT232H, allows 1M memory depth)
+python HaasoscopeProQt.py --usb3
+
 # Testing mode (disables dynamic status bar updates for stable screenshots)
 python HaasoscopeProQt.py --socket localhost:9999 --testing
 
