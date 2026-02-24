@@ -97,6 +97,7 @@ The GUI supports keyboard shortcuts for quick control adjustments:
 | `T` | Toggle two-channel mode for current board |
 | `C` | Toggle between channel 0 and 1 (two-channel mode) |
 | `0` - `9` | Select board 0-9 |
+| `` ` `` (backtick) | Select board 0 (alias for `0`) |
 
 **Tips:**
 - Arrow keys provide quick navigation without reaching for the mouse
