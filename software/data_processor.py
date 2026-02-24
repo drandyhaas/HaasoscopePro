@@ -517,12 +517,13 @@ class DataProcessor:
 
         # Calculate pulse width (width of pulse nearest to trigger point)
         pulse_width = self._calculate_pulse_width(x_data, y_data, vline, threshold)
-        measurements["Pulse width"] = pulse_width
+        measurements["Pulse width"] = pulse_width * state.nsunits  # Convert from display units to ns
 
         # Calculate period and frequency from trigger threshold crossings
         period_trig_xs = self._calculate_period_trig_crossings(x_data, y_data, channel_index)
-        measurements["Period (trig xs)"] = period_trig_xs
-        measurements["Freq (trig xs)"] = 1e9 / period_trig_xs if period_trig_xs > 0 else 0.0
+        period_trig_xs_ns = period_trig_xs * state.nsunits  # Convert from display units to ns
+        measurements["Period (trig xs)"] = period_trig_xs_ns
+        measurements["Freq (trig xs)"] = 1e9 / period_trig_xs_ns if period_trig_xs_ns > 0 else 0.0
 
         # Initialize fit results to None
         fit_results = None
