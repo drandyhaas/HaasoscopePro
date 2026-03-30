@@ -389,11 +389,20 @@ graph TD
 - Full protocol implementation
 - Multi-board simulation support
 
+**`test/test_scpi_client.py`** - SCPI socket test client
+- Connects to the SCPI server and queries identity, rates, and depths
+- Retrieves and parses binary waveform data
+- Usage: `python test/test_scpi_client.py [host] [port]`
+
 ### Utility Modules
 
 **`calibration.py`** - Calibration data management
 
 **`SCPIsocket.py`** - SCPI remote control interface
+- TCP server on port 32001 for remote oscilloscope control
+- Supports standard SCPI queries (`*IDN?`, `RATES?`, `DEPTHS?`) and acquisition commands (`START`, `STOP`, `SINGLE`, `FORCE`)
+- Binary waveform data retrieval via `K` command
+- See `test/test_scpi_client.py` for an example client
 
 **`spi.py`** - SPI communication helpers
 
