@@ -1,6 +1,7 @@
 # data_recorder.py
 
 import time
+import os
 
 
 class DataRecorder:
@@ -12,6 +13,7 @@ class DataRecorder:
         self.event_count_max = 1000
         self.file_part = 0
         self.base_filename = ""
+        self.record_dir = None
 
     def start(self):
         """Opens a new file for recording with a timestamp in its name."""
@@ -22,7 +24,11 @@ class DataRecorder:
         # If this is the very first file, create a base timestamped name
         if self.file_part == 0:
             timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
-            self.base_filename = f"HaasoscopePro_data_{timestamp}"
+            base = f"HaasoscopePro_data_{timestamp}"
+            if self.record_dir:
+                self.base_filename = os.path.join(self.record_dir, base)
+            else:
+                self.base_filename = base
 
         self.file_part += 1
         self.event_count = 0
@@ -31,7 +37,7 @@ class DataRecorder:
             filename = f"{self.base_filename}_part_{self.file_part}.csv"
             self.file_handle = open(filename, 'w')
             self.is_recording = True
-            #print(f"Recording started to {filename}")
+            print(f"Recording started to {filename}")
             return True
         except IOError:
             self.is_recording = False

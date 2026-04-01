@@ -7,7 +7,7 @@ import numpy as np
 import threading
 import pyqtgraph as pg
 from pyqtgraph.Qt import QtCore, QtWidgets, loadUiType
-from PyQt5.QtWidgets import QMessageBox, QColorDialog, QFrame
+from PyQt5.QtWidgets import QMessageBox, QColorDialog, QFrame, QFileDialog
 from PyQt5.QtGui import QPalette, QColor
 
 # Import all the refactored components
@@ -2423,14 +2423,24 @@ class MainWindow(TemplateBaseClass):
                           f"A PyQt5 application for the Haasoscope Pro\n\nVersion {self.state.softwareversion:.2f}")
 
     def take_screenshot(self):
+        if not hasattr(self, 'screenshot_dir') or self.screenshot_dir is None:
+            d = QFileDialog.getExistingDirectory(self, "Select Screenshot Directory")
+            if not d:
+                return
+            self.screenshot_dir = d
         pixmap = self.grab()
         timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
-        filename = f"HaasoscopePro_{timestamp}.png"
+        filename = os.path.join(self.screenshot_dir, f"HaasoscopePro_{timestamp}.png")
         pixmap.save(filename)
         print(f"Screenshot saved as {filename}")
 
     def toggle_recording(self):
         if not self.recorder.is_recording:
+            if self.recorder.record_dir is None:
+                d = QFileDialog.getExistingDirectory(self, "Select Recording Directory")
+                if not d:
+                    return
+                self.recorder.record_dir = d
             if self.recorder.start(): self.ui.actionRecord.setText("Stop recording")
         else:
             self.recorder.stop()
