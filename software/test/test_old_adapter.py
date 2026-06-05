@@ -273,7 +273,38 @@ def test_fastusb_parse():
     print("test_fastusb_parse: PASS")
 
 
+def test_serial_retry_on_incomplete():
+    """An incomplete serial read should flush and re-acquire, not return zeros."""
+    dev = OldHaasoscopeDevice(num_boards=1, ram_width=9)
+    dev.minfirmwareversion = 20
+
+    class FlakySerial(FakeSerial):
+        def __init__(self, ns, fails):
+            super().__init__(ns)
+            self.fails = fails
+            self.resets = 0
+
+        def read(self, n):
+            if self.fails > 0:
+                return b""              # simulate an overrun: no data this event
+            if n == self.num_bytes:
+                return bytes([(i % 251) for i in range(n)])
+            return b""
+
+        def reset_input_buffer(self):
+            self.resets += 1
+            self.fails -= 1             # let the next acquisition succeed
+
+    dev.ser = FlakySerial(dev.num_samples, fails=1)
+    chans = dev._do_acquire(0)
+    assert dev.ser.resets >= 1, "reset_input_buffer not called on incomplete read"
+    assert chans.shape == (4, dev.num_samples)
+    assert np.any(chans != 0), "expected a valid event after retry, not zeros"
+    print("test_serial_retry_on_incomplete: PASS")
+
+
 if __name__ == "__main__":
     test_adapter_roundtrip()
     test_gain_coupling_offset()
     test_fastusb_parse()
+    test_serial_retry_on_incomplete()

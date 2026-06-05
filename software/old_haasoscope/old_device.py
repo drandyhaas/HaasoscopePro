@@ -130,6 +130,12 @@ class OldHaasoscopeDevice:
             'lowdaclevelssuperac': 'lowsuperac', 'highdaclevelssuperac': 'highsuperac',
         }
 
+        # Robustness for the (flow-control-less) serial readout: re-acquire a few
+        # times on an incomplete read instead of throttling the sender. The board
+        # free-runs (rolling trigger), so a discarded event is cheap.
+        self.max_read_retries = 3
+        self._read_timeout = 0.05  # per-read poll interval; deadline is computed
+
         # Shared-event machinery so the two adapter halves share one physical
         # acquisition. Per physical board: latest event + which halves consumed it.
         self._lock = threading.RLock()
@@ -186,8 +192,31 @@ class OldHaasoscopeDevice:
             return False
         print(f"Connected to original Haasoscope on {self.serport} "
               f"(timeout {self.sertimeout:.3f}s)")
+        # Proper fix for high-baud byte loss: ask the driver to deliver data
+        # promptly so the host keeps up with the CH340 RX FIFO (no throttling).
+        self._try_low_latency()
+        # Small per-read poll interval; the accumulating reader uses an overall
+        # deadline, so this just bounds how often it re-checks progress.
+        try:
+            self.ser.timeout = self._read_timeout
+        except Exception:
+            pass
         self.good = True
         return True
+
+    def _try_low_latency(self):
+        """Enable serial low-latency mode where supported (Linux/pyserial>=3.5).
+
+        On Linux this clears the FTDI/CH340 16 ms latency timer so the host
+        drains the RX FIFO frequently - the real cause of byte loss at 1.5 Mbaud.
+        No-op on platforms/versions that don't support it.
+        """
+        try:
+            self.ser.set_low_latency_mode(True)
+            print("Enabled serial low-latency mode")
+        except (NotImplementedError, ValueError, OSError, AttributeError) as e:
+            if self.debug:
+                print(f"Serial low-latency mode unavailable: {e}")
 
     def get_firmware_version(self, board):
         """Read a board's firmware version byte (HaasoscopeLibQt.py:245).
@@ -628,13 +657,37 @@ class OldHaasoscopeDevice:
                 chans[c] = 127 - seg.astype(np.int16)  # invert (op amp) + center
         return chans
 
+    def _read_exact(self, n):
+        """Accumulate exactly n bytes, tolerating bursty delivery.
+
+        Returns fewer than n only if an overall deadline elapses (a genuine
+        overrun / incomplete event). The deadline scales with the expected
+        transfer time at the baud rate plus the per-32-byte FPGA delay, with a
+        generous floor and margin.
+        """
+        transfer_s = n * 11.0 / self.brate
+        delay_s = (n / 32.0) * (2e-6 * self.serial_delay)
+        deadline = time.time() + 0.25 + 2.0 * (transfer_s + delay_s)
+        buf = bytearray()
+        while len(buf) < n:
+            chunk = self.ser.read(n - len(buf))   # up to self._read_timeout
+            if chunk:
+                buf.extend(chunk)
+            elif time.time() > deadline:
+                break
+        return bytes(buf)
+
     def _read_serial(self, board):
-        raw = self.ser.read(self.num_bytes)
+        raw = self._read_exact(self.num_bytes)
         if len(raw) != self.num_bytes:
             if self.debug:
                 print(f"old acquire (serial): wanted {self.num_bytes} bytes, "
                       f"got {len(raw)} from board {board}")
-            return np.zeros((NUM_CHAN_PER_BOARD, self.num_samples), dtype=np.int16)
+            try:
+                self.ser.reset_input_buffer()  # drop partial event before retry
+            except Exception:
+                pass
+            return None  # signal _do_acquire to re-acquire
         return self._parse_channels(np.frombuffer(raw, dtype=np.uint8), 0, 0)
 
     def _read_fastusb(self, board):
@@ -651,11 +704,15 @@ class OldHaasoscopeDevice:
                 dev.purge(ftd.defines.PURGE_RX)
         except Exception as e:
             print(f"fast-USB read error on board {board}: {e}")
-            return np.zeros((NUM_CHAN_PER_BOARD, self.num_samples), dtype=np.int16)
+            return None                            # signal retry
         if len(raw) != nb:
             if self.debug:
                 print(f"old acquire (fastusb): wanted {nb} bytes, got {len(raw)}")
-            return np.zeros((NUM_CHAN_PER_BOARD, self.num_samples), dtype=np.int16)
+            try:
+                dev.purge(ftd.defines.PURGE_RX)
+            except Exception:
+                pass
+            return None                            # signal retry
         return self._parse_channels(np.frombuffer(raw, dtype=np.uint8),
                                     pad, self.fastusbendpadding)
 
@@ -668,17 +725,26 @@ class OldHaasoscopeDevice:
         commands always go over serial; only the bulk data may come from the
         FT232H when fast-USB is active.
         """
-        # Prime the trigger (cmd 100), then select+request data for this board
-        # (cmd 51+board for fw>=17, else 10+board) - HaasoscopeLibQt.py:1594,1400.
-        self._w(100)
-        if self.minfirmwareversion >= 17:
-            self._w(51, board)
-        else:
-            self._w(10 + board)
+        # Re-acquire on an incomplete read rather than throttling the sender.
+        for _ in range(self.max_read_retries):
+            # Prime the trigger (cmd 100), then select+request data for this board
+            # (cmd 51+board for fw>=17, else 10+board) - HaasoscopeLibQt:1594,1400.
+            self._w(100)
+            if self.minfirmwareversion >= 17:
+                self._w(51, board)
+            else:
+                self._w(10 + board)
 
-        if self._fastusb_active:
-            return self._read_fastusb(board)
-        return self._read_serial(board)
+            data = (self._read_fastusb(board) if self._fastusb_active
+                    else self._read_serial(board))
+            if data is not None:
+                return data
+
+        # Persistent incomplete reads: return zeros so the pipeline stays alive.
+        if self.debug:
+            print(f"old acquire: board {board} incomplete after "
+                  f"{self.max_read_retries} tries")
+        return np.zeros((NUM_CHAN_PER_BOARD, self.num_samples), dtype=np.int16)
 
     def get_half_data(self, board, half):
         """Return the two centered channel arrays for one adapter half.
