@@ -677,17 +677,26 @@ class OldHaasoscopeDevice:
                 break
         return bytes(buf)
 
+    def _drain_serial(self):
+        """Discard any buffered input AND drain until the line is idle, so a
+        late-arriving tail of an aborted event cannot desync the next read.
+        reset_input_buffer() alone is a one-shot flush; the read loop catches
+        bytes that arrive just after it."""
+        try:
+            self.ser.reset_input_buffer()
+            while self.ser.read(4096):   # exits ~one poll (self._read_timeout) after quiet
+                pass
+        except Exception:
+            pass
+
     def _read_serial(self, board):
         raw = self._read_exact(self.num_bytes)
         if len(raw) != self.num_bytes:
             if self.debug:
                 print(f"old acquire (serial): wanted {self.num_bytes} bytes, "
                       f"got {len(raw)} from board {board}")
-            try:
-                self.ser.reset_input_buffer()  # drop partial event before retry
-            except Exception:
-                pass
-            return None  # signal _do_acquire to re-acquire
+            self._drain_serial()        # re-sync before re-acquiring
+            return None                 # signal _do_acquire to re-acquire
         return self._parse_channels(np.frombuffer(raw, dtype=np.uint8), 0, 0)
 
     def _read_fastusb(self, board):
@@ -701,20 +710,32 @@ class OldHaasoscopeDevice:
         try:
             raw = dev.read(nb)
             if dev.getQueueStatus() > 0:           # drain any leftover bytes
-                dev.purge(ftd.defines.PURGE_RX)
+                self._drain_ftd(dev)
         except Exception as e:
             print(f"fast-USB read error on board {board}: {e}")
+            self._drain_ftd(dev)
             return None                            # signal retry
         if len(raw) != nb:
             if self.debug:
                 print(f"old acquire (fastusb): wanted {nb} bytes, got {len(raw)}")
-            try:
-                dev.purge(ftd.defines.PURGE_RX)
-            except Exception:
-                pass
+            self._drain_ftd(dev)                    # re-sync before re-acquiring
             return None                            # signal retry
         return self._parse_channels(np.frombuffer(raw, dtype=np.uint8),
                                     pad, self.fastusbendpadding)
+
+    def _drain_ftd(self, dev):
+        """Purge the FT232H RX buffer and drain any late tail until idle, so an
+        aborted event cannot desync the next read."""
+        try:
+            import ftd2xx as ftd
+            dev.purge(ftd.defines.PURGE_RX)
+            for _ in range(64):                     # bounded drain
+                nq = dev.getQueueStatus()
+                if nq <= 0:
+                    break
+                dev.read(nq)
+        except Exception:
+            pass
 
     def _do_acquire(self, board):
         """Arm and read one event for a physical board.
