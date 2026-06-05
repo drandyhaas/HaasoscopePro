@@ -230,6 +230,50 @@ def test_gain_coupling_offset():
     print(f"  DAC writes after init: {dac_writes_after_init}, baseline ch0: {base}")
 
 
+def test_fastusb_parse():
+    """Verify the FT232H fast-USB padded buffer is parsed into the right channels."""
+    dev = OldHaasoscopeDevice(num_boards=1, ram_width=9, use_fastusb=True)
+    ns = dev.num_samples
+    pad, endpad = dev.fastusbpadding, dev.fastusbendpadding
+    nb = dev.num_bytes + pad * 4
+
+    # Lay out 4 channels of known bytes at the padded offsets.
+    raw = bytearray(nb)
+    expected = []
+    for c in range(4):
+        off = c * ns + (c + 1) * pad - endpad
+        vals = [(c * 30 + (i % 100)) % 251 for i in range(ns)]
+        for i, v in enumerate(vals):
+            raw[off + i] = v
+        expected.append(vals)
+
+    class FakeFtd:
+        def read(self, n):
+            return bytes(raw[:n])
+
+        def getQueueStatus(self):
+            return 0
+
+        def purge(self, mask):
+            pass
+
+        def close(self):
+            pass
+
+    dev.ser = FakeSerial(ns)          # arm/request commands still go over serial
+    dev._ftd = [FakeFtd()]
+    dev.usbsermap = [0]
+    dev._fastusb_active = True
+
+    chans = dev._do_acquire(0)
+    for c in range(4):
+        exp = np.array([127 - v for v in expected[c]], dtype=np.int16)
+        assert np.array_equal(chans[c], exp), f"fast-USB channel {c} mismatch"
+
+    print("test_fastusb_parse: PASS")
+
+
 if __name__ == "__main__":
     test_adapter_roundtrip()
     test_gain_coupling_offset()
+    test_fastusb_parse()

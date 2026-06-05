@@ -35,6 +35,10 @@ if __name__ == '__main__':
                              'backend. Each 4-channel board appears as two 2-channel boards.')
     parser.add_argument('--oldhs-boards', type=int, default=1, metavar='N',
                         help='Number of daisy-chained original Haasoscope boards (default: 1)')
+    parser.add_argument('--oldhs-fastusb', action='store_true',
+                        help='Use FT232H sync-245 fast-USB data readout for the original '
+                             'Haasoscope (higher frame rate; requires the FT232H hat). '
+                             'Falls back to serial if unavailable.')
     args = parser.parse_args()
 
     print("Python version", sys.version)
@@ -48,7 +52,8 @@ if __name__ == '__main__':
             print("Connecting to original (legacy) Haasoscope hardware...")
             # ram_width 12 (4096 samples/ch) comfortably covers the Pro's default
             # acquisition depth after the two-channel 20-samples-per-block mapping.
-            device = OldHaasoscopeDevice(num_boards=args.oldhs_boards, ram_width=12)
+            device = OldHaasoscopeDevice(num_boards=args.oldhs_boards, ram_width=12,
+                                         use_fastusb=args.oldhs_fastusb)
             if not (device.open() and device.init()):
                 print("ERROR: could not open/init the original Haasoscope.")
                 sys.exit(-1)

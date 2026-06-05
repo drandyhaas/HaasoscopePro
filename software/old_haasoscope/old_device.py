@@ -64,10 +64,18 @@ class OldHaasoscopeDevice:
     """
 
     def __init__(self, serport=None, num_boards=1, ram_width=DEFAULT_RAM_WIDTH,
-                 serial_delay=100, debug=False, calib_dir=None):
+                 serial_delay=100, debug=False, calib_dir=None, use_fastusb=False):
         self.serport = serport
         self.calib_dir = calib_dir
         self.num_boards = num_boards
+        # Fast-USB (FT232H sync-245 FIFO) readout. Commands always stay on the
+        # CH340 serial link; only the bulk ADC data moves to the FT232H.
+        self.use_fastusb = use_fastusb
+        self._ftd = []                  # opened ftd2xx handles
+        self._fastusb_active = False
+        self.usbsermap = None           # board index -> index into self._ftd
+        self.fastusbpadding = 4         # bytes per channel (HaasoscopeLibQt:100)
+        self.fastusbendpadding = 2      # of which this many are at the end (line 101)
         self.ram_width = ram_width
         self.num_samples = int(2 ** ram_width)
         self.num_bytes = self.num_samples * NUM_CHAN_PER_BOARD  # per board
@@ -250,6 +258,10 @@ class OldHaasoscopeDevice:
         self._i2c("20 12 f0")
         for b in range(self.num_boards):
             self._i2c("20 13 " + ('%02x' % (self._b20[b] & 0xFF)), b)
+
+        # Optionally switch bulk data readout to the FT232H (sync-245 FIFO).
+        if self.use_fastusb:
+            self._setup_fastusb()
 
         # Read per-board unique IDs and load DAC calibration, then push the
         # baseline DAC for every channel so 0V reads at the ADC center.
@@ -475,14 +487,186 @@ class OldHaasoscopeDevice:
         return
 
     # ------------------------------------------------------------------ #
+    # Fast-USB (FT232H sync-245 FIFO) data readout
+    # ------------------------------------------------------------------ #
+    def _setup_fastusb(self):
+        """Open FT232H device(s), switch the board(s) to USB2 readout, and map
+        boards to FT232H connections. Falls back to serial on any failure."""
+        if not self._open_fastusb():
+            print("No FT232H fast-USB device found; using serial readout")
+            return
+        self._enable_fastusb_on_board()
+        if self._make_usbsermap():
+            self._fastusb_active = True
+            print(f"Fast-USB (FT232H) readout enabled for {self.num_boards} board(s)")
+        else:
+            print("Fast-USB board mapping failed; falling back to serial readout")
+            self._disable_fastusb()
+
+    def _open_fastusb(self):
+        """Open and configure FT232H devices for sync-245 FIFO mode
+        (HaasoscopeLibQt.setup_connections, line 1807)."""
+        try:
+            import ftd2xx as ftd
+        except Exception as e:
+            print(f"ftd2xx not available for fast-USB: {e}")
+            return False
+        self._ftd = []
+        try:
+            ndev = ftd.createDeviceInfoList()
+        except Exception:
+            ndev = 0
+        for i in range(ndev):
+            try:
+                desc = str(ftd.getDeviceInfoDetail(i).get('description', ''))
+            except Exception:
+                continue
+            # The original FT232H hat reports "Haasoscope" (the Pro reports
+            # "Haasoscope Pro"/USB3); avoid grabbing a Pro board.
+            if 'Haasoscope' in desc and 'Pro' not in desc:
+                try:
+                    dev = ftd.open(i)
+                    dev.setTimeouts(1000, 1000)
+                    dev.setBitMode(0xff, 0x40)   # sync 245 FIFO mode
+                    dev.setUSBParameters(0x10000, 0x10000)
+                    dev.setLatencyTimer(1)
+                    dev.purge(ftd.defines.PURGE_RX | ftd.defines.PURGE_TX)
+                    self._ftd.append(dev)
+                    print(f"Opened FT232H fast-USB device: {desc}")
+                except Exception as e:
+                    print(f"Could not open FT232H device {i}: {e}")
+        return len(self._ftd) >= self.num_boards
+
+    def _enable_fastusb_on_board(self):
+        """Tell the board(s) to write data over the FT232H FIFO.
+
+        cmd 58 toggles fast-USB writing (toggle_fastusb, line 235); cmd 137
+        switches readout to USB2 (toggledousb, line 516); cmd 125,1 sets
+        ticks-to-wait=1 (telltickstowait for fw>=5, line 268).
+        """
+        self._w(58)
+        self._w(137)
+        self._w(125, 1)
+
+    def _disable_fastusb(self):
+        """Revert to serial readout and release FT232H handles."""
+        try:
+            self._w(137)   # toggle USB2 readout back off
+            self._w(58)    # toggle fast-USB writing back off
+        except Exception:
+            pass
+        for dev in self._ftd:
+            try:
+                dev.close()
+            except Exception:
+                pass
+        self._ftd = []
+        self._fastusb_active = False
+
+    def _make_usbsermap(self):
+        """Map each board to the FT232H carrying its data
+        (HaasoscopeLibQt.makeusbsermap, line 1335)."""
+        if len(self._ftd) < self.num_boards:
+            return False
+        pad = self.fastusbpadding
+        bwant = self.num_bytes + pad * NUM_CHAN_PER_BOARD
+        self.usbsermap = [-1] * self.num_boards
+        for dev in self._ftd:
+            try:
+                dev.setTimeouts(50, 1000)        # short timeout while probing
+            except Exception:
+                pass
+        found, ok = set(), True
+        self._w(100)                             # prime all boards
+        for bn in range(self.num_boards):
+            if self.minfirmwareversion >= 17:
+                self._w(51, bn)
+            else:
+                self._w(10 + bn)
+            time.sleep(0.25)                     # wait for a rolling-trigger event
+            foundit = False
+            for ui, dev in enumerate(self._ftd):
+                if ui in found:
+                    continue
+                try:
+                    rslt = dev.read(bwant)
+                except Exception:
+                    rslt = b""
+                if len(rslt) == bwant:
+                    self.usbsermap[bn] = ui
+                    found.add(ui)
+                    foundit = True
+                    break
+            if not foundit:
+                print(f"Could not find FT232H connection for board {bn}")
+                ok = False
+                break
+        for dev in self._ftd:
+            try:
+                dev.setTimeouts(1000, 1000)      # restore normal timeout
+            except Exception:
+                pass
+        print(f"fast-USB usbsermap: {self.usbsermap}")
+        return ok
+
+    # ------------------------------------------------------------------ #
     # Acquisition (shared between the two adapter halves)
     # ------------------------------------------------------------------ #
+    def _parse_channels(self, buf, padding, endpadding):
+        """Split a raw byte buffer into 4 centered int16 channel arrays.
+
+        Channel c occupies num_samples bytes at offset
+        ``c*ns + (c+1)*padding - endpadding`` (HaasoscopeLibQt.py:1446). For the
+        plain serial path padding/endpadding are 0.
+        """
+        ns = self.num_samples
+        chans = np.zeros((NUM_CHAN_PER_BOARD, ns), dtype=np.int16)
+        for c in range(NUM_CHAN_PER_BOARD):
+            off = c * ns + (c + 1) * padding - endpadding
+            seg = buf[off:off + ns]
+            if len(seg) == ns:
+                chans[c] = 127 - seg.astype(np.int16)  # invert (op amp) + center
+        return chans
+
+    def _read_serial(self, board):
+        raw = self.ser.read(self.num_bytes)
+        if len(raw) != self.num_bytes:
+            if self.debug:
+                print(f"old acquire (serial): wanted {self.num_bytes} bytes, "
+                      f"got {len(raw)} from board {board}")
+            return np.zeros((NUM_CHAN_PER_BOARD, self.num_samples), dtype=np.int16)
+        return self._parse_channels(np.frombuffer(raw, dtype=np.uint8), 0, 0)
+
+    def _read_fastusb(self, board):
+        try:
+            import ftd2xx as ftd
+        except Exception:
+            return np.zeros((NUM_CHAN_PER_BOARD, self.num_samples), dtype=np.int16)
+        pad = self.fastusbpadding
+        nb = self.num_bytes + pad * NUM_CHAN_PER_BOARD
+        dev = self._ftd[self.usbsermap[board]]
+        try:
+            raw = dev.read(nb)
+            if dev.getQueueStatus() > 0:           # drain any leftover bytes
+                dev.purge(ftd.defines.PURGE_RX)
+        except Exception as e:
+            print(f"fast-USB read error on board {board}: {e}")
+            return np.zeros((NUM_CHAN_PER_BOARD, self.num_samples), dtype=np.int16)
+        if len(raw) != nb:
+            if self.debug:
+                print(f"old acquire (fastusb): wanted {nb} bytes, got {len(raw)}")
+            return np.zeros((NUM_CHAN_PER_BOARD, self.num_samples), dtype=np.int16)
+        return self._parse_channels(np.frombuffer(raw, dtype=np.uint8),
+                                    pad, self.fastusbendpadding)
+
     def _do_acquire(self, board):
         """Arm and read one event for a physical board.
 
         Returns a (4, num_samples) int16 array of *centered* sample values
         (127 - raw_byte), i.e. positive = positive volts after the op-amp
-        inversion. On a short/timed-out read returns zeros.
+        inversion. On a short/timed-out read returns zeros. The arm/request
+        commands always go over serial; only the bulk data may come from the
+        FT232H when fast-USB is active.
         """
         # Prime the trigger (cmd 100), then select+request data for this board
         # (cmd 51+board for fw>=17, else 10+board) - HaasoscopeLibQt.py:1594,1400.
@@ -492,19 +676,9 @@ class OldHaasoscopeDevice:
         else:
             self._w(10 + board)
 
-        raw = self.ser.read(self.num_bytes)
-        if len(raw) != self.num_bytes:
-            if self.debug:
-                print(f"old acquire: wanted {self.num_bytes} bytes, "
-                      f"got {len(raw)} from board {board}")
-            return np.zeros((NUM_CHAN_PER_BOARD, self.num_samples), dtype=np.int16)
-
-        buf = np.frombuffer(raw, dtype=np.uint8)
-        chans = np.empty((NUM_CHAN_PER_BOARD, self.num_samples), dtype=np.int16)
-        for c in range(NUM_CHAN_PER_BOARD):
-            seg = buf[c * self.num_samples:(c + 1) * self.num_samples].astype(np.int16)
-            chans[c] = 127 - seg  # invert (op amp) + center -> range -128..127
-        return chans
+        if self._fastusb_active:
+            return self._read_fastusb(board)
+        return self._read_serial(board)
 
     def get_half_data(self, board, half):
         """Return the two centered channel arrays for one adapter half.
@@ -535,6 +709,14 @@ class OldHaasoscopeDevice:
         return chA, chB
 
     def close(self):
+        if self._fastusb_active:
+            self._disable_fastusb()
+        else:
+            for dev in self._ftd:
+                try:
+                    dev.close()
+                except Exception:
+                    pass
         try:
             if self.ser is not None:
                 # Best-effort: stop rolling trigger and switch ADCs off is
