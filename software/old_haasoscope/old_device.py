@@ -671,7 +671,14 @@ class OldHaasoscopeDevice:
             off = c * ns + (c + 1) * padding - endpadding
             seg = buf[off:off + ns]
             if len(seg) == ns:
-                chans[c] = 127 - seg.astype(np.int16)  # invert (op amp) + center
+                # Treat raw bytes as UNSIGNED offset-binary (0..255), then invert
+                # for the op amp: (127 - byte) is monotonic over the full range.
+                # NOTE (bench-verify): the legacy code reads these as SIGNED int8
+                # before "127 - x", which differs for any byte > 127. Ours is the
+                # physically-correct interpretation, but if the trace looks
+                # discontinuous around mid-scale on real hardware, try matching the
+                # legacy int8 behavior. Part of the scaling calibration cluster.
+                chans[c] = 127 - seg.astype(np.int16)
         return chans
 
     def _read_exact(self, n):

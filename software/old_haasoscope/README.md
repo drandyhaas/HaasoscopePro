@@ -93,6 +93,12 @@ cd software && python test/test_old_adapter.py
 ## Known limitations (need a physical board to finish)
 
 - `yscale` / offset-mapping constants are first-cut; tune against a known signal.
+- **ADC byte interpretation (int8 vs uint8):** we treat raw bytes as unsigned
+  offset-binary and invert with `127 - byte` (monotonic over 0..255). The legacy
+  code reads them as signed `int8` before `127 - x`, which differs for bytes
+  > 127. Ours is the physically-correct interpretation; if the waveform looks
+  discontinuous around mid-scale on real hardware, try matching the legacy int8
+  behavior. This belongs with the scaling calibration above.
 - ×100 super-gain and 50 Ω / 1 MΩ impedance are physical switches on v9.0 boards.
 - Logic analyzer and slow MAX10 ADC are not yet exposed.
 - Multi-board DAC table/board-order indexing needs verification on a real chain.

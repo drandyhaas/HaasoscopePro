@@ -122,6 +122,11 @@ to idle first to stay in sync). Use `--oldhs-fastusb` for the highest rate.
 **Status / limitations (needs validation on a physical board):**
 - The voltage scaling (`yscale`) and offset mapping constants are first-cut and
   should be tuned on the bench against a known signal.
+- **ADC byte interpretation:** raw bytes are treated as unsigned offset-binary
+  (`127 - byte`, monotonic). The legacy software read them as signed `int8`,
+  which differs for bytes > 127. Ours is the physically-correct choice, but if
+  the trace looks discontinuous around mid-scale on real hardware, try the legacy
+  `int8` behavior. (Part of the scaling calibration.)
 - ×100 super-gain and 50 Ω / 1 MΩ input impedance are physical switches on v9.0
   boards (read, not set, by software), so they are not software-controllable.
 - The original board's logic analyzer and slow MAX10 ADC are not yet exposed.
