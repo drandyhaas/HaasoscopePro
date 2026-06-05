@@ -73,6 +73,61 @@ python HaasoscopeProQt.py --help
 
 See [dummy_scope/README.md](dummy_scope/README.md) for detailed dummy server documentation.
 
+### Running with the Original (Legacy) Haasoscope
+
+This software can also drive the **original Haasoscope** hardware (the older
+4-channel, 8-bit, 125 MS/s board found in `../../Haasoscope/software`, normally
+run via `HaasoscopeQt.py`). This lets the old hardware use all the modern Pro
+features — measurements, FFT, cursors, math channels, persistence, SCPI, etc.
+
+```bash
+# One original board (auto-detects the CH340 serial port)
+python HaasoscopeProQt.py --oldhs
+
+# Faster data readout over the FT232H (sync-245 FIFO); falls back to serial
+python HaasoscopeProQt.py --oldhs --oldhs-fastusb
+
+# A daisy chain of N original boards
+python HaasoscopeProQt.py --oldhs --oldhs-boards 2
+```
+
+**How it works:** the original board has 4 channels, but the Pro software treats
+channels as *2 per board*. So each physical original board is presented to the
+app as **two virtual boards of two channels each** (channels 0,1 → board half 0;
+channels 2,3 → board half 1). This reuses the Pro's existing multi-board path
+(its own 4-channel mode is also "2 boards × 2 channels"), so the rest of the app
+runs unchanged. Legacy boards are labelled `(L)` in the board selector.
+
+**Command-line options:**
+
+| Option | Description |
+|--------|-------------|
+| `--oldhs` | Use the original Haasoscope hardware via the adapter backend |
+| `--oldhs-boards N` | Number of daisy-chained original boards (default: 1) |
+| `--oldhs-fastusb` | Use FT232H sync-245 fast-USB data readout (higher frame rate; needs the FT232H hat). Commands stay on the CH340 serial link; falls back to serial if unavailable |
+
+**Calibration:** per-board DAC offset calibration is loaded automatically from
+the legacy `calib_<boardID>.json.txt` files (searched in `old_haasoscope/calib/`
+and then the sibling `../../Haasoscope/software/calib/`), so 0 V reads at the
+center of the range. Gain (×10), AC/DC coupling, and per-channel offset are
+mapped to the original hardware's commands.
+
+**Serial robustness:** the original board streams over a CH340 USB-UART at
+1.5 Mbaud with no hardware flow control. Instead of throttling the sender (the
+old `serialdelaytimerwait` workaround), this backend enables serial low-latency
+mode (Linux), reads with a progress-based deadline, and — because the board
+free-runs — simply **re-acquires** a fresh event on an incomplete read (draining
+to idle first to stay in sync). Use `--oldhs-fastusb` for the highest rate.
+
+**Status / limitations (needs validation on a physical board):**
+- The voltage scaling (`yscale`) and offset mapping constants are first-cut and
+  should be tuned on the bench against a known signal.
+- ×100 super-gain and 50 Ω / 1 MΩ input impedance are physical switches on v9.0
+  boards (read, not set, by software), so they are not software-controllable.
+- The original board's logic analyzer and slow MAX10 ADC are not yet exposed.
+
+Developer details are in [old_haasoscope/README.md](old_haasoscope/README.md).
+
 ## Editing the GUI
 
 The Haasoscope Pro GUI can be edited using [Qt Designer](https://www.pythonguis.com/installation/install-qt-designer-standalone/), on software/HaasoscopePro.ui or HaasoscopeProFFT.ui etc.
