@@ -5,6 +5,9 @@ hardware (4-channel, 8-bit, 125 MS/s, serial-controlled), so the old hardware
 gains all the Pro features without forking the GUI. Run it with `--oldhs`
 (see the main [software/README.md](../README.md) for user-facing options).
 
+Original hardware/software repo: https://github.com/drandyhaas/Haasoscope
+(the byte sequences here are ported from its `libs/HaasoscopeLibQt.py`).
+
 ## Design
 
 The original board is incompatible with the Pro at every layer (serial vs FIFO

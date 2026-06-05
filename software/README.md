@@ -76,9 +76,10 @@ See [dummy_scope/README.md](dummy_scope/README.md) for detailed dummy server doc
 ### Running with the Original (Legacy) Haasoscope
 
 This software can also drive the **original Haasoscope** hardware (the older
-4-channel, 8-bit, 125 MS/s board found in `../../Haasoscope/software`, normally
-run via `HaasoscopeQt.py`). This lets the old hardware use all the modern Pro
-features — measurements, FFT, cursors, math channels, persistence, SCPI, etc.
+4-channel, 8-bit, 125 MS/s board from the
+[original Haasoscope repo](https://github.com/drandyhaas/Haasoscope), normally
+run via its own `HaasoscopeQt.py`). This lets the old hardware use all the modern
+Pro features — measurements, FFT, cursors, math channels, persistence, SCPI, etc.
 
 ```bash
 # One original board (auto-detects the CH340 serial port)
