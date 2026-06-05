@@ -63,6 +63,12 @@ class MainWindow(TemplateBaseClass):
         caps = getattr(usbs[0], 'caps', None) if usbs else None
         self.is_legacy = bool(usbs) and getattr(usbs[0], 'is_legacy', False)
         self.state = ScopeState(num_boards=len(usbs), num_chan_per_board=2, caps=caps)
+        if self.is_legacy:
+            # The original board has 4 independent full-rate channels; each virtual
+            # board exposes two of them, which is the app's two-channel mode. This
+            # MUST be on (default is single-channel) or the packed data is misread
+            # and the time axis is doubled.
+            self.state.dotwochannel = [True] * self.state.num_board
         self.state.testing_mode = testing_mode
         self.state.using_usb3 = using_usb3
         print(f"Haasoscope Pro Software Version: {self.state.softwareversion:.2f}")
@@ -109,6 +115,10 @@ class MainWindow(TemplateBaseClass):
             else:
                 self.ui.boardBox.addItem(str(i))
         self.ui.boardBox.blockSignals(False)
+        if self.is_legacy:
+            # Two-channel mode is mandatory for legacy boards (see above); don't
+            # let the user toggle it off and desync the data layout.
+            self.ui.twochanCheck.setEnabled(False)
         self.setup_successful = False
         self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
         self.math_reference_data = {}  # Stores {math_channel_name: {'x_ns': array, 'y': array}}

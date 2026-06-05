@@ -105,7 +105,7 @@ class OldHaasoscopeDevice:
         self.user_offset = [0.0] * nch  # additive DAC offset from the Pro offset slider
         # Port-B (0x20 reg 0x13) shadow register for AC/DC coupling, per board.
         # bit c (0..2) = 1 -> DC on channel c; high nibble 0 keeps ADCs powered.
-        self._b20 = [0x07] * num_boards  # default all DC
+        self._b20 = [0x0f] * num_boards  # default all DC (matches legacy init b20=0x0f)
 
         # DAC baseline tables (per global channel). Defaults from HaasoscopeLibQt
         # lines 133-140; overwritten per-board by readcalib() when a calib file
@@ -268,6 +268,13 @@ class OldHaasoscopeDevice:
         # Trigger time-over-threshold = 1 sample (cmd 129, line 311), with the
         # "use downsample for tot" high bit set as the legacy code does.
         self._set_trigger_time(1)
+        # Clock ticks to wait between serial bytes (cmd 125, telltickstowait,
+        # line 268). For firmware >=5 this is always 1; the legacy serial readout
+        # timing depends on it being sent.
+        self._w(125, 1)
+        # Center the trigger in the buffer by default (legacy init never sets the
+        # trigger point; only the GUI does, via cmd 121).
+        self.set_trigger_point(self.num_samples // 2)
         # Serial inter-chunk delay (cmd 135, line 201).
         self._w(135, *self._hi_lo(self.serial_delay))
 
@@ -409,6 +416,15 @@ class OldHaasoscopeDevice:
         """Set trigger edge (cmd 128, HaasoscopeLibQt.py:305): 1 = rising."""
         with self._lock:
             self._w(128, 1 if rising else 0)
+
+    def set_trigger_point(self, sample_pos):
+        """Set where the trigger sits in the captured buffer (cmd 121,
+        HaasoscopeLibQt.py:177). Value is in (downsampled) samples. The legacy
+        init never sends this - only the GUI does - so we must set it ourselves
+        or the trigger position is undefined. Exact mapping is bench-tunable."""
+        sample_pos = max(0, min(self.num_samples - 1, int(sample_pos)))
+        with self._lock:
+            self._w(121, *self._hi_lo(sample_pos))
 
     # ------------------------------------------------------------------ #
     # Front-end: gain / coupling / offset / termination + DAC calibration

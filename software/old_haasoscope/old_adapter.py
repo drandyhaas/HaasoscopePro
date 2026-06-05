@@ -77,6 +77,7 @@ class OldHaasoscopeBoardAdapter(UsbSocketAdapter):
         # Cached last-sent values so we only hit the serial line on change.
         self._last_trig_level = None
         self._last_trig_rising = None
+        self._last_trig_point = None
         self._last_downsample = None
         self._spi_mode = 0
 
@@ -218,11 +219,19 @@ class OldHaasoscopeBoardAdapter(UsbSocketAdapter):
         return _p32(0)
 
     def _trigger_info(self, data):
-        # opcode 8: data[1] = trigger level (0-255).
+        # opcode 8 (hardware_controller send_trigger_info):
+        #   data[1] = trigger level (0-255), data[3:5] = trigger position (blocks).
         level = data[1]
         if level != self._last_trig_level:
             self.device.set_trigger_level(level)
             self._last_trig_level = level
+        # Each Pro display block is 20 samples in two-channel mode; map to the
+        # original board's sample-domain trigger point (cmd 121). Exact alignment
+        # is bench-tunable.
+        triggerpos = (data[3] << 8) | data[4]
+        if triggerpos != self._last_trig_point:
+            self.device.set_trigger_point(triggerpos * 20)
+            self._last_trig_point = triggerpos
         return _p32(0)
 
     def _downsample(self, data):

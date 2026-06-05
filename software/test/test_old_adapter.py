@@ -90,6 +90,8 @@ def test_adapter_roundtrip():
 
     caps = adapters[0].caps
     state = ScopeState(num_boards=len(adapters), num_chan_per_board=2, caps=caps)
+    # main_window forces two-channel mode on for legacy boards (default is False);
+    # mirror that here since the adapter always packs the two-channel layout.
     state.dotwochannel = [True] * state.num_board
     es, ese = state.expect_samples, state.expect_samples_extra
 
@@ -184,8 +186,19 @@ def test_gain_coupling_offset():
     dac_writes_after_init = _count_subseq(device.ser.sent, [136, 3, 96])
     assert dac_writes_after_init >= 4, f"expected >=4 DAC writes, got {dac_writes_after_init}"
 
+    # init() must send telltickstowait (cmd 125,1) and a default trigger point
+    # (cmd 121, centered = num_samples//2 = 256 -> hi/lo 1,0 for ram_width=9).
+    assert _count_subseq(device.ser.sent, [125, 1]) >= 1, "telltickstowait (125) not sent"
+    assert _count_subseq(device.ser.sent, [121, 1, 0]) >= 1, "default trigger point (121) not sent"
+
     adapters = make_adapters_for_device(device)
     half0 = adapters[0]  # device channels 0,1
+
+    # --- Trigger point: opcode 8 position maps to cmd 121 (blocks*20 samples) ---
+    half0.send(bytes([8, 128, 2, 0, 10, 0, 0, 0]))  # triggerpos = 10 -> 200 samples
+    half0.recv(4)
+    assert _count_subseq(device.ser.sent, [121, 0, 200]) >= 1, \
+        "opcode 8 trigger position not mapped to cmd 121"
 
     # --- Gain: drive setgain via board.py through the adapter (chan0, 20 dB) ---
     set_spi_mode(half0, 0)
