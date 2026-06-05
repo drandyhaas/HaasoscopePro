@@ -222,6 +222,13 @@ def test_gain_coupling_offset():
     after = _count_subseq(device.ser.sent, [136, 2, 32, 19])
     assert after > before, "coupling i2c (0x20 0x13) not sent"
 
+    # Channel 3 coupling must work too (the legacy code's range(0,3) never drove
+    # bit 3); all 4 channels should be controllable.
+    device.set_channel_coupling(3, is_dc=False)   # AC -> bit 3 clear
+    assert (device._b20[0] & (1 << 3)) == 0, "channel 3 AC not reflected in b20 bit 3"
+    device.set_channel_coupling(3, is_dc=True)    # DC -> bit 3 set
+    assert (device._b20[0] & (1 << 3)) != 0, "channel 3 DC not reflected in b20 bit 3"
+
     # --- Offset: dooffset shifts the DAC away from the calibrated baseline ---
     base = device.daclevels['low'][0]
     dac_before = _count_subseq(device.ser.sent, [136, 3, 96])

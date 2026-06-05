@@ -491,9 +491,10 @@ class OldHaasoscopeDevice:
             self._apply_dac(gchan)              # baseline depends on gain
 
     def set_channel_coupling(self, gchan, is_dc):
-        """Set AC/DC coupling via IO-expander 0x20 reg 0x13
-        (HaasoscopeLibQt.setacdc, line 811). Only channels 0-2 have a coupling
-        bit on the original hardware."""
+        """Set AC/DC coupling via IO-expander 0x20 reg 0x13 (the low nibble is one
+        bit per channel: bit c = 1 -> DC on channel c; high nibble 0 keeps ADCs
+        on). HaasoscopeLibQt.setacdc (line 811) loops range(0,3), which is a bug
+        that never drives channel 3 - here we control all 4 channels."""
         if gchan >= len(self.acdc):
             return
         new_ac = 1 if is_dc else 0  # self.acdc: 1 = DC, 0 = AC
@@ -501,13 +502,13 @@ class OldHaasoscopeDevice:
             if self.acdc[gchan] != new_ac:
                 self.acdc[gchan] = new_ac
                 board = self.num_boards - 1 - (gchan // NUM_CHAN_PER_BOARD)
-                chanonboard = gchan % NUM_CHAN_PER_BOARD
-                if chanonboard < 3:
-                    if is_dc:
-                        self._b20[board] |= (1 << chanonboard)
-                    else:
-                        self._b20[board] &= ~(1 << chanonboard)
-                    self._i2c("20 13 " + ('%02x' % (self._b20[board] & 0xFF)), int(board))
+                chanonboard = gchan % NUM_CHAN_PER_BOARD  # 0..3 -> coupling bits 0..3
+                if is_dc:
+                    self._b20[board] |= (1 << chanonboard)
+                else:
+                    self._b20[board] &= ~(1 << chanonboard)
+                self._b20[board] &= 0x0F  # keep high nibble 0 (ADCs powered)
+                self._i2c("20 13 " + ('%02x' % (self._b20[board] & 0xFF)), int(board))
             self._apply_dac(gchan)  # baseline differs for AC vs DC
 
     def set_channel_offset(self, gchan, pro_dacval):
