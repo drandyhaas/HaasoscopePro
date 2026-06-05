@@ -3,18 +3,23 @@
 class ScopeState:
     """A class to hold the configuration and state of the oscilloscope application."""
 
-    def __init__(self, num_boards, num_chan_per_board):
+    def __init__(self, num_boards, num_chan_per_board, caps=None):
+        # Optional hardware-capability overrides (used by non-Pro backends, e.g. the
+        # legacy Haasoscope adapter). When caps is None every value below is identical
+        # to the original Pro defaults, so the Pro/dummy path is unchanged.
+        caps = caps or {}
+
         # General and Hardware Configuration
         self.softwareversion = 32.02
         self.num_board = num_boards
         self.num_chan_per_board = num_chan_per_board
-        self.samplerate = 3.2  # GHz
+        self.samplerate = caps.get('samplerate', 3.2)  # GHz
         self.expect_samples = 100
         self.expect_samples_extra = 5
         self.depth_before_pllreset = 100
         self.firmwareversion = [-1] * num_boards  # Per-board firmware version
         self.firmwareversion_minor = [-1] * num_boards  # Per-board firmware version minor
-        self.basevoltage = 200
+        self.basevoltage = caps.get('basevoltage', 200)
 
         # Application State
         self.paused = True
@@ -86,7 +91,7 @@ class ScopeState:
         self.skip_next_event = False
         self.fitwidthfraction = 0.2
         self.line_width = 2  # Default line width for plots
-        self.yscale = 3.3 / 2.03 * 10 * 5 / 8 / pow(2, 12) / 16
+        self.yscale = caps.get('yscale', 3.3 / 2.03 * 10 * 5 / 8 / pow(2, 12) / 16)
         self.nsunits = 1
         self.units = "ns"
         self.min_y, self.max_y = -5, 5

@@ -50,12 +50,19 @@ class MainWindow(TemplateBaseClass):
         self.usbs = usbs
         self.dummy_scope = None
         for usb in self.usbs:
-            if hasattr(usb, 'socket_addr'):  # UsbSocketAdapter has socket_addr
+            # The legacy Haasoscope adapter also carries socket_addr (to reuse the
+            # dummy-board code paths) but is NOT a dummy server, so don't enable
+            # the dummy-server config UI for it.
+            if hasattr(usb, 'socket_addr') and not getattr(usb, 'is_legacy', False):
                 #print(f"  -> Connected to dummy scope server at: {}")
                 self.dummy_scope = usb.socket_addr
 
         # 1. Initialize core components
-        self.state = ScopeState(num_boards=len(usbs), num_chan_per_board=2)
+        # Backends may advertise hardware-capability overrides via a `caps` attribute
+        # (the legacy Haasoscope adapter does). Pro/dummy backends have none -> defaults.
+        caps = getattr(usbs[0], 'caps', None) if usbs else None
+        self.is_legacy = bool(usbs) and getattr(usbs[0], 'is_legacy', False)
+        self.state = ScopeState(num_boards=len(usbs), num_chan_per_board=2, caps=caps)
         self.state.testing_mode = testing_mode
         self.state.using_usb3 = using_usb3
         print(f"Haasoscope Pro Software Version: {self.state.softwareversion:.2f}")
@@ -94,8 +101,10 @@ class MainWindow(TemplateBaseClass):
         self.ui.boardBox.setMaxVisibleItems(self.state.num_board)
         self.ui.boardBox.clear()
         for i in range(self.state.num_board):
-            # Check if this board is a dummy board (UsbSocketAdapter)
-            if isinstance(self.usbs[i], UsbSocketAdapter):
+            # Label legacy (L) and dummy (D) boards distinctly.
+            if getattr(self.usbs[i], 'is_legacy', False):
+                self.ui.boardBox.addItem(f"{i} (L)")
+            elif isinstance(self.usbs[i], UsbSocketAdapter):
                 self.ui.boardBox.addItem(f"{i} (D)")
             else:
                 self.ui.boardBox.addItem(str(i))
@@ -219,9 +228,10 @@ class MainWindow(TemplateBaseClass):
         self.update_checker.update_available.connect(self._show_update_notification)
         self.update_checker.check_for_updates()
 
-        # Load default FIR calibration file at startup (if it exists)
+        # Load default FIR calibration file at startup (if it exists). The bundled
+        # FIR is Pro-specific (3.2 GHz), so skip it for the legacy backend.
         default_fir_path = os.path.join(os.path.dirname(__file__), "haasoscope.fir")
-        if os.path.exists(default_fir_path) and self.state.num_board>0:
+        if os.path.exists(default_fir_path) and self.state.num_board>0 and not self.is_legacy:
             # Load without enabling corrections and without showing dialogs
             load_fir_filter(self, self.state, self.ui, filename=default_fir_path,
                           enable_corrections=False, show_dialogs=False)
