@@ -85,12 +85,21 @@ Pro features — measurements, FFT, cursors, math channels, persistence, SCPI, e
 # One original board (auto-detects the CH340 serial port)
 python HaasoscopeProQt.py --oldhs
 
+# Force a specific serial port (needed if you have more than one CH340 adapter)
+python HaasoscopeProQt.py --oldhs --oldhs-port COM13
+
 # Faster data readout over the FT232H (sync-245 FIFO); falls back to serial
 python HaasoscopeProQt.py --oldhs --oldhs-fastusb
 
 # A daisy chain of N original boards
 python HaasoscopeProQt.py --oldhs --oldhs-boards 2
 ```
+
+**Picking the serial port:** auto-detection matches the CH340 USB-UART
+(VID:PID `1A86:7523`) and, like the legacy app, picks the **highest-numbered**
+matching port. If you have more than one CH340 adapter plugged in, that guess can
+be wrong — pass `--oldhs-port` (e.g. `COM13`, or `/dev/ttyUSB0` on Linux) to
+select the board explicitly.
 
 **How it works:** the original board has 4 channels, but the Pro software treats
 channels as *2 per board*. So each physical original board is presented to the
@@ -105,6 +114,7 @@ runs unchanged. Legacy boards are labelled `(L)` in the board selector.
 |--------|-------------|
 | `--oldhs` | Use the original Haasoscope hardware via the adapter backend |
 | `--oldhs-boards N` | Number of daisy-chained original boards (default: 1) |
+| `--oldhs-port PORT` | Serial port of the original board (e.g. `COM13`). Overrides auto-detection when multiple CH340 adapters are present |
 | `--oldhs-fastusb` | Use FT232H sync-245 fast-USB data readout (higher frame rate; needs the FT232H hat). Commands stay on the CH340 serial link; falls back to serial if unavailable |
 
 **Calibration:** per-board DAC offset calibration is loaded automatically from
@@ -120,9 +130,17 @@ mode (Linux), reads with a progress-based deadline, and — because the board
 free-runs — simply **re-acquires** a fresh event on an incomplete read (draining
 to idle first to stay in sync). Use `--oldhs-fastusb` for the highest rate.
 
-**Status / limitations (needs validation on a physical board):**
-- The voltage scaling (`yscale`) and offset mapping constants are first-cut and
-  should be tuned on the bench against a known signal.
+**Status / limitations:**
+- Basic acquisition is confirmed on real hardware (a 200 kHz square wave reads at
+  the right frequency with a clean shape). The vertical scale (`yscale`) is
+  bench-calibrated for **50 Ω input mode** against a 5.0 V Vpp source; the 1 MΩ
+  path may need a different constant (50 Ω/1 MΩ is a physical switch the software
+  can't read). The **offset** DAC mapping is bench-calibrated for 50 Ω too (an
+  offset click shifts the trace by the Pro's intended mV).
+- Vertical gain has only the three physical levels of the original board
+  (×1 / ×10 / ×100), so the Pro's continuous dB control snaps to those at the
+  14 dB and 34 dB thresholds — expect the trace scale to change in steps, not
+  smoothly. Amplitude is auto-compensated so true volts stay correct across levels.
 - **ADC byte interpretation:** raw bytes are treated as unsigned offset-binary
   (`127 - byte`, monotonic). The legacy software read them as signed `int8`,
   which differs for bytes > 127. Ours is the physically-correct choice, but if

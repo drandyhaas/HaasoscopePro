@@ -61,11 +61,34 @@ Original board (CH340 serial @1.5Mbaud  [+ optional FT232H for data])
 | transport `send`/`recv` (8-byte opcodes) | CH340 serial commands; data via serial or FT232H |
 | data: 16-bit, 50 words/block, BEEF/clock markers | 8-bit centered samples `(127 - byte) << 8`, markers synthesized |
 | `samplerate` (capability) | `0.25` GHz → Pro halves it in two-channel mode → 125 MS/s |
-| `yscale` (capability) | `7.5 / 65536` (first cut; tune on bench) |
+| `yscale` (capability) | fixed `1/8192` (ADC→divisions); voltage cal is in `basevoltage` |
+| `basevoltage` (capability) | `device.yscale × 1000` mV/div (5.5 V/div; bench-cal'd for 50 Ω) |
 | gain (SPI, dB) | x1 / x10 (cmd 134) + sample scaling compensation |
 | offset (SPI, 16-bit DAC) | 12-bit DAC (`setdac`), additive on calibrated baseline |
 | AC/DC (opcode 10) | IO-expander `0x20` reg `0x13` (`setacdc`) |
 | PLL / clock calibration | skipped (adapter carries `socket_addr`, like the dummy) |
+
+## Connection / port selection
+
+`OldHaasoscopeDevice(serport=...)` uses the given port if one is passed
+(`HaasoscopeProQt.py --oldhs-port COM13`). Otherwise `find_old_haasoscope_ports()`
+auto-detects: it matches the CH340 USB-UART (VID:PID `1A86:7523`) and returns
+candidates **sorted descending**, then `open()` takes the first — mirroring the
+legacy `HaasoscopeLibQt.setup_connections()` (`ports.sort(reverse=True)` + first
+match). Because pyserial orders `COM`/`ttyUSB` names numerically, a machine with
+both `COM6` and `COM13` picks `COM13`, the same as the old app. With more than one
+CH340 adapter present this is just a heuristic, so prefer `--oldhs-port` to be
+explicit.
+
+A couple of subtleties worth knowing if you touch the init path:
+- Firmware-version detection (`get_firmware_version`) selects the board with
+  `[30 + board]` for board < 10, **not** `_select_board()` — at that point
+  `minfirmwareversion` is still the default 255, and `_select_board` would emit
+  the firmware ≥17-only `[53, board]` form. The legacy code is deliberate about
+  this (`HaasoscopeLibQt.py:376`).
+- `getIDs()` restores the full `sertimeout` for its 8-byte read; `open()` lowers
+  `ser.timeout` to the short streaming poll interval, which is too brief for the
+  ID reply.
 
 ## Serial robustness
 
@@ -95,7 +118,22 @@ cd software && python test/test_old_adapter.py
 
 ## Known limitations (need a physical board to finish)
 
-- `yscale` / offset-mapping constants are first-cut; tune against a known signal.
+- **Vertical calibration:** the Pro computes volts as `sample × yscale × VperD`
+  (`VperD = basevoltage/1000`), so `yscale` and `basevoltage` must be independent
+  — if both derive from one constant it enters volts *quadratically*. The adapter
+  fixes `caps['yscale'] = 1/8192` (display geometry) and puts the whole linear
+  calibration in `caps['basevoltage'] = device.yscale × 1000` mV/div. Bench-cal'd
+  for **50 Ω** mode against a 5.0 V Vpp source; re-tune with
+  `device.yscale *= true_Vpp / measured_Vpp`. The 1 MΩ path may differ (50 Ω/1 MΩ
+  is a physical switch the software can't read).
+- Vertical **gain** has only the original board's three physical levels
+  (×1/×10/×100), so the Pro's continuous dB control snaps at 14 dB and 34 dB
+  (`old_adapter.py`); amplitude is compensated in `get_half_data` so true volts
+  stay correct. Stepped behaviour is expected, not a bug.
+- The **offset** DAC mapping (`OFFSET_GAIN` in `old_device.py`) is bench-calibrated
+  (`-1/192`): a +10 offset click moves the trace by the Pro's intended ~257 mV.
+  Like the vertical scale it's tied to the 50 Ω front-end; re-tune for 1 MΩ with
+  `OFFSET_GAIN *= intended/measured`.
 - **ADC byte interpretation (int8 vs uint8):** we treat raw bytes as unsigned
   offset-binary and invert with `127 - byte` (monotonic over 0..255). The legacy
   code reads them as signed `int8` before `127 - x`, which differs for bytes

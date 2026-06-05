@@ -35,6 +35,16 @@ STROBE_PATTERN = [1, 2, 4, 8, 16, 32, 64, 128]
 
 DEFAULT_FIRMWARE_VERSION = 1000031  # large -> no Pro feature gate trips (matches dummy)
 
+# Fixed ADC-count -> screen-division mapping for the caps 'yscale'. The Pro turns
+# a sample into volts as  volts = sample * state.yscale * VperD  (state.yscale gives
+# divisions, VperD = basevoltage/1000 gives volts/division - see data_processor.py
+# lines 169 & 496 and plot_manager.py:1813). 'yscale' must therefore be a FIXED
+# display constant and NOT also carry the voltage scale, or device.yscale would
+# enter the measured voltage QUADRATICALLY. 1/8192 puts the full +-128-count ADC
+# range at +-4 divisions (a sensible trace size on the +-5-division grid); the
+# voltage calibration lives entirely in 'basevoltage' below.
+DISPLAY_YSCALE = 1.0 / 8192.0
+
 
 def _clip16(v):
     return max(-32768, min(32767, int(v)))
@@ -85,10 +95,17 @@ class OldHaasoscopeBoardAdapter(UsbSocketAdapter):
         # first board's caps are read, but every adapter advertises them.
         # samplerate is pre-doubled: the Pro halves it in two-channel mode, so
         # 0.25 GHz -> 0.125 GHz = the original board's true 125 MS/s.
+        # 'yscale' is the fixed display geometry; 'basevoltage' (mV per division)
+        # carries the whole voltage calibration so volts scale LINEARLY with
+        # device.yscale. With DISPLAY_YSCALE = 1/8192, a sample reads back as
+        #   volts = sample * (1/8192) * (device.yscale*1000/1000)
+        #         = (127-byte)*256 * device.yscale / 8192 = (127-byte)*device.yscale/32,
+        # i.e. device.yscale is the per-division volts and the full-scale Vpp is
+        # 8*device.yscale. Bench-calibrated against a 5.0 V Vpp / 50 Ohm source.
         self.caps = {
             'samplerate': 0.25,
-            'yscale': device.yscale / 65536.0,
-            'basevoltage': int(round(device.yscale * 1000)),  # mV (~7500)
+            'yscale': DISPLAY_YSCALE,
+            'basevoltage': int(round(device.yscale * 1000)),  # mV/div
         }
 
     # ------------------------------------------------------------------ #

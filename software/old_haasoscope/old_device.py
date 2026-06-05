@@ -31,24 +31,36 @@ BRATE = 1500000                # serial baud (HaasoscopeLibQt.py:73)
 CH340_VIDPID = "1A86:7523"     # CH340 USB-UART, the original board's control link
 CLKRATE_MHZ = 125.0            # native ADC sample rate
 
-# Mapping of the Pro's 16-bit offset DAC value to the original 12-bit DAC.
-# The Pro centers its offset DAC at 32768 (offset slider == 0). These constants
-# are a first cut and should be tuned on the bench (the two DACs differ in range
-# and polarity).
+# Mapping of the Pro's 16-bit offset DAC value to the original 12-bit DAC:
+#   user_offset[counts] = OFFSET_GAIN * (pro_dacval - OFFSET_PRO_CENTER)
+# The Pro centers its offset DAC at 32768 (offset slider == 0). OFFSET_GAIN is the
+# ratio (our 12-bit DAC counts) / (Pro 16-bit DAC counts) needed for the on-screen
+# shift to match the Pro's intended offset; the sign accounts for the negative-
+# feedback front end. Both the Pro's dacval and the screen mV scale with V/div, so
+# this ratio is V/div-independent. Bench-calibrated: a +10 offset click (Pro
+# intends +257 mV) moved the measured mean by 257 mV with OFFSET_GAIN = -1/192
+# (the initial -1/16 over-shot by ~12x). Re-tune: OFFSET_GAIN *= intended/measured.
 OFFSET_PRO_CENTER = 32768
-OFFSET_GAIN = -1.0 / 16.0
+OFFSET_GAIN = -1.0 / 192.0
 
 
 def find_old_haasoscope_ports():
     """Return a list of serial port names that look like an original Haasoscope.
 
-    Detection mirrors HaasoscopeLibQt.setup_connections() (line 1789): match the
-    CH340 USB-to-UART VID:PID. Returns [] if pyserial is unavailable.
+    Detection mirrors HaasoscopeLibQt.setup_connections() (line 1932): match the
+    CH340 USB-to-UART VID:PID, and return candidates sorted *descending* so the
+    first one is the same port the legacy app would pick. (The legacy code does
+    ``ports.sort(reverse=True)`` then takes the first CH340 match; pyserial sorts
+    COM names numerically, so a machine with both COM6 and COM13 picks COM13.)
+    Returns [] if pyserial is unavailable.
     """
     if not _HAVE_SERIAL:
         return []
+    infos = list(serial.tools.list_ports.comports())
+    infos.sort(reverse=True)  # match HaasoscopeLibQt.setup_connections ordering
     ports = []
-    for port_no, description, address in serial.tools.list_ports.comports():
+    for info in infos:
+        port_no, _description, address = info[0], info[1], info[2]
         addr = (address or "")
         if CH340_VIDPID in addr or CH340_VIDPID.lower() in addr.lower():
             ports.append(port_no)
@@ -90,9 +102,9 @@ class OldHaasoscopeDevice:
         self.minfirmwareversion = 255
         self.uniqueIDs = []
 
-        # Full-scale Vpp for x1 gain (HaasoscopeLibQt.py:1701). Adjusted up for
-        # v9.0 boards (firmware >= 15) after firmware is read in init().
-        self.yscale = 7.5
+        # Full-scale Vpp for x1 gain (placeholder; init() sets the bench-calibrated
+        # value once the firmware version / board generation is known).
+        self.yscale = 5.0
 
         # Runtime state mirrored from Pro-side requests.
         self.downsample = 2
@@ -223,7 +235,15 @@ class OldHaasoscopeDevice:
 
         Returns 0 if not found (very old firmware). Does not sys.exit on failure.
         """
-        self._select_board(board)
+        # Select the board WITHOUT _select_board(): the firmware version isn't
+        # known yet (minfirmwareversion is still the default 255), so _select_board
+        # would send the firmware>=17-only [53, board] form. The legacy code always
+        # uses [30 + board] here for board<10 precisely "because it might be
+        # firmware<17" (HaasoscopeLibQt.py:376).
+        if board < 10:
+            self._w(30 + board)
+        else:
+            self._w(53, board)  # board>=10 implies firmware>=17
         self._w(147)
         old_to = self.ser.timeout
         self.ser.timeout = 0.1
@@ -249,10 +269,16 @@ class OldHaasoscopeDevice:
             self.minfirmwareversion = min(self.minfirmwareversion, fw)
         print(f"Original Haasoscope min firmware version: {self.minfirmwareversion}")
 
-        # Full-scale voltage (lines 1701-1703).
-        self.yscale = 7.5
+        # Vertical calibration constant. With the adapter's fixed DISPLAY_YSCALE
+        # this is the volts-per-division the Pro shows (full-scale Vpp = 8x this),
+        # and it scales the displayed voltage LINEARLY (see old_adapter.py caps).
+        # Bench-calibrated on a v9.0 board in 50 Ohm input mode against a 5.0 V Vpp
+        # source. To re-tune: new = old * (true_Vpp / measured_Vpp). NOTE: 50 Ohm
+        # vs 1 MOhm is a physical switch we don't read, so this is calibrated for
+        # 50 Ohm mode; the 1 MOhm path may need a different constant.
+        self.yscale = 5.0
         if self.minfirmwareversion >= 15:
-            self.yscale *= 1.1  # v9.0 boards with 10M/1.1M/11k input resistors
+            self.yscale *= 1.1  # v9.0 boards (kept from legacy; folds into the cal)
 
         # Rolling (self) trigger on, so the board free-runs (line 1706).
         self._w(101)
@@ -317,7 +343,13 @@ class OldHaasoscopeDevice:
         for b in range(self.num_boards):
             self._select_board(b)
             self._w(142)
+            # open() lowers ser.timeout to the streaming poll interval (0.05s);
+            # restore the full per-event timeout so a slow board has time to
+            # return all 8 bytes (legacy getIDs reads with self.sertimeout).
+            old_to = self.ser.timeout
+            self.ser.timeout = self.sertimeout
             rslt = self.ser.read(8)
+            self.ser.timeout = old_to
             if len(rslt) == 8:
                 self.uniqueIDs.append(''.join('%02x' % x for x in rslt))
             else:
