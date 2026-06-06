@@ -16,3 +16,6 @@ ftd2xx>=1.1.0
 # Gracefully degrades if not installed
 requests>=2.25.0
 packaging>=20.0
+
+# For legacy Haasoscope
+pyserial
