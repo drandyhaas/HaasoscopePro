@@ -36,12 +36,36 @@ CLKRATE_MHZ = 125.0            # native ADC sample rate
 # The Pro centers its offset DAC at 32768 (offset slider == 0). OFFSET_GAIN is the
 # ratio (our 12-bit DAC counts) / (Pro 16-bit DAC counts) needed for the on-screen
 # shift to match the Pro's intended offset; the sign accounts for the negative-
-# feedback front end. Both the Pro's dacval and the screen mV scale with V/div, so
-# this ratio is V/div-independent. Bench-calibrated: a +10 offset click (Pro
-# intends +257 mV) moved the measured mean by 257 mV with OFFSET_GAIN = -1/192
-# (the initial -1/16 over-shot by ~12x). Re-tune: OFFSET_GAIN *= intended/measured.
+# feedback front end.
+#
+# The ratio depends on the analog front-end path: the on-screen mV per DAC count
+# differs across (gain × supergain × AC/DC) because each combination uses a
+# different op-amp gain and a different DAC reference / baseline table. We
+# therefore key OFFSET_GAIN_BY_MODE on the same (gain, supergain, acdc) tuple
+# that selects the DAC baseline (see daclevels below). Tuple meaning matches
+# the per-channel state convention used throughout this file:
+#   gain      : 1 = x1 (low), 0 = x10 (high)
+#   supergain : 1 = normal,   0 = x100
+#   acdc      : 1 = DC,       0 = AC
+#
+# Only the (x1, normal, DC) entry has been bench-calibrated: a +10 Pro offset
+# click intends +257 mV and was measured to move the mean by 257 mV with
+# OFFSET_GAIN = -1/192 (initial -1/16 over-shot by ~12x). Re-tune any entry:
+#   OFFSET_GAIN *= intended/measured.
+# All other entries default to the calibrated x1/DC value and SHOULD be
+# bench-tuned per combo; until then offsets in those modes may be inaccurate.
 OFFSET_PRO_CENTER = 32768
-OFFSET_GAIN = -1.0 / 192.0
+OFFSET_GAIN_DEFAULT = -1.0 / 192.0
+OFFSET_GAIN_BY_MODE = {
+    (1, 1, 1): -1.0 / 192.0,   # x1, normal, DC -- BENCH-CALIBRATED on v9.0/50Ω
+    (1, 1, 0): OFFSET_GAIN_DEFAULT,  # x1, normal, AC
+    (0, 1, 1): OFFSET_GAIN_DEFAULT,  # x10, normal, DC
+    (0, 1, 0): OFFSET_GAIN_DEFAULT,  # x10, normal, AC
+    (1, 0, 1): OFFSET_GAIN_DEFAULT,  # x1, supergain x100, DC
+    (1, 0, 0): OFFSET_GAIN_DEFAULT,  # x1, supergain x100, AC
+    (0, 0, 1): OFFSET_GAIN_DEFAULT,  # x10, supergain x100, DC
+    (0, 0, 0): OFFSET_GAIN_DEFAULT,  # x10, supergain x100, AC
+}
 
 
 def find_old_haasoscope_ports():
@@ -108,6 +132,11 @@ class OldHaasoscopeDevice:
 
         # Runtime state mirrored from Pro-side requests.
         self.downsample = 2
+        # Rolling (self) trigger state. cmd 101 = rolling ON, cmd 102 = rolling
+        # OFF — these are SET commands, NOT a toggle (HaasoscopeLibQt.py:166).
+        # Tracked here so set_rolling() can avoid writes when state already
+        # matches; both adapter halves of the same physical board will call us.
+        self._rolling = False
 
         # Per-channel front-end state (global channel index = board*4 + chan).
         nch = num_boards * NUM_CHAN_PER_BOARD
@@ -280,8 +309,10 @@ class OldHaasoscopeDevice:
         if self.minfirmwareversion >= 15:
             self.yscale *= 1.1  # v9.0 boards (kept from legacy; folds into the cal)
 
-        # Rolling (self) trigger on, so the board free-runs (line 1706).
+        # Rolling (self) trigger on, so the board free-runs (line 1706). cmd 101
+        # = rolling ON, cmd 102 = rolling OFF (HaasoscopeLibQt.tellrolltrig).
         self._w(101)
+        self._rolling = True
 
         # Number of samples to send (cmd 122, line 185).
         self._w(122, *self._hi_lo(self.num_samples))
@@ -437,6 +468,68 @@ class OldHaasoscopeDevice:
             self._w(124, ds)
             self.downsample = ds
 
+    def set_rolling(self, rolling):
+        """Drive the legacy board's rolling (self) trigger on/off. cmd 101 = ON,
+        cmd 102 = OFF (HaasoscopeLibQt.tellrolltrig — these are SET commands,
+        not a toggle). Skips the write when state already matches so duplicate
+        calls from the two adapter halves of the same physical board don't
+        generate unnecessary traffic. In Normal mode the adapter polls via
+        try_acquire_event() with a short timeout so the GUI stays responsive
+        while waiting for a real trigger crossing."""
+        rolling = bool(rolling)
+        with self._lock:
+            if rolling != self._rolling:
+                self._w(101 if rolling else 102)
+                self._rolling = rolling
+                # Switching to Normal: drain any tail bytes from the last
+                # rolling-mode event so the next poll starts clean.
+                if not rolling:
+                    self._drain_serial(0.05)
+
+    def try_acquire_event(self, board, max_time=0.2):
+        """Non-blocking attempt to acquire one event into the shared cache,
+        bounded by max_time seconds. Returns True iff self._event[board] now
+        holds a fresh event (and consumed[board] is reset). Used by the
+        adapter's _trigger_check in Normal mode: short-timeout poll so the
+        Pro's polling thread keeps the GUI responsive when no trigger fires.
+
+        Serial path only for now (fast-USB falls back to the regular blocking
+        _do_acquire path because its read primitives don't accept a deadline)."""
+        with self._lock:
+            # An event already cached and not yet consumed by both halves is
+            # fine to reuse — no need to re-acquire.
+            if self._event[board] is not None and len(self._consumed[board]) < 2:
+                return True
+            # Prime trigger + request data, same as _do_acquire.
+            self._w(100)
+            if self.minfirmwareversion >= 17:
+                self._w(51, board)
+            else:
+                self._w(10 + board)
+            if self._fastusb_active:
+                # Bounded poll over FT232H: short timeout, single attempt.
+                event = self._read_fastusb(board)
+                if event is None:
+                    return False
+                self._event[board] = event
+                self._consumed[board] = set()
+                return True
+            # Serial path: accumulate up to num_bytes with a hard deadline.
+            deadline = time.time() + max_time
+            buf = bytearray()
+            while len(buf) < self.num_bytes and time.time() < deadline:
+                chunk = self.ser.read(self.num_bytes - len(buf))
+                if chunk:
+                    buf.extend(chunk)
+            if len(buf) != self.num_bytes:
+                # Partial / no data — drain whatever arrived and report timeout.
+                self._drain_serial(0.05)
+                return False
+            event = self._parse_channels(np.frombuffer(buf, dtype=np.uint8), 0, 0)
+            self._event[board] = event
+            self._consumed[board] = set()
+            return True
+
     def set_trigger_level(self, level):
         """Set trigger threshold 0-255 (cmd 127, HaasoscopeLibQt.py:291). The
         value is inverted on the wire because of the negative-feedback op amp."""
@@ -547,13 +640,18 @@ class OldHaasoscopeDevice:
         """Apply the Pro offset (a 16-bit DAC value centered at 32768) as an
         additive shift on the original 12-bit DAC.
 
-        NOTE: OFFSET_GAIN / sign are a first cut and should be tuned on hardware
-        (the two DACs differ in range and polarity).
+        The Pro→legacy DAC ratio depends on which analog path is engaged
+        (different op-amp gain, different DAC reference / baseline per combo),
+        so we pick OFFSET_GAIN from OFFSET_GAIN_BY_MODE keyed on the channel's
+        current (gain, supergain, acdc) state. Only the x1/normal/DC entry is
+        bench-calibrated; the rest fall through to OFFSET_GAIN_DEFAULT.
         """
         if gchan >= len(self.user_offset):
             return
         with self._lock:
-            self.user_offset[gchan] = OFFSET_GAIN * (pro_dacval - OFFSET_PRO_CENTER)
+            key = (self.gain[gchan], self.supergain[gchan], self.acdc[gchan])
+            offset_gain = OFFSET_GAIN_BY_MODE.get(key, OFFSET_GAIN_DEFAULT)
+            self.user_offset[gchan] = offset_gain * (pro_dacval - OFFSET_PRO_CENTER)
             self._apply_dac(gchan)
 
     def set_channel_termination(self, gchan, onemeg):
@@ -733,15 +831,23 @@ class OldHaasoscopeDevice:
                 break
         return bytes(buf)
 
-    def _drain_serial(self):
+    def _drain_serial(self, max_time=None):
         """Discard any buffered input AND drain until the line is idle, so a
         late-arriving tail of an aborted event cannot desync the next read.
         reset_input_buffer() alone is a one-shot flush; the read loop catches
-        bytes that arrive just after it."""
+        bytes that arrive just after it. With max_time set, give up after that
+        many seconds (useful when a previous session left rolling trigger on
+        and the line never goes idle)."""
         try:
             self.ser.reset_input_buffer()
-            while self.ser.read(4096):   # exits ~one poll (self._read_timeout) after quiet
-                pass
+            if max_time is None:
+                while self.ser.read(4096):   # exits ~one poll after quiet
+                    pass
+                return
+            deadline = time.time() + max_time
+            while time.time() < deadline:
+                if not self.ser.read(4096):
+                    return                    # idle
         except Exception:
             pass
 

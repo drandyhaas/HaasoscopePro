@@ -311,7 +311,10 @@ def setgain(usb, chan: int, value: int, doswap: bool):
     if doswap: chan = (chan + 1) % 2
     cs = 2 if chan == 0 else 1
     # 26 is 0dB gain. Value is dB, so 26-value is the register setting.
-    spicommand(usb, f"Amp Gain {chan}", 0x02, 0x00, 26 - value, False, cs=cs, nbyte=2, quiet=True)
+    # Mask to a byte so values > 26 (used by the legacy backend to reach x100
+    # at value=34) wrap into the unsigned byte range; the legacy adapter
+    # interprets that byte as signed int8 to recover the original dB.
+    spicommand(usb, f"Amp Gain {chan}", 0x02, 0x00, (26 - value) & 0xFF, False, cs=cs, nbyte=2, quiet=True)
 
 
 def dooffset(usb, chan: int, val: int, scaling: float, doswap: bool) -> bool:

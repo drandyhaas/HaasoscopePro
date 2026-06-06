@@ -181,7 +181,17 @@ class OldHaasoscopeBoardAdapter(UsbSocketAdapter):
         if rising != self._last_trig_rising:
             self.device.set_trigger_rising(rising)
             self._last_trig_rising = rising
-        # Always report "event ready" (byte0=251), trigger position 0 in byte1.
+        # Normal mode (rolling disabled at the device): poll for a real
+        # triggered event with a short timeout (~0.2s) so the Pro's polling
+        # thread keeps the Qt event loop alive. If nothing fires in that
+        # window we report "no event" and the Pro skips the data read; the
+        # trace freezes on the last successful event. Auto mode always
+        # reports "event ready" because the rolling trigger free-runs.
+        if not getattr(self.device, '_rolling', True):
+            try_acquire = getattr(self.device, 'try_acquire_event', None)
+            if try_acquire is not None and try_acquire(self.phys_board, max_time=0.2):
+                return bytes([251, 0, 0, 0])
+            return bytes([0, 0, 0, 0])
         return bytes([251, 0, 0, 0])
 
     def _opcode2(self, sub, data):
@@ -195,6 +205,14 @@ class OldHaasoscopeBoardAdapter(UsbSocketAdapter):
             # half 0 looks like the first board (internal clock, bit3);
             # later halves look like external-clock-locked slaves (bit1).
             return _p32((1 << 3) if (self.phys_board == 0 and self.half == 0) else (1 << 1))
+        if sub == 8:                      # rolling-trigger / Auto-Normal mode
+            # set_rolling / set_exttrig both send [2, 8, is_rolling, 0, ...].
+            # Drive the legacy device's rolling trigger so Normal mode actually
+            # stops the board's free-running self-trigger. The device tracks
+            # state, so duplicate calls from the two adapter halves of the same
+            # physical board are a no-op.
+            self.device.set_rolling(bool(data[2]))
+            return _p32(0)
         return _p32(0)
 
     def _spi(self, data):
@@ -210,7 +228,12 @@ class OldHaasoscopeBoardAdapter(UsbSocketAdapter):
         addr = data[2]
         if self._spi_mode == 0 and addr == 0x02 and cs in (1, 2):
             pro_chan = 0 if cs == 2 else 1
-            gain_db = 26 - data[4]
+            # board.py masks (26 - value) to a byte, so dB values > 26 (e.g. 34
+            # for x100) wrap into the upper half of the byte range. Re-interpret
+            # data[4] as signed int8 to recover the original (possibly negative)
+            # register value.
+            reg = data[4] - 256 if data[4] > 127 else data[4]
+            gain_db = 26 - reg
             level = 100 if gain_db >= 34 else (10 if gain_db >= 14 else 1)
             self.device.set_channel_gain(self._gchan(pro_chan), level)
         elif self._spi_mode == 1 and cs == 4 and addr in (0x18, 0x19):

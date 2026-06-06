@@ -284,7 +284,14 @@ class HardwareController:
         state = self.state
         merging = 1
         if ds < 0: ds = 0
-        if ds == 0:
+        # Legacy backend has no FPGA-side averaging path: the original Haasoscope
+        # only implements a true power-of-two downsample (cmd 124). Bypass the
+        # Pro's merging-factor encoding (which repurposes ds=1..5 as "stay at
+        # full rate + merge N samples") and forward ds unchanged with merging=1,
+        # so state.downsamplefactor reflects the actual hardware divisor.
+        if getattr(usb, 'is_legacy', False):
+            pass  # ds stays as-is, merging stays 1
+        elif ds == 0:
             merging = 1
         elif ds == 1:
             ds, merging = 0, 2
@@ -543,8 +550,16 @@ class HardwareController:
 
     def use_ext_trigs(self):
         for board in range(1, self.num_board):
-            self.state.doexttrig[board] = True
             usb = self.usbs[board]
+            # The legacy backend exposes one physical 4-channel board as TWO
+            # virtual Pro boards; both halves share the same physical trigger,
+            # so there is no real "ext-trig" to configure. Marking the second
+            # half ext-trig kicks the Pro app into LVDS-delay calibration and
+            # ext-trig position offsets that don't apply, distorting the second
+            # board's time axis. Skip the whole setup for legacy halves.
+            if getattr(usb, 'is_legacy', False):
+                continue
+            self.state.doexttrig[board] = True
 
             # Skip dummy boards
             if isinstance(usb, UsbSocketAdapter): continue

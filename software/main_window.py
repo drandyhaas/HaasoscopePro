@@ -119,6 +119,22 @@ class MainWindow(TemplateBaseClass):
             # Two-channel mode is mandatory for legacy boards (see above); don't
             # let the user toggle it off and desync the data layout.
             self.ui.twochanCheck.setEnabled(False)
+            # 50Ω/1MΩ is a physical switch on v9.0 boards (no software control),
+            # and the Pro UI's mohm flag silently halves V/div in gain_changed,
+            # so toggling it would mislead the V/div readout. Lock to 1MΩ-style
+            # (mohm=True) and disable the checkbox.
+            self.ui.ohmCheck.setEnabled(False)
+            # Attenuator (attCheck) is a no-op in the legacy adapter; hide that
+            # affordance so the user doesn't think it does something.
+            self.ui.attCheck.setEnabled(False)
+            # Legacy front end only implements three discrete gains (x1 / x10 /
+            # x100). The adapter snaps the SPI dB value at 14 and 34, so make
+            # those the only reachable spinbox values. Step 20 covers all four
+            # transitions cleanly (0→14 via 20-snap, 14→34, 34→14, 14→0 via
+            # clip-then-snap), and max=34 makes x100 reachable.
+            self.ui.gainBox.setMaximum(34)
+            self.ui.gainBox.setMinimum(0)
+            self.ui.gainBox.setSingleStep(20)
         self.setup_successful = False
         self.reference_data = {}  # Stores {channel_index: {'x_ns': array, 'y': array}}
         self.math_reference_data = {}  # Stores {math_channel_name: {'x_ns': array, 'y': array}}
@@ -2256,6 +2272,12 @@ class MainWindow(TemplateBaseClass):
         s.doresamp[s.activexychannel] = value
         # Mark that this channel's resamp has been manually overridden
         s.resamp_overridden[s.activexychannel] = True
+        # The legacy backend's two virtual boards share one physical sample
+        # density, so a per-channel upsample mismatch is always a UI artefact.
+        # Mirror the change to every legacy channel.
+        if self.is_legacy:
+            for ch in range(len(s.doresamp)):
+                s.doresamp[ch] = value
         if self.state.downsample < 0:
             s.saved_doresamp[s.activexychannel] = value
 
@@ -2277,6 +2299,8 @@ class MainWindow(TemplateBaseClass):
         if self.state.downsample < -10:
             #print("Maximum zoom level reached.")
             self.ui.timefastButton.setEnabled(False)
+        # Speeding up from the legacy cap re-enables the slow button.
+        self.ui.timeslowButton.setEnabled(True)
 
         old_downsample = self.state.downsample
         old_downsamplezoom = self.state.downsamplezoom
@@ -2288,18 +2312,20 @@ class MainWindow(TemplateBaseClass):
         # When transitioning from downsample=0 to downsample=-1, set resamp intelligently
         if old_downsample == 0 and self.state.downsample == -1:
             s = self.state
-            # If resamp has been manually overridden, keep the current value
-            # Otherwise, use default of 4 for zoomed mode
-            if not s.resamp_overridden[s.activexychannel]:
-                s.doresamp[s.activexychannel] = 4
-
-            # If in two-channel mode, also set doresamp for channel 1 of the active board
-            if s.dotwochannel[s.activeboard]:
-                ch1_index = s.activeboard * s.num_chan_per_board + 1
-                if not s.resamp_overridden[ch1_index]:
-                    s.doresamp[ch1_index] = 4
-
-            # If overridden, keep current value (no change needed)
+            # Channels to upsample: by default just the active channel (and its
+            # pair in two-channel mode). For the legacy backend the two virtual
+            # boards are one physical board sharing the same sample density, so
+            # we upsample ALL legacy channels together to keep the display
+            # uniform across the four traces.
+            if self.is_legacy:
+                channels_to_set = list(range(len(s.doresamp)))
+            else:
+                channels_to_set = [s.activexychannel]
+                if s.dotwochannel[s.activeboard]:
+                    channels_to_set.append(s.activeboard * s.num_chan_per_board + 1)
+            for ch in channels_to_set:
+                if not s.resamp_overridden[ch]:
+                    s.doresamp[ch] = 4
 
             self.ui.resampBox.blockSignals(True)
             self.ui.resampBox.setValue(s.doresamp[s.activexychannel])
@@ -2343,6 +2369,14 @@ class MainWindow(TemplateBaseClass):
             self.fftui.reset_analysis_state()
 
     def time_slow(self):
+        # The original Haasoscope firmware caps downsample at ~18
+        # (HaasoscopeLibQt.py maxdownsample); above that, the board's behavior
+        # is undefined. Enforce the cap so the legacy "slower" button stops at
+        # the same place the original app does.
+        if self.is_legacy and self.state.downsample >= 18:
+            self.ui.timeslowButton.setEnabled(False)
+            return
+        self.ui.timeslowButton.setEnabled(True)
         self.ui.timefastButton.setEnabled(True)
         old_downsample = self.state.downsample
         old_downsamplezoom = self.state.downsamplezoom
@@ -3335,6 +3369,16 @@ class MainWindow(TemplateBaseClass):
     def gain_changed(self):
         """Handles changes to the gain slider."""
         s = self.state
+        # Legacy front end has only x1 / x10 / x100. The adapter snaps SPI
+        # gain_db at 14 and 34; mirror that here so the displayed dB / V/div
+        # tracks the *actual* hardware gain instead of lying between snaps.
+        if self.is_legacy:
+            raw = self.ui.gainBox.value()
+            snapped = 0 if raw < 14 else (14 if raw < 34 else 34)
+            if snapped != raw:
+                self.ui.gainBox.blockSignals(True)
+                self.ui.gainBox.setValue(snapped)
+                self.ui.gainBox.blockSignals(False)
         s.gain[s.activexychannel] = self.ui.gainBox.value()
 
         self.controller.set_channel_gain(s.activeboard, s.selectedchannel, s.gain[s.activexychannel])
@@ -3346,7 +3390,11 @@ class MainWindow(TemplateBaseClass):
         db = s.gain[s.activexychannel]
         v_per_div = (s.basevoltage / 1000.) * s.tenx[s.activexychannel] / pow(10, db / 20.)
         if s.dooversample[s.activeboard]: v_per_div *= 2.0
-        if not s.mohm[s.activexychannel]: v_per_div /= 2.0
+        # The 50Ω/1MΩ /2 divisor is a Pro front-end attenuator factor; legacy has
+        # no equivalent (50Ω is a separate physical switch and doesn't change the
+        # ADC-side scaling), so applying it would silently halve the displayed
+        # V/div. Skip it for legacy.
+        if not self.is_legacy and not s.mohm[s.activexychannel]: v_per_div /= 2.0
 
         oldvperd = s.VperD[s.activexychannel]
         s.VperD[s.activexychannel] = v_per_div
@@ -3371,10 +3419,11 @@ class MainWindow(TemplateBaseClass):
         self.ui.VperD.setText(display_text)
         # --- END OF NEW LOGIC ---
 
-        if self.ui.gainBox.value() > 24:
-            self.ui.gainBox.setSingleStep(2)
-        else:
-            self.ui.gainBox.setSingleStep(6)
+        if not self.is_legacy:
+            if self.ui.gainBox.value() > 24:
+                self.ui.gainBox.setSingleStep(2)
+            else:
+                self.ui.gainBox.setSingleStep(6)
 
         self.plot_manager.update_right_axis()
         self.plot_manager.update_cursor_display()
@@ -3384,9 +3433,13 @@ class MainWindow(TemplateBaseClass):
         s = self.state
         s.offset[s.activexychannel] = self.ui.offsetBox.value()
 
-        # UI layer calculates the scaling factor based on current state
+        # UI layer calculates the scaling factor based on current state.
+        # The 245/160 AC-mode bump is the Pro front-end's AC-coupling DAC range
+        # ratio. The legacy front end uses different DAC baseline tables for AC
+        # vs DC (lowac/highac/etc in old_device.py), so this Pro-specific factor
+        # would double-count the AC compensation. Skip it for legacy.
         scaling = 1000 * s.VperD[s.activexychannel] / 160.0
-        if s.acdc[s.activexychannel]:
+        if s.acdc[s.activexychannel] and not self.is_legacy:
             scaling *= 245.0 / 160.0
         final_scaling = scaling / s.tenx[s.activexychannel]
 
@@ -3402,7 +3455,7 @@ class MainWindow(TemplateBaseClass):
         # UI update logic remains here
         v_offset = (scaling / (1000 * s.VperD[s.activexychannel] / 160.0)) * (
                     1000 * s.VperD[s.activexychannel] / 160.0) * 1.5 * s.offset[s.activexychannel]
-        if s.acdc[s.activexychannel]: v_offset *= (160.0 / 245.0)
+        if s.acdc[s.activexychannel] and not self.is_legacy: v_offset *= (160.0 / 245.0)
         self.ui.Voff.setText(f"{int(v_offset)} mV")
 
     def skew_changed(self):

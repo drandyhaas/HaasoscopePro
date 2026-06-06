@@ -116,6 +116,46 @@ rate (commands still go over serial).
 cd software && python test/test_old_adapter.py
 ```
 
+## Pro UI behaviour in legacy mode
+
+The Pro app's UI is the original's superset, so legacy mode disables or constrains
+the controls the original hardware can't honour. Done in `main_window.py` keyed on
+`self.is_legacy` and in `hardware_controller.tell_downsample` keyed on the adapter's
+`is_legacy` flag.
+
+- **Y-axis convention:** Pro shows *true input volts* — the legacy device pre-
+  divides ADC samples by the analog gain factor in `OldHaasoscopeDevice.get_half_data`,
+  so a 0.1 V input at ×10 reads as 0.1 V on the trace. The original `HaasoscopeQt.py`
+  used a different convention (raw amp output, only the `Vmean`/`Vrms` text
+  compensated), so the y-axis numbers between the two apps will not match.
+- **Two-channel mode** is forced on (samplerate cap is pre-doubled and the
+  packet layout assumes it). `twochanCheck` is disabled.
+- **50 Ω / 1 MΩ (`ohmCheck`) is disabled.** On v9.0 it's a physical switch the
+  software can't drive, and the Pro's `mohm` flag silently halves V/div in
+  `gain_changed`. `gain_changed` now skips that divisor entirely for legacy so
+  the displayed V/div tracks reality.
+- **Attenuator (`attCheck`) is disabled** — no hardware equivalent.
+- **Gain (`gainBox`) is restricted to {0, 14, 34} dB** (the x1 / x10 / x100 snap
+  points). Spinbox max is 34 (so x100 is reachable, vs the Pro default of 26)
+  and `singleStep = 20` so up/down cleanly walks the three values. `gain_changed`
+  snaps any intermediate value to the nearest of {0, 14, 34} before computing
+  V/div, so the displayed mV/div matches the engaged hardware gain. **Caveat:**
+  ×100 super-gain on v9.0 is a *physical DPDT switch on the board* — selecting
+  it from the UI only updates the DAC-baseline selection and the sample
+  compensation factor, it does NOT engage the analog ×100 path; the user must
+  flip the physical switch for the trace to actually be ×100.
+- **Timebase merging-factor encoding bypassed.** The Pro's `tell_downsample()`
+  repurposes downsample values 1–5 as "stay at full rate + FPGA-side averaging,"
+  which the legacy hardware doesn't implement. The adapter is detected via
+  `is_legacy` and `tell_downsample` forwards `ds` unchanged with `merging=1`,
+  so `state.downsamplefactor = 2^ds` matches the actual hardware divisor and
+  the x-axis time/div text is correct.
+- **Downsample cap of 18.** Mirrors the original `HaasoscopeLibQt.py`
+  `maxdownsample`; the "slower" button stops there for legacy.
+- **AC-mode offset scaling** skips the Pro's `245/160` front-end factor, since
+  legacy compensates AC vs DC via separate DAC baseline tables (`lowac`/
+  `highac`/etc.), not via that ratio.
+
 ## Known limitations (need a physical board to finish)
 
 - **Vertical calibration:** the Pro computes volts as `sample × yscale × VperD`
@@ -126,14 +166,11 @@ cd software && python test/test_old_adapter.py
   for **50 Ω** mode against a 5.0 V Vpp source; re-tune with
   `device.yscale *= true_Vpp / measured_Vpp`. The 1 MΩ path may differ (50 Ω/1 MΩ
   is a physical switch the software can't read).
-- Vertical **gain** has only the original board's three physical levels
-  (×1/×10/×100), so the Pro's continuous dB control snaps at 14 dB and 34 dB
-  (`old_adapter.py`); amplitude is compensated in `get_half_data` so true volts
-  stay correct. Stepped behaviour is expected, not a bug.
-- The **offset** DAC mapping (`OFFSET_GAIN` in `old_device.py`) is bench-calibrated
-  (`-1/192`): a +10 offset click moves the trace by the Pro's intended ~257 mV.
-  Like the vertical scale it's tied to the 50 Ω front-end; re-tune for 1 MΩ with
-  `OFFSET_GAIN *= intended/measured`.
+- **Offset calibration is per-(gain × supergain × AC/DC).** Currently only the
+  (x1, normal, DC) entry in `OFFSET_GAIN_BY_MODE` is bench-tuned (`-1/192`); the
+  other 7 combos default to the same value and need re-tuning. Method per combo:
+  set the gain/coupling, send a known offset click, measure the on-screen mV
+  shift, then `OFFSET_GAIN_BY_MODE[key] *= intended/measured`.
 - **ADC byte interpretation (int8 vs uint8):** we treat raw bytes as unsigned
   offset-binary and invert with `127 - byte` (monotonic over 0..255). The legacy
   code reads them as signed `int8` before `127 - x`, which differs for bytes
