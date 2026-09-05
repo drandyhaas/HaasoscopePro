@@ -71,16 +71,20 @@ class DataRecorder:
         num_channels = s.num_board * s.num_chan_per_board
         line_parts = [str(vline_val)]
 
-        # Determine the number of valid samples based on the mode of the first board
-        # This is a simplification; assumes all boards are in the same mode.
-        board_idx = 0
-        if s.dotwochannel[board_idx]:
-            num_samples = self.state.expect_samples * 20  # xydata.shape[2] // 2
-        else:
-            num_samples = self.state.expect_samples * 40  # xydata.shape[2]
-
         for i in range(num_channels):
-            x_data = xydata[i][0][:num_samples]
+            # Two-channel mode is a per-board setting, so resolve it for the board this channel is on.
+            board_idx = i // s.num_chan_per_board
+            if s.dotwochannel[board_idx]:
+                # In two-channel mode each channel is sampled at half the rate (1.6 GS/s instead of 3.2 GS/s),
+                # so only the first half of the array holds valid samples (the rest is stale), and those
+                # samples are spaced twice as far apart in time. The stored x-axis always uses the
+                # single-channel spacing (with trigger-stabilizer corrections applied in that same scale),
+                # so multiply by 2 to get the true sample times - exactly as plot_manager does for display.
+                num_samples = xydata.shape[2] // 2
+                x_data = xydata[i][0][:num_samples] * 2.0
+            else:
+                num_samples = xydata.shape[2]
+                x_data = xydata[i][0][:num_samples]
             y_data = xydata[i][1][:num_samples]
 
             for x, y in zip(x_data, y_data):
