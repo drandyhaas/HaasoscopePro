@@ -43,7 +43,7 @@ class HardwareController:
         self.state.firmwareversion[board_idx] = ver
         if self.state.softwareversion < ver < 1000000: # don't worry about dummy firmware versions, but do fail if the real board firmware is newer than this software
             print("Error - this board has newer firmware than this software!")
-            return false
+            return False
         if ver < max(self.state.firmwareversion):
             print("Warning - this board has older firmware than another being used:",max(self.state.firmwareversion))
         if ver > min(self.state.firmwareversion) > -1:

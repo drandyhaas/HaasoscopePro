@@ -36,8 +36,10 @@ def open_ft_usb_device(device_type, device_name):
             
             if sys.platform == 'win32':
                 usb = ftd3xx.create(device_id, ftd3xx._ftd3xx_win32.FT_OPEN_BY_INDEX)
-            elif sys.platform == 'linux2':
+            elif sys.platform.startswith('linux'):  # Python 3 reports 'linux' (not 'linux2')
                 usb = ftd3xx.create(device_id, ftd3xx._ftd3xx_linux.FT_OPEN_BY_INDEX)
+            else:
+                return None, 'FT60X (USB3) is not supported on platform %s' % sys.platform
             
             if usb is None:
                 continue
