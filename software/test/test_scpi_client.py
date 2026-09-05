@@ -55,7 +55,7 @@ def parse_waveform_payload(data):
 
     print(f"  Sequence number:   {seqnum}")
     print(f"  Number of channels: {num_channels}")
-    print(f"  fs/sample:         {fs_per_sample}  ({fs_per_sample/1e6:.1f} ps/sample, {1e15/fs_per_sample/1e9:.3f} GS/s)")
+    print(f"  fs/sample:         {fs_per_sample}  ({fs_per_sample/1e3:.1f} ps/sample, {1e15/fs_per_sample/1e9:.3f} GS/s)")
     print(f"  Trigger position:  {trigger_pos_fs} fs")
     print(f"  Waveforms/sec:     {wfms_per_s:.1f}")
 
