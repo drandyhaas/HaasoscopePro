@@ -6,7 +6,7 @@ An affordable 2 GHz 3.2 GS/s 12 bit open-source open-hardware expandable USB osc
 
 ## Links
 
-Available on [CrowdSupply](https://www.crowdsupply.com/andy-haas/haasoscope-pro) and at [Mouser](https://www.mouser.com/c/?q=Haasoscope)
+Available on [CrowdSupply](https://www.crowdsupply.com/andy-haas/haasoscope-pro) and [Mouser](https://www.mouser.com/c/?q=Haasoscope) and [eBay](https://www.ebay.com/sch/i.html?_nkw=Haasoscope+)
 
 [Hackaday.io page](https://hackaday.io/project/200773-haasoscope-pro)
 
